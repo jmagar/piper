@@ -11,13 +11,18 @@ import dotenv from 'dotenv';
 import { BaseMessage } from '@langchain/core/messages';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
+import { format } from 'date-fns';
 
 // Create a custom logger that broadcasts to WebSocket clients
 const logClients = new Set<WebSocket>();
 
+function formatTimestamp(date: Date): string {
+    return `[${format(date, 'yyyy/MM/dd')}][${format(date, 'hh:mm:ss aa')} EST]`;
+}
+
 function broadcastLog(level: 'info' | 'error' | 'debug', message: string) {
     const logEntry = {
-        timestamp: new Date().toISOString(),
+        timestamp: formatTimestamp(new Date()),
         level,
         message
     };
@@ -28,11 +33,12 @@ function broadcastLog(level: 'info' | 'error' | 'debug', message: string) {
         }
     });
     
-    // Also log to console
+    // Also log to console with the same timestamp format
+    const logMessage = `${logEntry.timestamp} ${message}`;
     if (level === 'error') {
-        console.error(message);
+        console.error(logMessage);
     } else {
-        console.log(message);
+        console.log(logMessage);
     }
 }
 
