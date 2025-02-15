@@ -17,7 +17,7 @@ const port = process.env.PORT || 4100; // Different from Next.js port
 
 // CORS configuration
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:4100'],
+    origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:4100'],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true

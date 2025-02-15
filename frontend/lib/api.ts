@@ -7,9 +7,9 @@ export interface ChatMessage {
 
 export async function sendMessage(message: string): Promise<string> {
     try {
+        console.log('Sending message to:', `${API_BASE_URL}/api/chat`);
         const response = await fetch(`${API_BASE_URL}/api/chat`, {
             method: 'POST',
-            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -17,10 +17,13 @@ export async function sendMessage(message: string): Promise<string> {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error:', errorText);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const text = await response.text();
+        console.log('Received response:', text);
         return text;
     } catch (error) {
         console.error('Error sending message:', error);
