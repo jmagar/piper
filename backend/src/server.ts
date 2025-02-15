@@ -35,7 +35,15 @@ const model = await initChatModel({
     temperature: config.llm.temperature,
     maxTokens: config.llm.max_tokens
 });
-const { tools, cleanup } = await convertMcpToLangchainTools({});
+
+// Convert MCP servers to Langchain tools
+const { tools, cleanup } = await convertMcpToLangchainTools(
+    config.mcp_servers,
+    { logLevel: 'debug' }
+);
+
+console.log('Available tools:', tools.map(tool => tool.name));
+
 const agent = await createReactAgent({ llm: model, tools });
 
 // Cleanup handler
