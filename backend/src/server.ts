@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { MemorySaver } from '@langchain/langgraph';
 import { HumanMessage } from '@langchain/core/messages';
 import { convertMcpToLangchainTools } from '@h1deya/langchain-mcp-tools';
 import { initChatModel } from './init-chat-model.js';
@@ -44,7 +45,11 @@ const { tools, cleanup } = await convertMcpToLangchainTools(
 
 console.log('Available tools:', tools.map(tool => tool.name));
 
-const agent = await createReactAgent({ llm: model, tools });
+const agent = await createReactAgent({
+    llm: model,
+    tools,
+    checkpointSaver: new MemorySaver(),
+});
 
 // Cleanup handler
 process.on('SIGINT', cleanup);
@@ -69,47 +74,28 @@ const handleChat = async (req: ChatRequest, res: Response): Promise<void> => {
         // Create the message array with proper typing
         const messages: BaseMessage[] = [new HumanMessage(message)];
         console.log('Invoking agent with message:', message);
-        const result = await agent.invoke({ messages });
+        const result = await agent.invoke(
+            { messages },
+            { configurable: { thread_id: 'chat-thread' } }
+        );
         console.log('Agent result:', result);
 
-        // Handle the result differently since the type has changed
-        let response;
-        try {
-            if (typeof result === 'object' && result !== null) {
-                if ('content' in result) {
-                    response = String(result.content);
-                } else if ('response' in result) {
-                    response = String(result.response);
-                } else if ('output' in result) {
-                    response = String(result.output);
-                } else {
-                    // Extract meaningful content from the object
-                    response = Object.entries(result)
-                        .filter(([key, value]) => 
-                            typeof value === 'string' && 
-                            !key.includes('id') && 
-                            !key.includes('metadata'))
-                        .map(([, value]) => value)
-                        .join('\n');
-                }
-            } else {
-                response = String(result);
+        // Get the last message from the agent's response
+        const lastMessage = result.messages[result.messages.length - 1];
+        console.log('Last message:', lastMessage);
+
+        let response = '';
+        if (lastMessage) {
+            if ('content' in lastMessage && typeof lastMessage.content === 'string') {
+                response = lastMessage.content;
             }
-            
-            // Clean up any remaining JSON-like formatting
-            try {
-                const parsed = JSON.parse(response);
-                if (typeof parsed === 'object' && parsed !== null) {
-                    response = parsed.content || parsed.response || parsed.output || String(parsed);
-                }
-            } catch {
-                // If it's not valid JSON, keep the original response
-            }
-        } catch (error) {
-            console.error('Response formatting error:', error);
-            response = String(result);
         }
-            
+
+        if (!response) {
+            response = 'I apologize, but I was unable to generate a proper response.';
+        }
+
+        console.log('Final response:', response);
         res.setHeader('Content-Type', 'text/plain');
         res.send(response);
     } catch (error) {
