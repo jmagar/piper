@@ -92,9 +92,27 @@ const data = {
       icon: Database,
     },
     {
-      title: "Servers",
+      title: "MCP",
       url: "#",
       icon: Server,
+      items: [
+        {
+          title: "Config",
+          url: "/mcp/config",
+        },
+        {
+          title: "Tools",
+          url: "/mcp/tools",
+        },
+        {
+          title: "Servers",
+          url: "/mcp/servers",
+        },
+        {
+          title: "Logs",
+          url: "/mcp/logs",
+        },
+      ],
     },
     {
       title: "Documentation",
