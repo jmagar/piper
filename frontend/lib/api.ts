@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4100';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -20,8 +20,8 @@ export async function sendMessage(message: string): Promise<string> {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
-        return data.response;
+        const text = await response.text();
+        return text;
     } catch (error) {
         console.error('Error sending message:', error);
         throw error;

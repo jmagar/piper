@@ -17,7 +17,7 @@ const port = process.env.PORT || 4100; // Different from Next.js port
 
 // CORS configuration
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+    origin: ['http://localhost:3000', 'http://localhost:4100'],
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true
@@ -58,14 +58,19 @@ interface ChatRequest extends Request {
 const handleChat = async (req: ChatRequest, res: Response): Promise<void> => {
     try {
         const { message } = req.body;
+        console.log('Received message:', message);
+        
         if (!message || typeof message !== 'string') {
+            console.log('Invalid message format:', message);
             res.status(400).json({ error: 'Message is required and must be a string' });
             return;
         }
 
         // Create the message array with proper typing
         const messages: BaseMessage[] = [new HumanMessage(message)];
+        console.log('Invoking agent with message:', message);
         const result = await agent.invoke({ messages });
+        console.log('Agent result:', result);
 
         // Handle the result differently since the type has changed
         let response;
@@ -105,10 +110,11 @@ const handleChat = async (req: ChatRequest, res: Response): Promise<void> => {
             response = String(result);
         }
             
-        res.json({ response });
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(response);
     } catch (error) {
         console.error('Chat error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).send('Internal server error');
     }
 };
 
