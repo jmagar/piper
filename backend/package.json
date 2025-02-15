@@ -1,0 +1,67 @@
+{
+  "name": "mcp-client-langchain-ts",
+  "version": "0.1.12",
+  "description": "MCP Client Using LangChain / TypeScript",
+  "license": "MIT",
+  "keywords": [
+    "modelcontextprotocol",
+    "mcp",
+    "mcp-client",
+    "langchain",
+    "langchain-tyoescript",
+    "tool-calling",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "hideya kawahara",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "start:server": "tsx src/server.ts",
+    "start:h": "tsx src/index.ts -h",
+    "start:v": "tsx src/index.ts -v",
+    "dev": "tsx watch src/index.ts",
+    "dev:server": "tsx watch src/server.ts",
+    "lint": "eslint src",
+    "clean": "git clean -fdxn -e .env && read -p 'OK?' && git clean -fdx -e .env"
+  },
+  "dependencies": {
+    "@h1deya/langchain-mcp-tools": "^0.1.12",
+    "@h1deya/mcp-server-weather": "^0.1.2",
+    "@langchain/anthropic": "^0.3.11",
+    "@langchain/community": "^0.3.20",
+    "@langchain/core": "^0.3.26",
+    "@langchain/groq": "^0.1.2",
+    "@langchain/langgraph": "^0.2.36",
+    "@langchain/openai": "^0.3.16",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@modelcontextprotocol/server-brave-search": "^0.6.2",
+    "@modelcontextprotocol/server-filesystem": "^2025.1.14",
+    "@modelcontextprotocol/server-puppeteer": "^0.6.2",
+    "@n8n/json-schema-to-zod": "^1.1.0",
+    "@types/yargs": "^17.0.33",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "json5": "^2.2.3",
+    "yargs": "^17.7.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
