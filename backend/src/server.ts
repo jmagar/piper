@@ -79,17 +79,26 @@ const handleChat = async (req: ChatRequest, res: Response): Promise<void> => {
                     response = String(result.output);
                 } else {
                     // Extract meaningful content from the object
-                    const meaningfulContent = Object.entries(result)
+                    response = Object.entries(result)
                         .filter(([key, value]) => 
                             typeof value === 'string' && 
                             !key.includes('id') && 
                             !key.includes('metadata'))
                         .map(([, value]) => value)
                         .join('\n');
-                    response = meaningfulContent || JSON.stringify(result, null, 2);
                 }
             } else {
                 response = String(result);
+            }
+            
+            // Clean up any remaining JSON-like formatting
+            try {
+                const parsed = JSON.parse(response);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    response = parsed.content || parsed.response || parsed.output || String(parsed);
+                }
+            } catch {
+                // If it's not valid JSON, keep the original response
             }
         } catch (error) {
             console.error('Response formatting error:', error);
