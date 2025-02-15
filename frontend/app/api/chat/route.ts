@@ -12,7 +12,7 @@ export async function POST(req: Request) {
                     status: 400,
                     headers: {
                         'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': 'http://localhost:3100',
+                        'Access-Control-Allow-Origin': 'http://localhost:4100',
                         'Access-Control-Allow-Methods': 'GET, POST',
                         'Access-Control-Allow-Headers': 'Content-Type',
                         'Access-Control-Allow-Credentials': 'true',
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                 status: 200,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': 'http://localhost:3100',
+                    'Access-Control-Allow-Origin': 'http://localhost:4100',
                     'Access-Control-Allow-Methods': 'GET, POST',
                     'Access-Control-Allow-Headers': 'Content-Type',
                     'Access-Control-Allow-Credentials': 'true',
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
                 status: 500,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': 'http://localhost:3100',
+                    'Access-Control-Allow-Origin': 'http://localhost:4100',
                     'Access-Control-Allow-Methods': 'GET, POST',
                     'Access-Control-Allow-Headers': 'Content-Type',
                     'Access-Control-Allow-Credentials': 'true',
@@ -57,7 +57,7 @@ export async function OPTIONS(request: Request) {
     return new NextResponse(null, {
         status: 204,
         headers: {
-            'Access-Control-Allow-Origin': 'http://localhost:3100',
+            'Access-Control-Allow-Origin': 'http://localhost:4100',
             'Access-Control-Allow-Methods': 'GET, POST',
             'Access-Control-Allow-Headers': 'Content-Type',
             'Access-Control-Allow-Credentials': 'true',

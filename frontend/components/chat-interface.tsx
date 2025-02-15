@@ -50,7 +50,10 @@ export function ChatInterface() {
         setIsLoading(true);
 
         try {
+            console.log('Sending message:', newMessage.content);
             const response = await sendMessage(newMessage.content);
+            console.log('Received response:', response);
+            
             const assistantMessage: ExtendedChatMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
@@ -59,11 +62,11 @@ export function ChatInterface() {
             };
             setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error in chat interface:', error);
             const errorMessage: ExtendedChatMessage = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
-                content: 'Sorry, there was an error processing your message.',
+                content: error instanceof Error ? error.message : 'Sorry, there was an error processing your message.',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
