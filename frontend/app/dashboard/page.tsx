@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import Link from "next/link"
 import { 
   Activity, 
   Bot, 
@@ -109,10 +110,12 @@ export default function DashboardPage() {
                     Welcome to your Model Context Protocol control center
                   </p>
                 </div>
-                <Button className="gap-2">
-                  <Bot className="w-4 h-4" />
-                  New Chat
-                  <ArrowRight className="w-4 h-4" />
+                <Button asChild className="gap-2">
+                  <Link href="/chat">
+                    <Bot className="w-4 h-4" />
+                    New Chat
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </Button>
               </div>
 
@@ -120,16 +123,18 @@ export default function DashboardPage() {
                 {/* Quick Links */}
                 <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                   {quickLinks.map((link) => (
-                    <Card key={link.name} className="hover:shadow-md transition-all cursor-pointer">
-                      <CardHeader className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("p-2 rounded-md bg-primary/10", link.color)}>
-                            <link.icon className="w-4 h-4" />
+                    <Link key={link.name} href={link.href}>
+                      <Card className="hover:shadow-md transition-all cursor-pointer">
+                        <CardHeader className="p-4">
+                          <div className="flex items-center gap-2">
+                            <div className={cn("p-2 rounded-md bg-primary/10", link.color)}>
+                              <link.icon className="w-4 h-4" />
+                            </div>
+                            <CardTitle className="text-base">{link.name}</CardTitle>
                           </div>
-                          <CardTitle className="text-base">{link.name}</CardTitle>
-                        </div>
-                      </CardHeader>
-                    </Card>
+                        </CardHeader>
+                      </Card>
+                    </Link>
                   ))}
                 </section>
 

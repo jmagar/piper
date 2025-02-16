@@ -6,6 +6,7 @@ import { ChatMessage, sendMessage } from '@/lib/api';
 import { ThumbsUp, ThumbsDown, Edit2, RotateCcw, Copy, User, Bot } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ExtendedChatMessage extends ChatMessage {
     id: string;
@@ -32,7 +33,7 @@ export function ChatInterface() {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const messageId = crypto.randomUUID();
+        const messageId = uuidv4();
         const newMessage: ExtendedChatMessage = {
             id: messageId,
             role: 'user',
@@ -55,7 +56,7 @@ export function ChatInterface() {
             console.log('Received response:', response);
             
             const assistantMessage: ExtendedChatMessage = {
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 role: 'assistant',
                 content: response,
                 timestamp: new Date()
@@ -63,13 +64,14 @@ export function ChatInterface() {
             setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
             console.error('Error in chat interface:', error);
-            const errorMessage: ExtendedChatMessage = {
-                id: crypto.randomUUID(),
+            const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+            const assistantMessage: ExtendedChatMessage = {
+                id: uuidv4(),
                 role: 'assistant',
-                content: error instanceof Error ? error.message : 'Sorry, there was an error processing your message.',
+                content: `⚠️ ${errorMessage}\n\nPlease try again or check your connection.`,
                 timestamp: new Date()
             };
-            setMessages(prev => [...prev, errorMessage]);
+            setMessages(prev => [...prev, assistantMessage]);
         } finally {
             setIsLoading(false);
         }
@@ -98,7 +100,7 @@ export function ChatInterface() {
         try {
             const response = await sendMessage(message.content);
             const newMessage: ExtendedChatMessage = {
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 role: 'assistant',
                 content: response,
                 timestamp: new Date()

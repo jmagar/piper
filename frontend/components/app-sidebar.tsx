@@ -1,6 +1,7 @@
 "use client"
 
 import type * as React from "react"
+import Link from "next/link"
 import {
   AudioWaveform,
   BookOpen,
@@ -18,12 +19,12 @@ import {
   Sparkles,
   CheckSquare,
   Terminal,
+  Cpu,
 } from "lucide-react"
 
 import { NavMain } from "./nav-main"
-import { NavProjects } from "./nav-projects"
 import { NavUser } from "./nav-user"
-import { TeamSwitcher } from "./team-switcher"
+import { ModelSelector } from "./model-selector"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -32,25 +33,8 @@ const data = {
   user: {
     name: "Jacob",
     email: "jmagar@gmail.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
+    avatar: undefined,
+  } as { name: string; email: string; avatar?: string },
   navMain: [
     {
       title: "Messages",
@@ -59,7 +43,7 @@ const data = {
       items: [
         {
           title: "New",
-          url: "/messages/new",
+          url: "/chat",
         },
         {
           title: "History",
@@ -189,7 +173,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <ModelSelector />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

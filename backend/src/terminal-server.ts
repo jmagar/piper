@@ -3,6 +3,9 @@ import { Server as HttpServer } from 'http';
 import * as pty from 'node-pty';
 import { format } from 'date-fns';
 
+// Keep track of active terminal processes
+const activeTerminals = new Set<pty.IPty>();
+
 export function setupTerminalServer(httpServer: HttpServer, projectRoot: string) {
     const io = new Server(httpServer, {
         path: '/ws/terminal',
@@ -29,6 +32,9 @@ export function setupTerminalServer(httpServer: HttpServer, projectRoot: string)
             }
         });
 
+        // Track the terminal
+        activeTerminals.add(ptyProcess);
+
         // Handle incoming data
         socket.on('input', (data: string) => {
             ptyProcess.write(data);
@@ -48,6 +54,7 @@ export function setupTerminalServer(httpServer: HttpServer, projectRoot: string)
         socket.on('disconnect', () => {
             console.log(`[${format(new Date(), 'yyyy/MM/dd HH:mm:ss')}] Terminal disconnected`);
             ptyProcess.kill();
+            activeTerminals.delete(ptyProcess);
         });
 
         // Set up command restrictions and custom commands
@@ -80,5 +87,17 @@ export function setupTerminalServer(httpServer: HttpServer, projectRoot: string)
         ptyProcess.write('clear\n');
     });
 
-    return io;
+    return {
+        io,
+        cleanup: () => {
+            // Kill all active terminal processes
+            for (const terminal of activeTerminals) {
+                terminal.kill();
+            }
+            activeTerminals.clear();
+            
+            // Close Socket.IO server
+            io.close();
+        }
+    };
 } 
