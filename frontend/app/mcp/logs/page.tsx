@@ -1,11 +1,12 @@
 "use client"
 
-import { McpLogsViewer } from "@/components/mcp-logs-viewer"
+import { McpLogsViewer } from "../_components/mcp-logs-viewer"
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 export default function McpLogsPage() {
     return (
-        <div className="h-screen p-4">
+        <SidebarProvider>
             <McpLogsViewer />
-        </div>
+        </SidebarProvider>
     );
 } 

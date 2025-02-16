@@ -4,7 +4,10 @@
   :root {
     --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    
+  }
+}
+
+:root {
     /* Colors */
     --background: hsl(0 0% 100%);
     --foreground: hsl(20 14.3% 4.1%);
@@ -25,7 +28,7 @@
     --border: hsl(20 5.9% 90%);
     --input: hsl(20 5.9% 90%);
     --ring: hsl(20 14.3% 4.1%);
-    
+
     /* Sidebar Colors */
     --sidebar: hsl(0 0% 98%);
     --sidebar-foreground: hsl(240 5.3% 26.1%);
@@ -35,19 +38,19 @@
     --sidebar-accent-foreground: hsl(240 5.9% 10%);
     --sidebar-border: hsl(220 13% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    
+
     /* Chart Colors */
     --chart-1: hsl(12 76% 61%);
     --chart-2: hsl(173 58% 39%);
     --chart-3: hsl(197 37% 24%);
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
-    
+
     /* Radius */
     --radius: 0.6rem;
-  }
+}
 
-  .dark {
+.dark {
     --background: hsl(20 14.3% 4.1%);
     --foreground: hsl(60 9.1% 97.8%);
     --card: hsl(20 14.3% 4.1%);
@@ -67,14 +70,14 @@
     --border: hsl(12 6.5% 15.1%);
     --input: hsl(12 6.5% 15.1%);
     --ring: hsl(24 5.7% 82.9%);
-    
+
     /* Dark mode chart colors */
     --chart-1: hsl(220 70% 50%);
     --chart-2: hsl(160 60% 45%);
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
-    
+
     /* Dark mode sidebar */
     --sidebar: hsl(240 5.9% 10%);
     --sidebar-foreground: hsl(240 4.8% 95.9%);
@@ -83,15 +86,12 @@
     --sidebar-accent: hsl(240 3.7% 15.9%);
     --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
     --sidebar-border: hsl(240 3.7% 15.9%);
-  }
 }
 
-@layer utilities {
+@layer base {
   * {
     border-color: var(--border);
-    outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
   }
-  
   body {
     background-color: var(--background);
     color: var(--foreground);

@@ -14,6 +14,10 @@ import {
   SquareTerminal,
   Database,
   Server,
+  MessageSquare,
+  Sparkles,
+  CheckSquare,
+  Terminal,
 } from "lucide-react"
 
 import { NavMain } from "./nav-main"
@@ -21,12 +25,13 @@ import { NavProjects } from "./nav-projects"
 import { NavUser } from "./nav-user"
 import { TeamSwitcher } from "./team-switcher"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "Jacob",
+    email: "jmagar@gmail.com",
     avatar: "/avatars/shadcn.jpg",
   },
   teams: [
@@ -48,54 +53,37 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Messages",
       url: "#",
-      icon: SquareTerminal,
-      isActive: true,
+      icon: MessageSquare,
       items: [
         {
+          title: "New",
+          url: "/messages/new",
+        },
+        {
           title: "History",
-          url: "#",
+          url: "/messages/history",
         },
         {
           title: "Starred",
-          url: "#",
+          url: "/messages/starred",
         },
         {
-          title: "Settings",
-          url: "#",
+          title: "Stats",
+          url: "/messages/stats",
         },
       ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Knowledge Base",
-      url: "#",
-      icon: Database,
     },
     {
       title: "MCP",
       url: "#",
       icon: Server,
       items: [
+        {
+          title: "Logs",
+          url: "/mcp/logs",
+        },
         {
           title: "Config",
           url: "/mcp/config",
@@ -108,77 +96,94 @@ const data = {
           title: "Servers",
           url: "/mcp/servers",
         },
+      ],
+    },
+    {
+      title: "Prompts",
+      url: "#",
+      icon: Sparkles,
+      items: [
         {
-          title: "Logs",
-          url: "/mcp/logs",
+          title: "New",
+          url: "/prompts/new",
+        },
+        {
+          title: "List",
+          url: "/prompts/list",
+        },
+        {
+          title: "Starred",
+          url: "/prompts/starred",
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Knowledge Base",
       url: "#",
-      icon: BookOpen,
+      icon: Database,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "New",
+          url: "/knowledge/new",
         },
         {
-          title: "Get Started",
-          url: "#",
+          title: "List",
+          url: "/knowledge/list",
         },
         {
-          title: "Tutorials",
-          url: "#",
+          title: "Starred",
+          url: "/knowledge/starred",
         },
         {
-          title: "Changelog",
-          url: "#",
+          title: "Stats",
+          url: "/knowledge/stats",
         },
       ],
+    },
+    {
+      title: "Tasks",
+      url: "#",
+      icon: CheckSquare,
+      items: [
+        {
+          title: "New",
+          url: "/tasks/new",
+        },
+        {
+          title: "List",
+          url: "/tasks/list",
+        },
+        {
+          title: "Starred",
+          url: "/tasks/starred",
+        },
+        {
+          title: "Status",
+          url: "/tasks/status",
+        },
+        {
+          title: "Stats",
+          url: "/tasks/stats",
+        },
+      ],
+    },
+    {
+      title: "Terminal",
+      url: "/terminal",
+      icon: Terminal,
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
+    },
+    {
+      title: "Documentation",
+      url: "/docs",
+      icon: BookOpen,
     },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -188,10 +193,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <div className="flex items-center justify-between px-4 py-2">
+          <NavUser user={data.user} />
+          <ThemeToggle />
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

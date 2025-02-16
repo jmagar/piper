@@ -12,6 +12,7 @@ import { BaseMessage } from '@langchain/core/messages';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { format } from 'date-fns';
+import { setupTerminalServer } from './terminal-server.js';
 
 // Create a custom logger that broadcasts to WebSocket clients
 const logClients = new Set<WebSocket>();
@@ -47,8 +48,8 @@ broadcastLog('info', 'Loading environment variables...');
 dotenv.config();
 
 const app = express();
-const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws/logs' });
+const httpServer = createServer(app);
+const wss = new WebSocketServer({ server: httpServer, path: '/ws/logs' });
 
 wss.on('connection', (ws: WebSocket) => {
     broadcastLog('info', 'New client connected to logs WebSocket');
@@ -172,23 +173,52 @@ const handleChat = async (req: ChatRequest, res: Response): Promise<void> => {
         
         broadcastLog('info', '=== Processing Agent Response ===');
         broadcastLog('info', 'Number of messages in result: ' + result.messages.length);
-        
-        // Get the last message from the agent's response
-        const lastMessage = result.messages[result.messages.length - 1];
-        broadcastLog('info', 'Last message type: ' + (lastMessage?.constructor.name || 'undefined'));
 
-        let response = '';
-        if (lastMessage) {
-            if ('content' in lastMessage && typeof lastMessage.content === 'string') {
-                response = lastMessage.content;
-                broadcastLog('info', 'Successfully extracted response content');
-            } else {
-                broadcastLog('info', 'No content found in last message');
+        // Process all messages to track tool usage
+        let currentToolUsage: { tool?: string; input?: string; observation?: string } = {};
+        let finalResponse = '';
+
+        // Process messages in order to track tool usage
+        for (const msg of result.messages) {
+            if (!('content' in msg) || typeof msg.content !== 'string') continue;
+            
+            const content = msg.content.trim();
+            
+            if (content.includes('Action:') && content.includes('Action Input:')) {
+                // This is a tool action message
+                const actionMatch = content.match(/Action: (\w+)/);
+                const actionInputMatch = content.match(/Action Input: (.*?)(?=\n|$)/s);
+                
+                if (actionMatch) {
+                    currentToolUsage = {
+                        tool: actionMatch[1],
+                        input: actionInputMatch ? actionInputMatch[1].trim() : '',
+                    };
+                }
+            } else if (content.includes('Observation:')) {
+                // This is a tool observation
+                const observationMatch = content.match(/Observation: (.*?)(?=\n|$)/s);
+                if (observationMatch && currentToolUsage.tool) {
+                    currentToolUsage.observation = observationMatch[1].trim();
+                    
+                    // Format the tool usage
+                    finalResponse += 'Action: Using ' + currentToolUsage.tool + '\n' +
+                                   'Parameters: ' + currentToolUsage.input + '\n' +
+                                   'Result: ' + currentToolUsage.observation + '\n\n';
+                    
+                    // Reset for next tool usage
+                    currentToolUsage = {};
+                }
+            } else if (msg === result.messages[result.messages.length - 1]) {
+                // This is the final response
+                finalResponse += content;
             }
-        } else {
-            broadcastLog('info', 'No messages found in agent response');
         }
 
+        let response = finalResponse || result.messages[result.messages.length - 1]?.content || 'I apologize, but I was unable to generate a proper response.';
+        
+        broadcastLog('info', 'Successfully extracted response content');
+        
         if (!response) {
             broadcastLog('info', 'No valid response found, using fallback message');
             response = 'I apologize, but I was unable to generate a proper response.';
@@ -213,10 +243,132 @@ const handleHealth = (_req: Request, res: Response): void => {
     res.json({ status: 'ok' });
 };
 
+// Tools info endpoint
+const handleToolsInfo = (_req: Request, res: Response): void => {
+    broadcastLog('info', 'Tools info requested');
+    const toolsInfo = tools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        requiredParameters: 'required' in tool.schema ? Object.keys(tool.schema.required) : [],
+        schema: tool.schema
+    }));
+    res.json(toolsInfo);
+};
+
+// Servers info endpoint
+const handleServersInfo = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        broadcastLog('info', 'Servers info requested');
+        const serversInfo = await Promise.all(
+            Object.entries(config.mcp_servers).map(async ([name, server]) => {
+                try {
+                    // Find all tools associated with this server
+                    const serverTools = tools.filter(tool => 
+                        tool.name.toLowerCase().includes(name.toLowerCase()) ||
+                        tool.description.toLowerCase().includes(name.toLowerCase())
+                    );
+
+                    let status: 'running' | 'stopped' | 'error' = 'stopped';
+                    let error: string | undefined;
+
+                    if (serverTools.length > 0) {
+                        // If we have any tools from this server, consider it running
+                        status = 'running';
+                        // Log available operations for this server
+                        const operations = serverTools.map(tool => tool.name).join(', ');
+                        broadcastLog('debug', `Server ${name} operations available: ${operations}`);
+                    } else {
+                        status = 'stopped';
+                        error = 'No tools found for this server';
+                        broadcastLog('debug', `No tools found for server ${name}`);
+                    }
+
+                    // Include server configuration in response
+                    const serverInfo = {
+                        name,
+                        command: server.command,
+                        args: server.args,
+                        status,
+                        error,
+                        lastChecked: new Date().toISOString(),
+                        // Include additional useful information
+                        toolCount: serverTools.length,
+                        env: server.env ? Object.keys(server.env) : [],
+                    };
+
+                    broadcastLog('info', `${name}: ${status}${error ? ` (${error})` : ''}`);
+                    return serverInfo;
+
+                } catch (err) {
+                    const errorMsg = err instanceof Error ? err.message : 'Unknown error checking server status';
+                    broadcastLog('error', `Failed to check ${name} server: ${errorMsg}`);
+                    return {
+                        name,
+                        command: server.command,
+                        args: server.args,
+                        status: 'error' as const,
+                        error: errorMsg,
+                        lastChecked: new Date().toISOString(),
+                        toolCount: 0,
+                        env: server.env ? Object.keys(server.env) : [],
+                    };
+                }
+            })
+        );
+        
+        broadcastLog('info', `Server status check completed. Found ${serversInfo.length} servers.`);
+        
+        // Add summary statistics
+        const summary = {
+            total: serversInfo.length,
+            running: serversInfo.filter(s => s.status === 'running').length,
+            stopped: serversInfo.filter(s => s.status === 'stopped').length,
+            error: serversInfo.filter(s => s.status === 'error').length,
+        };
+        
+        broadcastLog('info', `Summary: ${summary.running} running, ${summary.stopped} stopped, ${summary.error} error`);
+        
+        res.json({
+            servers: serversInfo,
+            summary,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        broadcastLog('error', `Error checking server status: ${errorMsg}`);
+        res.status(500).json({ 
+            error: 'Failed to check server status',
+            details: errorMsg,
+            timestamp: new Date().toISOString()
+        });
+    }
+};
+
+// MCP Config endpoint
+const handleMcpConfig = (_req: Request, res: Response): void => {
+    broadcastLog('info', 'MCP config requested');
+    res.json({
+        llm: {
+            model_provider: config.llm.model_provider,
+            model: config.llm.model,
+            temperature: config.llm.temperature,
+            max_tokens: config.llm.max_tokens
+        }
+    });
+};
+
+// Initialize terminal server
+broadcastLog('info', '=== Initializing Terminal Server ===');
+setupTerminalServer(httpServer, process.cwd());
+broadcastLog('info', 'Terminal server initialized successfully');
+
 app.post('/api/chat', handleChat);
 app.get('/health', handleHealth);
+app.get('/api/tools', handleToolsInfo);
+app.get('/api/servers', handleServersInfo);
+app.get('/api/config', handleMcpConfig);
 
-server.listen(port, () => {
+httpServer.listen(port, () => {
     broadcastLog('info', '\n=== Server Started ===');
     broadcastLog('info', `MCP server listening at http://localhost:${port}`);
     broadcastLog('info', 'Ready to handle requests');
