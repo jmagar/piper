@@ -39,7 +39,7 @@ A python version of this MCP client is available
     - `.gitignore` is configured to ignore `.env`
       to prevent accidental commits of the credentials.
 
-3. Configure LLM and MCP Servers settings `llm_mcp_config.json5` as needed.
+3. Configure LLM and MCP Servers settings in `../llm_mcp_config.json5` as needed.
 
     - [The configuration file format](https://github.com/hideya/mcp-client-langchain-ts/blob/main/llm_mcp_config.json5)
       for MCP servers follows the same structure as
@@ -74,4 +74,4 @@ npm run start:h
 
 At the prompt, you can simply press Enter to use example queries that perform MCP server tool invocations.
 
-Example queries can be configured in  `llm_mcp_config.json5`
+Example queries can be configured in `../llm_mcp_config.json5`

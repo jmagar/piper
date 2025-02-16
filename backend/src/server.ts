@@ -8,9 +8,15 @@ import { createToolsHandler } from './modules/tools.js';
 import { createServersHandler } from './modules/servers.js';
 import { createConfigHandler } from './modules/config.js';
 import { broadcastLog } from './utils/logger.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables
-dotenv.config();
+// ES Module path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from project root
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const port = process.env.PORT || 4100;
 
 // Initialize Express and middleware

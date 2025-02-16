@@ -121,7 +121,7 @@ pooper/
 ## 📝 Configuration
 
 ### MCP Servers
-Configure your MCP servers in `backend/llm_mcp_config.json5`:
+Configure your MCP servers in `llm_mcp_config.json5`:
 
 ```json5
 {

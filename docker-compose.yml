@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  redis:
+    container_name: pooper-redis
+    image: redis:7-alpine
+    ports:
+      - "7654:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - jakenet
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    container_name: pooper-db
+    image: postgres:16-alpine
+    ports:
+      - "7432:5432"
+    environment:
+      POSTGRES_USER: pooper
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pooperdev}
+      POSTGRES_DB: pooper
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - jakenet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pooper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+    name: pooper_redis_data
+  postgres_data:
+    name: pooper_postgres_data
+
+networks:
+  jakenet:
+    external: true 

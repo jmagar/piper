@@ -8,6 +8,12 @@ import readline from 'readline';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES Module path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize environment variables
 dotenv.config();
@@ -33,7 +39,7 @@ const parseArguments = (): Arguments => {
         type: 'string',
         description: 'Path to config file',
         demandOption: false,
-        default: 'llm_mcp_config.json5',
+        default: path.resolve(__dirname, '../../llm_mcp_config.json5'),
         alias: 'c',
       },
       verbose: {

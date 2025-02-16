@@ -6,6 +6,12 @@ import { loadConfig } from '../load-config.js';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { StructuredTool } from '@langchain/core/tools';
 import { Config } from '../types/index.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES Module path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function initializeMcpTools(config: Config) {
     const { tools, cleanup } = await convertMcpToLangchainTools(
@@ -30,7 +36,7 @@ async function initializeAgent(model: BaseChatModel, tools: StructuredTool[]) {
 export async function initializeServer() {
     try {
         // Load configuration
-        const config = await loadConfig('llm_mcp_config.json5');
+        const config = await loadConfig(path.resolve(__dirname, '../../../llm_mcp_config.json5'));
         console.log('Configuration loaded');
         
         // Initialize LLM

@@ -6,7 +6,8 @@ import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const nextConfig: NextConfig = {
-  env: process.env
+    // Environment variables are automatically loaded by Next.js
+    // from .env files, so we don't need to specify them here
 };
 
 export default nextConfig;
