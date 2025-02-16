@@ -1,6 +1,6 @@
 # 🚀 Pooper - Model Context Protocol Client
 
-A modern, beautiful web interface for interacting with AI models through the Model Context Protocol (MCP). Built with Next.js, TypeScript, and shadcn/ui.
+A modern, beautiful web interface for interacting with AI models through the Model Context Protocol (MCP). Built with Next.js, TypeScript, and shadcn/ui. The backend is based on [mcp-client-langchain-ts](https://github.com/hideya/mcp-client-langchain-ts), a robust TypeScript implementation of the MCP client using LangChain.
 
 ## ✨ Features
 
@@ -65,20 +65,16 @@ pnpm install
 
 3. Configure environment variables:
 ```bash
-# Backend
-cp backend/.env.template backend/.env
-# Edit backend/.env with your API keys
-
-# Frontend
-cp frontend/.env.template frontend/.env.local
-# Edit frontend/.env.local with your configuration
+# Copy the template to project root
+cp .env.template .env
+# Edit .env with your configuration and API keys
 ```
 
 4. Start the development servers:
 ```bash
 # Terminal 1: Start the backend
 cd backend
-pnpm dev
+pnpm run dev:server
 
 # Terminal 2: Start the frontend
 cd frontend
@@ -91,14 +87,24 @@ pnpm dev
 
 ```
 pooper/
-├── backend/             # Express.js backend
-│   ├── src/            # Source files
-│   └── tests/          # Test files
-├── frontend/           # Next.js frontend
-│   ├── app/           # App router pages
-│   ├── components/    # React components
-│   └── lib/           # Utility functions
-└── docs/              # Documentation
+├── .env                # Environment variables
+├── .env.template      # Environment template
+├── docker-compose.yml # Docker services configuration
+├── llm_mcp_config.json5 # MCP configuration
+│
+├── backend/          # Express.js backend
+│   ├── src/         # Source files
+│   │   ├── modules/ # Server modules
+│   │   ├── types/   # TypeScript types
+│   │   └── utils/   # Utility functions
+│   └── tests/       # Test files
+│
+├── frontend/        # Next.js frontend
+│   ├── app/        # App router pages
+│   ├── components/ # React components
+│   │   ├── ui/    # UI components
+│   │   └── ...    # Feature components
+│   └── lib/       # Utility functions
 ```
 
 ## 🧩 Technologies
@@ -111,10 +117,10 @@ pooper/
 - Model Context Protocol
 
 ### Frontend
-- Next.js 14
-- React 19
+- Next.js 15
+- React
 - TypeScript
-- Tailwind CSS
+- Tailwind CSS v4
 - shadcn/ui
 - Lucide Icons
 
@@ -152,6 +158,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
+- [mcp-client-langchain-ts](https://github.com/hideya/mcp-client-langchain-ts) for the excellent base MCP client implementation
 - [Model Context Protocol](https://github.com/modelcontextprotocol/protocol) for the amazing protocol
 - [shadcn/ui](https://ui.shadcn.com/) for the beautiful components
 - [Lucide](https://lucide.dev/) for the icons
