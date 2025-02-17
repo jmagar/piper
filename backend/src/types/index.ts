@@ -52,4 +52,15 @@ export interface LogEntry {
     timestamp: string;
     level: 'info' | 'error' | 'debug';
     message: string;
-} 
+}
+
+export type {
+    Session,
+    OnlineStatus,
+    UserStatus,
+    TypingState,
+    ToolResult,
+    CacheOperations,
+    MessageCache,
+    ToolCache
+} from './redis.js'; 

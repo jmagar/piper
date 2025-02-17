@@ -1,0 +1,70 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User model for authentication and preferences
+model User {
+  id            String         @id @default(uuid())
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  email         String        @unique
+  name          String?
+  preferences   Json?         // Stores user preferences as JSON: { theme?: 'light' | 'dark', notifications?: boolean, language?: string }
+  conversations Conversation[]
+  messages      ChatMessage[]
+
+  @@map("users")
+}
+
+// Conversation model for chat history
+model Conversation {
+  id              String        @id @default(uuid())
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  title           String?
+  last_message_at DateTime      @default(now())
+  messages        ChatMessage[]
+  user           User?         @relation(fields: [user_id], references: [id])
+  user_id        String?
+
+  @@map("conversations")
+}
+
+// ChatMessage model for individual messages
+model ChatMessage {
+  id              String        @id @default(uuid())
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  role            String        // "user" or "assistant"
+  content         String        @db.Text
+  metadata        Json?         // Stores message metadata (e.g., tool usage)
+  conversation    Conversation  @relation(fields: [conversation_id], references: [id])
+  conversation_id String
+  user           User?         @relation(fields: [user_id], references: [id])
+  user_id        String?
+
+  @@index([conversation_id])
+  @@index([user_id])
+  @@map("chat_messages")
+}
+
+// ToolResult model for caching tool outputs
+model ToolResult {
+  id          String   @id @default(uuid())
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  tool_name   String
+  input_hash  String   // Base64 encoded hash of the input
+  result      Json     // The cached result
+  expires_at  DateTime
+
+  @@unique([tool_name, input_hash])
+  @@index([expires_at])
+  @@map("tool_results")
+} 

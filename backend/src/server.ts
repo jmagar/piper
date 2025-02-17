@@ -3,13 +3,17 @@ import cors from 'cors';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 import { initializeServer } from './modules/server.js';
-import { createChatHandler } from './modules/chat.js';
+import { createChatController, ChatService, ChatRepository } from './modules/chat/index.js';
 import { createToolsHandler } from './modules/tools.js';
 import { createServersHandler } from './modules/servers.js';
 import { createConfigHandler } from './modules/config.js';
+import { MessageCacheService } from './services/cache/message.cache.js';
+import { ToolCacheService } from './services/cache/tool.cache.js';
+import { SessionCacheService } from './services/cache/session.cache.js';
 import { broadcastLog } from './utils/logger.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { networkInterfaces } from 'os';
 
 // ES Module path resolution
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +26,25 @@ const port = process.env.PORT || 4100;
 // Initialize Express and middleware
 const app = express();
 const httpServer = createServer(app);
+
+// Get all network interfaces
+function getNetworkAddresses(): string[] {
+    const interfaces = networkInterfaces();
+    const addresses: string[] = [];
+    
+    for (const [, nets] of Object.entries(interfaces)) {
+        if (!nets) continue;
+        
+        for (const net of nets) {
+            // Skip internal and non-IPv4 addresses
+            if (!net.internal && net.family === 'IPv4') {
+                addresses.push(net.address);
+            }
+        }
+    }
+    
+    return addresses;
+}
 
 // CORS configuration
 const requiredPorts = ['3000', '3002', '4100'];
@@ -71,8 +94,21 @@ async function startServer() {
             cleanup
         } = await initializeServer();
 
+        // Initialize chat dependencies
+        const chatRepository = new ChatRepository();
+        const messageCache = new MessageCacheService();
+        const toolCache = new ToolCacheService();
+        const sessionCache = new SessionCacheService();
+        const chatService = new ChatService(
+            agent,
+            chatRepository,
+            messageCache,
+            toolCache,
+            sessionCache
+        );
+
         // Set up route handlers
-        app.post('/chat', createChatHandler(agent));
+        app.post('/chat', createChatController(chatService));
         app.get('/tools', createToolsHandler(tools));
         app.get('/servers', createServersHandler(config, tools));
         app.get('/config', createConfigHandler(config));
@@ -80,9 +116,19 @@ async function startServer() {
         // Start HTTP server
         httpServer.listen({ port: port, host: '0.0.0.0' }, () => {
             broadcastLog('info', `Server listening on all interfaces at port ${port}`);
-            broadcastLog('info', `You can access it via:`);
-            broadcastLog('info', `- http://localhost:${port}`);
-            broadcastLog('info', `- http://YOUR_IP:${port}`);
+            broadcastLog('info', 'You can access it via:');
+            broadcastLog('info', `- http://localhost:${port} (local access)`);
+            
+            // Log all available network addresses
+            const networkAddresses = getNetworkAddresses();
+            if (networkAddresses.length > 0) {
+                broadcastLog('info', 'Network interfaces:');
+                networkAddresses.forEach(addr => {
+                    broadcastLog('info', `- http://${addr}:${port}`);
+                });
+            } else {
+                broadcastLog('info', 'No external network interfaces found');
+            }
         });
 
         // Handle process signals

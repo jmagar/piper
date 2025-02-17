@@ -1,8 +1,9 @@
 import { WebSocket } from 'ws';
 import { format } from 'date-fns';
-import { LogLevel } from '../types/index.js';
 import fs from 'fs';
 import path from 'path';
+
+export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 // Create logs directory if it doesn't exist
 const logsDir = path.join(process.cwd(), 'logs');
@@ -20,17 +21,18 @@ const logStream = fs.createWriteStream(
 const logClients = new Set<WebSocket>();
 
 function formatTimestamp(date: Date): string {
-    return `[${format(date, 'yyyy/MM/dd')}][${format(date, 'hh:mm:ss aa')} EST]`;
+    return format(date, 'yyyy-MM-dd HH:mm:ss.SSS');
 }
 
-function writeToFile(logEntry: { timestamp: string; level: LogLevel; message: string }) {
+function writeToFile(logEntry: { timestamp: string; level: LogLevel; message: string }): void {
     const logLine = `${logEntry.timestamp} [${logEntry.level.toUpperCase()}] ${logEntry.message}\n`;
     logStream.write(logLine);
 }
 
-export function broadcastLog(level: LogLevel, message: string) {
+export function broadcastLog(level: LogLevel, message: string): void {
+    const timestamp = formatTimestamp(new Date());
     const logEntry = {
-        timestamp: formatTimestamp(new Date()),
+        timestamp,
         level,
         message
     };
@@ -38,41 +40,52 @@ export function broadcastLog(level: LogLevel, message: string) {
     // Write to file
     writeToFile(logEntry);
     
+    // Format console message
+    const formattedMessage = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+    
+    // Log to console with appropriate method
+    switch (level) {
+        case 'error':
+            console.error(formattedMessage);
+            break;
+        case 'warn':
+            console.warn(formattedMessage);
+            break;
+        case 'debug':
+            console.debug(formattedMessage);
+            break;
+        case 'info':
+            console.log(formattedMessage);
+            break;
+    }
+    
     // Broadcast to WebSocket clients
     logClients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(logEntry));
         }
     });
-    
-    // Also log to console with the same timestamp format
-    const logMessage = `${logEntry.timestamp} [${level.toUpperCase()}] ${message}`;
-    if (level === 'error') {
-        console.error(logMessage);
-    } else {
-        console.log(logMessage);
-    }
 }
 
-export function addLogClient(client: WebSocket) {
+export function addLogClient(client: WebSocket): void {
     logClients.add(client);
 }
 
-export function removeLogClient(client: WebSocket) {
+export function removeLogClient(client: WebSocket): void {
     logClients.delete(client);
 }
 
-export function clearLogClients() {
+export function clearLogClients(): void {
     logClients.clear();
 }
 
-export function terminateAllClients() {
+export function terminateAllClients(): void {
     logClients.forEach(client => client.terminate());
     clearLogClients();
 }
 
 // Clean up function for the logger
-export function cleanupLogger() {
+export function cleanupLogger(): void {
     logStream.end();
     terminateAllClients();
 } 
