@@ -6,16 +6,44 @@ import { ChatRepository } from './chat.repository.js';
 import { MessageCacheService } from '../../services/cache/message.cache.js';
 import { ToolCacheService } from '../../services/cache/tool.cache.js';
 import { SessionCacheService } from '../../services/cache/session.cache.js';
+import { StatsService } from '../../services/stats/stats.service.js';
+import { StarsService } from '../../services/stars/stars.service.js';
+import { ConversationService } from '../../services/conversation/conversation.service.js';
 import type { ToolUsage } from './chat.types.js';
+import type { ChatMessage } from '../../types/db.js';
+
+export interface QueryOptions {
+    page: number;
+    limit: number;
+    search: string;
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+}
+
+export interface DatabaseQueryOptions {
+    skip: number;
+    take: number;
+    search: string;
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+}
 
 export class ChatService {
+    private readonly statsService: StatsService;
+    private readonly starsService: StarsService;
+    private readonly conversationService: ConversationService;
+
     constructor(
         private readonly agent: Agent,
         private readonly chatRepository: ChatRepository,
         private readonly messageCache: MessageCacheService,
         private readonly toolCache: ToolCacheService,
         private readonly sessionCache: SessionCacheService
-    ) {}
+    ) {
+        this.statsService = new StatsService();
+        this.starsService = new StarsService();
+        this.conversationService = new ConversationService();
+    }
 
     async processMessage(
         message: string,
@@ -71,17 +99,14 @@ export class ChatService {
                 );
 
                 if (toolMessages.length > 0) {
-                    // Since tool message type is internal to LangChain, we need to access properties carefully
                     const toolMessage = toolMessages[0];
                     const toolContent = toolMessage.content;
                     
-                    // Parse tool content assuming it contains the required fields
                     let toolName = 'unknown';
                     let toolInput = '';
                     let toolOutput = '';
                     
                     if (typeof toolContent === 'string') {
-                        // Try to extract tool info from content
                         const nameMatch = toolContent.match(/Tool: (.*?)(?:\n|$)/);
                         const inputMatch = toolContent.match(/Input: (.*?)(?:\n|$)/);
                         const outputMatch = toolContent.match(/Output: (.*?)(?:\n|$)/);
@@ -104,7 +129,6 @@ export class ChatService {
                     ? lastMessage.content 
                     : JSON.stringify(lastMessage.content);
             } catch (error) {
-                // Handle error case
                 currentToolUsage = {
                     name: 'error',
                     input: message,
@@ -123,21 +147,40 @@ export class ChatService {
 
             const assistantMessage = await this.chatRepository.addMessage(
                 conversation.id,
-                response as string,
+                response,
                 'assistant',
                 currentToolUsage
             );
 
+            // Update stats
+            if (userId) {
+                await this.statsService.updateUserStats(userId, message.length);
+                await this.statsService.updateConversationStats(
+                    conversation.id,
+                    'user',
+                    false
+                );
+                await this.statsService.updateConversationStats(
+                    conversation.id,
+                    'assistant',
+                    !!currentToolUsage
+                );
+            }
+
+            // Generate and update conversation summary
+            const allMessages = [...conversation.messages, userMessage, assistantMessage];
+            const summary = await this.conversationService.generateSummary(allMessages);
+            await this.conversationService.updateSummary(conversation.id, summary);
+
             // Update cache
-            const updatedMessages = [...conversation.messages, userMessage, assistantMessage];
-            await this.messageCache.cacheConversationMessages(conversation.id, updatedMessages);
+            await this.messageCache.cacheConversationMessages(conversation.id, allMessages);
 
             // Clear typing indicator
             if (userId && conversationId) {
                 await this.sessionCache.clearTypingIndicator(userId, conversationId);
             }
 
-            return response as string;
+            return response;
 
         } catch (error) {
             broadcastLog('error', `Error processing message: ${error}`);
@@ -149,5 +192,165 @@ export class ChatService {
 
             throw error;
         }
+    }
+
+    async starMessage(messageId: string, userId: string, note?: string): Promise<void> {
+        await this.starsService.starMessage(messageId, userId, note);
+    }
+
+    async unstarMessage(messageId: string, userId: string): Promise<void> {
+        await this.starsService.unstarMessage(messageId, userId);
+    }
+
+    async getStarredMessages(userId: string, options: QueryOptions) {
+        const { page, limit, search, sortBy, sortOrder } = options;
+        const dbOptions: DatabaseQueryOptions = {
+            skip: (page - 1) * limit,
+            take: limit,
+            search,
+            sortBy,
+            sortOrder
+        };
+
+        // First try to get from cache
+        const cacheKey = `starred:${userId}:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+        const cached = await this.messageCache.getCachedMessages(cacheKey);
+        if (cached) {
+            return {
+                messages: cached,
+                hasMore: cached.length === limit,
+                total: await this.starsService.getStarredMessagesCount(userId, search)
+            };
+        }
+
+        // If not in cache, get from database
+        const starredMessages = await this.starsService.getStarredMessages(userId, dbOptions);
+        const messages: ChatMessage[] = starredMessages.map(sm => ({
+            id: sm.message.id,
+            created_at: sm.message.created_at,
+            updated_at: sm.message.updated_at,
+            role: sm.message.role as 'user' | 'assistant',
+            content: sm.message.content,
+            metadata: sm.message.metadata as Record<string, unknown>,
+            conversation_id: sm.message.conversation_id,
+            user_id: sm.message.user_id
+        }));
+
+        // Cache the results
+        await this.messageCache.cacheConversationMessages(cacheKey, messages);
+
+        return {
+            messages,
+            hasMore: messages.length === limit,
+            total: await this.starsService.getStarredMessagesCount(userId, search)
+        };
+    }
+
+    async archiveConversation(conversationId: string): Promise<void> {
+        await this.conversationService.archiveConversation(conversationId);
+    }
+
+    async unarchiveConversation(conversationId: string): Promise<void> {
+        await this.conversationService.unarchiveConversation(conversationId);
+    }
+
+    async getArchivedConversations(userId: string, options: QueryOptions) {
+        const { page, limit, search, sortBy, sortOrder } = options;
+        const dbOptions: DatabaseQueryOptions = {
+            skip: (page - 1) * limit,
+            take: limit,
+            search,
+            sortBy,
+            sortOrder
+        };
+
+        // First try to get from cache
+        const cacheKey = `conversations:archived:${userId}:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+        const cached = await this.messageCache.getCachedMessages(cacheKey);
+        if (cached) {
+            return {
+                conversations: cached,
+                hasMore: cached.length === limit,
+                total: await this.conversationService.getArchivedConversationsCount(userId, search)
+            };
+        }
+
+        // If not in cache, get from database
+        const conversations = await this.conversationService.getArchivedConversations(userId, dbOptions);
+        const messages: ChatMessage[] = conversations.flatMap(conv => 
+            conv.messages.map(msg => ({
+                id: msg.id,
+                created_at: msg.created_at,
+                updated_at: msg.updated_at,
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+                metadata: msg.metadata as Record<string, unknown>,
+                conversation_id: msg.conversation_id,
+                user_id: msg.user_id
+            }))
+        );
+
+        // Cache the results
+        await this.messageCache.cacheConversationMessages(cacheKey, messages);
+
+        return {
+            conversations,
+            hasMore: conversations.length === limit,
+            total: await this.conversationService.getArchivedConversationsCount(userId, search)
+        };
+    }
+
+    async getActiveConversations(userId: string, options: QueryOptions) {
+        const { page, limit, search, sortBy, sortOrder } = options;
+        const dbOptions: DatabaseQueryOptions = {
+            skip: (page - 1) * limit,
+            take: limit,
+            search,
+            sortBy,
+            sortOrder
+        };
+
+        // First try to get from cache
+        const cacheKey = `conversations:active:${userId}:${page}:${limit}:${search}:${sortBy}:${sortOrder}`;
+        const cached = await this.messageCache.getCachedMessages(cacheKey);
+        if (cached) {
+            return {
+                conversations: cached,
+                hasMore: cached.length === limit,
+                total: await this.conversationService.getActiveConversationsCount(userId, search)
+            };
+        }
+
+        // If not in cache, get from database
+        const conversations = await this.conversationService.getActiveConversations(userId, dbOptions);
+        const messages: ChatMessage[] = conversations.flatMap(conv => 
+            conv.messages.map(msg => ({
+                id: msg.id,
+                created_at: msg.created_at,
+                updated_at: msg.updated_at,
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content,
+                metadata: msg.metadata as Record<string, unknown>,
+                conversation_id: msg.conversation_id,
+                user_id: msg.user_id
+            }))
+        );
+
+        // Cache the results
+        await this.messageCache.cacheConversationMessages(cacheKey, messages);
+
+        return {
+            conversations,
+            hasMore: conversations.length === limit,
+            total: await this.conversationService.getActiveConversationsCount(userId, search)
+        };
+    }
+
+    async getUserStats(userId: string) {
+        return await this.statsService.getUserStats(userId);
+    }
+
+    async getConversationStats(conversationId: string) {
+        return await this.statsService.getConversationStats(conversationId);
     }
 } 

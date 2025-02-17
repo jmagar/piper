@@ -10,21 +10,36 @@ A modern, beautiful web interface for interacting with AI models through the Mod
 - Support for markdown and code blocks
 - Message reactions and editing
 - Copy and regenerate responses
+- Star/favorite important messages
+- Conversation history with search and filtering
+- Conversation archiving
 
 ### 🛠️ MCP Tools Integration
-- Visual tool explorer
+- Visual tool explorer with categorized view
 - Real-time tool execution feedback
 - Comprehensive tool documentation
 - Tool usage statistics
+- Currently supported MCP servers:
+  - 📂 Filesystem - File and directory operations
+  - 🌤️ Weather - Weather information service
+  - 🔍 Brave Search - Web search capabilities
+  - 🌐 Puppeteer - Web browsing and screenshots
+  - ⏰ Time - Time-related operations
+  - 📦 Package Docs - NPM package documentation
+  - 🌐 Fetch - HTTP request handling
+  - 🐙 GitHub - GitHub repository interactions
+  - 📝 Documentation - Markdown and text processing
+  - 🔬 WCGW - What Could Go Wrong analysis tool
 
 ### 📊 Server Management
 - Real-time server status monitoring
 - Server health checks
 - Environment variable management
 - Tool availability tracking
+- Server statistics dashboard
 
 ### 📝 Logging System
-- Real-time log streaming
+- Real-time log streaming via WebSocket
 - Beautiful log visualization
 - Log level filtering
 - Timestamp formatting
@@ -36,13 +51,27 @@ A modern, beautiful web interface for interacting with AI models through the Mod
 - Responsive layout
 - Smooth animations
 - Accessibility focused
+- Real-time typing indicators
+- Online status tracking
+
+### 🗄️ Data Management
+- PostgreSQL for persistent storage
+- Redis for caching and real-time features
+- Message and conversation archiving
+- Tool result caching
+- Rate limiting
+- Session management
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+
 - pnpm
+- PostgreSQL 16+
+- Redis 7+
 - Model Context Protocol servers
+- Python 3.8+ (for some MCP servers)
+- `uv` package manager (for Python-based servers)
 
 ### Installation
 
@@ -67,10 +96,28 @@ pnpm install
 ```bash
 # Copy the template to project root
 cp .env.template .env
-# Edit .env with your configuration and API keys
+# Edit .env with your configuration and API keys:
+# - ANTHROPIC_API_KEY
+# - OPENAI_API_KEY (optional)
+# - BRAVE_API_KEY
+# - GITHUB_PERSONAL_ACCESS_TOKEN
+# - Database and Redis configuration
 ```
 
-4. Start the development servers:
+4. Start the infrastructure services:
+```bash
+# Start PostgreSQL and Redis
+docker-compose up -d
+```
+
+5. Initialize the database:
+```bash
+cd backend
+pnpm prisma migrate dev
+pnpm prisma db seed
+```
+
+6. Start the development servers:
 ```bash
 # Terminal 1: Start the backend
 cd backend
@@ -81,7 +128,7 @@ cd frontend
 pnpm dev
 ```
 
-5. Open [http://localhost:3002](http://localhost:3002) in your browser.
+7. Open [http://localhost:3002](http://localhost:3002) in your browser.
 
 ## 🏗️ Project Structure
 
@@ -97,6 +144,7 @@ pooper/
 │   │   ├── modules/ # Server modules
 │   │   ├── types/   # TypeScript types
 │   │   └── utils/   # Utility functions
+│   ├── prisma/      # Database schema and migrations
 │   └── tests/       # Test files
 │
 ├── frontend/        # Next.js frontend
@@ -115,6 +163,9 @@ pooper/
 - WebSocket
 - LangChain
 - Model Context Protocol
+- Prisma ORM
+- Redis
+- PostgreSQL
 
 ### Frontend
 - Next.js 15
@@ -123,6 +174,7 @@ pooper/
 - Tailwind CSS v4
 - shadcn/ui
 - Lucide Icons
+- Sonner Toasts
 
 ## 📝 Configuration
 
@@ -132,21 +184,25 @@ Configure your MCP servers in `llm_mcp_config.json5`:
 ```json5
 {
   "llm": {
-    "model_provider": "openai",
-    "model": "gpt-4",
-    // ...
+    "model_provider": "anthropic",
+    "model": "claude-3-5-sonnet-20241022",
+    "temperature": 0.7,
+    "max_tokens": 1000,
   },
   "mcp_servers": {
-    // ...
+    // Server configurations...
   }
 }
 ```
 
 ### Environment Variables
 Required environment variables:
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key (optional)
-- `BRAVE_API_KEY` - Brave Search API key (optional)
+- `ANTHROPIC_API_KEY` - Anthropic API key
+- `OPENAI_API_KEY` - OpenAI API key (optional)
+- `BRAVE_API_KEY` - Brave Search API key
+- `GITHUB_PERSONAL_ACCESS_TOKEN` - GitHub Personal Access Token
+- Database and Redis configuration
+- CORS and port settings
 
 ## 🤝 Contributing
 

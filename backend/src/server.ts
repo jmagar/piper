@@ -108,7 +108,16 @@ async function startServer() {
         );
 
         // Set up route handlers
-        app.post('/chat', createChatController(chatService));
+        const chatController = createChatController(chatService);
+        app.post('/chat', chatController.handleChat);
+        app.post('/chat/star', chatController.handleStarMessage);
+        app.post('/chat/unstar', chatController.handleUnstarMessage);
+        app.get('/chat/starred/:userId', chatController.handleGetStarredMessages);
+        app.post('/chat/archive', chatController.handleArchiveConversation);
+        app.post('/chat/unarchive', chatController.handleUnarchiveConversation);
+        app.get('/chat/conversations/:userId', chatController.handleGetConversations);
+        app.get('/chat/stats', chatController.handleGetStats);
+
         app.get('/tools', createToolsHandler(tools));
         app.get('/servers', createServersHandler(config, tools));
         app.get('/config', createConfigHandler(config));

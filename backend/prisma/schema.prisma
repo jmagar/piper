@@ -18,6 +18,8 @@ model User {
   preferences   Json?         // Stores user preferences as JSON: { theme?: 'light' | 'dark', notifications?: boolean, language?: string }
   conversations Conversation[]
   messages      ChatMessage[]
+  starred_messages StarredMessage[]
+  usage_stats   UserStats?
 
   @@map("users")
 }
@@ -28,11 +30,15 @@ model Conversation {
   created_at      DateTime      @default(now())
   updated_at      DateTime      @updatedAt
   title           String?
+  summary         String?       @db.Text  // AI-generated summary of the conversation
   last_message_at DateTime      @default(now())
+  is_archived     Boolean       @default(false)  // For history management
   messages        ChatMessage[]
   user           User?         @relation(fields: [user_id], references: [id])
   user_id        String?
+  stats          ConversationStats?
 
+  @@index([is_archived])
   @@map("conversations")
 }
 
@@ -48,10 +54,57 @@ model ChatMessage {
   conversation_id String
   user           User?         @relation(fields: [user_id], references: [id])
   user_id        String?
+  starred_by     StarredMessage[]
 
   @@index([conversation_id])
   @@index([user_id])
   @@map("chat_messages")
+}
+
+// StarredMessage model for favorited messages
+model StarredMessage {
+  id          String      @id @default(uuid())
+  created_at  DateTime    @default(now())
+  note        String?     @db.Text  // Optional note about why it was starred
+  message     ChatMessage @relation(fields: [message_id], references: [id])
+  message_id  String
+  user        User        @relation(fields: [user_id], references: [id])
+  user_id     String
+
+  @@unique([message_id, user_id])  // One star per message per user
+  @@map("starred_messages")
+}
+
+// UserStats model for tracking user activity
+model UserStats {
+  id                      String   @id @default(uuid())
+  user                    User     @relation(fields: [user_id], references: [id])
+  user_id                 String   @unique
+  total_conversations     Int      @default(0)
+  total_messages          Int      @default(0)
+  total_starred          Int      @default(0)
+  average_response_length Float    @default(0)
+  last_active            DateTime @default(now())
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  @@map("user_stats")
+}
+
+// ConversationStats model for conversation metrics
+model ConversationStats {
+  id                  String       @id @default(uuid())
+  conversation        Conversation @relation(fields: [conversation_id], references: [id])
+  conversation_id     String       @unique
+  message_count       Int          @default(0)
+  user_message_count  Int          @default(0)
+  bot_message_count   Int          @default(0)
+  average_response_time Float      @default(0)
+  tool_usage_count    Int          @default(0)
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  @@map("conversation_stats")
 }
 
 // ToolResult model for caching tool outputs
