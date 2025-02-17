@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatMessage, sendMessage } from '@/lib/api';
 import { ThumbsUp, ThumbsDown, Edit2, RotateCcw, Copy, User, Bot } from 'lucide-react';
 import { format } from 'date-fns';
@@ -20,7 +19,6 @@ export function ChatInterface() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -144,7 +142,7 @@ export function ChatInterface() {
                     const match = line.match(numberedLinkPattern);
                     
                     if (match) {
-                        const [_, number, linkText, url, restOfLine] = match;
+                        const [, number, linkText, url, restOfLine] = match;
                         return (
                             <div key={`line-${lineIndex}`} className="flex gap-2 items-baseline py-1">
                                 <span className="text-muted-foreground">{number}</span>

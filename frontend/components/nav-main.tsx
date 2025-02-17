@@ -1,65 +1,99 @@
 "use client"
 
-import { ChevronRight, type LucideIcon } from "lucide-react"
-
+import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
+import { ChevronRight, LucideIcon } from "lucide-react"
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string
-    url: string
-    icon?: LucideIcon
-    isActive?: boolean
-    items?: {
-      title: string
-      url: string
-    }[]
-  }[]
-}) {
+interface NavItem {
+  title: string
+  url: string
+  icon?: LucideIcon
+  items?: NavItem[]
+}
+
+interface NavMainProps {
+  items: NavItem[]
+}
+
+export function NavMain({ items }: NavMainProps) {
+  const pathname = usePathname()
+  const [openGroups, setOpenGroups] = React.useState<string[]>([])
+
+  const toggleGroup = React.useCallback((title: string) => {
+    setOpenGroups(prev => 
+      prev.includes(title) 
+        ? prev.filter(t => t !== title)
+        : [...prev, title]
+    )
+  }, [])
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
-            <SidebarMenuItem>
+    <nav className="flex flex-col gap-2 p-2">
+      {items.map((item, index) => {
+        const Icon = item.icon
+        const isActive = pathname.startsWith(item.url)
+        const isOpen = openGroups.includes(item.title)
+
+        if (item.items) {
+          return (
+            <Collapsible
+              key={index}
+              open={isOpen}
+              onOpenChange={() => toggleGroup(item.title)}
+            >
               <CollapsibleTrigger asChild>
-                <SidebarMenuButton tooltip={item.title}>
-                  {item.icon && <item.icon />}
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                >
+                  {Icon && <Icon className="h-4 w-4" />}
                   <span>{item.title}</span>
-                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                </SidebarMenuButton>
+                  <ChevronRight 
+                    className={cn(
+                      "ml-auto h-4 w-4 transition-transform",
+                      isOpen && "rotate-90"
+                    )} 
+                  />
+                </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub>
-                  {item.items?.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
-                          <span>{subItem.title}</span>
-                        </a>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
+                <div className="mt-2 space-y-1 pl-6">
+                  {item.items.map((subItem, subIndex) => (
+                    <Link
+                      key={subIndex}
+                      href={subItem.url}
+                      className={cn(
+                        "block rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        pathname === subItem.url && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {subItem.title}
+                    </Link>
                   ))}
-                </SidebarMenuSub>
+                </div>
               </CollapsibleContent>
-            </SidebarMenuItem>
-          </Collapsible>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
+            </Collapsible>
+          )
+        }
+
+        return (
+          <Link
+            key={index}
+            href={item.url}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+              isActive && "bg-accent text-accent-foreground"
+            )}
+          >
+            {Icon && <Icon className="h-4 w-4" />}
+            <span>{item.title}</span>
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
 

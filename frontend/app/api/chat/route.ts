@@ -24,7 +24,7 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({ message }),
             cache: 'no-store',
-        }).catch(error => {
+        }).catch((error: Error) => {
             console.error('Fetch error details:', {
                 message: error.message,
                 cause: error.cause,
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         console.error('Error in chat route:', {
             error: error instanceof Error ? {
                 message: error.message,
-                cause: (error as any).cause,
+                cause: (error as Error).cause,
                 stack: error.stack
             } : error
         });
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 }
 
 // CORS is handled by Next.js middleware, so we don't need explicit CORS headers here
-export async function OPTIONS(request: Request) {
+export async function OPTIONS() {
     return new NextResponse(null, { status: 204 });
 }
 

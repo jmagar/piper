@@ -11,7 +11,6 @@ import {
   Bot, 
   Terminal, 
   Server, 
-  Cpu, 
   MessageSquare, 
   Database,
   Wrench,

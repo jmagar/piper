@@ -1,26 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import Link from "next/link"
-import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-  Database,
-  Server,
-  MessageSquare,
-  Sparkles,
-  CheckSquare,
-  Terminal,
-  Cpu,
-} from "lucide-react"
+import { MessageSquare, Settings2, Database, Server, Sparkles, CheckSquare, Terminal, BookOpen } from "lucide-react"
 
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
@@ -42,20 +23,20 @@ const data = {
       icon: MessageSquare,
       items: [
         {
-          title: "New",
-          url: "/chat",
+          title: "New Chat",
+          url: "/chat/new",
         },
         {
           title: "History",
-          url: "/messages/history",
+          url: "/chat/history",
         },
         {
           title: "Starred",
-          url: "/messages/starred",
+          url: "/chat/starred",
         },
         {
           title: "Stats",
-          url: "/messages/stats",
+          url: "/chat/stats",
         },
       ],
     },
