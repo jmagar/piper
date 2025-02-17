@@ -2,7 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { ChatInterface } from '@/components/chat-interface'
+import { ChatInterface } from '@/components/chat/chat-interface'
 
 export default function NewChatPage() {
   return (

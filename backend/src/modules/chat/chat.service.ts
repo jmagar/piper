@@ -49,7 +49,7 @@ export class ChatService {
         message: string,
         conversationId?: string,
         userId?: string
-    ): Promise<string> {
+    ): Promise<{ userMessage: ChatMessage; assistantMessage: ChatMessage }> {
         try {
             // Update user status if provided
             if (userId) {
@@ -180,7 +180,7 @@ export class ChatService {
                 await this.sessionCache.clearTypingIndicator(userId, conversationId);
             }
 
-            return response;
+            return { userMessage, assistantMessage };
 
         } catch (error) {
             broadcastLog('error', `Error processing message: ${error}`);

@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 import { initializeServer } from './modules/server.js';
@@ -10,10 +9,10 @@ import { createConfigHandler } from './modules/config.js';
 import { MessageCacheService } from './services/cache/message.cache.js';
 import { ToolCacheService } from './services/cache/tool.cache.js';
 import { SessionCacheService } from './services/cache/session.cache.js';
+import { setupWebSocket } from './websocket.js';
 import { broadcastLog } from './utils/logger.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { networkInterfaces } from 'os';
 
 // ES Module path resolution
 const __filename = fileURLToPath(import.meta.url);
@@ -27,52 +26,7 @@ const port = process.env.PORT || 4100;
 const app = express();
 const httpServer = createServer(app);
 
-// Get all network interfaces
-function getNetworkAddresses(): string[] {
-    const interfaces = networkInterfaces();
-    const addresses: string[] = [];
-    
-    for (const [, nets] of Object.entries(interfaces)) {
-        if (!nets) continue;
-        
-        for (const net of nets) {
-            // Skip internal and non-IPv4 addresses
-            if (!net.internal && net.family === 'IPv4') {
-                addresses.push(net.address);
-            }
-        }
-    }
-    
-    return addresses;
-}
-
-// CORS configuration
-const requiredPorts = ['3000', '3002', '4100'];
-const baseOrigins = process.env.CORS_ALLOWED_ORIGINS ? 
-    process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim()) :
-    ['localhost', '127.0.0.1'];
-
-// Generate all required origin combinations
-const allowedOrigins = baseOrigins.flatMap(host => {
-    // Remove any existing protocol or port
-    const cleanHost = host.replace(/^https?:\/\//, '').split(':')[0];
-    return requiredPorts.map(port => `http://${cleanHost}:${port}`);
-});
-
-const corsOptions = {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
-    credentials: true
-};
-
-// Log CORS configuration
-broadcastLog('info', 'CORS configuration:');
-broadcastLog('info', `Base hosts/IPs: ${baseOrigins.join(', ')}`);
-broadcastLog('info', `Allowed origins: ${allowedOrigins.join(', ')}`);
-
 // Set up middleware
-app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check endpoint
@@ -118,26 +72,16 @@ async function startServer() {
         app.get('/chat/conversations/:userId', chatController.handleGetConversations);
         app.get('/chat/stats', chatController.handleGetStats);
 
-        app.get('/tools', createToolsHandler(tools));
-        app.get('/servers', createServersHandler(config, tools));
-        app.get('/config', createConfigHandler(config));
+        app.get('/api/tools', createToolsHandler(tools));
+        app.get('/api/servers', createServersHandler(config));
+        app.get('/api/config', createConfigHandler(config));
+
+        // Initialize WebSocket server
+        setupWebSocket(httpServer);
 
         // Start HTTP server
-        httpServer.listen({ port: port, host: '0.0.0.0' }, () => {
-            broadcastLog('info', `Server listening on all interfaces at port ${port}`);
-            broadcastLog('info', 'You can access it via:');
-            broadcastLog('info', `- http://localhost:${port} (local access)`);
-            
-            // Log all available network addresses
-            const networkAddresses = getNetworkAddresses();
-            if (networkAddresses.length > 0) {
-                broadcastLog('info', 'Network interfaces:');
-                networkAddresses.forEach(addr => {
-                    broadcastLog('info', `- http://${addr}:${port}`);
-                });
-            } else {
-                broadcastLog('info', 'No external network interfaces found');
-            }
+        httpServer.listen(port, () => {
+            broadcastLog('info', `Server listening on port ${port}`);
         });
 
         // Handle process signals

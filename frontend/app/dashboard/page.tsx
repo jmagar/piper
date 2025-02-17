@@ -59,10 +59,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4100';
         const [serversRes, toolsRes, configRes] = await Promise.all([
-          fetch('http://localhost:4100/api/servers'),
-          fetch('http://localhost:4100/api/tools'),
-          fetch('http://localhost:4100/api/config')
+          fetch(`${baseUrl}/api/servers`),
+          fetch(`${baseUrl}/api/tools`),
+          fetch(`${baseUrl}/api/config`)
         ]);
 
         if (serversRes.ok && toolsRes.ok && configRes.ok) {

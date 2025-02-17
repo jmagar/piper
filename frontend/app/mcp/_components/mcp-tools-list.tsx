@@ -51,11 +51,47 @@ const getServerIcon = (serverName: string) => {
 };
 
 const getServerFromToolName = (toolName: string): string => {
-    if (toolName.includes('file') || toolName.includes('directory')) return 'filesystem';
-    if (toolName.includes('search')) return 'brave-search';
-    if (toolName.includes('weather')) return 'weather';
-    if (toolName.includes('browse') || toolName.includes('screenshot')) return 'puppeteer';
-    if (toolName.includes('fetch') || toolName.includes('http')) return 'fetch';
+    // Media processing tools
+    if (toolName.match(/^(execute-ffmpeg|convert-video|compress-video|trim-video)$/)) return 'mediaProcessor';
+    
+    // File system tools
+    if (toolName.match(/^(read_file|write_file|edit_file|create_directory|list_directory|directory_tree|move_file|search_files|get_file_info|list_allowed_directories)$/)) return 'filesystem';
+    
+    // Search tools
+    if (toolName.match(/^(brave_web_search|brave_local_search)$/)) return 'brave-search';
+    if (toolName.match(/^web_search$/)) return 'searxng';
+    
+    // Weather tools
+    if (toolName.match(/^(get-alerts|get-forecast)$/)) return 'weather';
+    
+    // Browser automation tools
+    if (toolName.match(/^puppeteer_/)) return 'puppeteer';
+    
+    // Shell tools
+    if (toolName.match(/^shell_/)) return 'shell';
+    
+    // Docker tools
+    if (toolName.match(/^(create-container|deploy-compose|get-logs|list-containers)$/)) return 'docker-mcp';
+    
+    // GitHub tools
+    if (toolName.match(/^(create_or_update_file|search_repositories|create_repository|get_file_contents|push_files|create_issue|create_pull_request|fork_repository|create_branch|list_commits|list_issues|update_issue|add_issue_comment|search_code|search_issues|search_users|get_issue)$/)) return 'github';
+    
+    // Time tools
+    if (toolName.match(/^(get_current_time|convert_time)$/)) return 'time';
+    
+    // Package documentation tools
+    if (toolName.match(/^lookup_.*_doc$/)) return 'package-docs';
+    
+    // Neurolora tools
+    if (toolName.match(/^(analyze_code|create_github_issues)$/)) return 'aindreyway-mcp-neurolora';
+    
+    // Sequential thinking tools
+    if (toolName === 'sequentialthinking') return 'sequential-thinking';
+    
+    // MCP installer tools
+    if (toolName.match(/^install_.*_mcp_server$/)) return 'mcp-installer';
+    
+    // Default to other if no match found
     return 'other';
 };
 
@@ -152,7 +188,7 @@ export function McpToolsList() {
     useEffect(() => {
         const fetchTools = async () => {
             try {
-                const response = await fetch('http://localhost:4100/api/tools');
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4100'}/api/tools`);
                 if (!response.ok) {
                     throw new Error('Failed to fetch tools');
                 }

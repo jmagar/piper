@@ -3,97 +3,87 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ChevronRight, LucideIcon } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface NavItem {
-  title: string
-  url: string
-  icon?: LucideIcon
-  items?: NavItem[]
+  title: string;
+  url?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  items?: NavItem[];
 }
 
 interface NavMainProps {
-  items: NavItem[]
+  items: NavItem[];
 }
 
 export function NavMain({ items }: NavMainProps) {
-  const pathname = usePathname()
-  const [openGroups, setOpenGroups] = React.useState<string[]>([])
+  const pathname = usePathname();
+  const [openCategories, setOpenCategories] = React.useState<string[]>([]);
 
-  const toggleGroup = React.useCallback((title: string) => {
-    setOpenGroups(prev => 
+  const toggleCategory = (title: string) => {
+    setOpenCategories(prev => 
       prev.includes(title) 
         ? prev.filter(t => t !== title)
         : [...prev, title]
-    )
-  }, [])
+    );
+  };
 
   return (
-    <nav className="flex flex-col gap-2 p-2">
-      {items.map((item, index) => {
-        const Icon = item.icon
-        const isActive = pathname.startsWith(item.url)
-        const isOpen = openGroups.includes(item.title)
-
-        if (item.items) {
-          return (
-            <Collapsible
-              key={index}
-              open={isOpen}
-              onOpenChange={() => toggleGroup(item.title)}
+    <div className="grid gap-1">
+      {items.map((item, index) => (
+        <div key={index}>
+          {item.url && !item.items ? (
+            <Link
+              href={item.url}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
+                pathname === item.url && "bg-accent"
+              )}
             >
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                >
-                  {Icon && <Icon className="h-4 w-4" />}
+              {item.icon && <item.icon className="h-4 w-4" />}
+              <span>{item.title}</span>
+            </Link>
+          ) : (
+            <Collapsible
+              open={openCategories.includes(item.title)}
+              onOpenChange={() => toggleCategory(item.title)}
+            >
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent">
+                  {item.icon && <item.icon className="h-4 w-4" />}
                   <span>{item.title}</span>
-                  <ChevronRight 
+                  <ChevronDown 
                     className={cn(
                       "ml-auto h-4 w-4 transition-transform",
-                      isOpen && "rotate-90"
+                      openCategories.includes(item.title) && "rotate-180"
                     )} 
                   />
-                </button>
+                </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 space-y-1 pl-6">
-                  {item.items.map((subItem, subIndex) => (
+                <div className="grid gap-1 pl-6">
+                  {item.items?.map((subItem, subIndex) => (
                     <Link
                       key={subIndex}
-                      href={subItem.url}
+                      href={subItem.url || "#"}
                       className={cn(
-                        "block rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                        pathname === subItem.url && "bg-accent text-accent-foreground"
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
+                        pathname === subItem.url && "bg-accent"
                       )}
                     >
-                      {subItem.title}
+                      {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                      <span>{subItem.title}</span>
                     </Link>
                   ))}
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          )
-        }
-
-        return (
-          <Link
-            key={index}
-            href={item.url}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-              isActive && "bg-accent text-accent-foreground"
-            )}
-          >
-            {Icon && <Icon className="h-4 w-4" />}
-            <span>{item.title}</span>
-          </Link>
-        )
-      })}
-    </nav>
-  )
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 

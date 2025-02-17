@@ -50,6 +50,9 @@ importers:
       '@prisma/client':
         specifier: ^6.3.1
         version: 6.3.1(prisma@6.3.1(typescript@5.7.3))(typescript@5.7.3)
+      '@types/socket.io':
+        specifier: ^3.0.2
+        version: 3.0.2
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -71,6 +74,9 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.21.2
+      ioredis:
+        specifier: ^5.5.0
+        version: 5.5.0
       json5:
         specifier: ^2.2.3
         version: 2.2.3
@@ -988,6 +994,10 @@ packages:
 
   '@types/serve-static@1.15.7':
     resolution: {integrity: sha512-W8Ym+h8nhuRwaKPaDw34QUkwsGi6Rc4yYqvKFo5rm2FUEhCFbzVWrxXUxuKK8TASjWsysJY0nsmNCGhCOIsrOw==}
+
+  '@types/socket.io@3.0.2':
+    resolution: {integrity: sha512-pu0sN9m5VjCxBZVK8hW37ZcMe8rjn4HHggBN5CbaRTvFwv5jOmuIRZEuddsBPa9Th0ts0SIo3Niukq+95cMBbQ==}
+    deprecated: This is a stub types definition. socket.io provides its own type definitions, so you do not need this installed.
 
   '@types/tough-cookie@4.0.5':
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
@@ -2841,8 +2851,7 @@ snapshots:
       - '@langchain/core'
       - supports-color
 
-  '@ioredis/commands@1.2.0':
-    optional: true
+  '@ioredis/commands@1.2.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -3199,6 +3208,14 @@ snapshots:
       '@types/node': 22.13.4
       '@types/send': 0.17.4
 
+  '@types/socket.io@3.0.2':
+    dependencies:
+      socket.io: 4.8.1
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   '@types/tough-cookie@4.0.5': {}
 
   '@types/uuid@10.0.0': {}
@@ -3549,8 +3566,7 @@ snapshots:
 
   delayed-stream@1.0.0: {}
 
-  denque@2.1.0:
-    optional: true
+  denque@2.1.0: {}
 
   depd@2.0.0: {}
 
@@ -4075,7 +4091,6 @@ snapshots:
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   ip-address@9.0.5:
     dependencies:
@@ -4205,13 +4220,11 @@ snapshots:
     dependencies:
       p-locate: 5.0.0
 
-  lodash.defaults@4.2.0:
-    optional: true
+  lodash.defaults@4.2.0: {}
 
   lodash.includes@4.3.0: {}
 
-  lodash.isarguments@3.1.0:
-    optional: true
+  lodash.isarguments@3.1.0: {}
 
   lodash.isboolean@3.0.3: {}
 
@@ -4535,13 +4548,11 @@ snapshots:
       process: 0.11.10
       readable-stream: 4.7.0
 
-  redis-errors@1.2.0:
-    optional: true
+  redis-errors@1.2.0: {}
 
   redis-parser@3.0.0:
     dependencies:
       redis-errors: 1.2.0
-    optional: true
 
   redis@4.7.0:
     dependencies:
@@ -4695,8 +4706,7 @@ snapshots:
 
   sprintf-js@1.1.3: {}
 
-  standard-as-callback@2.1.0:
-    optional: true
+  standard-as-callback@2.1.0: {}
 
   statuses@2.0.1: {}
 

@@ -225,11 +225,12 @@ export function ModelSelector() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[250px] p-0" align="start">
-          <Command>
+          <Command className="rounded-lg border shadow-md">
             <CommandInput 
               placeholder="Search models..." 
               value={state.search}
               onValueChange={handleSearch}
+              className="h-9"
             />
             <CommandEmpty>No model found.</CommandEmpty>
             <CommandGroup>
@@ -238,10 +239,11 @@ export function ModelSelector() {
                   key={model.value}
                   value={model.value}
                   onSelect={() => handleSelect(model.value)}
+                  className="flex items-center gap-2 px-2 py-1.5"
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "h-4 w-4",
                       state.value === model.value ? "opacity-100" : "opacity-0"
                     )}
                   />

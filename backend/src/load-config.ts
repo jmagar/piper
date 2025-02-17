@@ -12,6 +12,8 @@ export interface MCPServerConfig {
   command: string;
   args: string[];
   env?: Record<string, string>;
+  port?: number;
+  base_url?: string;
 }
 
 export interface Config {

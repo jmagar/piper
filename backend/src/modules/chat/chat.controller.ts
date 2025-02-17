@@ -23,18 +23,46 @@ export function createChatController(chatService: ChatService) {
                     return;
                 }
 
-                const response = await chatService.processMessage(message, conversationId, userId);
+                const { userMessage, assistantMessage } = await chatService.processMessage(message, conversationId, userId);
 
                 broadcastLog('info', '=== Sending Response ===');
-                broadcastLog('info', 'Response length: ' + response.length);
-                res.setHeader('Content-Type', 'text/plain');
-                res.send(response);
+                broadcastLog('info', 'Response length: ' + assistantMessage.content.length);
+                
+                // Return both messages with their proper database IDs
+                res.json({
+                    userMessage: {
+                        id: userMessage.id,
+                        role: userMessage.role,
+                        content: userMessage.content,
+                        timestamp: userMessage.created_at,
+                        status: 'sent',
+                        metadata: {
+                            ...userMessage.metadata,
+                            username: 'User'
+                        }
+                    },
+                    assistantMessage: {
+                        id: assistantMessage.id,
+                        role: assistantMessage.role,
+                        content: assistantMessage.content,
+                        timestamp: assistantMessage.created_at,
+                        status: 'sent',
+                        metadata: {
+                            ...assistantMessage.metadata,
+                            username: 'Assistant'
+                        }
+                    }
+                });
+
                 broadcastLog('info', 'Response sent successfully');
 
             } catch (error) {
                 broadcastLog('error', '=== Error in Chat Controller ===');
                 broadcastLog('error', 'Error details: ' + error);
-                res.status(500).send('Internal server error');
+                res.status(500).json({ 
+                    error: 'Internal server error',
+                    details: error instanceof Error ? error.message : String(error)
+                });
             }
         },
 

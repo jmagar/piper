@@ -4,80 +4,83 @@ const prisma = new PrismaClient();
 
 async function main() {
     // Create test user
-    const user = await prisma.user.create({
-        data: {
+    const user = await prisma.user.upsert({
+        where: { email: 'test@example.com' },
+        update: {},
+        create: {
+            id: 'test-user-1',
             email: 'test@example.com',
             name: 'Test User',
             preferences: {
-                theme: 'dark',
-                notifications: true,
-                language: 'en'
+                theme: 'light',
+                notifications: true
             }
         }
     });
-    console.log('Created test user:', user);
 
-    // Create a test conversation
-    const conversation = await prisma.conversation.create({
-        data: {
-            title: 'Test Conversation',
-            user: {
-                connect: { id: user.id }
-            },
-            messages: {
-                create: [
-                    {
-                        role: 'user',
-                        content: 'What\'s the weather like in San Francisco?',
-                        user: {
-                            connect: { id: user.id }
-                        },
-                        metadata: {
-                            liked: true,
-                            tool_calls: [
-                                {
-                                    tool: 'weather',
-                                    input: 'San Francisco',
-                                    result: 'Currently 72°F and sunny'
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        role: 'assistant',
-                        content: 'According to the weather service, it\'s currently 72°F and sunny in San Francisco.',
-                        metadata: {
-                            liked: true
-                        }
-                    }
-                ]
+    // Create user stats
+    await prisma.userStats.upsert({
+        where: { user_id: user.id },
+        update: {},
+        create: {
+            user_id: user.id,
+            total_conversations: 0,
+            total_messages: 0,
+            total_starred: 0,
+            average_response_length: 0,
+            last_active: new Date()
+        }
+    });
+
+    // Create initial conversation
+    const conversation = await prisma.conversation.upsert({
+        where: { id: 'initial-conversation' },
+        update: {},
+        create: {
+            id: 'initial-conversation',
+            title: 'First Conversation',
+            user_id: user.id,
+            last_message_at: new Date()
+        }
+    });
+
+    // Create conversation stats
+    await prisma.conversationStats.upsert({
+        where: { conversation_id: conversation.id },
+        update: {},
+        create: {
+            conversation_id: conversation.id,
+            message_count: 0,
+            user_message_count: 0,
+            bot_message_count: 0,
+            average_response_time: 0,
+            tool_usage_count: 0
+        }
+    });
+
+    // Create test message
+    await prisma.chatMessage.upsert({
+        where: { id: 'test-message' },
+        update: {},
+        create: {
+            id: 'test-message',
+            content: 'Hello, this is a test message',
+            role: 'user',
+            conversation_id: conversation.id,
+            user_id: user.id,
+            metadata: {
+                username: 'Test User',
+                type: 'text'
             }
-        },
-        include: {
-            messages: true
         }
     });
-    console.log('Created conversation with messages:', conversation);
 
-    // Create tool result cache entries
-    const toolResult = await prisma.toolResult.create({
-        data: {
-            tool_name: 'weather',
-            input_hash: Buffer.from('San Francisco').toString('base64'),
-            result: {
-                temperature: 72,
-                condition: 'sunny',
-                location: 'San Francisco, CA'
-            },
-            expires_at: new Date(Date.now() + 1000 * 60 * 15) // 15 minutes from now
-        }
-    });
-    console.log('Created tool result cache:', toolResult);
+    console.log('Seed completed');
 }
 
 main()
     .catch((e) => {
-        console.error('Error seeding database:', e);
+        console.error(e);
         process.exit(1);
     })
     .finally(async () => {

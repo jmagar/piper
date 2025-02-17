@@ -18,6 +18,8 @@ model User {
   preferences   Json?         // Stores user preferences as JSON: { theme?: 'light' | 'dark', notifications?: boolean, language?: string }
   conversations Conversation[]
   messages      ChatMessage[]
+  reactions     MessageReaction[]
+  bookmarks     MessageBookmark[]
   starred_messages StarredMessage[]
   usage_stats   UserStats?
 
@@ -54,10 +56,24 @@ model ChatMessage {
   conversation_id String
   user           User?         @relation(fields: [user_id], references: [id])
   user_id        String?
+  
+  // Threading support
+  parent_message  ChatMessage?  @relation("MessageThread", fields: [parent_id], references: [id])
+  parent_id      String?
+  replies        ChatMessage[]  @relation("MessageThread")
+  thread_summary String?       @db.Text
+
+  // Reactions
+  reactions      MessageReaction[]
+  bookmarks      MessageBookmark[]
+
   starred_by     StarredMessage[]
 
   @@index([conversation_id])
   @@index([user_id])
+  @@index([parent_id])
+  @@index([created_at])
+  @@index([content]) // For full-text search
   @@map("chat_messages")
 }
 
@@ -120,4 +136,38 @@ model ToolResult {
   @@unique([tool_name, input_hash])
   @@index([expires_at])
   @@map("tool_results")
+}
+
+// New model for flexible reactions
+model MessageReaction {
+    id          String      @id @default(uuid())
+    created_at  DateTime    @default(now())
+    emoji       String      // Unicode emoji or custom emoji code
+    message     ChatMessage @relation(fields: [message_id], references: [id])
+    message_id  String
+    user        User        @relation(fields: [user_id], references: [id])
+    user_id     String
+    group       String?     // For grouping similar reactions
+
+    @@unique([message_id, user_id, emoji])
+    @@index([message_id])
+    @@index([user_id])
+    @@map("message_reactions")
+}
+
+// New model for bookmarks
+model MessageBookmark {
+    id          String      @id @default(uuid())
+    created_at  DateTime    @default(now())
+    note        String?     @db.Text
+    tags        String[]    // Array of tags for organization
+    message     ChatMessage @relation(fields: [message_id], references: [id])
+    message_id  String
+    user        User        @relation(fields: [user_id], references: [id])
+    user_id     String
+
+    @@unique([message_id, user_id])
+    @@index([user_id])
+    @@index([tags])
+    @@map("message_bookmarks")
 } 

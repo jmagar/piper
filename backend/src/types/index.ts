@@ -38,14 +38,30 @@ export interface MCPServerConfig {
     command: string;
     args: string[];
     env?: Record<string, string>;
+    port?: number;
+    base_url?: string;
+    retry?: {
+        max_attempts?: number;
+        initial_delay?: number;
+        max_delay?: number;
+        backoff_factor?: number;
+    };
+    health_check?: {
+        interval?: number;
+        timeout?: number;
+        path?: string;
+    };
 }
 
 export interface Config {
-    llm: LLMConfig;
+    llm: {
+        model_provider: string;
+        model: string;
+        temperature?: number;
+        max_tokens?: number;
+    };
+    mcp_servers: Record<string, MCPServerConfig>;
     example_queries?: string[];
-    mcp_servers: {
-        [key: string]: MCPServerConfig;
-    }
 }
 
 export interface LogEntry {

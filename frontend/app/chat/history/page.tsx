@@ -1,157 +1,125 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { useCallback, useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatDistanceToNow } from "date-fns"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useInfiniteScroll } from "@/lib/hooks/use-infinite-scroll"
-import { FilterSort, type FilterSortOptions } from "@/components/chat/filter-sort"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { MessageSquare, ArrowRight, Loader2 } from "lucide-react"
+import { format } from "date-fns"
+import Link from "next/link"
+import { toast } from "sonner"
 
 interface Conversation {
-  id: string
-  title: string
-  createdAt: string
-  lastMessage: string
-  messageCount: number
+    id: string;
+    title?: string;
+    summary?: string;
+    lastMessageAt: string;
+    messageCount: number;
 }
 
-const ITEMS_PER_PAGE = 10
+export default function ChatHistoryPage() {
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [loading, setLoading] = useState(true);
 
-const sortOptions = [
-  { value: "created_at", label: "Date Created" },
-  { value: "last_message_at", label: "Last Message" },
-  { value: "title", label: "Title" },
-  { value: "messageCount", label: "Message Count" },
-]
+    useEffect(() => {
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/chat/conversations/test-user-1');
+                if (!response.ok) throw new Error('Failed to load conversations');
+                const data = await response.json();
+                setConversations(data);
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                toast.error('Failed to load chat history');
+            } finally {
+                setLoading(false);
+            }
+        }
 
-function ConversationSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-2/3" />
-        <Skeleton className="h-4 w-1/3 mt-2" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-4/5 mt-2" />
-      </CardContent>
-    </Card>
-  )
-}
+        loadConversations();
+    }, []);
 
-export default function HistoryPage() {
-  const [filterOptions, setFilterOptions] = useState<FilterSortOptions>({
-    search: "",
-    sortBy: "created_at",
-    sortOrder: "desc"
-  });
+    return (
+        <SidebarProvider>
+            <div className="flex h-screen w-full">
+                <AppSidebar />
+                <main className="flex-1 w-full overflow-hidden">
+                    <div className="h-full flex flex-col">
+                        <div className="p-4 border-b flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                            <div>
+                                <h1 className="text-2xl font-bold">Chat History</h1>
+                                <p className="text-sm text-muted-foreground">
+                                    Your previous conversations
+                                </p>
+                            </div>
+                            <Button asChild>
+                                <Link href="/chat/new">
+                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                    New Chat
+                                </Link>
+                            </Button>
+                        </div>
 
-  const fetchConversations = useCallback(async (page: number) => {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: ITEMS_PER_PAGE.toString(),
-        search: filterOptions.search,
-        sortBy: filterOptions.sortBy,
-        sortOrder: filterOptions.sortOrder
-      });
-
-      const response = await fetch(`/api/chat/history?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch conversations');
-      
-      const data = await response.json();
-      return {
-        data: data.conversations,
-        hasMore: data.hasMore
-      };
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-      throw error;
-    }
-  }, [filterOptions]);
-
-  const {
-    data: conversations,
-    loading,
-    error,
-    lastElementRef,
-    reset
-  } = useInfiniteScroll<Conversation>({
-    fetchData: fetchConversations,
-    threshold: 300
-  });
-
-  // Reset infinite scroll when filter options change
-  useEffect(() => {
-    reset();
-  }, [filterOptions, reset]);
-
-  return (
-    <SidebarProvider>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <main className="flex-1 w-full p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Chat History</h1>
-            <p className="text-muted-foreground">View your past conversations</p>
-          </div>
-
-          <FilterSort
-            onFilterChange={setFilterOptions}
-            sortOptions={sortOptions}
-            placeholder="Search conversations..."
-            className="mb-6"
-          />
-          
-          <div className="h-[calc(100vh-250px)] overflow-auto">
-            <div className="grid gap-4">
-              {conversations.map((conversation, index) => (
-                <Card
-                  key={conversation.id}
-                  ref={index === conversations.length - 1 ? lastElementRef : null}
-                  className="hover:bg-accent/50 cursor-pointer"
-                >
-                  <CardHeader>
-                    <CardTitle>{conversation.title}</CardTitle>
-                    <CardDescription>
-                      {formatDistanceToNow(new Date(conversation.createdAt), { addSuffix: true })}
-                      {' · '}
-                      {conversation.messageCount} messages
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {conversation.lastMessage}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {loading && (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <ConversationSkeleton key={`skeleton-${index}`} />
-                ))
-              )}
-
-              {error && (
-                <div className="text-red-500 p-4 text-center">
-                  Error loading conversations. Please try again.
-                </div>
-              )}
-
-              {!loading && conversations.length === 0 && (
-                <div className="text-center p-4">
-                  {filterOptions.search
-                    ? `No conversations found matching "${filterOptions.search}"`
-                    : "No conversations found"}
-                </div>
-              )}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {loading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                </div>
+                            ) : conversations.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full gap-4">
+                                    <MessageSquare className="w-12 h-12 text-muted-foreground" />
+                                    <div className="text-center">
+                                        <h3 className="text-lg font-semibold">No conversations yet</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Start a new chat to begin
+                                        </p>
+                                    </div>
+                                    <Button asChild>
+                                        <Link href="/chat/new">
+                                            Start New Chat
+                                        </Link>
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4">
+                                    {conversations.map((conversation) => (
+                                        <Link 
+                                            key={conversation.id} 
+                                            href={`/chat/${conversation.id}`}
+                                        >
+                                            <Card className="p-4 hover:shadow-md transition-all cursor-pointer">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-1">
+                                                        <h3 className="font-medium">
+                                                            {conversation.title || 'Untitled Conversation'}
+                                                        </h3>
+                                                        {conversation.summary && (
+                                                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                                                {conversation.summary}
+                                                            </p>
+                                                        )}
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                            <span>
+                                                                {format(new Date(conversation.lastMessageAt), 'PPp')}
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>
+                                                                {conversation.messageCount} messages
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                                                </div>
+                                            </Card>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </main>
             </div>
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
-  )
+        </SidebarProvider>
+    )
 } 
