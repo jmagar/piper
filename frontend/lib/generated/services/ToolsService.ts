@@ -40,7 +40,7 @@ export class ToolsService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/tools/executions',
+            url: '/api/tools/executions',
             query: {
                 'toolId': toolId,
                 'userId': userId,

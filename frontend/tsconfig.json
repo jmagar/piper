@@ -14,14 +14,17 @@
     "types": ["node"],
     "typeRoots": ["./node_modules/@types", "./types"],
     "noEmit": true,
-    "incremental": true
+    "incremental": true,
+    "allowJs": true
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "*.config.{js,mjs,cjs}"
+    "*.config.{js,mjs,cjs}",
+    "postcss.config.*",
+    ".eslintrc.*"
   ],
   "exclude": [
     "node_modules"

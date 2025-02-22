@@ -27,7 +27,7 @@ export class RealtimeService {
     }>> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/realtime/events',
+            url: '/api/realtime/events',
             query: {
                 'userId': userId,
                 'type': type,

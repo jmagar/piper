@@ -33,21 +33,21 @@ const data = {
   navMain: [
     {
       title: "Messages",
-      url: "#",
+      url: "/chat",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
           title: "New",
-          url: "#",
+          url: "/chat/new",
         },
         {
           title: "History",
-          url: "#",
+          url: "/chat/history",
         },
         {
           title: "Starred",
-          url: "#",
+          url: "/chat/starred",
         },
       ],
     },

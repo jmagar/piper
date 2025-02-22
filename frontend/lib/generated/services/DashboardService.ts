@@ -64,7 +64,7 @@ export class DashboardService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/dashboard/stats',
+            url: '/api/dashboard/stats',
             errors: {
                 401: `Unauthorized`,
                 500: `Internal server error`,

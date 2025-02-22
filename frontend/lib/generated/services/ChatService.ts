@@ -34,7 +34,7 @@ export class ChatService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/chat',
+            url: '/api/chat',
             query: {
                 'conversationId': conversationId,
                 'cursor': cursor,
@@ -66,7 +66,7 @@ export class ChatService {
     ): CancelablePromise<ChatMessage> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/chat',
+            url: '/api/chat',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -86,7 +86,7 @@ export class ChatService {
     ): CancelablePromise<Array<Conversation>> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/chat/conversations/{userId}',
+            url: '/api/chat/conversations/{userId}',
             path: {
                 'userId': userId,
             },
@@ -111,7 +111,7 @@ export class ChatService {
     ): CancelablePromise<StarredMessage> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/chat/messages/star',
+            url: '/api/chat/messages/star',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -134,7 +134,7 @@ export class ChatService {
     ): CancelablePromise<any> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/chat/messages/unstar',
+            url: '/api/chat/messages/unstar',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -156,7 +156,7 @@ export class ChatService {
     ): CancelablePromise<(UserStats | ConversationStats)> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/chat/stats',
+            url: '/api/chat/stats',
             query: {
                 'userId': userId,
                 'conversationId': conversationId,

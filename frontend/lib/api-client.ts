@@ -2,6 +2,7 @@ import { ChatAPI } from './generated';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4100';
 
+// Initialize API client with proper configuration
 const api = new ChatAPI({
     BASE: API_BASE_URL,
     WITH_CREDENTIALS: false,

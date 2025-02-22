@@ -29,7 +29,7 @@ async function waitForServerReady(port: number, timeout = 30000): Promise<boolea
     while (Date.now() - start < timeout) {
         try {
             await new Promise((resolve, reject) => {
-                const req = http.get(`http://localhost:${port}/health`, (res) => {
+                const req = http.get(`http://localhost:${port}/api/health`, (res) => {
                     if (res.statusCode === 200) {
                         resolve(true);
                     } else {

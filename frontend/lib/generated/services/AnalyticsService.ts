@@ -35,7 +35,7 @@ export class AnalyticsService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/analytics/usage',
+            url: '/api/analytics/usage',
             query: {
                 'startDate': startDate,
                 'endDate': endDate,

@@ -23,53 +23,83 @@ module.exports = {
     },
     extend: {
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        // Base colors
+        background: {
+          DEFAULT: "hsl(0 0% 100%)",
+          dark: "hsl(240 10% 3.9%)"
+        },
+        foreground: {
+          DEFAULT: "hsl(240 10% 3.9%)",
+          dark: "hsl(0 0% 98%)"
+        },
         
+        // Component colors
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: "hsl(0 0% 100%)",
+          foreground: "hsl(240 10% 3.9%)",
+          dark: "hsl(240 10% 3.9%)",
+          "dark-foreground": "hsl(0 0% 98%)"
         },
         
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: "hsl(0 0% 100%)",
+          foreground: "hsl(240 10% 3.9%)",
+          dark: "hsl(240 10% 3.9%)",
+          "dark-foreground": "hsl(0 0% 98%)"
         },
         
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: "hsl(240 5.9% 10%)",
+          foreground: "hsl(0 0% 98%)",
+          dark: "hsl(0 0% 98%)",
+          "dark-foreground": "hsl(240 5.9% 10%)"
         },
         
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: "hsl(240 4.8% 95.9%)",
+          foreground: "hsl(240 5.9% 10%)",
+          dark: "hsl(240 3.7% 15.9%)",
+          "dark-foreground": "hsl(0 0% 98%)"
         },
         
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: "hsl(240 4.8% 95.9%)",
+          foreground: "hsl(240 3.8% 46.1%)",
+          dark: "hsl(240 3.7% 15.9%)",
+          "dark-foreground": "hsl(240 5% 64.9%)"
         },
         
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: "hsl(240 4.8% 95.9%)",
+          foreground: "hsl(240 5.9% 10%)",
+          dark: "hsl(240 3.7% 15.9%)",
+          "dark-foreground": "hsl(0 0% 98%)"
         },
         
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: "hsl(0 84.2% 60.2%)",
+          foreground: "hsl(0 0% 98%)",
+          dark: "hsl(0 62.8% 30.6%)",
+          "dark-foreground": "hsl(0 0% 98%)"
         },
         
         sidebar: {
-          DEFAULT: 'hsl(var(--sidebar))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
+          DEFAULT: "hsl(0 0% 98%)",
+          foreground: "hsl(240 5.3% 26.1%)",
+          primary: "hsl(240 5.9% 10%)",
+          "primary-foreground": "hsl(0 0% 98%)",
+          accent: "hsl(240 4.8% 95.9%)",
+          "accent-foreground": "hsl(240 5.9% 10%)",
+          border: "hsl(220 13% 91%)",
+          ring: "hsl(217.2 91.2% 59.8%)",
+          dark: "hsl(240 5.9% 10%)",
+          "dark-foreground": "hsl(240 4.8% 95.9%)",
+          "dark-primary": "hsl(224.3 76.3% 48%)",
+          "dark-primary-foreground": "hsl(0 0% 100%)",
+          "dark-accent": "hsl(240 3.7% 15.9%)",
+          "dark-accent-foreground": "hsl(240 4.8% 95.9%)",
+          "dark-border": "hsl(240 3.7% 15.9%)",
+          "dark-ring": "hsl(217.2 91.2% 59.8%)"
         },
 
         // Brand colors
@@ -79,7 +109,7 @@ module.exports = {
           emphasis: "hsl(142 72% 42%)",
           muted: "hsl(142 72% 85%)",
           subtle: "hsl(142 72% 95%)",
-          inverted: "hsl(142 72% 98%)",
+          inverted: "hsl(142 72% 98%)"
         },
         warning: {
           DEFAULT: "hsl(37 92% 50%)",
@@ -87,7 +117,7 @@ module.exports = {
           emphasis: "hsl(37 92% 60%)",
           muted: "hsl(37 92% 85%)",
           subtle: "hsl(37 92% 95%)",
-          inverted: "hsl(37 92% 98%)",
+          inverted: "hsl(37 92% 98%)"
         },
         error: {
           DEFAULT: "hsl(0 84.2% 60.2%)",
@@ -95,32 +125,28 @@ module.exports = {
           emphasis: "hsl(0 84.2% 70.2%)",
           muted: "hsl(0 84.2% 85.2%)",
           subtle: "hsl(0 84.2% 95.2%)",
-          inverted: "hsl(0 84.2% 98.2%)",
+          inverted: "hsl(0 84.2% 98.2%)"
         },
-        // Component colors
         surface: {
           DEFAULT: "hsl(0 0% 100%)",
           raised: "hsl(0 0% 98%)",
           overlay: "hsl(0 0% 100% / 0.9)",
-          sunken: "hsl(0 0% 96%)",
-        },
+          sunken: "hsl(0 0% 96%)"
+        }
       },
-      borderColor: {
-        DEFAULT: 'hsl(var(--border))',
-      },
-      backgroundColor: {
-        DEFAULT: 'hsl(var(--background))',
-      },
-      textColor: {
-        DEFAULT: 'hsl(var(--foreground))',
-      },
-      ringColor: {
-        DEFAULT: 'hsl(var(--ring))',
+      borderRadius: {
+        none: '0',
+        sm: '0.2rem',
+        DEFAULT: '0.6rem',
+        md: '0.4rem',
+        lg: '0.6rem',
+        xl: '1.2rem',
+        full: '9999px',
       },
       // Typography system
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        sans: ['system-ui', 'sans-serif'],
+        mono: ['monospace'],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '1rem' }],
@@ -147,16 +173,6 @@ module.exports = {
         '2xl': '2rem',
         '3xl': '2.5rem',
         '4xl': '3rem',
-      },
-      // Border radius
-      borderRadius: {
-        none: '0',
-        sm: 'calc(var(--radius) - 4px)',
-        DEFAULT: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        lg: 'var(--radius)',
-        xl: 'calc(var(--radius) * 2)',
-        full: '9999px',
       },
       // Shadows
       boxShadow: {

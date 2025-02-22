@@ -1,5 +1,5 @@
 paths:
-  /chat:
+  /api/chat:
     get:
       summary: Get messages
       operationId: getMessages
@@ -94,7 +94,7 @@ paths:
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
 
-  /chat/conversations/{userId}:
+  /api/chat/conversations/{userId}:
     get:
       summary: Get user conversations
       operationId: getUserConversations
@@ -120,7 +120,7 @@ paths:
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
 
-  /chat/messages/star:
+  /api/chat/messages/star:
     post:
       summary: Star a message
       operationId: starMessage
@@ -155,7 +155,7 @@ paths:
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
 
-  /chat/messages/unstar:
+  /api/chat/messages/unstar:
     post:
       summary: Unstar a message
       operationId: unstarMessage
@@ -184,7 +184,7 @@ paths:
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
 
-  /chat/stats:
+  /api/chat/stats:
     get:
       summary: Get chat statistics
       operationId: getChatStats

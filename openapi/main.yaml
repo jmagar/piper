@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: http://localhost:3002
+  - url: http://localhost:4100
     description: Local development server
 
 tags:
@@ -20,33 +20,258 @@ tags:
     description: Server dashboard and metrics endpoints
 
 paths:
-  /health:
-    $ref: './schemas/health.yaml#/paths/~1health'
-  /chat:
-    $ref: './schemas/chat.yaml#/paths/~1chat'
-  /chat/conversations/{userId}:
-    $ref: './schemas/chat.yaml#/paths/~1chat~1conversations~1{userId}'
-  /chat/messages/star:
-    $ref: './schemas/chat.yaml#/paths/~1chat~1messages~1star'
-  /chat/messages/unstar:
-    $ref: './schemas/chat.yaml#/paths/~1chat~1messages~1unstar'
-  /chat/stats:
-    $ref: './schemas/chat.yaml#/paths/~1chat~1stats'
-  /config:
+  /api/health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                    example: ok
+                required:
+                  - status
+
+  /api/chat:
+    get:
+      summary: Get messages
+      operationId: getMessages
+      tags: [Chat]
+      parameters:
+        - name: conversationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: threadId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+                  nextCursor:
+                    type: string
+                  total:
+                    type: integer
+        500:
+          $ref: '#/components/responses/ApiError'
+
+    post:
+      summary: Create message
+      operationId: createMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+                - username
+              properties:
+                content:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+                conversationId:
+                  type: string
+                  format: uuid
+                parentId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [text, code, system]
+                  default: text
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        201:
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        400:
+          $ref: '#/components/responses/ApiError'
+        500:
+          $ref: '#/components/responses/ApiError'
+
+  /api/chat/conversations/{userId}:
+    get:
+      summary: Get user conversations
+      operationId: getUserConversations
+      tags: [Chat]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+        404:
+          $ref: '#/components/responses/ApiError'
+        500:
+          $ref: '#/components/responses/ApiError'
+
+  /api/chat/messages/star:
+    post:
+      summary: Star a message
+      operationId: starMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+                note:
+                  type: string
+      responses:
+        200:
+          description: Message starred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StarredMessage'
+        400:
+          $ref: '#/components/responses/ApiError'
+        500:
+          $ref: '#/components/responses/ApiError'
+
+  /api/chat/messages/unstar:
+    post:
+      summary: Unstar a message
+      operationId: unstarMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        200:
+          description: Message unstarred
+        400:
+          $ref: '#/components/responses/ApiError'
+        500:
+          $ref: '#/components/responses/ApiError'
+
+  /api/chat/stats:
+    get:
+      summary: Get chat statistics
+      operationId: getChatStats
+      tags: [Chat]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: conversationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Chat statistics
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserStats'
+                  - $ref: '#/components/schemas/ConversationStats'
+        404:
+          $ref: '#/components/responses/ApiError'
+        500:
+          $ref: '#/components/responses/ApiError'
+
+  /api/config:
     $ref: './schemas/config.yaml#/paths/~1config'
-  /mcp/health:
+  /api/mcp/health:
     $ref: './schemas/mcp.yaml#/paths/~1mcp~1health'
-  /mcp/tools:
+  /api/mcp/tools:
     $ref: './schemas/mcp.yaml#/paths/~1mcp~1tools'
-  /mcp/tools/{toolId}:
+  /api/mcp/tools/{toolId}:
     $ref: './schemas/mcp.yaml#/paths/~1mcp~1tools~1{toolId}'
-  /dashboard/stats:
+  /api/dashboard/stats:
     $ref: './schemas/dashboard.yaml#/paths/~1dashboard~1stats'
-  /analytics/usage:
+  /api/analytics/usage:
     $ref: './schemas/analytics.yaml#/paths/~1analytics~1usage'
-  /realtime/events:
+  /api/realtime/events:
     $ref: './schemas/realtime.yaml#/paths/~1realtime~1events'
-  /tools/executions:
+  /api/tools/executions:
     $ref: './schemas/tool-execution.yaml#/paths/~1tools~1executions'
 
 components:
@@ -249,6 +474,3 @@ components:
           type: integer
         participantCount:
           type: integer
-        lastActive:
-          type: string
-          format: date-time

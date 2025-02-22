@@ -29,7 +29,7 @@ export class McpService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/mcp/health',
+            url: '/api/mcp/health',
             errors: {
                 500: `Internal server error`,
             },
@@ -43,7 +43,7 @@ export class McpService {
     public listMcpTools(): CancelablePromise<Array<Tool>> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/mcp/tools',
+            url: '/api/mcp/tools',
             errors: {
                 500: `Internal server error`,
             },
@@ -73,7 +73,7 @@ export class McpService {
     ): CancelablePromise<Tool> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/mcp/tools',
+            url: '/api/mcp/tools',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -93,7 +93,7 @@ export class McpService {
     ): CancelablePromise<Tool> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/mcp/tools/{toolId}',
+            url: '/api/mcp/tools/{toolId}',
             path: {
                 'toolId': toolId,
             },
@@ -114,7 +114,7 @@ export class McpService {
     ): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'DELETE',
-            url: '/mcp/tools/{toolId}',
+            url: '/api/mcp/tools/{toolId}',
             path: {
                 'toolId': toolId,
             },

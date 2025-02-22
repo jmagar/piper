@@ -1,3 +1,4 @@
+// @ts-nocheck
 import js from '@eslint/js';
 import globals from 'globals';
 import typescript from '@typescript-eslint/eslint-plugin';
@@ -8,26 +9,44 @@ import a11yPlugin from 'eslint-plugin-jsx-a11y';
 import importPlugin from 'eslint-plugin-import';
 import nextPlugin from '@next/eslint-plugin-next';
 
+/** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   js.configs.recommended,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/generated/**',
+      '**/*.d.ts',
+      '*.config.{js,mjs,cjs}',
+      '**/postcss.config.*',
+      '.eslintrc.*'
+    ]
+  },
+  // Config files override
+  {
+    files: ['*.config.{js,mjs,cjs}', '**/postcss.config.*', '.eslintrc.*'],
     languageOptions: {
-      ecmaVersion: 'latest',
       sourceType: 'module',
+      ecmaVersion: 'latest',
       globals: {
-        ...globals.browser,
         ...globals.node,
-        React: 'readonly',
-        JSX: 'readonly',
-      },
+        module: 'writable'
+      }
+    }
+  },
+  // TypeScript files
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
       parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
         ecmaFeatures: {
-          jsx: true,
-        },
-      },
+          jsx: true
+        }
+      }
     },
     plugins: {
       '@typescript-eslint': typescript,
@@ -35,7 +54,7 @@ export default [
       'react-hooks': reactHooksPlugin,
       'jsx-a11y': a11yPlugin,
       'import': importPlugin,
-      'next': nextPlugin,
+      'next': nextPlugin
     },
     settings: {
       react: {

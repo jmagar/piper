@@ -17,7 +17,7 @@ export class HealthService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/health',
+            url: '/api/health',
         });
     }
 }

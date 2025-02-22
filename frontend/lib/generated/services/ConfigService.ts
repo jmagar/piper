@@ -30,7 +30,7 @@ export class ConfigService {
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/config',
+            url: '/api/config',
             errors: {
                 500: `Error response`,
             },
