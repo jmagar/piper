@@ -258,6 +258,57 @@ router.post('/messages/unstar', async (
   }
 });
 
+// Get user conversations
+router.get('/conversations/:userId', async (
+  req: Request<{ userId: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId || typeof userId !== 'string') {
+      res.status(400).json({ error: 'User ID must be a string' });
+      return;
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        user_id: userId
+      },
+      orderBy: {
+        last_message_at: 'desc'
+      },
+      include: {
+        _count: {
+          select: {
+            messages: true
+          }
+        }
+      }
+    });
+
+    // Transform conversations to match API response type
+    const transformedConversations = conversations.map(conv => ({
+      id: conv.id,
+      title: conv.title,
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+      metadata: {
+        summary: conv.summary,
+        messageCount: conv._count.messages
+      }
+    }));
+
+    res.json(transformedConversations);
+  } catch (error) {
+    console.error('Error getting conversations:', error);
+    res.status(500).json({ 
+      error: 'Failed to get conversations',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Cleanup handler
 process.on('SIGTERM', async () => {
   await chatService.cleanup();

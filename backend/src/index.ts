@@ -37,9 +37,9 @@ app.use(express.json());
 app.options('*', cors(corsOptions));
 
 // Mount API routes
-app.use('/health', healthRoutes);
-app.use('/api/mcp', mcpRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/mcp', mcpRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
