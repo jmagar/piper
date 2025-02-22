@@ -27,6 +27,7 @@ pnpm-debug.log*
 *.swp
 *.swo
 *~
+.cursor/
 
 # OS files
 .DS_Store
