@@ -311,7 +311,7 @@ router.get('/conversations/:userId', async (
 
 // Cleanup handler
 process.on('SIGTERM', async () => {
-  await chatService.cleanup();
+  await chatService.cleanupResources();
   await prisma.$disconnect();
 });
 

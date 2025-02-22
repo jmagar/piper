@@ -5,7 +5,7 @@ import type { Socket, SocketOptions } from '@/types/socket';
 /**
  * Maximum number of reconnection attempts
  */
-export const MAX_RECONNECT_ATTEMPTS = 5;
+export const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Default socket options
@@ -16,9 +16,9 @@ export const DEFAULT_OPTIONS: SocketOptions = {
 } as const;
 
 /**
- * Get the API URL from environment or use default
+ * API URL is configured in next.config.js and available at build time
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4100';
+export const API_URL = 'http://localhost:4100';
 
 /**
  * Initialize and configure the socket connection
@@ -26,13 +26,13 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4100
 export function initSocket(options: SocketOptions = DEFAULT_OPTIONS): Socket {
     return io(API_URL, {
         path: '/socket.io',
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 2000,
+        timeout: 45000,
         forceNew: true,
         withCredentials: false,
         auth: options

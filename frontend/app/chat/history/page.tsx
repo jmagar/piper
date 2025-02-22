@@ -118,11 +118,11 @@ const ConversationCard = memo(function ConversationCard({ conversation }: { conv
                     <h3 className="font-medium">
                         {safeTitle}
                     </h3>
-                    {safeSummary.length > 0 && (
+                    {safeSummary.length > 0 ? (
                         <p className="text-sm text-muted-foreground line-clamp-2">
                             {safeSummary}
                         </p>
-                    )}
+                    ) : null}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>
                             {formattedDate}
@@ -187,7 +187,7 @@ export default function ChatHistoryPage() {
             } catch (error) {
                 if (!mounted) return;
                 
-                console.error('Error loading conversations:', error);
+                globalThis.console.error('Failed to load conversations:', error);
                 const errorMessage = error instanceof Error 
                     ? error.message
                     : isApiError(error)
@@ -251,7 +251,7 @@ export default function ChatHistoryPage() {
                         </p>
                     </div>
                     <Button asChild>
-                        <a href="/chat/new">Start New Chat</a>
+                        <Link href="/chat/new">Start New Chat</Link>
                     </Button>
                 </div>
             );
@@ -274,10 +274,10 @@ export default function ChatHistoryPage() {
                                 </p>
                             </div>
                             <Button asChild>
-                                <a href="/chat/new">
+                                <Link href="/chat/new">
                                     <MessageSquare className="w-4 h-4 mr-2" />
                                     New Chat
-                                </a>
+                                </Link>
                             </Button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4">

@@ -12,32 +12,44 @@
 
 import { RequestFile } from './models';
 
-export class ConversationStats {
-    'conversationId': string;
-    'messageCount': number;
-    'participantCount': number;
+export class StarredMessage {
+    'id': string;
+    'messageId': string;
+    'userId': string;
+    'note'?: string;
+    'createdAt': Date;
 
     static discriminator: string | undefined = undefined;
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
         {
-            "name": "conversationId",
-            "baseName": "conversationId",
+            "name": "id",
+            "baseName": "id",
             "type": "string"
         },
         {
-            "name": "messageCount",
-            "baseName": "messageCount",
-            "type": "number"
+            "name": "messageId",
+            "baseName": "messageId",
+            "type": "string"
         },
         {
-            "name": "participantCount",
-            "baseName": "participantCount",
-            "type": "number"
+            "name": "userId",
+            "baseName": "userId",
+            "type": "string"
+        },
+        {
+            "name": "note",
+            "baseName": "note",
+            "type": "string"
+        },
+        {
+            "name": "createdAt",
+            "baseName": "createdAt",
+            "type": "Date"
         }    ];
 
     static getAttributeTypeMap() {
-        return ConversationStats.attributeTypeMap;
+        return StarredMessage.attributeTypeMap;
     }
 }
 

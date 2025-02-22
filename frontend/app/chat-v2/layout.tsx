@@ -1,5 +1,7 @@
 "use client"
 
+import type { ReactNode, CSSProperties } from 'react';
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -9,13 +11,13 @@ import {
 export default function ChatLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <SidebarProvider
       style={{
         "--sidebar-width": "350px",
-      } as React.CSSProperties}
+      } as CSSProperties}
     >
       <div className="flex h-screen">
         <AppSidebar />

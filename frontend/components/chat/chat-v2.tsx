@@ -18,7 +18,11 @@ const DEFAULT_USER = {
   email: 'test@example.com'
 } as const;
 
-export function ChatV2() {
+interface ChatV2Props {
+  conversationId?: string;
+}
+
+export function ChatV2({ conversationId }: ChatV2Props) {
   const { socket, isConnected, isConnecting } = useSocket();
   const [messages, setMessages] = useState<ExtendedChatMessage[]>([{
     id: 'welcome',
@@ -56,7 +60,8 @@ export function ChatV2() {
       username: DEFAULT_USER.name,
       type: 'text',
       status: 'sending',
-      metadata: {}
+      metadata: {},
+      ...(conversationId ? { conversationId } : {})
     };
 
     setMessages(prev => [...prev, tempMessage]);
@@ -69,14 +74,30 @@ export function ChatV2() {
           throw new Error(response.error);
         }
         if (response.message !== undefined) {
-          setMessages(prev => prev.map(msg => 
-            msg.id === tempMessage.id ? { ...response.message, status: 'sent' } : msg
-          ));
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === tempMessage.id && response.message) {
+              return {
+                id: response.message.id,
+                role: response.message.role,
+                content: response.message.content,
+                createdAt: response.message.createdAt,
+                updatedAt: response.message.updatedAt,
+                type: response.message.type,
+                status: 'sent' as const,
+                metadata: response.message.metadata,
+                ...(response.message.userId && { userId: response.message.userId }),
+                ...(response.message.username && { username: response.message.username }),
+                ...(response.message.conversationId && { conversationId: response.message.conversationId }),
+                ...(response.message.parentId && { parentId: response.message.parentId })
+              };
+            }
+            return msg;
+          }));
         }
         scrollToBottom();
       });
     } catch (error) {
-      console.error('Failed to send message:', error);
+      globalThis.console.error('Failed to send message:', error);
       toast.error('Failed to send message');
       setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
     } finally {

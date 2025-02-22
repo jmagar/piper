@@ -1,13 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-import { toast } from 'sonner';
-
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { mcpApi } from '@/lib/api-client';
 import { formatBytes } from '@/lib/utils';
-
 
 interface McpServer {
   name?: string;

@@ -84,10 +84,10 @@ export function initWebSocket(server: HTTPServer, prisma: PrismaClient) {
     >(server, {
         cors: corsOptions,
         allowEIO3: true,
-        transports: ['websocket', 'polling'],
-        pingTimeout: 60000,
-        pingInterval: 25000,
-        connectTimeout: 30000,
+        transports: ['polling', 'websocket'],
+        pingTimeout: 45000,
+        pingInterval: 10000,
+        connectTimeout: 45000,
         path: '/socket.io'
     });
 
@@ -155,8 +155,8 @@ export function initWebSocket(server: HTTPServer, prisma: PrismaClient) {
                     conversationId: response.conversationId,
                     parentId: response.parentId,
                     metadata: response.metadata,
-                    createdAt: response.createdAt,
-                    updatedAt: response.updatedAt || response.createdAt,
+                    createdAt: response.createdAt.toISOString(),
+                    updatedAt: (response.updatedAt || response.createdAt).toISOString(),
                     status: 'sent'
                 };
                 io.emit('message:new', assistantMessage);

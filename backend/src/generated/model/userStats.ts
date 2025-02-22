@@ -12,17 +12,18 @@
 
 import { RequestFile } from './models';
 
-export class ConversationStats {
-    'conversationId': string;
+export class UserStats {
+    'userId': string;
     'messageCount': number;
-    'participantCount': number;
+    'conversationCount': number;
+    'lastActive'?: Date;
 
     static discriminator: string | undefined = undefined;
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
         {
-            "name": "conversationId",
-            "baseName": "conversationId",
+            "name": "userId",
+            "baseName": "userId",
             "type": "string"
         },
         {
@@ -31,13 +32,18 @@ export class ConversationStats {
             "type": "number"
         },
         {
-            "name": "participantCount",
-            "baseName": "participantCount",
+            "name": "conversationCount",
+            "baseName": "conversationCount",
             "type": "number"
+        },
+        {
+            "name": "lastActive",
+            "baseName": "lastActive",
+            "type": "Date"
         }    ];
 
     static getAttributeTypeMap() {
-        return ConversationStats.attributeTypeMap;
+        return UserStats.attributeTypeMap;
     }
 }
 

@@ -1,9 +1,22 @@
-import { createLangChainAgent } from '../../langchain-agent.js';
-import { ChatMessage } from '../../generated/model/chatMessage.js';
+import { createLangGraph } from '../../langgraph/index.js';
 import type { PrismaClient } from '@prisma/client';
 
+interface ChatMessage {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant' | 'system';
+  userId: string;
+  username: string;
+  conversationId?: string;
+  parentId?: string;
+  type?: 'text' | 'code' | 'system';
+  metadata?: { [key: string]: any };
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
 export class ChatService {
-  private agent: Awaited<ReturnType<typeof createLangChainAgent>> | null = null;
+  private agent: Awaited<ReturnType<typeof createLangGraph>> | null = null;
   private prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
@@ -13,9 +26,9 @@ export class ChatService {
   private async initAgent() {
     if (!this.agent) {
       try {
-        this.agent = await createLangChainAgent();
+        this.agent = await createLangGraph();
       } catch (error) {
-        console.error('Failed to initialize LangChain agent:', error);
+        console.error('Failed to initialize LangGraph agent:', error);
         // Continue without the agent
         return null;
       }
@@ -83,7 +96,7 @@ export class ChatService {
       try {
         const agent = await this.initAgent();
         if (agent) {
-          const rawResponse = await agent.query(message);
+          const rawResponse = await agent.invoke(message);
           response = this.formatToolResponse(rawResponse);
           
           // Add metadata for special responses
@@ -114,30 +127,31 @@ export class ChatService {
       });
 
       // Create response object
-      const chatMessage = new ChatMessage();
-      chatMessage.id = assistantMessage.id;
-      chatMessage.content = assistantMessage.content;
-      chatMessage.role = ChatMessage.RoleEnum.Assistant;
-      chatMessage.userId = assistantMessage.user_id ?? '';
-      chatMessage.username = user.name ?? '';
-      chatMessage.conversationId = assistantMessage.conversation_id;
-      chatMessage.parentId = assistantMessage.parent_id ?? undefined;
-      chatMessage.type = ChatMessage.TypeEnum.Text;
-      chatMessage.metadata = assistantMessage.metadata as { [key: string]: any } ?? {};
-      chatMessage.createdAt = assistantMessage.created_at;
-      chatMessage.updatedAt = assistantMessage.updated_at;
+      const result: ChatMessage = {
+        id: assistantMessage.id,
+        content: assistantMessage.content,
+        role: 'assistant',
+        userId: assistantMessage.user_id ?? '',
+        username: user.name ?? '',
+        conversationId: assistantMessage.conversation_id,
+        parentId: assistantMessage.parent_id ?? undefined,
+        type: 'text',
+        metadata: assistantMessage.metadata as { [key: string]: any } ?? {},
+        createdAt: assistantMessage.created_at,
+        updatedAt: assistantMessage.updated_at
+      };
 
-      return chatMessage;
+      return result;
     } catch (error) {
       console.error('Error processing message:', error);
       throw error;
     }
   }
 
-  async cleanup() {
+  async cleanupResources() {
     if (this.agent) {
       try {
-        await this.agent.cleanup();
+        await this.agent.cleanupResources();
       } catch (error) {
         console.error('Error cleaning up agent:', error);
       }
