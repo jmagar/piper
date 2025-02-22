@@ -1,0 +1,63 @@
+paths:
+  /analytics/usage:
+    get:
+      summary: Get API usage statistics
+      operationId: getUsage
+      tags: [Analytics]
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalTokens:
+                    type: object
+                    properties:
+                      input:
+                        type: integer
+                      output:
+                        type: integer
+                      total:
+                        type: integer
+                  costBreakdown:
+                    type: object
+                    properties:
+                      input:
+                        type: number
+                        format: float
+                      output:
+                        type: number
+                        format: float
+                      total:
+                        type: number
+                        format: float
+                  timeSeriesData:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        tokens:
+                          type: integer
+                        cost:
+                          type: number
+                          format: float
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

@@ -1,4 +1,4 @@
-import { ExtendedChatMessage } from '@/types/chat';
+import type { ExtendedChatMessage } from '@/types/chat';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';

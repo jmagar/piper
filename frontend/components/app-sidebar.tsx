@@ -1,93 +1,132 @@
 "use client"
 
-import type * as React from "react"
-import { MessageSquare, Settings2, Server, BookOpen } from "lucide-react"
-import { NavMain } from "./nav-main"
-import { NavUser } from "./nav-user"
-import { ModelSelector } from "./model-selector"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/theme-toggle"
+import * as React from "react"
 
-// Sample data
+import {
+  BookOpen,
+  Bot,
+  Command,
+  LifeBuoy,
+  Send,
+  SquareTerminal,
+} from "lucide-react"
+
+import { NavMain } from "@/components/nav-main"
+import { NavSecondary } from "@/components/nav-secondary"
+import { NavUser } from "@/components/nav-user"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
+
 const data = {
   user: {
-    name: "Jacob",
-    email: "jmagar@gmail.com",
-    avatar: undefined,
-  } as { name: string; email: string; avatar?: string },
+    name: "Piper",
+    email: "piper@example.com",
+    avatar: "/avatars/shadcn.jpg",
+  },
   navMain: [
     {
-      title: "Chat",
+      title: "Messages",
       url: "#",
-      icon: MessageSquare,
+      icon: SquareTerminal,
+      isActive: true,
       items: [
         {
-          title: "New Chat",
-          url: "/chat/new",
+          title: "New",
+          url: "#",
         },
         {
           title: "History",
-          url: "/chat/history",
+          url: "#",
         },
         {
-          title: "Starred Messages",
-          url: "/chat/starred",
-        }
+          title: "Starred",
+          url: "#",
+        },
       ],
     },
     {
-      title: "MCP",
+      title: "Model Context Protocol",
       url: "#",
-      icon: Server,
+      icon: Bot,
       items: [
         {
-          title: "Dashboard",
-          url: "/mcp",
+          title: "Config",
+          url: "#",
         },
         {
           title: "Servers",
-          url: "/mcp/servers",
-        },
-        {
-          title: "Tools",
-          url: "/mcp/tools",
+          url: "#",
         },
         {
           title: "Logs",
-          url: "/mcp/logs",
-        }
+          url: "#",
+        },
       ],
     },
     {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
+      title: "Knowledge",
+      url: "#",
+      icon: BookOpen,
+      items: [
+        {
+          title: "Search",
+          url: "#",
+        },
+        {
+          title: "Documents",
+          url: "#",
+        },
+      ],
     },
+  ],
+  navSecondary: [
     {
       title: "Documentation",
-      url: "/docs",
-      icon: BookOpen,
-    }
+      url: "#",
+      icon: LifeBuoy,
+    },
+    {
+      title: "Github",
+      url: "https://github.com/jmagar/piper",
+      icon: Send,
+    },
   ],
-};
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar variant="inset" {...props}>
       <SidebarHeader>
-        <ModelSelector />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <a href="#">
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <Command className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">Acme Inc</span>
+                  <span className="truncate text-xs">Enterprise</span>
+                </div>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center justify-between px-4 py-2">
-          <NavUser user={data.user} />
-          <ThemeToggle />
-        </div>
+        <NavUser user={data.user} />
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   )
 }
-

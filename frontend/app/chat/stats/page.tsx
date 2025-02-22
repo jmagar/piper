@@ -1,11 +1,13 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { formatDistanceToNow } from "date-fns"
 import { BarChart, MessageSquare, Clock, ArrowUpRight } from "lucide-react"
+
+import { AppSidebar } from "@/components/app-sidebar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 interface UserStats {
   totalMessages: number

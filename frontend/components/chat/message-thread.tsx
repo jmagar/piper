@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { ExtendedChatMessage } from '@/types/chat';
-import { getMessages } from '@/lib/api';
-import { Button } from '../ui/button';
-import { MessageCard } from '../chat/message-card';
-import { Skeleton } from '../ui/skeleton';
+
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+
+import { getMessages } from '@/lib/api';
+import type { ExtendedChatMessage } from '@/types/chat';
+
+import { MessageCardV2 as MessageCard } from '../chat/message-card-v2';
+import { Button } from '../ui/button';
+import { Skeleton } from '../ui/skeleton';
+
 
 interface MessageThreadProps {
     message: ExtendedChatMessage;
@@ -38,8 +42,7 @@ export function MessageThread({ message, onReply }: MessageThreadProps) {
         <div className="space-y-2">
             <MessageCard message={message} />
             
-            {hasReplies && (
-                <div className="ml-6 flex items-center gap-2 text-sm text-muted-foreground">
+            {hasReplies ? <div className="ml-6 flex items-center gap-2 text-sm text-muted-foreground">
                     <Button
                         variant="ghost"
                         size="sm"
@@ -49,11 +52,9 @@ export function MessageThread({ message, onReply }: MessageThreadProps) {
                         {isExpanded ? <ChevronUp /> : <ChevronDown />}
                         {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
                     </Button>
-                </div>
-            )}
+                </div> : null}
 
-            {isExpanded && (
-                <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
+            {isExpanded ? <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
                     {isLoading ? (
                         Array.from({ length: replyCount }).map((_, i) => (
                             <Skeleton key={i} className="h-20 w-full" />
@@ -63,8 +64,7 @@ export function MessageThread({ message, onReply }: MessageThreadProps) {
                             <MessageCard key={reply.id} message={reply} />
                         ))
                     )}
-                </div>
-            )}
+                </div> : null}
 
             <Button
                 variant="ghost"

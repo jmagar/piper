@@ -1,0 +1,215 @@
+paths:
+  /chat:
+    get:
+      summary: Get messages
+      operationId: getMessages
+      tags: [Chat]
+      parameters:
+        - name: conversationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: threadId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '../main.yaml#/components/schemas/ChatMessage'
+                  nextCursor:
+                    type: string
+                  total:
+                    type: integer
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    post:
+      summary: Create message
+      operationId: createMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+                - username
+              properties:
+                content:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+                conversationId:
+                  type: string
+                  format: uuid
+                parentId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [text, code, system]
+                  default: text
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        201:
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/ChatMessage'
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /chat/conversations/{userId}:
+    get:
+      summary: Get user conversations
+      operationId: getUserConversations
+      tags: [Chat]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../main.yaml#/components/schemas/Conversation'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /chat/messages/star:
+    post:
+      summary: Star a message
+      operationId: starMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+                note:
+                  type: string
+      responses:
+        200:
+          description: Message starred
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/StarredMessage'
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /chat/messages/unstar:
+    post:
+      summary: Unstar a message
+      operationId: unstarMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        200:
+          description: Message unstarred
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /chat/stats:
+    get:
+      summary: Get chat statistics
+      operationId: getChatStats
+      tags: [Chat]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: conversationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Chat statistics
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '../main.yaml#/components/schemas/UserStats'
+                  - $ref: '../main.yaml#/components/schemas/ConversationStats'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

@@ -1,0 +1,53 @@
+paths:
+  /config:
+    get:
+      summary: Get configuration
+      operationId: getConfig
+      tags: [Config]
+      responses:
+        200:
+          description: Configuration object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        provider:
+                          type: string
+                        contextWindow:
+                          type: integer
+                        maxTokens:
+                          type: integer
+                        temperature:
+                          type: number
+                          format: float
+                        topP:
+                          type: number
+                          format: float
+                        frequencyPenalty:
+                          type: number
+                          format: float
+                        presencePenalty:
+                          type: number
+                          format: float
+                        stopSequences:
+                          type: array
+                          items:
+                            type: string
+                  defaultModel:
+                    type: string
+                  maxContextLength:
+                    type: integer
+                  maxResponseTokens:
+                    type: integer
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

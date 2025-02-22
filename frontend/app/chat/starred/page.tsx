@@ -1,16 +1,20 @@
 "use client"
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { useCallback, useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { formatDistanceToNow } from "date-fns"
 import { Star } from "lucide-react"
+import { toast } from "sonner"
+
+import { AppSidebar } from "@/components/app-sidebar"
+import { FilterSort  } from "@/components/chat/filter-sort"
+import type {FilterSortOptions} from "@/components/chat/filter-sort";
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteScroll } from "@/lib/hooks/use-infinite-scroll"
-import { FilterSort, type FilterSortOptions } from "@/components/chat/filter-sort"
-import { toast } from "sonner"
+
 
 interface StarredMessage {
   id: string
@@ -149,7 +153,7 @@ export default function StarredPage() {
                       <CardTitle className="text-base">From conversation: {message.conversationTitle}</CardTitle>
                       <CardDescription>
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                        {message.note && ` · Note: ${message.note}`}
+                        {message.note ? ` · Note: ${message.note}` : null}
                       </CardDescription>
                     </div>
                     <Button
@@ -167,25 +171,19 @@ export default function StarredPage() {
                 </Card>
               ))}
               
-              {loading && (
-                Array.from({ length: 3 }).map((_, index) => (
+              {loading ? Array.from({ length: 3 }).map((_, index) => (
                   <MessageSkeleton key={`skeleton-${index}`} />
-                ))
-              )}
+                )) : null}
 
-              {error && (
-                <div className="text-red-500 p-4 text-center">
+              {error ? <div className="text-red-500 p-4 text-center">
                   Error loading starred messages. Please try again.
-                </div>
-              )}
+                </div> : null}
 
-              {!loading && starredMessages.length === 0 && (
-                <div className="text-center p-4">
+              {!loading && starredMessages.length === 0 ? <div className="text-center p-4">
                   {filterOptions.search
                     ? `No starred messages found matching "${filterOptions.search}"`
                     : "No starred messages found"}
-                </div>
-              )}
+                </div> : null}
             </div>
           </div>
         </main>

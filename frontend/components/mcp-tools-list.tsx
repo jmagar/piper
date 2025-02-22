@@ -1,237 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { Server, Info, FileText, Search, Cloud, Globe, Terminal, Wrench } from 'lucide-react';
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+'use client';
 
-interface ToolSchema {
-    required: string[];
-    properties: Record<string, {
-        type: string;
-        description: string;
-    }>;
-}
+import { useEffect, useState } from 'react';
+import { Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { mcpApi } from '@/lib/api-client';
+import type { Tool } from '@/lib/generated/models/Tool';
 
-interface ToolInfo {
-    name: string;
-    description: string;
-    requiredParameters: string[];
-    schema?: ToolSchema;
-}
-
-interface GroupedTools {
-    [key: string]: ToolInfo[];
-}
-
-const getServerIcon = (serverName: string) => {
-    switch (serverName.toLowerCase()) {
-        case 'filesystem':
-            return FileText;
-        case 'brave-search':
-            return Search;
-        case 'weather':
-            return Cloud;
-        case 'puppeteer':
-            return Globe;
-        case 'fetch':
-            return Globe;
-        default:
-            return Terminal;
-    }
-};
-
-const getServerFromToolName = (toolName: string): string => {
-    if (toolName.includes('file') || toolName.includes('directory')) return 'filesystem';
-    if (toolName.includes('search')) return 'brave-search';
-    if (toolName.includes('weather')) return 'weather';
-    if (toolName.includes('browse') || toolName.includes('screenshot')) return 'puppeteer';
-    if (toolName.includes('fetch') || toolName.includes('http')) return 'fetch';
-    return 'other';
-};
-
-function ToolCard({ tool }: { tool: ToolInfo }) {
-    return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <div className="p-3 rounded-lg border bg-card text-card-foreground hover:shadow-md transition-all hover:scale-[1.02] cursor-pointer">
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-primary/10">
-                            <Wrench className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 truncate">
-                            <h4 className="font-medium text-sm truncate">{tool.name}</h4>
-                        </div>
-                    </div>
-                </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4">
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-base">{tool.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                        {tool.description}
-                    </p>
-                    {tool.requiredParameters.length > 0 && (
-                        <div className="pt-2">
-                            <h5 className="text-sm font-medium mb-1.5">Required Parameters:</h5>
-                            <div className="flex flex-wrap gap-1.5">
-                                {tool.requiredParameters.map((param) => (
-                                    <span
-                                        key={param}
-                                        className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary"
-                                    >
-                                        {param}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {tool.schema && (
-                        <div className="pt-2">
-                            <button
-                                onClick={() => console.log(tool.schema)}
-                                className="text-xs text-primary hover:text-primary/80"
-                            >
-                                View Schema
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-}
-
-function ServerSection({ name, tools }: { name: string; tools: ToolInfo[] }) {
-    const IconComponent = getServerIcon(name);
-    return (
-        <div className="space-y-3">
-            <div className="flex items-center gap-2 sticky top-0 bg-background/95 py-2">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <div className="p-1.5 rounded-md bg-primary/10">
-                                <IconComponent className="w-4 h-4 text-primary" />
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{name.replace('-', ' ')} Server</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <h3 className="text-sm font-medium capitalize">
-                    {name.replace('-', ' ')}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                        {tools.length} tools
-                    </span>
-                </h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {tools.map((tool) => (
-                    <ToolCard key={tool.name} tool={tool} />
-                ))}
-            </div>
+function ToolSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
         </div>
-    );
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function McpToolsList() {
-    const [tools, setTools] = useState<ToolInfo[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchTools = async () => {
-            try {
-                const response = await fetch('http://localhost:4100/api/tools');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tools');
-                }
-                const data = await response.json();
-                setTools(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to fetch tools');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchTools();
-    }, []);
-
-    const groupedTools = tools.reduce((acc: GroupedTools, tool) => {
-        const serverName = getServerFromToolName(tool.name);
-        if (!acc[serverName]) {
-            acc[serverName] = [];
-        }
-        acc[serverName].push(tool);
-        return acc;
-    }, {});
-
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <div className="flex items-center justify-center h-full">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-current animate-bounce" />
-                        <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.2s]" />
-                        <div className="w-2 h-2 rounded-full bg-current animate-bounce [animation-delay:0.4s]" />
-                    </div>
-                </div>
-            );
-        }
-
-        if (error) {
-            return (
-                <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
-                    <Info className="w-12 h-12 text-red-500" />
-                    <div className="text-center">
-                        <h3 className="text-lg font-semibold text-red-500">Error Loading Tools</h3>
-                        <p className="text-sm text-muted-foreground">{error}</p>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col h-full">
-                <div className="p-4 border-b flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-                    <div className="flex items-center gap-2">
-                        <Server className="w-5 h-5" />
-                        <h2 className="text-lg font-semibold">MCP Tools</h2>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                        {tools.length} tools available
-                    </span>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                    <div className="p-4 space-y-6">
-                        {Object.entries(groupedTools).map(([serverName, serverTools]) => (
-                            <ServerSection key={serverName} name={serverName} tools={serverTools} />
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        setLoading(true);
+        const data = await mcpApi.listMcpTools();
+        setTools(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch tools');
+      } finally {
+        setLoading(false);
+      }
     };
 
+    void fetchTools();
+  }, []);
+
+  if (loading) {
     return (
-        <SidebarProvider>
-            <div className="flex h-screen w-full">
-                <AppSidebar />
-                <main className="flex-1 w-full overflow-hidden">
-                    {renderContent()}
-                </main>
-            </div>
-        </SidebarProvider>
+      <div className="p-4 space-y-4">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <ToolSkeleton key={`skeleton-${index}`} />
+        ))}
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
+        <Info className="w-12 h-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-red-500">Error Loading Tools</h3>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold">MCP Tools</h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {tools.map(tool => (
+          <Card key={tool.id} className="relative">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">{tool.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{tool.description}</p>
+                </div>
+                <Badge variant={
+                  tool.type === 'system' ? 'default' :
+                  tool.type === 'plugin' ? 'secondary' :
+                  'outline'
+                }>
+                  {tool.type ?? 'custom'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Parameters</h4>
+                  <div className="space-y-2">
+                    {tool.parameters?.map((param, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span className="font-medium">{param.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{param.type}</Badge>
+                          {param.required ? <Badge variant="destructive">Required</Badge> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {tool.metadata !== undefined ? <details className="mt-2">
+                    <summary className="text-sm cursor-pointer">Metadata</summary>
+                    <pre className="mt-1 text-xs bg-gray-100 p-2 rounded dark:bg-gray-700">
+                      {JSON.stringify(tool.metadata, null, 2)}
+                    </pre>
+                  </details> : null}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 } 

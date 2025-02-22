@@ -1,0 +1,72 @@
+---
+description: 
+globs: 
+---
+# Development Workflow Rules
+
+Rules for development workflow and server management.
+
+<rule>
+name: dev_workflow_standards
+description: Standards for development workflow and server management
+filters:
+  - type: file_path
+    pattern: "scripts/.*?\\.ts$|package\\.json$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these development workflow standards:
+      
+      1. Server Management:
+         - ALWAYS use `pnpm run dev` from project root
+         - NEVER start servers individually
+         - Let start-servers.ts handle:
+           * Server cleanup
+           * Port management
+           * Docker container health
+           * Process cleanup
+           * Hot reload setup
+      
+      2. Hot Reload:
+         - Frontend uses Next.js hot reload
+         - Backend uses tsx watch
+         - Config changes auto-reload
+         - No manual restarts needed
+      
+      3. Docker Management:
+         - start-servers.ts handles containers:
+           * Checks network existence
+           * Creates network if needed
+           * Verifies container health
+           * Handles container startup
+      
+      4. Process Management:
+         - Proper cleanup on exit
+         - Handles SIGINT/SIGTERM
+         - Manages port conflicts
+         - Proper error handling
+      
+      5. Development Commands:
+         - Root level commands:
+           * pnpm run dev (starts all servers)
+           * pnpm run build
+           * pnpm run test
+           * pnpm run lint
+         - No individual server starts
+         - No manual Docker management
+
+examples:
+  - input: |
+      // Bad
+      cd frontend && pnpm dev
+      cd backend && pnpm dev
+      
+      // Good
+      pnpm run dev  # From project root
+    output: "Proper development workflow using unified command"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

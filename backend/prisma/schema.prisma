@@ -170,4 +170,30 @@ model MessageBookmark {
     @@index([user_id])
     @@index([tags])
     @@map("message_bookmarks")
-} 
+}
+
+model McpServer {
+    id          String      @id @default(cuid())
+    name        String
+    url         String
+    type        String      // 'primary', 'secondary', 'replica'
+    status      String      @default("active") // 'active', 'inactive', 'maintenance'
+    metadata    Json?
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @updatedAt @map("updated_at")
+
+    @@map("mcp_servers")
+}
+
+model McpTool {
+    id          String      @id @default(cuid())
+    name        String
+    description String
+    type        String      // 'system', 'user', 'plugin'
+    parameters  Json        // Array of parameter objects
+    metadata    Json?
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @updatedAt @map("updated_at")
+
+    @@map("mcp_tools")
+}

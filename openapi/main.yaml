@@ -1,0 +1,254 @@
+openapi: 3.0.0
+info:
+  title: Pooper API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3002
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Chat
+    description: Chat related endpoints
+  - name: Config
+    description: Configuration endpoints
+  - name: MCP
+    description: Model Context Protocol endpoints
+  - name: Dashboard
+    description: Server dashboard and metrics endpoints
+
+paths:
+  /health:
+    $ref: './schemas/health.yaml#/paths/~1health'
+  /chat:
+    $ref: './schemas/chat.yaml#/paths/~1chat'
+  /chat/conversations/{userId}:
+    $ref: './schemas/chat.yaml#/paths/~1chat~1conversations~1{userId}'
+  /chat/messages/star:
+    $ref: './schemas/chat.yaml#/paths/~1chat~1messages~1star'
+  /chat/messages/unstar:
+    $ref: './schemas/chat.yaml#/paths/~1chat~1messages~1unstar'
+  /chat/stats:
+    $ref: './schemas/chat.yaml#/paths/~1chat~1stats'
+  /config:
+    $ref: './schemas/config.yaml#/paths/~1config'
+  /mcp/health:
+    $ref: './schemas/mcp.yaml#/paths/~1mcp~1health'
+  /mcp/tools:
+    $ref: './schemas/mcp.yaml#/paths/~1mcp~1tools'
+  /mcp/tools/{toolId}:
+    $ref: './schemas/mcp.yaml#/paths/~1mcp~1tools~1{toolId}'
+  /dashboard/stats:
+    $ref: './schemas/dashboard.yaml#/paths/~1dashboard~1stats'
+  /analytics/usage:
+    $ref: './schemas/analytics.yaml#/paths/~1analytics~1usage'
+  /realtime/events:
+    $ref: './schemas/realtime.yaml#/paths/~1realtime~1events'
+  /tools/executions:
+    $ref: './schemas/tool-execution.yaml#/paths/~1tools~1executions'
+
+components:
+  responses:
+    ApiError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                description: Error message
+            required:
+              - error
+
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+
+    Tool:
+      type: object
+      required:
+        - id
+        - name
+        - serverId
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        serverId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [system, plugin, custom]
+          default: custom
+        parameters:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              description:
+                type: string
+              required:
+                type: boolean
+                default: false
+              schema:
+                type: object
+                additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - content
+        - userId
+        - username
+        - createdAt
+        - role
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, system]
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        conversationId:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [text, code, system]
+          default: text
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - title
+        - userId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    StarredMessage:
+      type: object
+      required:
+        - id
+        - messageId
+        - userId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UserStats:
+      type: object
+      required:
+        - userId
+        - messageCount
+        - conversationCount
+      properties:
+        userId:
+          type: string
+          format: uuid
+        messageCount:
+          type: integer
+        conversationCount:
+          type: integer
+        lastActive:
+          type: string
+          format: date-time
+
+    ConversationStats:
+      type: object
+      required:
+        - conversationId
+        - messageCount
+        - participantCount
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        messageCount:
+          type: integer
+        participantCount:
+          type: integer
+        lastActive:
+          type: string
+          format: date-time

@@ -1,0 +1,360 @@
+paths:
+  /mcp/health:
+    get:
+      summary: Get MCP server health status
+      operationId: getMcpHealth
+      tags: [MCP]
+      responses:
+        200:
+          description: Health status of MCP servers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded, error]
+                  servers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [ok, error]
+                        error:
+                          type: string
+                        memoryUsage:
+                          type: object
+                          properties:
+                            heapUsed:
+                              type: number
+                            heapTotal:
+                              type: number
+                            external:
+                              type: number
+                            rss:
+                              type: number
+                  timestamp:
+                    type: string
+                    format: date-time
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /mcp/servers:
+    get:
+      summary: List MCP servers
+      operationId: listMcpServers
+      tags: [MCP]
+      responses:
+        200:
+          description: List of MCP servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    url:
+                      type: string
+                    status:
+                      type: string
+                      enum: [active, inactive, error]
+                    metadata:
+                      type: object
+                      additionalProperties: true
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    post:
+      summary: Register MCP server
+      operationId: registerMcpServer
+      tags: [MCP]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - url
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                url:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        201:
+          description: MCP server registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  url:
+                    type: string
+                  status:
+                    type: string
+                    enum: [active, inactive, error]
+                  metadata:
+                    type: object
+                    additionalProperties: true
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /mcp/servers/{serverId}:
+    get:
+      summary: Get MCP server details
+      operationId: getMcpServer
+      tags: [MCP]
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: MCP server details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  url:
+                    type: string
+                  status:
+                    type: string
+                    enum: [active, inactive, error]
+                  metadata:
+                    type: object
+                    additionalProperties: true
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    delete:
+      summary: Unregister MCP server
+      operationId: unregisterMcpServer
+      tags: [MCP]
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: MCP server unregistered
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /mcp/tools:
+    get:
+      summary: List MCP tools
+      operationId: listMcpTools
+      tags: [MCP]
+      responses:
+        200:
+          description: List of MCP tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../main.yaml#/components/schemas/Tool'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+    post:
+      summary: Register MCP tool
+      operationId: registerMcpTool
+      tags: [MCP]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - serverId
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                serverId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [system, plugin, custom]
+                  default: custom
+                parameters:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - type
+                    properties:
+                      name:
+                        type: string
+                      type:
+                        type: string
+                      description:
+                        type: string
+                      required:
+                        type: boolean
+                        default: false
+                      schema:
+                        type: object
+                        additionalProperties: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        201:
+          description: MCP tool registered
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/Tool'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /mcp/tools/{toolId}:
+    get:
+      summary: Get MCP tool details
+      operationId: getMcpTool
+      tags: [MCP]
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: MCP tool details
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/Tool'
+        404:
+          description: Tool not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+    delete:
+      summary: Unregister MCP tool
+      operationId: unregisterMcpTool
+      tags: [MCP]
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: MCP tool unregistered
+        404:
+          description: Tool not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string

@@ -11,15 +11,20 @@ export interface ChatMessage {
 
 export interface ExtendedChatMessage {
     id: string;
-    role: 'user' | 'assistant';
+    role: 'user' | 'assistant' | 'system';
     content: string;
-    timestamp: string | Date;
+    createdAt: string;
+    updatedAt: string;
+    userId?: string;
+    username?: string;
+    conversationId?: string;
+    parentId?: string;
+    type: 'text' | 'code' | 'system';
     status: 'sending' | 'sent' | 'error';
-    metadata?: {
+    metadata: {
         edited?: boolean;
         editedAt?: Date;
-        username?: string;
-        type?: 'text' | 'code' | 'system';
+        timestamp?: string | number;
         reactions?: Record<string, {
             count: number;
             users: {
@@ -85,4 +90,4 @@ export interface UserStats {
     totalStarred: number;
     averageResponseLength: number;
     lastActive: Date;
-} 
+}

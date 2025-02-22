@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
+
 import { Server, Info, FileText, Search, Cloud, Globe, Terminal, Wrench } from 'lucide-react';
+
 import { AppSidebar } from "@/components/app-sidebar";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
     Tooltip,
@@ -8,11 +15,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface ToolSchema {
     required: string[];
@@ -116,8 +118,7 @@ function ToolCard({ tool }: { tool: ToolInfo }) {
                     <p className="text-sm text-muted-foreground">
                         {tool.description}
                     </p>
-                    {tool.requiredParameters.length > 0 && (
-                        <div className="pt-2">
+                    {tool.requiredParameters.length > 0 ? <div className="pt-2">
                             <h5 className="text-sm font-medium mb-1.5">Required Parameters:</h5>
                             <div className="flex flex-wrap gap-1.5">
                                 {tool.requiredParameters.map((param) => (
@@ -129,18 +130,15 @@ function ToolCard({ tool }: { tool: ToolInfo }) {
                                     </span>
                                 ))}
                             </div>
-                        </div>
-                    )}
-                    {tool.schema && (
-                        <div className="pt-2">
+                        </div> : null}
+                    {tool.schema ? <div className="pt-2">
                             <button
                                 onClick={() => console.log(tool.schema)}
                                 className="text-xs text-primary hover:text-primary/80"
                             >
                                 View Schema
                             </button>
-                        </div>
-                    )}
+                        </div> : null}
                 </div>
             </PopoverContent>
         </Popover>
@@ -188,7 +186,7 @@ export function McpToolsList() {
     useEffect(() => {
         const fetchTools = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4100'}/api/tools`);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/tools`);
                 if (!response.ok) {
                     throw new Error('Failed to fetch tools');
                 }
@@ -270,4 +268,4 @@ export function McpToolsList() {
             </div>
         </SidebarProvider>
     );
-} 
+}

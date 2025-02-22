@@ -1,184 +1,85 @@
-import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { MemorySaver } from '@langchain/langgraph';
-import { HumanMessage } from '@langchain/core/messages';
-import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
-import { initChatModel } from './init-chat-model.js';
-import { loadConfig, Config } from './load-config.js';
-import readline from 'readline';
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
+import type { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { createServer } from 'http';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// ES Module path resolution
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
+import mcpRoutes from './routes/mcp.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import configRoutes from './routes/config.routes.js';
+import healthRoutes from './routes/health.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import { initWebSocket } from './websocket.js';
 
 // Initialize environment variables
 dotenv.config();
 
-// Constants
-const COLORS = {
-  YELLOW: '\x1b[33m',
-  CYAN: '\x1b[36m',
-  RESET: '\x1b[0m'
-} as const;
+// Initialize Prisma
+const prisma = new PrismaClient();
 
-// CLI argument setup
-interface Arguments {
-  config: string;
-  verbose: boolean;
-  [key: string]: unknown;
-}
+const app = express();
 
-const parseArguments = (): Arguments => {
-  return yargs(hideBin(process.argv))
-    .options({
-      config: {
-        type: 'string',
-        description: 'Path to config file',
-        demandOption: false,
-        default: path.resolve(__dirname, '../../llm_mcp_config.json5'),
-        alias: 'c',
-      },
-      verbose: {
-        type: 'boolean',
-        description: 'Run with verbose logging',
-        demandOption: false,
-        default: false,
-        alias: 'v',
-      },
-    })
-    .help()
-    .alias('help', 'h')
-    .parseSync() as Arguments;
+// CORS configuration
+const corsOptions = {
+    origin: '*',  // Allow all origins in development
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 
-// Input handling
-const createReadlineInterface = () => {
-  return readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-};
+// Basic middleware
+app.use(cors(corsOptions));
+app.use(express.json());
 
-const getInput = (rl: readline.Interface, prompt: string): Promise<string> => {
-  return new Promise((resolve) => rl.question(prompt, resolve));
-};
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
-async function getUserQuery(
-  rl: readline.Interface,
-  remainingQueries: string[]
-): Promise<string | undefined> {
-  const input = await getInput(rl, `${COLORS.YELLOW}Query: `);
-  process.stdout.write(COLORS.RESET);
-  const query = input.trim();
+// Mount API routes
+app.use('/health', healthRoutes);
+app.use('/api/mcp', mcpRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
-  if (query.toLowerCase() === 'quit' || query.toLowerCase() === 'q') {
-    rl.close();
-    return undefined;
-  }
+// Basic error handling
+app.use((_req: Request, res: Response) => {
+    res.status(404).json({ error: 'Not Found' });
+});
 
-  if (query === '') {
-    const exampleQuery = remainingQueries.shift();
-    if (!exampleQuery) {
-      console.log('\nPlease type a query, or "quit" or "q" to exit\n');
-      return await getUserQuery(rl, remainingQueries);
-    }
-    process.stdout.write('\x1b[1A\x1b[2K'); // Move up and clear the line
-    console.log(`${COLORS.YELLOW}Example Query: ${exampleQuery}${COLORS.RESET}`);
-    return exampleQuery;
-  }
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+});
 
-  return query;
-}
+// Create HTTP server
+const httpServer = createServer(app);
 
-// Conversation loop
-async function handleConversation(
-  agent: ReturnType<typeof createReactAgent>,
-  remainingQueries: string[]
-): Promise<void> {
-  console.log('\nConversation started. Type "quit" or "q" to end the conversation.\n');
-  if (remainingQueries && remainingQueries.length > 0) {
-    console.log('Exaample Queries (just type Enter to supply them one by one):');
-    remainingQueries.forEach(query => console.log(`- ${query}`));
-    console.log();
-  }
+// Initialize WebSocket with updated CORS options
+const io = initWebSocket(httpServer, prisma);
 
-  const rl = createReadlineInterface();
+// Get port from environment or use default
+const port = process.env.PORT || 4100;
+const serverUrl = `http://localhost:${port}`;
+const wsUrl = `ws://localhost:${port}`;
 
-  while (true) {
-    const query = await getUserQuery(rl, remainingQueries);
-    console.log();
+// Start server
+httpServer.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    console.log(`WebSocket server running at ws://localhost:${port}`);
+    console.log('Environment variables loaded:', {
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? '***' : undefined,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY ? '***' : undefined,
+        BRAVE_API_KEY: process.env.BRAVE_API_KEY ? '***' : undefined,
+        GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PERSONAL_ACCESS_TOKEN ? '***' : undefined,
+    });
 
-    if (!query) {
-      console.log(`${COLORS.CYAN}Goodbye!${COLORS.RESET}\n`);
-      return;
-    }
-
-    const agentFinalState = await agent.invoke(
-      { messages: [new HumanMessage(query)] },
-      { configurable: { thread_id: 'test-thread' } }
-    );
-
-    // the last message is an AIMessage
-    const result = agentFinalState.messages[agentFinalState.messages.length - 1].content;
-    const messageOneBefore = agentFinalState.messages[agentFinalState.messages.length - 2]
-    if (messageOneBefore.constructor.name === 'ToolMessage') {
-      console.log(); // new line after tool call output
-    }
-
-    console.log(`${COLORS.CYAN}${result}${COLORS.RESET}\n`);
-  }
-}
-
-// Application initialization
-async function initializeReactAgent(config: Config, verbose: boolean) {
-  console.log('Initializing model...', config.llm, '\n');
-  const llmConfig = {
-    modelProvider: config.llm.model_provider,
-    model: config.llm.model,
-    temperature: config.llm.temperature,
-    maxTokens: config.llm.max_tokens,
-  }
-  const llm = initChatModel(llmConfig);
-
-  console.log(`Initializing ${Object.keys(config.mcp_servers).length} MCP server(s)...\n`);
-  const { tools, cleanup } = await convertMcpToLangchainTools(
-    config.mcp_servers,
-    { logLevel: verbose ? 'debug' : 'info' }
-  );
-
-  const agent = createReactAgent({
-    llm,
-    tools,
-    checkpointSaver: new MemorySaver(),
-  });
-
-  return { agent, cleanup };
-}
-
-// Main
-async function main(): Promise<void> {
-  let mcpCleanup: McpServerCleanupFn | undefined;
-
-  try {
-    const argv = parseArguments();
-    const config = loadConfig(argv.config);
-
-    const { agent, cleanup } = await initializeReactAgent(config, argv.verbose);
-    mcpCleanup = cleanup;
-
-    await handleConversation(agent, config.example_queries ?? []);
-
-  } finally {
-    await mcpCleanup?.();
-  }
-}
-
-// Application entry point with error handling
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
+    // Close Prisma and Socket.IO when app shuts down
+    process.on('SIGTERM', async () => {
+        console.log('Shutting down server...');
+        await prisma.$disconnect();
+        await io.close();
+        process.exit(0);
+    });
 });

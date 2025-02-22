@@ -1,75 +1,23 @@
-// The configuration file format is [JSON5](https://json5.org/),
-// where comments and trailing commas are allowed.
-// The file format is further extended to replace `${...}` notations
-// with the values of corresponding environment variables.
-// Keep all the credentials and private into the `.env` file
-// and refer to them with `${...}` notation as needed.
 {
-    // "llm": {
-    //     "model_provider": "openai",
-    //     "model": "gpt-4",
-    //     "temperature": 0.0,
-    //     "max_tokens": 1000,
-    // },
     "llm": {
         "model_provider": "anthropic",
         "model": "claude-3-5-sonnet-20241022",
         "temperature": 0.7,
         "max_tokens": 1000,
     },
-    // "llm": {
-    //     "model_provider": "groq",
-    //     "model": "llama-3.1-8b-instant",
-    //     "temperature": 0.0,
-    //     "max_tokens": 1000,
-    // },
     "example_queries": [
         "Tomorrow's weather in SF?",
         "Read and briefly summarize the LICENSE file",
         "Read the news headlines on bbc.com",
     ],
     "mcp_servers": {
-        // What Could Go Wrong - Python-based MCP server
-        // "wcgw": {
-        //     "command": "uv",
-        //     "args": [
-        //         "tool",
-        //         "run",
-        //         "--from",
-        //         "wcgw@latest",
-        //         "--python",
-        //         "3.12",
-        //         "wcgw_mcp"
-        //     ]
-        // },
-        "mcp-server-firecrawl": {
-            "command": "npx",
-            "args": ["-y", "mcp-server-firecrawl"],
-            "env": {
-                "FIRE_CRAWL_API_KEY": "${FIRE_CRAWL_API_KEY}",
-
-                "FIRE_CRAWL_RETRY_MAX_ATTEMPTS": "5",
-                "FIRE_CRAWL_RETRY_INITIAL_DELAY": "2000",
-                "FIRE_CRAWL_RETRY_MAX_DELAY": "30000",
-                "FIRE_CRAWL_RETRY_BACKOFF_FACTOR": "3",
-
-                "FIRE_CRAWL_CREDIT_WARNING_THRESHOLD": "2000",
-                "FIRE_CRAWL_CREDIT_CRITICAL_THRESHOLD": "500"
-            }
-        },
         "searxng": {
             "command": "npx",
-            "args": [
-                "-y",
-        "@kevinwatt/mcp-server-searxng"
-            ]
+            "args": ["-y", "@kevinwatt/mcp-server-searxng"]
         },
         "mediaProcessor": {
             "command": "npx",
-            "args": [
-                "-y",
-                "mcp-media-processor@latest"
-            ]
+            "args": ["-y", "mcp-media-processor@latest"]
         },
         "modal-toolbox": {
             "command": "uvx",
@@ -77,10 +25,7 @@
         },
         "shell": {
             "command": "npx",
-            "args": [
-                "-y",
-                "@kevinwatt/shell-mcp"
-            ]
+            "args": ["-y", "@kevinwatt/shell-mcp"]
         },
         "mcp-server-commands": {
             "command": "npx",
@@ -88,26 +33,15 @@
         },
         "docker-mcp": {
             "command": "uvx",
-            "args": [
-                "docker-mcp"
-            ]
+            "args": ["docker-mcp"]
         },
         "sequential-thinking": {
             "command": "npx",
-            "args": [
-                "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-            ]
+            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
         },
         "mcp-installer": {
             "command": "npx",
-            "args": [
-                "@anaisbetts/mcp-installer"
-            ]
-        },
-        "package-docs": {
-            "command": "npx",
-            "args": ["-y", "mcp-package-docs"]
+            "args": ["@anaisbetts/mcp-installer"]
         },
         "aindreyway-mcp-neurolora": {
             "command": "npx",
@@ -121,50 +55,32 @@
             "command": "uvx",
             "args": ["mcp-server-time"]
         },
-        // https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
         "filesystem": {
             "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-filesystem",
-                "."
-            ]
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
         },
-        // https://github.com/modelcontextprotocol/servers/tree/main/src/fetch
         "fetch": {
             "command": "uvx",
             "args": ["mcp-server-fetch"]
         },
-        // https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-python
         "weather": {
             "command": "npx",
-            "args": [
-                "-y",
-                "@h1deya/mcp-server-weather"
-            ]
+            "args": ["-y", "@h1deya/mcp-server-weather"]
         },
-        // https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer
         "puppeteer": {
             "command": "npx",
             "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
         },
-        // https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search
         "brave-search": {
             "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-brave-search"
-            ],
+            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
             "env": {
                 "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-            },
+            }
         },
         "github": {
             "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-github"
-            ],
+            "args": ["-y", "@modelcontextprotocol/server-github"],
             "env": {
                 "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
             }

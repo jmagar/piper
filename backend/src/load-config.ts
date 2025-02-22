@@ -12,8 +12,6 @@ export interface MCPServerConfig {
   command: string;
   args: string[];
   env?: Record<string, string>;
-  port?: number;
-  base_url?: string;
 }
 
 export interface Config {
@@ -29,8 +27,13 @@ export function loadConfig(path: string): Config {
     let json5Str = readFileSync(path, 'utf-8');
 
     // Replace environment variables in the format ${VAR_NAME} with their values
-    Object.entries(process.env).forEach(([key, value]) => {
-      json5Str = json5Str.replace(`\${${key}}`, value || '');
+    json5Str = json5Str.replace(/\${([^}]+)}/g, (match, varName) => {
+      const value = process.env[varName];
+      if (value === undefined) {
+        console.warn(`Warning: Environment variable ${varName} not found`);
+        return '';
+      }
+      return value;
     });
 
     const config = JSON5.parse(json5Str);
@@ -40,6 +43,7 @@ export function loadConfig(path: string): Config {
 
     return config;
   } catch (error) {
+    console.error('Failed to load configuration:', error);
     if (error instanceof Error) {
       throw new Error(`Failed to load configuration from "${path}": ${error.message}`);
     }

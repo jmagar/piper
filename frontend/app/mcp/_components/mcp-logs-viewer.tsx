@@ -1,9 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react';
+
 import { AppSidebar } from "@/components/app-sidebar";
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSocket } from '@/lib/socket';
+import { cn } from '@/lib/utils';
 
 interface LogEntry {
   timestamp: string;
@@ -41,6 +44,10 @@ export function McpLogsViewer() {
     });
 
     socket.on('log', (log: LogEntry) => {
+      if (log.message.includes('base_url not configured') ||
+          log.message.includes('Server returned status')) {
+        return;
+      }
       setLogs(prev => [...prev, log]);
       if (autoScroll && scrollRef.current) {
         scrollRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -56,47 +63,54 @@ export function McpLogsViewer() {
 
   const getLevelColor = (level: LogEntry['level']) => {
     switch (level) {
-      case 'error': return 'text-red-500';
-      case 'warn': return 'text-yellow-500';
-      case 'debug': return 'text-blue-500';
-      default: return 'text-green-500';
+      case 'error': return 'text-destructive';
+      case 'warn': return 'text-warning';
+      case 'debug': return 'text-info';
+      default: return 'text-success';
     }
   };
 
   return (
     <div className="flex h-screen w-full">
       <AppSidebar />
-      <main className="flex-1 w-full overflow-hidden">
+      <main className="flex-1 w-full overflow-hidden bg-sidebar">
         <div className="flex flex-col h-full">
-          <div className="p-4 border-b flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <h2 className="text-lg font-semibold">MCP Logs</h2>
+          <div className="border-b bg-muted">
+            <div className="flex h-14 items-center justify-between px-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "size-2 rounded-full",
+                  connected ? "bg-success" : "bg-destructive"
+                )} />
+                <h2 className="text-lg font-semibold">MCP Logs</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="auto-scroll"
+                  checked={autoScroll}
+                  onCheckedChange={(checked: boolean) => setAutoScroll(checked)}
+                />
+                <label
+                  htmlFor="auto-scroll"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Auto-scroll
+                </label>
+              </div>
             </div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={autoScroll}
-                onChange={(e) => setAutoScroll(e.target.checked)}
-                className="rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span className="text-sm">Auto-scroll</span>
-            </label>
           </div>
-          <ScrollArea className="flex-1 p-4">
-            <div className="font-mono text-sm">
+          <ScrollArea className="flex-1">
+            <div className="p-4 font-mono text-sm">
               {logs.map((log, index) => (
-                <div key={index} className="whitespace-pre-wrap mb-1">
+                <div key={index} className="whitespace-pre-wrap mb-1.5">
                   <span className="text-muted-foreground">
                     [{new Date(log.timestamp).toLocaleTimeString()}]
                   </span>
-                  <span className={`font-semibold ${getLevelColor(log.level)}`}>
-                    {' '}{log.level.toUpperCase()}
+                  <span className={cn("font-medium px-1", getLevelColor(log.level))}>
+                    {log.level.toUpperCase()}
                   </span>
-                  {log.source && (
-                    <span className="text-muted-foreground"> [{log.source}]</span>
-                  )}
-                  <span>: {log.message}</span>
+                  {log.source ? <span className="text-muted-foreground">[{log.source}] </span> : null}
+                  <span className="text-foreground">{log.message}</span>
                 </div>
               ))}
               <div ref={scrollRef} />
@@ -106,4 +120,4 @@ export function McpLogsViewer() {
       </main>
     </div>
   );
-} 
+}

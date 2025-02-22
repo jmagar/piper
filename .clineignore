@@ -1,0 +1,53 @@
+# Build outputs
+dist/
+.next/
+build/
+out/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Cache and logs
+.cache/
+.turbo/
+coverage/
+*.log
+.env
+.env.*
+!.env.template
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__/
+__mocks__/
+
+# Generated files
+*.js.map
+*.d.ts
+tsconfig.tsbuildinfo
+
+# MCP specific ignores
+**/mcp-logs/
+**/mcp-cache/
+**/mcp-temp/
+openapi/generated/
+**/installHook.js
+**/installHook.js.map
+
+# Project specific
+frontend/public/static/
+backend/uploads/
+backend/logs/
+.cursorrules.bak 

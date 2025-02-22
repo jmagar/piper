@@ -47,3 +47,13 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Python
+.mypy_cache/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Tool directories
+.cursor/
+.repomix/

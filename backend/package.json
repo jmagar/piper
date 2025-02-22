@@ -1,85 +1,66 @@
 {
-  "name": "mcp-client-langchain-ts",
-  "version": "0.1.12",
-  "description": "MCP Client Using LangChain / TypeScript",
-  "license": "MIT",
-  "keywords": [
-    "modelcontextprotocol",
-    "mcp",
-    "mcp-client",
-    "langchain",
-    "langchain-tyoescript",
-    "tool-calling",
-    "typescript",
-    "nodejs"
-  ],
-  "author": "hideya kawahara",
+  "name": "pooper-backend",
+  "version": "0.1.0",
+  "description": "Pooper Backend API",
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts",
-    "start:server": "tsx src/server.ts",
-    "start:h": "tsx src/index.ts -h",
-    "start:v": "tsx src/index.ts -v",
     "dev": "tsx watch src/index.ts",
-    "dev:server": "tsx watch src/server.ts",
-    "test:storage": "tsx src/test-storage.ts",
+    "dev:all": "cd .. && tsx scripts/start-servers.ts",
+    "test-mcp": "tsx watch src/test-mcp-server.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "lint": "eslint src",
-    "clean": "git clean -fdxn -e .env && read -p 'OK?' && git clean -fdx -e .env"
+    "generate": "prisma generate && openapi-generator-cli generate -i ../openapi/main.yaml -g typescript-node -o src/generated --additional-properties=supportsES6=true,npmName=@api/server",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "test": "vitest"
   },
   "dependencies": {
-    "@h1deya/langchain-mcp-tools": "^0.1.12",
-    "@h1deya/mcp-server-weather": "^0.1.2",
+    "@h1deya/langchain-mcp-tools": "^0.1.13",
     "@langchain/anthropic": "^0.3.13",
-    "@langchain/community": "^0.3.30",
     "@langchain/core": "^0.3.40",
-    "@langchain/groq": "^0.1.2",
+    "@langchain/groq": "^0.1.3",
     "@langchain/langgraph": "^0.2.46",
     "@langchain/openai": "^0.4.4",
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "@modelcontextprotocol/server-brave-search": "^0.6.2",
-    "@modelcontextprotocol/server-filesystem": "^2025.1.14",
-    "@modelcontextprotocol/server-puppeteer": "^0.6.2",
-    "@n8n/json-schema-to-zod": "^1.1.0",
-    "@prisma/client": "^6.3.1",
-    "@types/socket.io": "^3.0.2",
-    "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.5.14",
-    "@types/yargs": "^17.0.33",
+    "@prisma/client": "^6.4.0",
+    "axios": "^1.7.9",
     "cors": "^2.8.5",
-    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "ioredis": "^5.5.0",
+    "helmet": "^8.0.0",
     "json5": "^2.2.3",
-    "mcp-package-docs": "^0.1.6",
-    "node-pty": "^1.0.0",
-    "redis": "^4.7.0",
     "socket.io": "^4.8.1",
-    "uuid": "^11.0.5",
+    "winston": "^3.17.0",
     "ws": "^8.18.0",
-    "yargs": "^17.7.2",
-    "zod": "^3.24.1"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.17.0",
+    "@openapitools/openapi-generator-cli": "^2.16.3",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.10.5",
-    "@typescript-eslint/eslint-plugin": "^8.19.0",
-    "@typescript-eslint/parser": "^8.19.0",
-    "eslint": "^9.17.0",
-    "prisma": "^6.3.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.19.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "node-pty"
-    ]
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint": "^9.20.1",
+    "prisma": "^6.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.1",
+    "vitest": "^3.0.6"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@openapitools/openapi-generator-cli",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
   }
 }

@@ -1,14 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { MessageSquare, ArrowRight, Loader2 } from "lucide-react"
-import { format } from "date-fns"
+
 import Link from "next/link"
+
+import { format } from "date-fns"
+import { MessageSquare, ArrowRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+
+import { AppSidebar } from "@/components/app-sidebar"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { SidebarProvider } from "@/components/ui/sidebar"
+
+
 
 interface Conversation {
     id: string;
@@ -94,11 +99,9 @@ export default function ChatHistoryPage() {
                                                         <h3 className="font-medium">
                                                             {conversation.title || 'Untitled Conversation'}
                                                         </h3>
-                                                        {conversation.summary && (
-                                                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                                        {conversation.summary ? <p className="text-sm text-muted-foreground line-clamp-2">
                                                                 {conversation.summary}
-                                                            </p>
-                                                        )}
+                                                            </p> : null}
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                             <span>
                                                                 {format(new Date(conversation.lastMessageAt), 'PPp')}

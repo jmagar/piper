@@ -1,7 +1,7 @@
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGroq } from '@langchain/groq';
-import { BaseChatModel, BindToolsInput } from '@langchain/core/language_models/chat_models';
+import type { BaseChatModel, BindToolsInput } from '@langchain/core/language_models/chat_models';
 
 // FIXME: no typescript version of init_chat_model()?
 // Ref: https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html
@@ -42,7 +42,7 @@ export function initChatModel(config: ChatModelConfig): BaseChatModel {
     if (typeof model?.bindTools === 'function') {
       if (tools && tools.length > 0) {
         // FIXME
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+         
         model = (model as { bindTools: Function }).bindTools(tools);
       }
     } else {

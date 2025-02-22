@@ -1,0 +1,118 @@
+# API and Type Definition Rules
+
+Rules for API integration and TypeScript type definitions.
+
+<rule>
+name: api_type_standards
+description: Standards for API integration and type definitions
+filters:
+  - type: file_path
+    pattern: "types/.*?\\.ts$|lib/generated/.*?\\.ts$|lib/api.*?\\.ts$|openapi/.*?\\.ya?ml$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these API and type definition standards:
+      
+      1. Type Definitions:
+         - Use proper interfaces for messages:
+           * ChatMessage (basic)
+           * ExtendedChatMessage (with metadata)
+         - Use proper enums for statuses:
+           * 'sending' | 'sent' | 'error'
+         - Use proper role types:
+           * 'user' | 'assistant' | 'system'
+         - Use proper metadata typing
+         - Follow naming conventions
+      
+      2. API Integration:
+         - Use OpenAPI/Swagger for API definitions
+         - Generate types from OpenAPI specs
+         - Use proper service classes:
+           * ChatService
+           * HealthService
+           * ConfigService
+         - Handle API responses properly
+         - Use proper error types
+      
+      3. OpenAPI Structure:
+         - Organize schemas by domain:
+           * chat.yaml
+           * health.yaml
+           * config.yaml
+         - Use proper response types
+         - Define proper error responses
+         - Use proper parameter validation
+         - Follow OpenAPI 3.0 standards
+      
+      4. Error Handling:
+         - Use proper error interfaces:
+           * ApiError
+           * ServiceError
+         - Handle HTTP errors properly
+         - Validate API responses
+         - Use proper error messages
+         - Follow error patterns
+      
+      5. Code Generation:
+         - Use openapi-typescript-codegen
+         - Generate proper service classes
+         - Generate proper type definitions
+         - Handle API versioning
+         - Keep generated code clean
+
+examples:
+  - input: |
+      // Bad
+      type Message = {
+        id: number
+        text: string
+        data: any
+      }
+
+      // Good
+      interface ChatMessage {
+        role: 'user' | 'assistant' | 'system';
+        content: string;
+        userId?: string;
+        username?: string;
+        conversationId?: string;
+        parentId?: string;
+        type?: 'text' | 'code' | 'system';
+        metadata?: Record<string, unknown>;
+      }
+      
+      interface ExtendedChatMessage {
+        id: string;
+        role: 'user' | 'assistant';
+        content: string;
+        createdAt: string;
+        updatedAt?: string;
+        userId?: string;
+        username?: string;
+        conversationId?: string;
+        parentId?: string;
+        type?: 'text' | 'code' | 'system';
+        status?: 'sending' | 'sent' | 'error';
+        metadata?: {
+          edited?: boolean;
+          editedAt?: Date;
+          timestamp?: string | number;
+          reactions?: Record<string, {
+            count: number;
+            users: { id: string; name: string; }[];
+          }>;
+          hasThread?: boolean;
+          replyCount?: number;
+          lastReplyAt?: string | Date;
+          bookmarked?: boolean;
+          threadSummary?: string;
+          [key: string]: unknown;
+        };
+      }
+    output: "Properly structured chat message types with proper typing"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

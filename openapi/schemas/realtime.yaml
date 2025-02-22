@@ -1,0 +1,53 @@
+paths:
+  /realtime/events:
+    get:
+      summary: Get realtime events
+      operationId: getEvents
+      tags: [Realtime]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [message, typing, presence]
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    type:
+                      type: string
+                      enum: [message, typing, presence]
+                    userId:
+                      type: string
+                      format: uuid
+                    data:
+                      type: object
+                      additionalProperties: true
+                    timestamp:
+                      type: string
+                      format: date-time
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        401:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

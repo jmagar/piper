@@ -1,0 +1,117 @@
+# WebSocket and Real-time Rules
+
+Rules for WebSocket and real-time functionality.
+
+<rule>
+name: websocket_standards
+description: Standards for WebSocket and real-time functionality
+filters:
+  - type: file_path
+    pattern: "lib/socket.*?\\.tsx?$|hooks/use-.*?-socket\\.tsx?$|components/chat/.*?\\.tsx$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these WebSocket and real-time standards:
+      
+      1. Socket Connection:
+         - Use singleton pattern for socket instance
+         - Configure proper reconnection settings:
+           * MAX_RECONNECT_ATTEMPTS = 5
+           * reconnectionDelay = 1000
+           * reconnectionDelayMax = 5000
+           * timeout = 20000
+         - Handle both WebSocket and polling transports
+         - Implement proper auth in socket handshake
+      
+      2. Event Handling:
+         - Use typed events with proper interfaces:
+           * ServerToClientEvents
+           * ClientToServerEvents
+           * InterServerEvents
+           * SocketData
+         - Handle all lifecycle events:
+           * connect/disconnect
+           * connect_error
+           * reconnect_attempt
+           * error
+         - Use proper event naming: 'message:new', 'message:update', etc.
+      
+      3. State Management:
+         - Track connection states:
+           * isConnected
+           * isConnecting
+           * error
+         - Implement proper retry logic with backoff
+         - Handle loading and error states
+         - Use proper toast notifications
+      
+      4. Error Handling:
+         - Handle connection errors with proper retries
+         - Implement timeout for operations (10s default)
+         - Show user-friendly error messages
+         - Log errors properly in development
+         - Handle cleanup on errors
+      
+      5. Component Integration:
+         - Use proper hooks pattern (useChatSocket)
+         - Handle component lifecycle properly
+         - Implement proper cleanup in useEffect
+         - Handle loading/error/success states
+         - Follow proper typing patterns
+
+examples:
+  - input: |
+      // Bad
+      const socket = io('http://localhost:3000')
+      socket.on('message', (data: any) => setState(data))
+
+      // Good
+      function useChatSocket() {
+        const socket = useSocket();
+        const [isConnected, setIsConnected] = useState(false);
+        const [isConnecting, setIsConnecting] = useState(true);
+        const [error, setError] = useState<string | null>(null);
+        
+        useEffect(() => {
+          if (!socket) {
+            setIsConnecting(false);
+            setIsConnected(false);
+            setError('Initializing chat connection...');
+            return;
+          }
+          
+          const handleConnect = () => {
+            setIsConnected(true);
+            setIsConnecting(false);
+            setError(null);
+          };
+          
+          const handleDisconnect = (reason: string) => {
+            setIsConnected(false);
+            if (reason === 'io server disconnect') {
+              setError('Disconnected from chat server');
+              setIsConnecting(false);
+            } else {
+              setIsConnecting(true);
+              setError('Connection lost. Reconnecting...');
+            }
+          };
+          
+          socket.on('connect', handleConnect);
+          socket.on('disconnect', handleDisconnect);
+          
+          return () => {
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
+          };
+        }, [socket]);
+        
+        return { socket, isConnected, isConnecting, error };
+      }
+    output: "Properly implemented socket hook with proper state management"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 
