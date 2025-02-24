@@ -11,6 +11,7 @@ import { MessageInput } from './message-input';
 
 export function ChatV2() {
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
+    const [conversationId, setConversationId] = React.useState<string | undefined>();
     const [messages, setMessages] = React.useState<ExtendedChatMessage[]>([
         {
             id: 'system-intro',
@@ -85,6 +86,10 @@ I'm integrated with your development environment and can directly help with:
 
         const handleNewMessage = (message: ExtendedChatMessage) => {
             setMessages(prev => [...prev, message]);
+            // Update conversationId if this is the first response
+            if (message.conversationId && !conversationId) {
+                setConversationId(message.conversationId);
+            }
             scrollToBottom();
         };
 
@@ -92,7 +97,7 @@ I'm integrated with your development environment and can directly help with:
         return () => {
             socket.off('message:new', handleNewMessage);
         };
-    }, [socket, scrollToBottom]);
+    }, [socket, scrollToBottom, conversationId]);
 
     const handleMessageUpdate = React.useCallback((updatedMessage: ExtendedChatMessage) => {
         setMessages(prev => 
@@ -116,6 +121,7 @@ I'm integrated with your development environment and can directly help with:
             updatedAt: new Date().toISOString(),
             type: 'text',
             status: 'sending',
+            conversationId,
             metadata: {
                 files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
             }
@@ -136,6 +142,10 @@ I'm integrated with your development environment and can directly help with:
                     setMessages(prev => 
                         prev.map(msg => msg.id === newMessage.id ? response.message! : msg)
                     );
+                    // Update conversationId if this is the first message
+                    if (response.message.conversationId && !conversationId) {
+                        setConversationId(response.message.conversationId);
+                    }
                 }
             });
         } catch (error) {
@@ -145,7 +155,7 @@ I'm integrated with your development environment and can directly help with:
         } finally {
             setIsSending(false);
         }
-    }, [input, isConnected, socket, scrollToBottom]);
+    }, [input, isConnected, socket, scrollToBottom, conversationId]);
 
     const handleFilesSelected = React.useCallback((files: File[]) => {
         console.log('Files selected:', files);
@@ -163,18 +173,20 @@ I'm integrated with your development environment and can directly help with:
                             onUpdate={handleMessageUpdate}
                         />
                     ))}
-                    <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef} className="h-px" />
                 </div>
             </div>
-            <MessageInput
-                value={input}
-                onChange={setInput}
-                onSubmit={handleSendMessage}
-                isSending={isSending}
-                disabled={!isConnected}
-                onAttach={handleFilesSelected}
-                placeholder={isConnected ? "Type a message..." : "Connecting to chat server..."}
-            />
+            <div className="sticky bottom-0 bg-[hsl(var(--background))] border-t">
+                <MessageInput
+                    value={input}
+                    onChange={setInput}
+                    onSubmit={handleSendMessage}
+                    isSending={isSending}
+                    disabled={!isConnected}
+                    onAttach={handleFilesSelected}
+                    placeholder={isConnected ? "Type a message..." : "Connecting to chat server..."}
+                />
+            </div>
         </div>
     );
-} 
+}

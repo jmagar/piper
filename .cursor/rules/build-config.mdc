@@ -1,6 +1,7 @@
 ---
-description: 
+description: Rules for package management, build configuration, and dependencies.
 globs: 
+alwaysApply: false
 ---
 # Build and Package Management Rules
 

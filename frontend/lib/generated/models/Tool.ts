@@ -3,27 +3,20 @@
 /* tslint:disable */
 /* eslint-disable */
 export type Tool = {
-    id: string;
+  id: string;
+  name: string;
+  description?: string;
+  serverId: string;
+  type?: 'system' | 'plugin' | 'custom';
+  parameters?: Array<{
     name: string;
+    type: string;
     description?: string;
-    serverId: string;
-    type?: Tool.type;
-    parameters?: Array<{
-        name: string;
-        type: string;
-        description?: string;
-        required?: boolean;
-        schema?: Record<string, any>;
-    }>;
-    metadata?: Record<string, any>;
-    createdAt?: string;
-    updatedAt?: string;
+    required?: boolean;
+    schema?: Record<string, any>;
+  }>;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
 };
-export namespace Tool {
-    export enum type {
-        SYSTEM = 'system',
-        PLUGIN = 'plugin',
-        CUSTOM = 'custom',
-    }
-}
 

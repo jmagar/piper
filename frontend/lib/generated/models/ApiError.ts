@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ApiError = {
-    message: string;
-    code?: string;
-    details?: Record<string, any>;
+  message: string;
+  code?: string;
+  details?: Record<string, any>;
 };
 

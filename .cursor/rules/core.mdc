@@ -1,6 +1,7 @@
 ---
-description: 
+description: Core project rules
 globs: 
+alwaysApply: false
 ---
 # Core Project Rules
 

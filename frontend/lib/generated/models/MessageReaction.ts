@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type MessageReaction = {
-    id: string;
-    messageId: string;
-    userId: string;
-    emoji: string;
-    createdAt: string;
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
 };
 

@@ -1,6 +1,7 @@
 ---
-description: 
-globs: 
+description: TailwindCSS v4 Configuration
+globs: tailwind.config.*
+alwaysApply: false
 ---
 # Tailwind v4 Rules
 

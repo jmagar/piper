@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarProvider,
 } from "@/components/ui/sidebar-new"
 
 const data = {
@@ -102,67 +103,90 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="bg-primary text-primary-foreground flex aspect-square h-8 w-8 items-center justify-center rounded-lg">
-                  <Command className="h-4 w-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Acme Inc</span>
-                  <span className="truncate text-xs text-muted-foreground">Enterprise</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          {data.navMain.map((section) => (
-            <SidebarMenuItem key={section.title}>
-              <SidebarMenuButton
-                onClick={() => toggleSection(section.title)}
-                className="justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <section.icon className="h-4 w-4" />
-                  <span>{section.title}</span>
-                </div>
-                <ChevronDown 
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    expandedSections.includes(section.title) && "rotate-180"
-                  )} 
-                />
+    <SidebarProvider>
+      <Sidebar {...props}>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <a href="#" className="flex justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary text-primary-foreground flex aspect-square h-8 w-8 items-center justify-center rounded-lg">
+                      <Command className="h-4 w-4" />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-medium">Acme Inc</span>
+                      <span className="truncate text-xs text-muted-foreground">Enterprise</span>
+                    </div>
+                  </div>
+                  <ThemeToggle />
+                </a>
               </SidebarMenuButton>
-              {expandedSections.includes(section.title) && (
-                <SidebarMenu className="ml-4 mt-1">
-                  {section.items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <a href={item.url}>
-                          {item.title}
-                        </a>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              )}
             </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
-      </SidebarContent>
-      <SidebarFooter>
-        <div className="px-4 py-2">
-          <ThemeToggle />
-        </div>
-        <NavUser user={data.user} />
-      </SidebarFooter>
-    </Sidebar>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <div className="flex flex-col h-full">
+            <SidebarMenu>
+              {data.navMain.map((section) => (
+                <SidebarMenuItem key={section.title}>
+                  <SidebarMenuButton
+                    onClick={() => toggleSection(section.title)}
+                    className="justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <section.icon className="h-4 w-4" />
+                      <span>{section.title}</span>
+                    </div>
+                    <ChevronDown 
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        expandedSections.includes(section.title) && "rotate-180"
+                      )} 
+                    />
+                  </SidebarMenuButton>
+                  {expandedSections.includes(section.title) && (
+                    <SidebarMenu className="ml-4 mt-1">
+                      {section.items.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton asChild>
+                            <a href={item.url}>
+                              {item.title}
+                            </a>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+            <div className="mt-auto pt-4">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a href="https://github.com/jmagar/piper" className="flex items-center gap-2">
+                      <Send className="h-4 w-4" />
+                      <span>Github</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a href="#" className="flex items-center gap-2">
+                      <LifeBuoy className="h-4 w-4" />
+                      <span>Documentation</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
+          </div>
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser user={data.user} />
+        </SidebarFooter>
+      </Sidebar>
+    </SidebarProvider>
   );
 }

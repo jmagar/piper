@@ -3,55 +3,56 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CancelablePromise } from '../core/CancelablePromise';
-import type { BaseHttpRequest } from '../core/BaseHttpRequest';
+import { OpenAPI } from '../core/OpenAPI';
+import { request as __request } from '../core/request';
 export class RealtimeService {
-    constructor(public readonly httpRequest: BaseHttpRequest) {}
+  /**
+   * Get realtime connection status
+   * @returns any Realtime connection status
+   * @throws ApiError
+   */
+  public static getRealtimeStatus(): CancelablePromise<{
+    status?: 'connected' | 'disconnected';
+    connectedClients?: number;
     /**
-     * Get realtime connection status
-     * @returns any Realtime connection status
-     * @throws ApiError
+     * Server uptime in seconds
      */
-    public getRealtimeStatus(): CancelablePromise<{
-        status?: 'connected' | 'disconnected';
-        connectedClients?: number;
-        /**
-         * Server uptime in seconds
-         */
-        uptime?: number;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/api/realtime/status',
-            errors: {
-                500: `Error response`,
-            },
-        });
-    }
-    /**
-     * Send realtime event
-     * @param requestBody
-     * @returns any Event sent
-     * @throws ApiError
-     */
-    public sendEvent(
-        requestBody: {
-            type: string;
-            data: Record<string, any>;
-            /**
-             * Target user ID, if not specified broadcast to all
-             */
-            target?: string;
-        },
-    ): CancelablePromise<any> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/api/realtime/events',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Error response`,
-                500: `Error response`,
-            },
-        });
-    }
+    uptime?: number;
+  }> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/realtime/status',
+      errors: {
+        500: `Error response`,
+      },
+    });
+  }
+  /**
+   * Send realtime event
+   * @returns any Event sent
+   * @throws ApiError
+   */
+  public static sendEvent({
+    requestBody,
+  }: {
+    requestBody: {
+      type: string;
+      data: Record<string, any>;
+      /**
+       * Target user ID, if not specified broadcast to all
+       */
+      target?: string;
+    },
+  }): CancelablePromise<any> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/realtime/events',
+      body: requestBody,
+      mediaType: 'application/json',
+      errors: {
+        400: `Error response`,
+        500: `Error response`,
+      },
+    });
+  }
 }

@@ -1,0 +1,90 @@
+components:
+  schemas:
+    ChatMessageType:
+      type: string
+      enum: [text, code, system, file-list]
+      default: text
+
+    ChatMessageMetadata:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ChatMessageType'
+        timestamp:
+          type: string
+          format: date-time
+        error:
+          type: string
+        errorMessage:
+          type: string
+        bookmarked:
+          type: boolean
+        reactions:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              count:
+                type: integer
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+      additionalProperties: true
+
+    LangChainOptions:
+      type: object
+      properties:
+        streaming:
+          type: boolean
+          default: false
+        memory:
+          type: boolean
+          default: true
+        memorySize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        fallbackProvider:
+          type: string
+          enum: [openai, anthropic]
+      additionalProperties: false
+
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - content
+        - role
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, system]
+        type:
+          $ref: '#/components/schemas/ChatMessageType'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/ChatMessageMetadata'
+        status:
+          type: string
+          enum: [sending, sent, error]
+          default: sending

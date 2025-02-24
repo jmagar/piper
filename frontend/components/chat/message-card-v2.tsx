@@ -292,8 +292,8 @@ export function MessageCardV2({
                     'rounded-2xl px-4 py-3 text-sm shadow-sm transition-colors',
                     isSystem && 'bg-muted/30 mx-auto max-w-2xl border border-border/50 dark:bg-muted/10',
                     isUser && 'bg-gradient-to-br from-blue-600 to-blue-700 text-white ml-auto shadow-lg hover:shadow-xl',
-                    isAssistant && 'bg-gray-100 dark:bg-gray-800 border border-border/50 dark:border-border/20',
-                    message.metadata?.toolOutput && 'bg-muted/10 border border-border/50 dark:border-border/20',
+                    isAssistant && 'bg-[hsl(var(--card))] dark:bg-[hsl(var(--card))] text-card-foreground dark:text-card-foreground border border-border/50 dark:border-border/20',
+                    message.metadata?.toolOutput && 'bg-[hsl(var(--card))] border border-border/50 dark:border-border/20',
                     'relative'
                 )}>
                     {message.metadata?.toolOutput ? (
@@ -302,8 +302,12 @@ export function MessageCardV2({
                                 <Wrench className="h-3 w-3" />
                                 <span>Tool Output: {message.metadata.toolUsed?.name}</span>
                             </div>
-                            <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:my-0 prose-p:leading-normal prose-p:my-1 prose-headings:mb-2 prose-headings:mt-4 first:prose-headings:mt-0 prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border/50 prose-code:text-foreground/90 prose-code:bg-muted/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none">
-                                {typeof message.content === 'string' ? renderMarkdown(message.content) : null}
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <pre className="bg-muted/50 border border-border/50 rounded-md p-4 overflow-x-auto">
+                                    <code className="text-sm">
+                                        {typeof message.content === 'string' ? message.content : null}
+                                    </code>
+                                </pre>
                             </div>
                         </div>
                     ) : (

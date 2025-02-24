@@ -2,31 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ChatMessageMetadata } from './ChatMessageMetadata';
+import type { ChatMessageType } from './ChatMessageType';
 export type ChatMessage = {
-    id: string;
-    content: string;
-    role: ChatMessage.role;
-    type?: ChatMessage.type;
-    createdAt: string;
-    updatedAt: string;
-    metadata?: Record<string, any>;
-    status?: ChatMessage.status;
+  id: string;
+  content: string;
+  role: 'user' | 'assistant' | 'system';
+  type?: ChatMessageType;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: ChatMessageMetadata;
+  status?: 'sending' | 'sent' | 'error';
 };
-export namespace ChatMessage {
-    export enum role {
-        USER = 'user',
-        ASSISTANT = 'assistant',
-        SYSTEM = 'system',
-    }
-    export enum type {
-        TEXT = 'text',
-        CODE = 'code',
-        SYSTEM = 'system',
-    }
-    export enum status {
-        SENDING = 'sending',
-        DELIVERED = 'delivered',
-        ERROR = 'error',
-    }
-}
 

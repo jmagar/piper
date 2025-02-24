@@ -96,7 +96,7 @@ function SidebarBase({ children, className }: SidebarBaseProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen w-64 transform transition-transform duration-200',
+        'fixed left-0 top-0 z-40 h-screen w-72 transform transition-transform duration-200',
         isOpen ? 'translate-x-0' : '-translate-x-full',
         className
       )}
@@ -255,7 +255,7 @@ function SidebarMain({
       <div
         data-slot="sidebar"
         className={cn(
-          "bg-sidebar text-sidebar-foreground flex h-full w-64 flex-col border-r",
+          "bg-sidebar text-sidebar-foreground flex h-full w-72 flex-col border-r",
           className
         )}
         {...props}
@@ -288,7 +288,7 @@ function SidebarMain({
   return (
     <nav
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col border-r bg-background transition-transform duration-200 ease-in-out",
+        "fixed inset-y-0 left-0 z-40 flex h-screen w-72 flex-col border-r bg-background transition-transform duration-200 ease-in-out",
         !isOpen && "-translate-x-full",
         className
       )}

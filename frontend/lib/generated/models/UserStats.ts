@@ -3,9 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type UserStats = {
-    userId: string;
-    messageCount: number;
-    conversationCount: number;
-    lastActive?: string;
+  userId: string;
+  messageCount: number;
+  conversationCount: number;
+  lastActive?: string;
 };
 

@@ -1,17 +1,25 @@
 import { PrismaClient } from '@prisma/client';
+import debug from 'debug';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 
-import type { ChatMessage } from '../generated/model/chatMessage.js';
+import { ChatLangChainService } from '../services/chat/chat-langchain.service.mjs';
 import { ChatService } from '../services/chat/chat.service.js';
+import type { ChatMessage, ChatMetadata } from '../types/chat.mjs';
+import { createMetadata } from '../types/chat.mjs';
 
-const router = Router();
+const log = debug('mcp:chat:routes');
+const error = debug('mcp:chat:routes:error');
+
+const router: Router = Router();
 const prisma = new PrismaClient();
-const chatService = new ChatService(prisma);
+const legacyService = new ChatService(prisma);
+const langchainService = new ChatLangChainService(prisma);
 
 interface ChatRequest {
   content: string;
   userId: string;
+  conversationId?: string;
 }
 
 interface StarMessageRequest {
@@ -25,21 +33,19 @@ interface ErrorResponse {
   details?: string;
 }
 
-interface MessageMetadata {
-  username?: string;
-  type?: 'text' | 'code' | 'system';
-  bookmarked?: boolean;
-  reactions?: Record<string, {
-    count: number;
-    users: Array<{
-      id: string;
-      name: string;
-    }>;
-  }>;
-  [key: string]: unknown;
-}
-
 type ChatResponse = ChatMessage | ErrorResponse;
+
+function extractTextFromJson(content: string): string {
+  try {
+    const data = JSON.parse(content);
+    if (Array.isArray(data) && data.length > 0 && 'text' in data[0]) {
+      return data.map(item => item.text).join('\n');
+    }
+    return content;
+  } catch {
+    return content;
+  }
+}
 
 // Get messages
 router.get('/', async (
@@ -106,11 +112,11 @@ router.get('/', async (
         }
       })
     });
-  } catch (error) {
-    console.error('Error getting messages:', error);
+  } catch (err) {
+    error('Error getting messages: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ 
       error: 'Failed to get messages',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: err instanceof Error ? err.message : 'Unknown error'
     });
   }
 });
@@ -121,7 +127,7 @@ router.post('/', async (
   res: Response<ChatResponse>
 ): Promise<void> => {
   try {
-    const { content, userId } = req.body;
+    const { content, userId, conversationId } = req.body;
 
     if (!content || typeof content !== 'string') {
       res.status(400).json({ error: 'Content must be a string' });
@@ -133,13 +139,35 @@ router.post('/', async (
       return;
     }
 
-    const response = await chatService.processMessage(content, userId);
-    res.json(response as unknown as ChatMessage);
-  } catch (error) {
-    console.error('Error processing chat message:', error);
+    // Try LangChain service first, fallback to legacy
+    let response;
+    try {
+      log('Processing message with LangChain service');
+      response = await langchainService.processMessage(content, userId, conversationId);
+      log('Message processed successfully by LangChain service');
+    } catch (err) {
+      error('LangChain service failed, falling back to legacy: %s', err instanceof Error ? err.message : String(err));
+      response = await legacyService.processMessage(content, userId);
+      log('Message processed by legacy service');
+    }
+
+    // Extract text from JSON if needed
+    const cleanContent = extractTextFromJson(response.content);
+    const metadata: ChatMetadata = {
+      type: response.type,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json({
+      ...response,
+      content: cleanContent,
+      metadata: createMetadata(metadata)
+    });
+  } catch (err) {
+    error('Error processing chat message: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ 
       error: 'Failed to process message',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: err instanceof Error ? err.message : 'Unknown error'
     });
   }
 });
@@ -180,23 +208,23 @@ router.post('/messages/star', async (
     });
 
     // Update message metadata
-    const currentMetadata = message.metadata as MessageMetadata || {};
+    const currentMetadata = message.metadata as ChatMetadata || {};
     await prisma.chatMessage.update({
       where: { id: messageId },
       data: {
-        metadata: {
+        metadata: createMetadata({
           ...currentMetadata,
           bookmarked: true
-        }
+        })
       }
     });
 
     res.json(starred);
-  } catch (error) {
-    console.error('Error starring message:', error);
+  } catch (err) {
+    error('Error starring message: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ 
       error: 'Failed to star message',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: err instanceof Error ? err.message : 'Unknown error'
     });
   }
 });
@@ -238,23 +266,23 @@ router.post('/messages/unstar', async (
     });
 
     // Update message metadata
-    const currentMetadata = message.metadata as MessageMetadata || {};
+    const currentMetadata = message.metadata as ChatMetadata || {};
     await prisma.chatMessage.update({
       where: { id: messageId },
       data: {
-        metadata: {
+        metadata: createMetadata({
           ...currentMetadata,
           bookmarked: false
-        }
+        })
       }
     });
 
     res.json({ success: true });
-  } catch (error) {
-    console.error('Error unstarring message:', error);
+  } catch (err) {
+    error('Error unstarring message: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ 
       error: 'Failed to unstar message',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: err instanceof Error ? err.message : 'Unknown error'
     });
   }
 });
@@ -301,18 +329,19 @@ router.get('/conversations/:userId', async (
     }));
 
     res.json(transformedConversations);
-  } catch (error) {
-    console.error('Error getting conversations:', error);
+  } catch (err) {
+    error('Error getting conversations: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ 
       error: 'Failed to get conversations',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: err instanceof Error ? err.message : 'Unknown error'
     });
   }
 });
 
 // Cleanup handler
 process.on('SIGTERM', async () => {
-  await chatService.cleanupResources();
+  await legacyService.cleanupResources();
+  await langchainService.cleanupResources();
   await prisma.$disconnect();
 });
 

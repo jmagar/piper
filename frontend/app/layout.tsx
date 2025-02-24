@@ -1,11 +1,11 @@
 import "./globals.css"
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils"
+import { Metadata } from "next"
+import { RootLayoutClient } from "@/components/root-layout-client"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Pooper Chat",
   description: "A modern chat application",
 }
@@ -18,15 +18,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+      <body className={inter.variable}>
+        <RootLayoutClient>
           {children}
-        </ThemeProvider>
+        </RootLayoutClient>
       </body>
     </html>
   )

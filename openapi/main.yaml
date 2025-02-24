@@ -40,57 +40,6 @@ components:
             $ref: '#/components/schemas/ApiError'
 
   schemas:
-    Tool:
-      type: object
-      required:
-        - id
-        - name
-        - serverId
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-        serverId:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum: [system, plugin, custom]
-          default: custom
-        parameters:
-          type: array
-          items:
-            type: object
-            required:
-              - name
-              - type
-            properties:
-              name:
-                type: string
-              type:
-                type: string
-              description:
-                type: string
-              required:
-                type: boolean
-                default: false
-              schema:
-                type: object
-                additionalProperties: true
-        metadata:
-          type: object
-          additionalProperties: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
     ApiError:
       type: object
       required:
@@ -105,39 +54,16 @@ components:
           additionalProperties: true
 
     ChatMessage:
-      type: object
-      required:
-        - id
-        - content
-        - role
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-        content:
-          type: string
-        role:
-          type: string
-          enum: [user, assistant, system]
-        type:
-          type: string
-          enum: [text, code, system]
-          default: text
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        metadata:
-          type: object
-          additionalProperties: true
-        status:
-          type: string
-          enum: [sending, delivered, error]
-          default: sending
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessage'
+
+    ChatMessageType:
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessageType'
+
+    ChatMessageMetadata:
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessageMetadata'
+
+    LangChainOptions:
+      $ref: './schemas/langchain.yaml#/components/schemas/LangChainOptions'
 
     Conversation:
       type: object
@@ -245,737 +171,91 @@ components:
           type: string
           format: date-time
 
+    Tool:
+      type: object
+      required:
+        - id
+        - name
+        - serverId
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        serverId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [system, plugin, custom]
+          default: custom
+        parameters:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              description:
+                type: string
+              required:
+                type: boolean
+                default: false
+              schema:
+                type: object
+                additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
 paths:
-  /api/health:
-    get:
-      summary: Health check endpoint
-      description: Returns the health status of the API
-      operationId: getHealth
-      tags:
-        - Health
-      responses:
-        '200':
-          description: API is healthy
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    enum: [ok]
-                    example: ok
-                required:
-                  - status
-
   /api/chat:
-    get:
-      summary: Get messages
-      operationId: getMessages
-      tags: [Chat]
-      parameters:
-        - name: conversationId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: cursor
-          in: query
-          schema:
-            type: string
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: search
-          in: query
-          schema:
-            type: string
-        - name: threadId
-          in: query
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: List of messages
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  messages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ChatMessage'
-                  nextCursor:
-                    type: string
-                  total:
-                    type: integer
-        500:
-          $ref: '#/components/responses/ApiError'
-
-    post:
-      summary: Create message
-      operationId: createMessage
-      tags: [Chat]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - content
-                - userId
-                - username
-              properties:
-                content:
-                  type: string
-                userId:
-                  type: string
-                  format: uuid
-                username:
-                  type: string
-                conversationId:
-                  type: string
-                  format: uuid
-                parentId:
-                  type: string
-                  format: uuid
-                type:
-                  type: string
-                  enum: [text, code, system]
-                  default: text
-                metadata:
-                  type: object
-                  additionalProperties: true
-      responses:
-        201:
-          description: Message created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChatMessage'
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat'
   /api/chat/conversations/{userId}:
-    get:
-      summary: Get user conversations
-      operationId: getUserConversations
-      tags: [Chat]
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: List of conversations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Conversation'
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1conversations~1{userId}'
   /api/chat/messages/star:
-    post:
-      summary: Star a message
-      operationId: starMessage
-      tags: [Chat]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - messageId
-                - userId
-              properties:
-                messageId:
-                  type: string
-                  format: uuid
-                userId:
-                  type: string
-                  format: uuid
-                note:
-                  type: string
-      responses:
-        200:
-          description: Message starred
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StarredMessage'
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1messages~1star'
   /api/chat/messages/unstar:
-    post:
-      summary: Unstar a message
-      operationId: unstarMessage
-      tags: [Chat]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - messageId
-                - userId
-              properties:
-                messageId:
-                  type: string
-                  format: uuid
-                userId:
-                  type: string
-                  format: uuid
-      responses:
-        200:
-          description: Message unstarred
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1messages~1unstar'
   /api/chat/stats:
-    get:
-      summary: Get chat statistics
-      operationId: getChatStats
-      tags: [Chat]
-      parameters:
-        - name: userId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: conversationId
-          in: query
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: Chat statistics
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/UserStats'
-                  - $ref: '#/components/schemas/ConversationStats'
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1stats'
   /api/chat/messages/{messageId}/reactions:
-    post:
-      summary: Add a reaction to a message
-      operationId: addMessageReaction
-      tags: [Chat]
-      parameters:
-        - name: messageId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - emoji
-                - userId
-                - username
-              properties:
-                emoji:
-                  type: string
-                userId:
-                  type: string
-                  format: uuid
-                username:
-                  type: string
-      responses:
-        200:
-          description: Reaction added
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageReaction'
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1messages~1{messageId}~1reactions'
+  /api/chat/messages/{messageId}/thread:
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1messages~1{messageId}~1thread'
+  /api/chat/messages/{messageId}:
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1messages~1{messageId}'
   /api/mcp/tools:
-    get:
-      summary: Get available tools
-      operationId: getTools
-      tags: [MCP]
-      responses:
-        200:
-          description: List of available tools
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tool'
-        500:
-          $ref: '#/components/responses/ApiError'
-
-    post:
-      summary: Register a new tool
-      operationId: registerTool
-      tags: [MCP]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tool'
-      responses:
-        201:
-          description: Tool registered
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tool'
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1tools'
   /api/mcp/tools/{toolId}:
-    get:
-      summary: Get tool by ID
-      operationId: getTool
-      tags: [MCP]
-      parameters:
-        - name: toolId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: Tool details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tool'
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
-    put:
-      summary: Update tool
-      operationId: updateTool
-      tags: [MCP]
-      parameters:
-        - name: toolId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Tool'
-      responses:
-        200:
-          description: Tool updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tool'
-        400:
-          $ref: '#/components/responses/ApiError'
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
-    delete:
-      summary: Delete tool
-      operationId: deleteTool
-      tags: [MCP]
-      parameters:
-        - name: toolId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        204:
-          description: Tool deleted
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1tools~1{toolId}'
   /api/tools:
-    get:
-      summary: Get available tools
-      operationId: getAvailableTools
-      tags: [Tools]
-      responses:
-        200:
-          description: List of available tools
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tool'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/tools.yaml#/paths/~1api~1tools'
   /api/tools/{toolId}/invoke:
-    post:
-      summary: Invoke a tool
-      operationId: invokeTool
-      tags: [Tools]
-      parameters:
-        - name: toolId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - parameters
-              properties:
-                parameters:
-                  type: object
-                  additionalProperties: true
-      responses:
-        200:
-          description: Tool invocation result
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    additionalProperties: true
-        400:
-          $ref: '#/components/responses/ApiError'
-        404:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/tools.yaml#/paths/~1api~1tools~1{toolId}~1invoke'
   /api/analytics/metrics:
-    get:
-      summary: Get analytics metrics
-      operationId: getMetrics
-      tags: [Analytics]
-      parameters:
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: userId
-          in: query
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: Analytics metrics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  messageCount:
-                    type: integer
-                  userCount:
-                    type: integer
-                  toolUsage:
-                    type: object
-                    additionalProperties:
-                      type: integer
-                  activeUsers:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        userId:
-                          type: string
-                          format: uuid
-                        messageCount:
-                          type: integer
-                        lastActive:
-                          type: string
-                          format: date-time
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/analytics.yaml#/paths/~1api~1analytics~1metrics'
   /api/realtime/status:
-    get:
-      summary: Get realtime connection status
-      operationId: getRealtimeStatus
-      tags: [Realtime]
-      responses:
-        200:
-          description: Realtime connection status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    enum: [connected, disconnected]
-                  connectedClients:
-                    type: integer
-                  uptime:
-                    type: integer
-                    description: Server uptime in seconds
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/realtime.yaml#/paths/~1api~1realtime~1status'
   /api/realtime/events:
-    post:
-      summary: Send realtime event
-      operationId: sendEvent
-      tags: [Realtime]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - type
-                - data
-              properties:
-                type:
-                  type: string
-                data:
-                  type: object
-                  additionalProperties: true
-                target:
-                  type: string
-                  format: uuid
-                  description: Target user ID, if not specified broadcast to all
-      responses:
-        200:
-          description: Event sent
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/realtime.yaml#/paths/~1api~1realtime~1events'
   /api/config:
-    get:
-      summary: Get server configuration
-      operationId: getConfig
-      tags: [Config]
-      responses:
-        200:
-          description: Server configuration
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  version:
-                    type: string
-                  features:
-                    type: object
-                    additionalProperties:
-                      type: boolean
-                  limits:
-                    type: object
-                    properties:
-                      maxMessageLength:
-                        type: integer
-                      maxFileSize:
-                        type: integer
-                      maxFilesPerMessage:
-                        type: integer
-                  providers:
-                    type: object
-                    properties:
-                      openai:
-                        type: boolean
-                      anthropic:
-                        type: boolean
-                      groq:
-                        type: boolean
-        500:
-          $ref: '#/components/responses/ApiError'
-
-    put:
-      summary: Update server configuration
-      operationId: updateConfig
-      tags: [Config]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                features:
-                  type: object
-                  additionalProperties:
-                    type: boolean
-                limits:
-                  type: object
-                  properties:
-                    maxMessageLength:
-                      type: integer
-                    maxFileSize:
-                      type: integer
-                    maxFilesPerMessage:
-                      type: integer
-                providers:
-                  type: object
-                  properties:
-                    openai:
-                      type: boolean
-                    anthropic:
-                      type: boolean
-                    groq:
-                      type: boolean
-      responses:
-        200:
-          description: Configuration updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/config.yaml#/paths/~1api~1config'
   /api/prompt/enhance:
-    post:
-      summary: Enhance a prompt
-      operationId: enhancePrompt
-      tags: [Prompt]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - prompt
-              properties:
-                prompt:
-                  type: string
-                options:
-                  type: object
-                  properties:
-                    temperature:
-                      type: number
-                      format: float
-                      minimum: 0
-                      maximum: 1
-                    maxTokens:
-                      type: integer
-                      minimum: 1
-      responses:
-        200:
-          description: Enhanced prompt
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  enhancedPrompt:
-                    type: string
-                  explanation:
-                    type: string
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
-
+    $ref: './schemas/prompt.yaml#/paths/~1api~1prompt~1enhance'
   /api/preview/link:
-    post:
-      summary: Get link preview
-      operationId: getLinkPreview
-      tags: [Preview]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - url
-              properties:
-                url:
-                  type: string
-                  format: uri
-      responses:
-        200:
-          description: Link preview
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  description:
-                    type: string
-                  image:
-                    type: string
-                    format: uri
-                  favicon:
-                    type: string
-                    format: uri
-                  siteName:
-                    type: string
-        400:
-          $ref: '#/components/responses/ApiError'
-        500:
-          $ref: '#/components/responses/ApiError'
+    $ref: './schemas/preview.yaml#/paths/~1api~1preview~1link'

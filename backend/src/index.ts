@@ -11,6 +11,7 @@ import configRoutes from './routes/config.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import mcpRoutes from './routes/mcp.routes.js';
+import promptRoutes from './routes/prompt.routes.js';
 import { initWebSocket } from './websocket.js';
 
 // Initialize environment variables
@@ -44,6 +45,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/prompt', promptRoutes);
 
 // Basic error handling
 app.use((_req: Request, res: Response) => {
@@ -52,7 +54,12 @@ app.use((_req: Request, res: Response) => {
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ 
+        error: {
+            message: err.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        }
+    });
 });
 
 // Create HTTP server

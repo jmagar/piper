@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type StarredMessage = {
-    id: string;
-    messageId: string;
-    userId: string;
-    note?: string;
-    createdAt: string;
+  id: string;
+  messageId: string;
+  userId: string;
+  note?: string;
+  createdAt: string;
 };
 

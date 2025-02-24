@@ -3,9 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ConversationStats = {
-    conversationId: string;
-    messageCount: number;
-    participantCount: number;
-    lastMessage?: string;
+  conversationId: string;
+  messageCount: number;
+  participantCount: number;
+  lastMessage?: string;
 };
 

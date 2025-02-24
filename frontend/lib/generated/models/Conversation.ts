@@ -3,10 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type Conversation = {
-    id: string;
-    title: string;
-    createdAt: string;
-    updatedAt: string;
-    metadata?: Record<string, any>;
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, any>;
 };
 

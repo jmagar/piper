@@ -1,6 +1,7 @@
 ---
-description: 
+description: Development workflow and server management
 globs: 
+alwaysApply: false
 ---
 # Development Workflow Rules
 

@@ -4,10 +4,6 @@ export * from './chatApi';
 import { ChatApi } from './chatApi';
 export * from './configApi';
 import { ConfigApi } from './configApi';
-export * from './dashboardApi';
-import { DashboardApi } from './dashboardApi';
-export * from './healthApi';
-import { HealthApi } from './healthApi';
 export * from './mCPApi';
 import { MCPApi } from './mCPApi';
 export * from './previewApi';
@@ -29,4 +25,4 @@ export class HttpError extends Error {
 
 export { RequestFile } from '../model/models';
 
-export const APIS = [AnalyticsApi, ChatApi, ConfigApi, DashboardApi, HealthApi, MCPApi, PreviewApi, PromptApi, RealtimeApi, ToolsApi];
+export const APIS = [AnalyticsApi, ChatApi, ConfigApi, MCPApi, PreviewApi, PromptApi, RealtimeApi, ToolsApi];
