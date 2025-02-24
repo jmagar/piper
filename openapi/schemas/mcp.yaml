@@ -190,14 +190,14 @@ paths:
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
 
-  /mcp/tools:
+  /api/mcp/tools:
     get:
-      summary: List MCP tools
-      operationId: listMcpTools
+      summary: Get available tools
+      operationId: getTools
       tags: [MCP]
       responses:
         200:
-          description: List of MCP tools
+          description: List of available tools
           content:
             application/json:
               schema:
@@ -205,93 +205,34 @@ paths:
                 items:
                   $ref: '../main.yaml#/components/schemas/Tool'
         500:
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'
 
     post:
-      summary: Register MCP tool
-      operationId: registerMcpTool
+      summary: Register a new tool
+      operationId: registerTool
       tags: [MCP]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - name
-                - serverId
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                serverId:
-                  type: string
-                  format: uuid
-                type:
-                  type: string
-                  enum: [system, plugin, custom]
-                  default: custom
-                parameters:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - name
-                      - type
-                    properties:
-                      name:
-                        type: string
-                      type:
-                        type: string
-                      description:
-                        type: string
-                      required:
-                        type: boolean
-                        default: false
-                      schema:
-                        type: object
-                        additionalProperties: true
-                metadata:
-                  type: object
-                  additionalProperties: true
+              $ref: '../main.yaml#/components/schemas/Tool'
       responses:
         201:
-          description: MCP tool registered
+          description: Tool registered
           content:
             application/json:
               schema:
                 $ref: '../main.yaml#/components/schemas/Tool'
         400:
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'
         500:
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'
 
-  /mcp/tools/{toolId}:
+  /api/mcp/tools/{toolId}:
     get:
-      summary: Get MCP tool details
-      operationId: getMcpTool
+      summary: Get tool by ID
+      operationId: getTool
       tags: [MCP]
       parameters:
         - name: toolId
@@ -302,33 +243,50 @@ paths:
             format: uuid
       responses:
         200:
-          description: MCP tool details
+          description: Tool details
           content:
             application/json:
               schema:
                 $ref: '../main.yaml#/components/schemas/Tool'
         404:
-          description: Tool not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'
         500:
-          description: Internal server error
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    put:
+      summary: Update tool
+      operationId: updateTool
+      tags: [MCP]
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../main.yaml#/components/schemas/Tool'
+      responses:
+        200:
+          description: Tool updated
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '../main.yaml#/components/schemas/Tool'
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
 
     delete:
-      summary: Unregister MCP tool
-      operationId: unregisterMcpTool
+      summary: Delete tool
+      operationId: deleteTool
       tags: [MCP]
       parameters:
         - name: toolId
@@ -339,22 +297,8 @@ paths:
             format: uuid
       responses:
         204:
-          description: MCP tool unregistered
+          description: Tool deleted
         404:
-          description: Tool not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'
         500:
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+          $ref: '../main.yaml#/components/responses/ApiError'

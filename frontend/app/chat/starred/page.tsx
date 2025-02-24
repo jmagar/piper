@@ -11,7 +11,7 @@ import { FilterSort  } from "@/components/chat/filter-sort"
 import type {FilterSortOptions} from "@/components/chat/filter-sort";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar-new"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInfiniteScroll } from "@/lib/hooks/use-infinite-scroll"
 

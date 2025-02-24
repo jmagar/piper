@@ -20,7 +20,7 @@ export interface ExtendedChatMessage {
     conversationId?: string;
     parentId?: string;
     type: 'text' | 'code' | 'system';
-    status: 'sending' | 'sent' | 'error';
+    status: 'sending' | 'sent' | 'delivered' | 'error';
     metadata: {
         edited?: boolean;
         editedAt?: Date;
@@ -37,6 +37,11 @@ export interface ExtendedChatMessage {
         lastReplyAt?: string | Date;
         bookmarked?: boolean;
         threadSummary?: string;
+        toolUsed?: {
+            name: string;
+            icon?: string;
+            status: 'success' | 'error' | 'running';
+        };
         [key: string]: unknown;
     };
 }

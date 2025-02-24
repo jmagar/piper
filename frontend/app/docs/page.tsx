@@ -9,7 +9,7 @@ import { Book, Code, Loader2 } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar-new";
 
 
 // OpenAPI Spec

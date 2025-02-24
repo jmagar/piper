@@ -7,7 +7,7 @@ import { BarChart, MessageSquare, Clock, ArrowUpRight } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar-new"
 
 interface UserStats {
   totalMessages: number

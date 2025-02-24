@@ -1,19 +1,58 @@
 {
+    "extends": "../tsconfig.json",
     "compilerOptions": {
         "target": "ES2022",
-        "module": "Node16",
-        "moduleResolution": "Node16",
-        "outDir": "./build",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022"],
+        "outDir": "dist",
         "rootDir": ".",
-        "strict": true,
-        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"],
+            "@generated/*": ["src/generated/*"]
+        },
+        "types": ["node", "vitest"],
+        "allowJs": true,
+        "declaration": true,
+        "sourceMap": true,
+        "declarationMap": true,
+        "composite": true,
         "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "types": ["node"]
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "noImplicitThis": true,
+        "useUnknownInCatchVariables": true,
+        "alwaysStrict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "allowUnusedLabels": false,
+        "allowUnreachableCode": false
     },
-    "include": ["src/**/*", "prisma/**/*"],
-    "ts-node": {
-        "esm": true,
-        "experimentalSpecifierResolution": "node"
-    }
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.js",
+        "prisma/**/*.ts",
+        "*.config.ts",
+        "*.config.js",
+        "*.config.mjs",
+        "**/*.test.ts",
+        "**/*.spec.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
 }

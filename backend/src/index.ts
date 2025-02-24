@@ -1,14 +1,16 @@
-import type { Request, Response, NextFunction } from 'express';
-import express from 'express';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
-import cors from 'cors';
+
 import { PrismaClient } from '@prisma/client';
-import mcpRoutes from './routes/mcp.routes.js';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+
 import chatRoutes from './routes/chat.routes.js';
 import configRoutes from './routes/config.routes.js';
-import healthRoutes from './routes/health.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import healthRoutes from './routes/health.routes.js';
+import mcpRoutes from './routes/mcp.routes.js';
 import { initWebSocket } from './websocket.js';
 
 // Initialize environment variables

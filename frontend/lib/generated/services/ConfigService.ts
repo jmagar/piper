@@ -7,31 +7,62 @@ import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ConfigService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
-     * Get configuration
-     * @returns any Configuration object
+     * Get server configuration
+     * @returns any Server configuration
      * @throws ApiError
      */
     public getConfig(): CancelablePromise<{
-        models?: Array<{
-            id?: string;
-            name?: string;
-            provider?: string;
-            contextWindow?: number;
-            maxTokens?: number;
-            temperature?: number;
-            topP?: number;
-            frequencyPenalty?: number;
-            presencePenalty?: number;
-            stopSequences?: Array<string>;
-        }>;
-        defaultModel?: string;
-        maxContextLength?: number;
-        maxResponseTokens?: number;
+        version?: string;
+        features?: Record<string, boolean>;
+        limits?: {
+            maxMessageLength?: number;
+            maxFileSize?: number;
+            maxFilesPerMessage?: number;
+        };
+        providers?: {
+            openai?: boolean;
+            anthropic?: boolean;
+            groq?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/api/config',
             errors: {
+                500: `Error response`,
+            },
+        });
+    }
+    /**
+     * Update server configuration
+     * @param requestBody
+     * @returns any Configuration updated
+     * @throws ApiError
+     */
+    public updateConfig(
+        requestBody: {
+            features?: Record<string, boolean>;
+            limits?: {
+                maxMessageLength?: number;
+                maxFileSize?: number;
+                maxFilesPerMessage?: number;
+            };
+            providers?: {
+                openai?: boolean;
+                anthropic?: boolean;
+                groq?: boolean;
+            };
+        },
+    ): CancelablePromise<{
+        success?: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/api/config',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Error response`,
                 500: `Error response`,
             },
         });

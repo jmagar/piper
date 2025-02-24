@@ -3,9 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ApiError = {
-    /**
-     * Error message
-     */
-    error: string;
+    message: string;
+    code?: string;
+    details?: Record<string, any>;
 };
 

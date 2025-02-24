@@ -21,7 +21,7 @@ interface SocketProviderProps {
 }
 
 /**
- * Socket provider component
+ * Socket provider component that manages socket connection lifecycle
  */
 export function SocketProvider({ children }: SocketProviderProps) {
     const [isConnected, setIsConnected] = React.useState(false);
@@ -143,6 +143,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
 
 /**
  * Hook to access socket context
+ * @returns Socket context value with the socket instance and connection state
  */
 export function useSocket(): SocketContextValue {
     const context = React.useContext(SocketContext);

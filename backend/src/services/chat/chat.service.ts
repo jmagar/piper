@@ -1,5 +1,6 @@
-import { createLangGraph } from '../../langgraph/index.js';
 import type { PrismaClient } from '@prisma/client';
+
+import { createLangGraph } from '../../langgraph/index.js';
 
 interface ChatMessage {
   id: string;
@@ -10,7 +11,7 @@ interface ChatMessage {
   conversationId?: string;
   parentId?: string;
   type?: 'text' | 'code' | 'system';
-  metadata?: { [key: string]: any };
+  metadata?: { [key: string]: unknown };
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -136,7 +137,7 @@ export class ChatService {
         conversationId: assistantMessage.conversation_id,
         parentId: assistantMessage.parent_id ?? undefined,
         type: 'text',
-        metadata: assistantMessage.metadata as { [key: string]: any } ?? {},
+        metadata: assistantMessage.metadata as { [key: string]: unknown } ?? {},
         createdAt: assistantMessage.created_at,
         updatedAt: assistantMessage.updated_at
       };

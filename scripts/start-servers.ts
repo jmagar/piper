@@ -16,7 +16,7 @@ type NodeTimer = ReturnType<typeof setTimeout>;
 const execAsync = promisify(exec);
 
 const BACKEND_PORT = 4100;
-const FRONTEND_PORTS = [3000, 3001, 3002, 3003];
+const FRONTEND_PORT = 3002;
 const DOCKER_CONTAINERS = ['pooper-redis', 'pooper-db'];
 const DOCKER_NETWORK = 'jakenet';
 
@@ -212,6 +212,7 @@ function startServer(command: string, args: string[], cwd: string, name: string,
         const env = { 
             ...process.env, 
             FORCE_COLOR: 'true',
+            PORT: port.toString(),
             ...(name === 'Frontend' ? {
                 NEXT_TURBO_DEV_LOG: '1',
                 NEXT_TURBO_TRACE: '1',
@@ -367,9 +368,7 @@ async function cleanup() {
     
     // Kill processes by port
     await killProcessOnPort(BACKEND_PORT);
-    for (const port of FRONTEND_PORTS) {
-        await killProcessOnPort(port);
-    }
+    await killProcessOnPort(FRONTEND_PORT);
     
     // Gracefully terminate stored processes
     if (frontendProcess) {
@@ -404,12 +403,10 @@ async function main() {
         await killProcessOnPort(BACKEND_PORT);
     }
 
-    // Kill any frontend server if running
-    for (const port of FRONTEND_PORTS) {
-        if (await isPortInUse(port)) {
-            console.warn(chalk.yellow(`Frontend server running on port ${chalk.bold(port)}, killing...`));
-            await killProcessOnPort(port);
-        }
+    // Kill frontend server if running
+    if (await isPortInUse(FRONTEND_PORT)) {
+        console.warn(chalk.yellow(`Frontend server running on port ${chalk.bold(FRONTEND_PORT)}, killing...`));
+        await killProcessOnPort(FRONTEND_PORT);
     }
 
     // Wait for backend port to be free
@@ -420,13 +417,11 @@ async function main() {
         process.exit(1);
     }
 
-    // Wait for frontend ports to be free
-    console.info(chalk.blue('Waiting for frontend ports to be free...'));
-    const frontendPortsFree = await Promise.all(
-        FRONTEND_PORTS.map(port => waitForPortToBeFree(port))
-    );
-    if (frontendPortsFree.some(free => !free)) {
-        console.error(chalk.red('Failed to free frontend ports'));
+    // Wait for frontend port to be free
+    console.info(chalk.blue('Waiting for frontend port to be free...'));
+    const frontendPortFree = await waitForPortToBeFree(FRONTEND_PORT);
+    if (!frontendPortFree) {
+        console.error(chalk.red(`Failed to free frontend port ${chalk.bold(FRONTEND_PORT)}`));
         process.exit(1);
     }
 
@@ -447,12 +442,7 @@ async function main() {
 
         // Start frontend server
         console.info(chalk.blue('Starting frontend server...'));
-        // Use first available port with type check
-        const frontendPort = FRONTEND_PORTS[0];
-        if (typeof frontendPort === 'undefined') {
-            throw new Error('No frontend port available');
-        }
-        await startServer('pnpm', ['run', 'dev'], frontendDir, 'Frontend', frontendPort);
+        await startServer('pnpm', ['run', 'dev'], frontendDir, 'Frontend', FRONTEND_PORT);
 
         console.info(chalk.green.bold('Both servers started successfully!'));
     } catch (error) {

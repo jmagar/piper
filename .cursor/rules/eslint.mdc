@@ -1,6 +1,7 @@
 ---
-description: 
+description: ESLint Configuration
 globs: 
+alwaysApply: false
 ---
 # ESLint Configuration Rules
 

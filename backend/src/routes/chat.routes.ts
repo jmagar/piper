@@ -1,8 +1,9 @@
+import { PrismaClient } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { ChatService } from '../services/chat/chat.service.js';
+
 import type { ChatMessage } from '../generated/model/chatMessage.js';
+import { ChatService } from '../services/chat/chat.service.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -145,7 +146,7 @@ router.post('/', async (
 
 // Star a message
 router.post('/messages/star', async (
-  req: Request<Record<string, never>, any, StarMessageRequest>,
+  req: Request<Record<string, never>, unknown, StarMessageRequest>,
   res: Response
 ): Promise<void> => {
   try {
@@ -202,7 +203,7 @@ router.post('/messages/star', async (
 
 // Unstar a message
 router.post('/messages/unstar', async (
-  req: Request<Record<string, never>, any, StarMessageRequest>,
+  req: Request<Record<string, never>, unknown, StarMessageRequest>,
   res: Response
 ): Promise<void> => {
   try {

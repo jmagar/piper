@@ -1,31 +1,22 @@
 "use client"
 
-import type { ReactNode, CSSProperties } from 'react';
-
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar-new"
 
 export default function ChatLayout({
   children,
 }: {
-  children: ReactNode
+  children: React.ReactNode
 }) {
   return (
-    <SidebarProvider
-      style={{
-        "--sidebar-width": "350px",
-      } as CSSProperties}
-    >
-      <div className="flex h-screen">
-        <AppSidebar />
-        <SidebarInset>
-          <main className="flex-1 flex flex-col overflow-hidden">
-            {children}
-          </main>
-        </SidebarInset>
+    <SidebarProvider>
+      <div className="flex h-screen w-full overflow-hidden">
+        <div className="flex-shrink-0">
+          <AppSidebar />
+        </div>
+        <main className="flex-1 flex flex-col overflow-hidden bg-background">
+          {children}
+        </main>
       </div>
     </SidebarProvider>
   )

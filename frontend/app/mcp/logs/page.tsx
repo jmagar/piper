@@ -1,13 +1,15 @@
-"use client"
+'use client';
 
-import { SidebarProvider } from "@/components/ui/sidebar"
+import * as React from 'react';
 
-import { McpLogsViewer } from "../_components/mcp-logs-viewer"
+import { McpLogsViewer } from '@/components/mcp-logs-viewer';
 
 export default function McpLogsPage() {
-    return (
-        <SidebarProvider>
-            <McpLogsViewer />
-        </SidebarProvider>
-    );
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-hidden">
+        <McpLogsViewer url="/mcp/logs" />
+      </div>
+    </div>
+  );
 } 

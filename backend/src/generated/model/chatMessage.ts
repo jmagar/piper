@@ -11,19 +11,21 @@
  */
 
 import { RequestFile } from './models';
+import { ChatMessageMetadata } from './chatMessageMetadata';
 
 export class ChatMessage {
     'id': string;
     'content': string;
     'role': ChatMessage.RoleEnum;
-    'userId': string;
-    'username': string;
+    'type': ChatMessage.TypeEnum;
+    'createdAt': Date;
+    'updatedAt': Date;
+    'userId'?: string;
+    'username'?: string;
     'conversationId'?: string;
     'parentId'?: string;
-    'type'?: ChatMessage.TypeEnum = ChatMessage.TypeEnum.Text;
-    'metadata'?: { [key: string]: any; };
-    'createdAt': Date;
-    'updatedAt'?: Date;
+    'status'?: ChatMessage.StatusEnum;
+    'metadata'?: ChatMessageMetadata;
 
     static discriminator: string | undefined = undefined;
 
@@ -42,6 +44,21 @@ export class ChatMessage {
             "name": "role",
             "baseName": "role",
             "type": "ChatMessage.RoleEnum"
+        },
+        {
+            "name": "type",
+            "baseName": "type",
+            "type": "ChatMessage.TypeEnum"
+        },
+        {
+            "name": "createdAt",
+            "baseName": "createdAt",
+            "type": "Date"
+        },
+        {
+            "name": "updatedAt",
+            "baseName": "updatedAt",
+            "type": "Date"
         },
         {
             "name": "userId",
@@ -64,24 +81,14 @@ export class ChatMessage {
             "type": "string"
         },
         {
-            "name": "type",
-            "baseName": "type",
-            "type": "ChatMessage.TypeEnum"
+            "name": "status",
+            "baseName": "status",
+            "type": "ChatMessage.StatusEnum"
         },
         {
             "name": "metadata",
             "baseName": "metadata",
-            "type": "{ [key: string]: any; }"
-        },
-        {
-            "name": "createdAt",
-            "baseName": "createdAt",
-            "type": "Date"
-        },
-        {
-            "name": "updatedAt",
-            "baseName": "updatedAt",
-            "type": "Date"
+            "type": "ChatMessageMetadata"
         }    ];
 
     static getAttributeTypeMap() {
@@ -99,5 +106,11 @@ export namespace ChatMessage {
         Text = <any> 'text',
         Code = <any> 'code',
         System = <any> 'system'
+    }
+    export enum StatusEnum {
+        Sending = <any> 'sending',
+        Sent = <any> 'sent',
+        Delivered = <any> 'delivered',
+        Error = <any> 'error'
     }
 }

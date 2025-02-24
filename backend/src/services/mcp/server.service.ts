@@ -1,7 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Server } from '../../generated/model/server.js';
-import type { Tool } from '../../generated/model/tool.js';
 import WebSocket from 'ws';
+
+import type { Server } from '../../generated/model/server';
+import type { Tool } from '../../generated/model/tool.js';
 
 export class McpServerService {
   private connections: Map<string, WebSocket> = new Map();
@@ -86,7 +87,7 @@ export class McpServerService {
     this.reconnectTimers.set(serverId, timer);
   }
 
-  private async handleServerMessage(serverId: string, message: any): Promise<void> {
+  private async handleServerMessage(serverId: string, message: unknown): Promise<void> {
     switch (message.type) {
       case 'handshake_response':
         await this.handleHandshakeResponse(serverId, message);
@@ -105,7 +106,7 @@ export class McpServerService {
     }
   }
 
-  private async handleHandshakeResponse(serverId: string, message: any): Promise<void> {
+  private async handleHandshakeResponse(serverId: string, message: unknown): Promise<void> {
     // Update server capabilities in database
     await this.prisma.mcpServer.update({
       where: { id: serverId },
@@ -118,7 +119,7 @@ export class McpServerService {
     });
   }
 
-  private async handleToolResponse(serverId: string, message: any): Promise<void> {
+  private async handleToolResponse(serverId: string, message: unknown): Promise<void> {
     // Store tool execution result
     await this.prisma.toolResult.create({
       data: {
@@ -130,17 +131,17 @@ export class McpServerService {
     });
   }
 
-  private async handleEvent(serverId: string, message: any): Promise<void> {
+  private async handleEvent(serverId: string, message: unknown): Promise<void> {
     // Log event for monitoring
     console.log(`Event from server ${serverId}:`, message);
   }
 
-  private async handleLog(serverId: string, message: any): Promise<void> {
+  private async handleLog(serverId: string, message: unknown): Promise<void> {
     // Store log message
     console.log(`Log from server ${serverId}:`, message);
   }
 
-  async executeTool(serverId: string, tool: string, params: any): Promise<any> {
+  async executeTool(serverId: string, tool: string, params: unknown): Promise<unknown> {
     const connection = this.connections.get(serverId);
     if (!connection) {
       throw new Error(`Not connected to server ${serverId}`);

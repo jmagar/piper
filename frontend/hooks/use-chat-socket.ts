@@ -1,95 +1,42 @@
-import { useEffect, useState, useCallback } from 'react';
-
-import { Socket } from 'socket.io-client';
-import { toast } from 'sonner';
+import * as React from 'react';
 
 import { useSocket } from '@/lib/socket';
+import type { ExtendedChatMessage } from '@/types/chat';
 
 export function useChatSocket() {
-    const socket = useSocket();
-    const [isConnected, setIsConnected] = useState(false);
-    const [isConnecting, setIsConnecting] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { socket, isConnected } = useSocket();
 
-    const connect = useCallback(() => {
-        if (!socket) {
-            setError('Chat connection not available');
-            toast.error('Chat connection not available');
-            return;
-        }
-
-        if (!socket.connected) {
-            setIsConnecting(true);
-            setError(null);
-            socket.connect();
-        }
+    const connect = React.useCallback(() => {
+        socket?.connect();
     }, [socket]);
 
-    useEffect(() => {
-        if (!socket) {
-            setIsConnecting(false);
-            setIsConnected(false);
-            setError('Initializing chat connection...');
-            return;
-        }
+    const onNewMessage = React.useCallback((callback: (message: ExtendedChatMessage) => void) => {
+        socket?.on('message:new', callback);
+        return () => socket?.off('message:new', callback);
+    }, [socket]);
 
-        const handleConnect = () => {
-            console.log('Chat socket connected');
-            setIsConnected(true);
-            setIsConnecting(false);
-            setError(null);
-        };
+    const onMessageUpdate = React.useCallback((callback: (message: ExtendedChatMessage) => void) => {
+        socket?.on('message:update', callback);
+        return () => socket?.off('message:update', callback);
+    }, [socket]);
 
-        const handleDisconnect = (reason: string) => {
-            console.log('Chat socket disconnected:', reason);
-            setIsConnected(false);
-            
-            if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-                setError('Disconnected from chat server');
-                setIsConnecting(false);
-            } else {
-                // For other disconnect reasons, we'll let the socket's auto-reconnect handle it
-                setIsConnecting(true);
-                setError('Connection lost. Reconnecting...');
-            }
-        };
+    const onUserTyping = React.useCallback((callback: (user: { userId: string; username: string }) => void) => {
+        socket?.on('user:typing', callback);
+        return () => socket?.off('user:typing', callback);
+    }, [socket]);
 
-        const handleConnectError = (error: Error) => {
-            console.error('Chat socket connection error:', error);
-            setIsConnecting(false);
-            setIsConnected(false);
-            setError('Failed to connect to chat server');
-        };
-
-        const handleError = (error: Error) => {
-            console.error('Chat socket error:', error);
-            setError('Chat server error occurred');
-        };
-
-        // Set up event listeners
-        socket.on('connect', handleConnect);
-        socket.on('disconnect', handleDisconnect);
-        socket.on('connect_error', handleConnectError);
-        socket.on('error', handleError);
-
-        // Set initial connection state
-        setIsConnected(socket.connected);
-        setIsConnecting(!socket.connected);
-
-        // Clean up event listeners
-        return () => {
-            socket.off('connect', handleConnect);
-            socket.off('disconnect', handleDisconnect);
-            socket.off('connect_error', handleConnectError);
-            socket.off('error', handleError);
-        };
+    const onUserStopTyping = React.useCallback((callback: (user: { userId: string; username: string }) => void) => {
+        socket?.on('user:stop_typing', callback);
+        return () => socket?.off('user:stop_typing', callback);
     }, [socket]);
 
     return {
         socket,
         isConnected,
-        isConnecting,
-        error,
-        connect
+        connect,
+        onNewMessage,
+        onMessageUpdate,
+        onUserTyping,
+        onUserStopTyping
     };
 }

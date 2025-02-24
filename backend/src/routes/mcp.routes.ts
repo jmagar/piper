@@ -1,5 +1,6 @@
-import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { Router } from 'express';
+
 import { McpServerService } from '../services/mcp/server.service.js';
 import { McpToolService } from '../services/mcp/tool.service.js';
 

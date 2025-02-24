@@ -25,8 +25,12 @@ const nextConfig = {
       'lucide-react',
       'date-fns'
     ],
-    // Modern features
-    typedRoutes: true
+    // Enable Turbopack
+    turbo: {
+      rules: {
+        // Add any Turbopack-specific rules here
+      }
+    }
   }
 };
 

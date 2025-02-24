@@ -6,14 +6,11 @@ export type ChatMessage = {
     id: string;
     content: string;
     role: ChatMessage.role;
-    userId: string;
-    username: string;
-    conversationId?: string;
-    parentId?: string;
     type?: ChatMessage.type;
-    metadata?: Record<string, any>;
     createdAt: string;
-    updatedAt?: string;
+    updatedAt: string;
+    metadata?: Record<string, any>;
+    status?: ChatMessage.status;
 };
 export namespace ChatMessage {
     export enum role {
@@ -25,6 +22,11 @@ export namespace ChatMessage {
         TEXT = 'text',
         CODE = 'code',
         SYSTEM = 'system',
+    }
+    export enum status {
+        SENDING = 'sending',
+        DELIVERED = 'delivered',
+        ERROR = 'error',
     }
 }
 

@@ -2,51 +2,48 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { Tool } from '../models/Tool';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ToolsService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
-     * Get tool execution history
-     * @param toolId
-     * @param userId
-     * @param status
-     * @param since
-     * @returns any List of tool executions
+     * Get available tools
+     * @returns Tool List of available tools
      * @throws ApiError
      */
-    public getToolExecutions(
-        toolId?: string,
-        userId?: string,
-        status?: 'pending' | 'running' | 'completed' | 'failed',
-        since?: string,
-    ): CancelablePromise<{
-        executions?: Array<{
-            id?: string;
-            toolId?: string;
-            userId?: string;
-            status?: 'pending' | 'running' | 'completed' | 'failed';
-            input?: Record<string, any>;
-            output?: Record<string, any>;
-            error?: {
-                code?: string;
-                message?: string;
-                details?: Record<string, any>;
-            };
-            startTime?: string;
-            endTime?: string;
-        }>;
-        nextCursor?: string;
-    }> {
+    public getAvailableTools(): CancelablePromise<Array<Tool>> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/api/tools/executions',
-            query: {
-                'toolId': toolId,
-                'userId': userId,
-                'status': status,
-                'since': since,
+            url: '/api/tools',
+            errors: {
+                500: `Error response`,
             },
+        });
+    }
+    /**
+     * Invoke a tool
+     * @param toolId
+     * @param requestBody
+     * @returns any Tool invocation result
+     * @throws ApiError
+     */
+    public invokeTool(
+        toolId: string,
+        requestBody: {
+            parameters: Record<string, any>;
+        },
+    ): CancelablePromise<{
+        result?: Record<string, any>;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/tools/{toolId}/invoke',
+            path: {
+                'toolId': toolId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `Error response`,
                 404: `Error response`,

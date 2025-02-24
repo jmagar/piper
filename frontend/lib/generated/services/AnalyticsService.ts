@@ -7,41 +7,36 @@ import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class AnalyticsService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
-     * Get API usage statistics
+     * Get analytics metrics
      * @param startDate
      * @param endDate
-     * @returns any Usage statistics
+     * @param userId
+     * @returns any Analytics metrics
      * @throws ApiError
      */
-    public getUsage(
+    public getMetrics(
         startDate?: string,
         endDate?: string,
+        userId?: string,
     ): CancelablePromise<{
-        totalTokens?: {
-            input?: number;
-            output?: number;
-            total?: number;
-        };
-        costBreakdown?: {
-            input?: number;
-            output?: number;
-            total?: number;
-        };
-        timeSeriesData?: Array<{
-            date?: string;
-            tokens?: number;
-            cost?: number;
+        messageCount?: number;
+        userCount?: number;
+        toolUsage?: Record<string, number>;
+        activeUsers?: Array<{
+            userId?: string;
+            messageCount?: number;
+            lastActive?: string;
         }>;
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/api/analytics/usage',
+            url: '/api/analytics/metrics',
             query: {
                 'startDate': startDate,
                 'endDate': endDate,
+                'userId': userId,
             },
             errors: {
-                400: `Error response`,
                 500: `Error response`,
             },
         });

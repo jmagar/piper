@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar-new"
 import { chatService } from "@/lib/api-client"
 import type { ApiError, Conversation } from "@/lib/generated"
 

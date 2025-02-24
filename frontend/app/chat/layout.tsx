@@ -1,7 +1,7 @@
 "use client"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar-new"
 
 export default function ChatLayout({
   children,
@@ -10,9 +10,9 @@ export default function ChatLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full">
+      <div className="flex min-h-screen">
         <AppSidebar />
-        <main className="flex-1 flex flex-col overflow-hidden bg-background">
+        <main className="flex-1 ml-64">
           {children}
         </main>
       </div>

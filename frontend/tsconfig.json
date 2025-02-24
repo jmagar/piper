@@ -1,32 +1,46 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
+    "target": "es2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "jsx": "preserve",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "noEmit": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/types/*": ["./types/*"],
+      "@/hooks/*": ["./hooks/*"]
+    },
     "plugins": [
       {
         "name": "next"
       }
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./types"],
-    "noEmit": true,
-    "incremental": true,
-    "allowJs": true
+    ]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "*.config.{js,mjs,cjs}",
-    "postcss.config.*",
-    ".eslintrc.*"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist",
+    "**/*.config.{js,mjs,cjs}",
+    "**/postcss.config.*",
+    ".eslintrc.*",
+    "eslint.config.mjs"
   ]
 }

@@ -1,53 +1,56 @@
 paths:
-  /realtime/events:
+  /api/realtime/status:
     get:
-      summary: Get realtime events
-      operationId: getEvents
+      summary: Get realtime connection status
+      operationId: getRealtimeStatus
       tags: [Realtime]
-      parameters:
-        - name: userId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: type
-          in: query
-          schema:
-            type: string
-            enum: [message, typing, presence]
-        - name: since
-          in: query
-          schema:
-            type: string
-            format: date-time
       responses:
         200:
-          description: List of events
+          description: Realtime connection status
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      format: uuid
-                    type:
-                      type: string
-                      enum: [message, typing, presence]
-                    userId:
-                      type: string
-                      format: uuid
-                    data:
-                      type: object
-                      additionalProperties: true
-                    timestamp:
-                      type: string
-                      format: date-time
-        400:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [connected, disconnected]
+                  connectedClients:
+                    type: integer
+                  uptime:
+                    type: integer
+                    description: Server uptime in seconds
+        500:
           $ref: '../main.yaml#/components/responses/ApiError'
-        401:
+
+  /api/realtime/events:
+    post:
+      summary: Send realtime event
+      operationId: sendEvent
+      tags: [Realtime]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+                target:
+                  type: string
+                  format: uuid
+                  description: Target user ID, if not specified broadcast to all
+      responses:
+        200:
+          description: Event sent
+        400:
           $ref: '../main.yaml#/components/responses/ApiError'
         500:
           $ref: '../main.yaml#/components/responses/ApiError'

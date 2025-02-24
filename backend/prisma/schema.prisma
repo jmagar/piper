@@ -181,6 +181,7 @@ model McpServer {
     metadata    Json?
     createdAt   DateTime    @default(now()) @map("created_at")
     updatedAt   DateTime    @updatedAt @map("updated_at")
+    tools       McpTool[]   @relation("ServerTools")
 
     @@map("mcp_servers")
 }
@@ -194,6 +195,8 @@ model McpTool {
     metadata    Json?
     createdAt   DateTime    @default(now()) @map("created_at")
     updatedAt   DateTime    @updatedAt @map("updated_at")
+    server      McpServer   @relation("ServerTools", fields: [serverId], references: [id])
+    serverId    String      @map("server_id")
 
     @@map("mcp_tools")
 }

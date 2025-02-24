@@ -1,9 +1,11 @@
 import type { Server as HTTPServer } from 'http';
+
+import type { PrismaClient } from '@prisma/client';
 import type { Socket } from 'socket.io';
 import { Server as SocketIOServer } from 'socket.io';
-import type { PrismaClient } from '@prisma/client';
-import { ChatService } from './services/chat/chat.service.js';
+
 import type { ChatMessage as ApiChatMessage } from './generated/model/models.js';
+import { ChatService } from './services/chat/chat.service.js';
 
 interface User {
     userId: string;

@@ -8,68 +8,27 @@ import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class McpService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
-     * Get MCP server health status
-     * @returns any Health status of MCP servers
+     * Get available tools
+     * @returns Tool List of available tools
      * @throws ApiError
      */
-    public getMcpHealth(): CancelablePromise<{
-        status?: 'ok' | 'degraded' | 'error';
-        servers?: Array<{
-            name?: string;
-            status?: 'ok' | 'error';
-            error?: string;
-            memoryUsage?: {
-                heapUsed?: number;
-                heapTotal?: number;
-                external?: number;
-                rss?: number;
-            };
-        }>;
-        timestamp?: string;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/api/mcp/health',
-            errors: {
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * List MCP tools
-     * @returns Tool List of MCP tools
-     * @throws ApiError
-     */
-    public listMcpTools(): CancelablePromise<Array<Tool>> {
+    public getTools(): CancelablePromise<Array<Tool>> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/api/mcp/tools',
             errors: {
-                500: `Internal server error`,
+                500: `Error response`,
             },
         });
     }
     /**
-     * Register MCP tool
+     * Register a new tool
      * @param requestBody
-     * @returns Tool MCP tool registered
+     * @returns Tool Tool registered
      * @throws ApiError
      */
-    public registerMcpTool(
-        requestBody: {
-            name: string;
-            description?: string;
-            serverId: string;
-            type?: 'system' | 'plugin' | 'custom';
-            parameters?: Array<{
-                name: string;
-                type: string;
-                description?: string;
-                required?: boolean;
-                schema?: Record<string, any>;
-            }>;
-            metadata?: Record<string, any>;
-        },
+    public registerTool(
+        requestBody: Tool,
     ): CancelablePromise<Tool> {
         return this.httpRequest.request({
             method: 'POST',
@@ -77,18 +36,18 @@ export class McpService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Bad request`,
-                500: `Internal server error`,
+                400: `Error response`,
+                500: `Error response`,
             },
         });
     }
     /**
-     * Get MCP tool details
+     * Get tool by ID
      * @param toolId
-     * @returns Tool MCP tool details
+     * @returns Tool Tool details
      * @throws ApiError
      */
-    public getMcpTool(
+    public getTool(
         toolId: string,
     ): CancelablePromise<Tool> {
         return this.httpRequest.request({
@@ -98,18 +57,44 @@ export class McpService {
                 'toolId': toolId,
             },
             errors: {
-                404: `Tool not found`,
-                500: `Internal server error`,
+                404: `Error response`,
+                500: `Error response`,
             },
         });
     }
     /**
-     * Unregister MCP tool
+     * Update tool
+     * @param toolId
+     * @param requestBody
+     * @returns Tool Tool updated
+     * @throws ApiError
+     */
+    public updateTool(
+        toolId: string,
+        requestBody: Tool,
+    ): CancelablePromise<Tool> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/api/mcp/tools/{toolId}',
+            path: {
+                'toolId': toolId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Error response`,
+                404: `Error response`,
+                500: `Error response`,
+            },
+        });
+    }
+    /**
+     * Delete tool
      * @param toolId
      * @returns void
      * @throws ApiError
      */
-    public unregisterMcpTool(
+    public deleteTool(
         toolId: string,
     ): CancelablePromise<void> {
         return this.httpRequest.request({
@@ -119,8 +104,8 @@ export class McpService {
                 'toolId': toolId,
             },
             errors: {
-                404: `Tool not found`,
-                500: `Internal server error`,
+                404: `Error response`,
+                500: `Error response`,
             },
         });
     }

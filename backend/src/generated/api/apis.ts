@@ -10,6 +10,10 @@ export * from './healthApi';
 import { HealthApi } from './healthApi';
 export * from './mCPApi';
 import { MCPApi } from './mCPApi';
+export * from './previewApi';
+import { PreviewApi } from './previewApi';
+export * from './promptApi';
+import { PromptApi } from './promptApi';
 export * from './realtimeApi';
 import { RealtimeApi } from './realtimeApi';
 export * from './toolsApi';
@@ -25,4 +29,4 @@ export class HttpError extends Error {
 
 export { RequestFile } from '../model/models';
 
-export const APIS = [AnalyticsApi, ChatApi, ConfigApi, DashboardApi, HealthApi, MCPApi, RealtimeApi, ToolsApi];
+export const APIS = [AnalyticsApi, ChatApi, ConfigApi, DashboardApi, HealthApi, MCPApi, PreviewApi, PromptApi, RealtimeApi, ToolsApi];

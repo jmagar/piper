@@ -1,19 +1,20 @@
 "use client"
 
-import * as React from "react"
-
 import {
   BookOpen,
   Bot,
+  ChevronDown,
   Command,
   LifeBuoy,
   Send,
   SquareTerminal,
 } from "lucide-react"
+import * as React from "react"
+import { cn } from "@/lib/utils"
 
-import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar-new"
 
 const data = {
   user: {
@@ -33,7 +34,6 @@ const data = {
   navMain: [
     {
       title: "Messages",
-      url: "/chat",
       icon: SquareTerminal,
       isActive: true,
       items: [
@@ -53,26 +53,16 @@ const data = {
     },
     {
       title: "Model Context Protocol",
-      url: "#",
       icon: Bot,
       items: [
         {
-          title: "Config",
-          url: "#",
-        },
-        {
-          title: "Servers",
-          url: "#",
-        },
-        {
           title: "Logs",
-          url: "#",
+          url: "/mcp/logs",
         },
       ],
     },
     {
       title: "Knowledge",
-      url: "#",
       icon: BookOpen,
       items: [
         {
@@ -101,19 +91,29 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
+
+  const toggleSection = (title: string) => {
+    setExpandedSections(prev => 
+      prev.includes(title) 
+        ? prev.filter(t => t !== title)
+        : [...prev, title]
+    );
+  };
+
   return (
-    <Sidebar variant="inset" {...props}>
+    <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
+                <div className="bg-primary text-primary-foreground flex aspect-square h-8 w-8 items-center justify-center rounded-lg">
+                  <Command className="h-4 w-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
+                  <span className="truncate text-xs text-muted-foreground">Enterprise</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -121,12 +121,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <SidebarMenu>
+          {data.navMain.map((section) => (
+            <SidebarMenuItem key={section.title}>
+              <SidebarMenuButton
+                onClick={() => toggleSection(section.title)}
+                className="justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <section.icon className="h-4 w-4" />
+                  <span>{section.title}</span>
+                </div>
+                <ChevronDown 
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    expandedSections.includes(section.title) && "rotate-180"
+                  )} 
+                />
+              </SidebarMenuButton>
+              {expandedSections.includes(section.title) && (
+                <SidebarMenu className="ml-4 mt-1">
+                  {section.items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <a href={item.url}>
+                          {item.title}
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              )}
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
+        <div className="px-4 py-2">
+          <ThemeToggle />
+        </div>
         <NavUser user={data.user} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

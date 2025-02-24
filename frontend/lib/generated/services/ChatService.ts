@@ -5,6 +5,7 @@
 import type { ChatMessage } from '../models/ChatMessage';
 import type { Conversation } from '../models/Conversation';
 import type { ConversationStats } from '../models/ConversationStats';
+import type { MessageReaction } from '../models/MessageReaction';
 import type { StarredMessage } from '../models/StarredMessage';
 import type { UserStats } from '../models/UserStats';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -163,6 +164,35 @@ export class ChatService {
             },
             errors: {
                 404: `Error response`,
+                500: `Error response`,
+            },
+        });
+    }
+    /**
+     * Add a reaction to a message
+     * @param messageId
+     * @param requestBody
+     * @returns MessageReaction Reaction added
+     * @throws ApiError
+     */
+    public addMessageReaction(
+        messageId: string,
+        requestBody: {
+            emoji: string;
+            userId: string;
+            username: string;
+        },
+    ): CancelablePromise<MessageReaction> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/chat/messages/{messageId}/reactions',
+            path: {
+                'messageId': messageId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Error response`,
                 500: `Error response`,
             },
         });

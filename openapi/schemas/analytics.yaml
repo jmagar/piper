@@ -1,63 +1,53 @@
 paths:
-  /analytics/usage:
+  /api/analytics/metrics:
     get:
-      summary: Get API usage statistics
-      operationId: getUsage
+      summary: Get analytics metrics
+      operationId: getMetrics
       tags: [Analytics]
       parameters:
         - name: startDate
           in: query
           schema:
             type: string
-            format: date
+            format: date-time
         - name: endDate
           in: query
           schema:
             type: string
-            format: date
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         200:
-          description: Usage statistics
+          description: Analytics metrics
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  totalTokens:
+                  messageCount:
+                    type: integer
+                  userCount:
+                    type: integer
+                  toolUsage:
                     type: object
-                    properties:
-                      input:
-                        type: integer
-                      output:
-                        type: integer
-                      total:
-                        type: integer
-                  costBreakdown:
-                    type: object
-                    properties:
-                      input:
-                        type: number
-                        format: float
-                      output:
-                        type: number
-                        format: float
-                      total:
-                        type: number
-                        format: float
-                  timeSeriesData:
+                    additionalProperties:
+                      type: integer
+                  activeUsers:
                     type: array
                     items:
                       type: object
                       properties:
-                        date:
+                        userId:
                           type: string
-                          format: date
-                        tokens:
+                          format: uuid
+                        messageCount:
                           type: integer
-                        cost:
-                          type: number
-                          format: float
-        400:
-          $ref: '../main.yaml#/components/responses/ApiError'
+                        lastActive:
+                          type: string
+                          format: date-time
         500:
           $ref: '../main.yaml#/components/responses/ApiError'

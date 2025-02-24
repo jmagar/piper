@@ -1,5 +1,6 @@
-import { Router } from 'express';
 import os from 'os';
+
+import { Router } from 'express';
 
 declare global {
   var requestCount: number;

@@ -2,14 +2,20 @@ import localVarRequest from 'request';
 
 export * from './apiError';
 export * from './chatMessage';
+export * from './chatMessageMetadata';
+export * from './chatMessageMetadataToolUsed';
 export * from './conversation';
 export * from './conversationStats';
 export * from './createMessageRequest';
+export * from './enhancePrompt200Response';
+export * from './enhancePromptRequest';
 export * from './getChatStats200Response';
 export * from './getConfig200Response';
 export * from './getConfig200ResponseModelsInner';
 export * from './getEvents200ResponseInner';
 export * from './getHealth200Response';
+export * from './getLinkPreview200Response';
+export * from './getLinkPreviewRequest';
 export * from './getMcpHealth200Response';
 export * from './getMcpHealth200ResponseServersInner';
 export * from './getMcpHealth200ResponseServersInnerMemoryUsage';
@@ -27,6 +33,8 @@ export * from './getUsage200Response';
 export * from './getUsage200ResponseCostBreakdown';
 export * from './getUsage200ResponseTimeSeriesDataInner';
 export * from './getUsage200ResponseTotalTokens';
+export * from './messageReaction';
+export * from './messageReactionUsersInner';
 export * from './registerMcpToolRequest';
 export * from './registerMcpToolRequestParametersInner';
 export * from './starMessageRequest';
@@ -50,14 +58,20 @@ export type RequestFile = string | Buffer | fs.ReadStream | RequestDetailedFile;
 
 import { ApiError } from './apiError';
 import { ChatMessage } from './chatMessage';
+import { ChatMessageMetadata } from './chatMessageMetadata';
+import { ChatMessageMetadataToolUsed } from './chatMessageMetadataToolUsed';
 import { Conversation } from './conversation';
 import { ConversationStats } from './conversationStats';
 import { CreateMessageRequest } from './createMessageRequest';
+import { EnhancePrompt200Response } from './enhancePrompt200Response';
+import { EnhancePromptRequest } from './enhancePromptRequest';
 import { GetChatStats200Response } from './getChatStats200Response';
 import { GetConfig200Response } from './getConfig200Response';
 import { GetConfig200ResponseModelsInner } from './getConfig200ResponseModelsInner';
 import { GetEvents200ResponseInner } from './getEvents200ResponseInner';
 import { GetHealth200Response } from './getHealth200Response';
+import { GetLinkPreview200Response } from './getLinkPreview200Response';
+import { GetLinkPreviewRequest } from './getLinkPreviewRequest';
 import { GetMcpHealth200Response } from './getMcpHealth200Response';
 import { GetMcpHealth200ResponseServersInner } from './getMcpHealth200ResponseServersInner';
 import { GetMcpHealth200ResponseServersInnerMemoryUsage } from './getMcpHealth200ResponseServersInnerMemoryUsage';
@@ -75,6 +89,8 @@ import { GetUsage200Response } from './getUsage200Response';
 import { GetUsage200ResponseCostBreakdown } from './getUsage200ResponseCostBreakdown';
 import { GetUsage200ResponseTimeSeriesDataInner } from './getUsage200ResponseTimeSeriesDataInner';
 import { GetUsage200ResponseTotalTokens } from './getUsage200ResponseTotalTokens';
+import { MessageReaction } from './messageReaction';
+import { MessageReactionUsersInner } from './messageReactionUsersInner';
 import { RegisterMcpToolRequest } from './registerMcpToolRequest';
 import { RegisterMcpToolRequestParametersInner } from './registerMcpToolRequestParametersInner';
 import { StarMessageRequest } from './starMessageRequest';
@@ -98,6 +114,7 @@ let primitives = [
 let enumsMap: {[index: string]: any} = {
         "ChatMessage.RoleEnum": ChatMessage.RoleEnum,
         "ChatMessage.TypeEnum": ChatMessage.TypeEnum,
+        "ChatMessage.StatusEnum": ChatMessage.StatusEnum,
         "CreateMessageRequest.TypeEnum": CreateMessageRequest.TypeEnum,
         "GetEvents200ResponseInner.TypeEnum": GetEvents200ResponseInner.TypeEnum,
         "GetHealth200Response.StatusEnum": GetHealth200Response.StatusEnum,
@@ -111,14 +128,20 @@ let enumsMap: {[index: string]: any} = {
 let typeMap: {[index: string]: any} = {
     "ApiError": ApiError,
     "ChatMessage": ChatMessage,
+    "ChatMessageMetadata": ChatMessageMetadata,
+    "ChatMessageMetadataToolUsed": ChatMessageMetadataToolUsed,
     "Conversation": Conversation,
     "ConversationStats": ConversationStats,
     "CreateMessageRequest": CreateMessageRequest,
+    "EnhancePrompt200Response": EnhancePrompt200Response,
+    "EnhancePromptRequest": EnhancePromptRequest,
     "GetChatStats200Response": GetChatStats200Response,
     "GetConfig200Response": GetConfig200Response,
     "GetConfig200ResponseModelsInner": GetConfig200ResponseModelsInner,
     "GetEvents200ResponseInner": GetEvents200ResponseInner,
     "GetHealth200Response": GetHealth200Response,
+    "GetLinkPreview200Response": GetLinkPreview200Response,
+    "GetLinkPreviewRequest": GetLinkPreviewRequest,
     "GetMcpHealth200Response": GetMcpHealth200Response,
     "GetMcpHealth200ResponseServersInner": GetMcpHealth200ResponseServersInner,
     "GetMcpHealth200ResponseServersInnerMemoryUsage": GetMcpHealth200ResponseServersInnerMemoryUsage,
@@ -136,6 +159,8 @@ let typeMap: {[index: string]: any} = {
     "GetUsage200ResponseCostBreakdown": GetUsage200ResponseCostBreakdown,
     "GetUsage200ResponseTimeSeriesDataInner": GetUsage200ResponseTimeSeriesDataInner,
     "GetUsage200ResponseTotalTokens": GetUsage200ResponseTotalTokens,
+    "MessageReaction": MessageReaction,
+    "MessageReactionUsersInner": MessageReactionUsersInner,
     "RegisterMcpToolRequest": RegisterMcpToolRequest,
     "RegisterMcpToolRequestParametersInner": RegisterMcpToolRequestParametersInner,
     "StarMessageRequest": StarMessageRequest,

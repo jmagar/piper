@@ -1,189 +1,189 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
-import { Loader2, Send } from 'lucide-react';
+import * as React from 'react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useSocket } from '@/lib/socket';
 import type { ExtendedChatMessage } from '@/types/chat';
 
-import { MessageListV2 } from './message-list-v2';
+import { MessageCardV2 } from './message-card-v2';
+import { MessageInput } from './message-input';
 
-const DEFAULT_USER = {
-  id: 'test-user-1',
-  name: 'Test User',
-  email: 'test@example.com'
-} as const;
+export function ChatV2() {
+    const messagesEndRef = React.useRef<HTMLDivElement>(null);
+    const [messages, setMessages] = React.useState<ExtendedChatMessage[]>([
+        {
+            id: 'system-intro',
+            role: 'system',
+            content: "This is a new chat session. The AI assistant will help you with coding tasks, using various tools and following best practices.",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            type: 'text',
+            status: 'delivered',
+            metadata: {}
+        },
+        {
+            id: 'welcome',
+            role: 'assistant',
+            content: `# 👋 Welcome to Your AI Coding Assistant!
 
-interface ChatV2Props {
-  conversationId?: string;
-}
+I'm here to help you with your development tasks. Here's what I can do:
 
-export function ChatV2({ conversationId }: ChatV2Props) {
-  const { socket, isConnected, isConnecting } = useSocket();
-  const [messages, setMessages] = useState<ExtendedChatMessage[]>([{
-    id: 'welcome',
-    role: 'system',
-    content: 'Welcome to the chat! Type a message to get started.',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    type: 'system',
-    status: 'sent',
-    metadata: {}
-  }]);
-  const [input, setInput] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+\`\`\`markdown
+Core Capabilities:
+├── 🔍 Code Analysis
+│   ├── Search and navigate codebases
+│   ├── Debug issues and optimize performance
+│   └── Review and suggest improvements
+│
+├── 💻 Code Generation
+│   ├── Create new components and features
+│   ├── Modify existing code safely
+│   └── Follow project standards and best practices
+│
+├── 🛠️ Development Tools
+│   ├── File and directory management
+│   ├── Git operations
+│   └── Package management
+│
+└── 📚 Knowledge Support
+    ├── Answer programming questions
+    ├── Explain concepts and patterns
+    └── Provide documentation and examples
+\`\`\`
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+I'm integrated with your development environment and can directly help with:
+- Searching and reading files
+- Making code changes
+- Running commands
+- Managing your project
 
-  const handleSendMessage = async (content: string) => {
-    if (content.trim().length === 0 || !isConnected || socket === null) {
-      if (!isConnected) {
-        toast.error('Not connected to chat server');
-      }
-      return;
-    }
-
-    const tempMessage: ExtendedChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: DEFAULT_USER.id,
-      username: DEFAULT_USER.name,
-      type: 'text',
-      status: 'sending',
-      metadata: {},
-      ...(conversationId ? { conversationId } : {})
-    };
-
-    setMessages(prev => [...prev, tempMessage]);
-    setInput('');
-    setIsSending(true);
-
-    try {
-      socket.emit('message:sent', tempMessage, (response: { error?: string; message?: ExtendedChatMessage }) => {
-        if (response.error !== undefined) {
-          throw new Error(response.error);
+**Ready to get started?** Let me know what you'd like to work on!`,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            type: 'text',
+            status: 'delivered',
+            metadata: {}
         }
-        if (response.message !== undefined) {
-          setMessages(prev => prev.map(msg => {
-            if (msg.id === tempMessage.id && response.message) {
-              return {
-                id: response.message.id,
-                role: response.message.role,
-                content: response.message.content,
-                createdAt: response.message.createdAt,
-                updatedAt: response.message.updatedAt,
-                type: response.message.type,
-                status: 'sent' as const,
-                metadata: response.message.metadata,
-                ...(response.message.userId && { userId: response.message.userId }),
-                ...(response.message.username && { username: response.message.username }),
-                ...(response.message.conversationId && { conversationId: response.message.conversationId }),
-                ...(response.message.parentId && { parentId: response.message.parentId })
-              };
+    ]);
+    const [input, setInput] = React.useState('');
+    const [isSending, setIsSending] = React.useState(false);
+    const { socket, isConnected } = useSocket();
+
+    const scrollToBottom = React.useCallback((behavior: ScrollBehavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+    }, []);
+
+    // Calculate context length
+    const contextLength = React.useMemo(() => {
+        return messages.reduce((acc, msg) => {
+            // Count characters in content
+            const contentLength = (msg.content?.length || 0);
+            // Count metadata as JSON string
+            const metadataLength = JSON.stringify(msg.metadata).length;
+            return acc + contentLength + metadataLength;
+        }, 0);
+    }, [messages]);
+
+    // Initial scroll and on new messages
+    React.useEffect(() => {
+        scrollToBottom('auto');
+    }, [messages, scrollToBottom]);
+
+    // Handle new messages
+    React.useEffect(() => {
+        if (!socket) return;
+
+        const handleNewMessage = (message: ExtendedChatMessage) => {
+            setMessages(prev => [...prev, message]);
+            scrollToBottom();
+        };
+
+        socket.on('message:new', handleNewMessage);
+        return () => {
+            socket.off('message:new', handleNewMessage);
+        };
+    }, [socket, scrollToBottom]);
+
+    const handleMessageUpdate = React.useCallback((updatedMessage: ExtendedChatMessage) => {
+        setMessages(prev => 
+            prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+        );
+    }, []);
+
+    const handleSendMessage = React.useCallback(async () => {
+        if (!input.trim() || !isConnected || !socket) {
+            if (!isConnected) {
+                toast.error('Not connected to chat server');
             }
-            return msg;
-          }));
+            return;
         }
+
+        const newMessage: ExtendedChatMessage = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: input.trim(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            type: 'text',
+            status: 'sending',
+            metadata: {}
+        };
+
+        setMessages(prev => [...prev, newMessage]);
+        setInput('');
         scrollToBottom();
-      });
-    } catch (error) {
-      globalThis.console.error('Failed to send message:', error);
-      toast.error('Failed to send message');
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-    } finally {
-      setIsSending(false);
-    }
-  };
+        setIsSending(true);
 
-  useEffect(() => {
-    if (socket === null) return;
+        try {
+            socket.emit('message:sent', newMessage, (response: { error?: string; message?: ExtendedChatMessage }) => {
+                if (response.error) {
+                    throw new Error(response.error);
+                }
 
-    const handleMessage = (message: ExtendedChatMessage) => {
-      setMessages((prev) => [...prev, message]);
-      scrollToBottom();
-    };
+                if (response.message) {
+                    setMessages(prev => 
+                        prev.map(msg => msg.id === newMessage.id ? response.message! : msg)
+                    );
+                }
+            });
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            toast.error('Failed to send message');
+            setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+        } finally {
+            setIsSending(false);
+        }
+    }, [input, isConnected, socket, scrollToBottom]);
 
-    const handleMessageUpdate = (message: ExtendedChatMessage) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === message.id ? message : m))
-      );
-    };
+    const handleFilesSelected = React.useCallback((files: File[]) => {
+        console.log('Files selected:', files);
+        toast.info('File upload coming soon!');
+    }, []);
 
-    socket.on('message:new', handleMessage);
-    socket.on('message:update', handleMessageUpdate);
-
-    return () => {
-      socket.off('message:new', handleMessage);
-      socket.off('message:update', handleMessageUpdate);
-    };
-  }, [socket]);
-
-  if (isConnecting) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[hsl(var(--background))]/20">
-        <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--muted-foreground))]" />
-        <div className="ml-2 text-[hsl(var(--muted-foreground))]">Connecting to chat server...</div>
-      </div>
+        <div className="flex h-full flex-col">
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-6 pb-4">
+                    {messages.map((message) => (
+                        <MessageCardV2
+                            key={message.id}
+                            message={message}
+                            onUpdate={handleMessageUpdate}
+                        />
+                    ))}
+                    <div ref={messagesEndRef} />
+                </div>
+            </div>
+            <MessageInput
+                value={input}
+                onChange={setInput}
+                onSubmit={handleSendMessage}
+                isSending={isSending}
+                disabled={!isConnected}
+                onAttach={handleFilesSelected}
+                placeholder={isConnected ? "Type a message..." : "Connecting to chat server..."}
+            />
+        </div>
     );
-  }
-
-  return (
-    <div className="flex flex-col h-full min-h-0 w-full bg-[hsl(var(--background))]">
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
-        <div className="mx-auto max-w-3xl w-full space-y-4">
-          <MessageListV2
-            messages={messages}
-            isLoading={false}
-            hasMore={false}
-            onLoadMore={() => {}}
-            onMessageUpdate={(message) => {
-              setMessages(prev =>
-                prev.map(msg => msg.id === message.id ? message : msg)
-              );
-            }}
-          />
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-      
-      <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4">
-        <div className="mx-auto max-w-3xl w-full flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void handleSendMessage(input);
-              }
-            }}
-            placeholder={isConnected ? "Type a message..." : "Connecting to chat server..."}
-            className="min-h-[60px] w-full resize-none bg-[hsl(var(--background))] focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-            disabled={isSending || !isConnected}
-          />
-          <Button
-            onClick={() => void handleSendMessage(input)}
-            disabled={input.trim().length === 0 || isSending || !isConnected}
-            className="h-[60px] w-[60px] shrink-0 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 } 

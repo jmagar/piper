@@ -1,0 +1,42 @@
+paths:
+  /api/preview/link:
+    post:
+      summary: Get link preview
+      operationId: getLinkPreview
+      tags: [Preview]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+      responses:
+        200:
+          description: Link preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  image:
+                    type: string
+                    format: uri
+                  favicon:
+                    type: string
+                    format: uri
+                  siteName:
+                    type: string
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError' 

@@ -213,3 +213,192 @@ paths:
           $ref: '../main.yaml#/components/responses/ApiError'
         500:
           $ref: '../main.yaml#/components/responses/ApiError'
+
+  /api/chat/messages/{messageId}/reactions:
+    post:
+      summary: Add a reaction to a message
+      operationId: addMessageReaction
+      tags: [Chat]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emoji
+                - userId
+                - username
+              properties:
+                emoji:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+      responses:
+        200:
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/MessageReaction'
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    delete:
+      summary: Remove a reaction from a message
+      operationId: removeMessageReaction
+      tags: [Chat]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: emoji
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Reaction removed
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /api/chat/messages/{messageId}/thread:
+    get:
+      summary: Get thread messages
+      operationId: getThreadMessages
+      tags: [Chat]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: List of thread messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '../main.yaml#/components/schemas/ChatMessage'
+                  nextCursor:
+                    type: string
+                  total:
+                    type: integer
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /api/chat/messages/{messageId}:
+    patch:
+      summary: Edit a message
+      operationId: editMessage
+      tags: [Chat]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+              properties:
+                content:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        200:
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                $ref: '../main.yaml#/components/schemas/ChatMessage'
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        403:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    delete:
+      summary: Delete a message
+      operationId: deleteMessage
+      tags: [Chat]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Message deleted
+        403:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

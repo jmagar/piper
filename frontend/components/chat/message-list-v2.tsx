@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import * as React from 'react';
 
 import { Loader2 } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
@@ -8,14 +8,55 @@ import { useInView } from 'react-intersection-observer';
 import { cn } from '@/lib/utils';
 import type { ExtendedChatMessage } from '@/types/chat';
 
-import { MessageCardV2 as MessageCard } from './message-card-v2';
+import { MessageGroup } from './message-group';
 
 interface MessageListProps {
   messages: ExtendedChatMessage[];
   isLoading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
-  onMessageUpdate: (message: ExtendedChatMessage) => void;
+  onMessageUpdate: (_: ExtendedChatMessage) => void;
+}
+
+/**
+ * Groups messages by sender and adds timestamps between groups
+ */
+function groupMessages(messages: ExtendedChatMessage[]): ExtendedChatMessage[][] {
+  const groups: ExtendedChatMessage[][] = [];
+  let currentGroup: ExtendedChatMessage[] = [];
+
+  messages.forEach((message, index) => {
+    const prevMessage = messages[index - 1];
+
+    // Start a new group if:
+    // 1. This is the first message
+    // 2. The sender changed
+    // 3. The time gap is more than 5 minutes
+    // 4. The previous message was a system message
+    // 5. This message is a system message
+    const shouldStartNewGroup = 
+      !prevMessage || 
+      prevMessage.role !== message.role ||
+      prevMessage.userId !== message.userId ||
+      Math.abs(new Date(message.createdAt).getTime() - new Date(prevMessage.createdAt).getTime()) > 5 * 60 * 1000 ||
+      prevMessage.role === 'system' ||
+      message.role === 'system';
+
+    if (shouldStartNewGroup) {
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+      }
+      currentGroup = [message];
+    } else {
+      currentGroup.push(message);
+    }
+  });
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  return groups;
 }
 
 export function MessageListV2({ 
@@ -26,10 +67,13 @@ export function MessageListV2({
   onMessageUpdate 
 }: MessageListProps) {
   const { ref: loadMoreRef, inView } = useInView();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Group messages by sender
+  const messageGroups = React.useMemo(() => groupMessages(messages), [messages]);
 
   // Load more messages when scrolling up
-  useEffect(() => {
+  React.useEffect(() => {
     if (inView && hasMore && !isLoading) {
       onLoadMore();
     }
@@ -37,7 +81,7 @@ export function MessageListV2({
 
   // Scroll to bottom on new message
   const lastMessage = messages[messages.length - 1];
-  useEffect(() => {
+  React.useEffect(() => {
     if (lastMessage?.status === 'sending') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -54,19 +98,24 @@ export function MessageListV2({
         </div>
       ) : null}
 
-      {/* Message list */}
-      <div className="space-y-4">
-        {messages.map(message => (
-          <MessageCard
-            key={message.id}
-            message={message}
-            className={cn(
-              'w-full max-w-3xl mx-auto',
-              message.role === 'assistant' ? "items-start" : "items-end"
-            )}
-            onUpdate={onMessageUpdate}
-          />
-        ))}
+      {/* Message groups */}
+      <div className="space-y-6">
+        {messageGroups.map((group) => {
+          const first = group[0];
+          if (!first) return null;
+
+          return (
+            <MessageGroup
+              key={first.id}
+              messages={group}
+              className={cn(
+                'w-full max-w-3xl mx-auto',
+                first.role === 'assistant' ? "items-start" : "items-end"
+              )}
+              onMessageUpdate={onMessageUpdate}
+            />
+          );
+        })}
       </div>
 
       {/* Scroll anchor */}

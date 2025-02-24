@@ -6,5 +6,6 @@ export type ConversationStats = {
     conversationId: string;
     messageCount: number;
     participantCount: number;
+    lastMessage?: string;
 };
 

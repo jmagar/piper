@@ -7,35 +7,49 @@ import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class RealtimeService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
-     * Get realtime events
-     * @param userId
-     * @param type
-     * @param since
-     * @returns any List of events
+     * Get realtime connection status
+     * @returns any Realtime connection status
      * @throws ApiError
      */
-    public getEvents(
-        userId?: string,
-        type?: 'message' | 'typing' | 'presence',
-        since?: string,
-    ): CancelablePromise<Array<{
-        id?: string;
-        type?: 'message' | 'typing' | 'presence';
-        userId?: string;
-        data?: Record<string, any>;
-        timestamp?: string;
-    }>> {
+    public getRealtimeStatus(): CancelablePromise<{
+        status?: 'connected' | 'disconnected';
+        connectedClients?: number;
+        /**
+         * Server uptime in seconds
+         */
+        uptime?: number;
+    }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/api/realtime/events',
-            query: {
-                'userId': userId,
-                'type': type,
-                'since': since,
+            url: '/api/realtime/status',
+            errors: {
+                500: `Error response`,
             },
+        });
+    }
+    /**
+     * Send realtime event
+     * @param requestBody
+     * @returns any Event sent
+     * @throws ApiError
+     */
+    public sendEvent(
+        requestBody: {
+            type: string;
+            data: Record<string, any>;
+            /**
+             * Target user ID, if not specified broadcast to all
+             */
+            target?: string;
+        },
+    ): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/realtime/events',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `Error response`,
-                401: `Error response`,
                 500: `Error response`,
             },
         });
