@@ -35,6 +35,10 @@ interface UseMarkdownOptions {
     showCopyButton?: boolean;
 }
 
+interface UseMarkdownResult {
+    renderMarkdown: (markdown: string) => React.ReactElement;
+}
+
 interface CodeProps extends React.HTMLAttributes<HTMLElement> {
     inline?: boolean;
 }
@@ -53,17 +57,19 @@ export function useMarkdown({
     enableSyntaxHighlight = true,
     enableGfm = true,
     showCopyButton = true
-}: UseMarkdownOptions = {}) {
+}: UseMarkdownOptions = {}): UseMarkdownResult {
     // Memoize components to prevent unnecessary re-renders
     const components = React.useMemo<Components>(() => ({
         // Root wrapper component
-        root: ({ children }: { children: React.ReactNode }) => (
-            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                {children}
-            </div>
-        ),
+        root: function Root({ children }: { children: React.ReactNode }): React.ReactElement {
+            return (
+                <article className="prose prose-sm dark:prose-invert max-w-none break-words">
+                    {children}
+                </article>
+            );
+        },
         // Custom code block rendering
-        code: ({ inline, className, children, ...props }: CodeProps) => {
+        code: function Code({ inline, className, children, ...props }: CodeProps): React.ReactElement {
             const match = /language-(\w+)/.exec(className ?? '');
             const language = match ? match[1] : '';
             const code = String(children).replace(/\n$/, '');
@@ -76,8 +82,20 @@ export function useMarkdown({
                 );
             }
 
+            const handleCopy = () => {
+                if (typeof navigator === 'undefined' || !navigator.clipboard) {
+                    toast.error('Clipboard API not available');
+                    return;
+                }
+                navigator.clipboard.writeText(code).then(() => {
+                    toast.success('Code copied to clipboard');
+                }).catch(() => {
+                    toast.error('Failed to copy code');
+                });
+            };
+
             return (
-                <div className="relative group">
+                <pre className="relative group">
                     <div
                         className={`${className ?? ''} p-4 rounded-lg bg-[hsl(var(--muted))] overflow-x-auto`}
                     >
@@ -93,10 +111,7 @@ export function useMarkdown({
                             variant="ghost"
                             size="icon"
                             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => {
-                                void navigator.clipboard.writeText(code);
-                                toast.success('Code copied to clipboard');
-                            }}
+                            onClick={handleCopy}
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -114,11 +129,11 @@ export function useMarkdown({
                             </svg>
                         </Button>
                     ) : null}
-                </div>
+                </pre>
             );
         },
         // Custom link rendering
-        a: ({ children, href, ...props }: LinkProps) => {
+        a: function Link({ children, href, ...props }: LinkProps): React.ReactElement {
             const isExternal = href?.startsWith('http');
             return (
                 <a
@@ -133,32 +148,51 @@ export function useMarkdown({
             );
         },
         // Custom table rendering
-        table: ({ children, ...props }: TableProps) => (
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[hsl(var(--border))]" {...props}>
-                    {children}
-                </table>
-            </div>
-        ),
+        table: function Table({ children, ...props }: TableProps): React.ReactElement {
+            return (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-[hsl(var(--border))]" {...props}>
+                        {children}
+                    </table>
+                </div>
+            );
+        },
         // Custom table header rendering
-        th: ({ children, ...props }: TableCellProps) => (
-            <th
-                className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider"
-                {...props}
-            >
-                {children}
-            </th>
-        ),
+        th: function TableHeader({ children, ...props }: TableCellProps): React.ReactElement {
+            return (
+                <th
+                    className="px-4 py-2 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider"
+                    {...props}
+                >
+                    {children}
+                </th>
+            );
+        },
         // Custom table cell rendering
-        td: ({ children, ...props }: TableCellProps) => (
-            <td className="px-4 py-2 whitespace-nowrap text-sm" {...props}>
-                {children}
-            </td>
+        td: function TableCell({ children, ...props }: TableCellProps): React.ReactElement {
+            return (
+                <td className="px-4 py-2 whitespace-nowrap text-sm" {...props}>
+                    {children}
+                </td>
+            );
+        },
+        // Override paragraph to prevent div nesting issues
+        p: React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+            function Paragraph({ children, ...props }, ref): React.ReactElement {
+                // If the child is a div or pre, render it directly to avoid nesting issues
+                if (React.Children.toArray(children).some(
+                    child => React.isValidElement(child) && 
+                    (child.type === 'div' || child.type === 'pre')
+                )) {
+                    return <>{children}</>;
+                }
+                return <p ref={ref} {...props}>{children}</p>;
+            }
         )
     }), [showCopyButton]);
 
     // Memoize rehype plugins to prevent unnecessary re-renders
-    const rehypePlugins = React.useMemo(() => {
+    const rehypePlugins = React.useMemo<any[]>(() => {
         const plugins = [];
         if (allowHtml) plugins.push(rehypeRaw);
         if (enableSyntaxHighlight) plugins.push(rehypeHighlight);
@@ -166,7 +200,7 @@ export function useMarkdown({
     }, [allowHtml, enableSyntaxHighlight]);
 
     // Memoize remark plugins to prevent unnecessary re-renders
-    const remarkPlugins = React.useMemo(() => {
+    const remarkPlugins = React.useMemo<any[]>(() => {
         const plugins = [];
         if (enableGfm) plugins.push(remarkGfm);
         return plugins;
@@ -174,13 +208,13 @@ export function useMarkdown({
 
     // Render function
     const renderMarkdown = React.useCallback(
-        (content: string) => (
+        (markdown: string): React.ReactElement => (
             <ReactMarkdown
                 components={components}
                 remarkPlugins={remarkPlugins}
                 rehypePlugins={rehypePlugins}
             >
-                {content}
+                {markdown}
             </ReactMarkdown>
         ),
         [components, remarkPlugins, rehypePlugins]
@@ -189,4 +223,4 @@ export function useMarkdown({
     return {
         renderMarkdown
     };
-} 
+}
