@@ -84,10 +84,6 @@
             "env": {
                 "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
             }
-        },
-        "overseerr-mcp": {
-            "command": "python3",
-            "args": ["-m", "overseerr_mcp"]
         }
     }
 }
