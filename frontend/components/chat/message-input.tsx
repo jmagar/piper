@@ -17,18 +17,26 @@ interface LinkPreview {
     siteName?: string;
 }
 
+interface EnhancePromptResponse {
+    enhancedPrompt: string;
+}
+
+interface ApiErrorResponse {
+    message: string;
+}
+
 /**
  * Props for the MessageInput component
  */
 interface MessageInputProps {
     /** The current value of the input */
-    value: string;
+    value: string;  
     /** Callback when the input value changes */
-    onChange: (value: string) => void;
+    onChange: (value: string) => void; // eslint-disable-line no-unused-vars
     /** Callback when the message is submitted */
-    onSubmit: (value: string, files: File[]) => void;
+    onSubmit: (value: string, files: File[]) => void; // eslint-disable-line no-unused-vars
     /** Optional callback when files are attached */
-    onAttach?: (files: FileList) => void;
+    onAttach?: (files: File[]) => void; // eslint-disable-line no-unused-vars
     /** Optional CSS class name */
     className?: string;
     /** Whether the message is currently being sent */
@@ -91,7 +99,9 @@ export function MessageInput({
         if (selectedFiles && selectedFiles.length > 0) {
             const newFiles = Array.from(selectedFiles);
             setFiles(prev => [...prev, ...newFiles]);
-            onAttach?.(newFiles);
+            if (onAttach) {
+                onAttach(newFiles);
+            }
         }
     };
 
@@ -106,17 +116,20 @@ export function MessageInput({
         try {
             const response = await promptService.enhancePrompt({
                 prompt: value
-            });
-            onChange(response.enhancedPrompt);
-            toast({
-                title: "Prompt Enhanced",
-                description: "Your message has been enhanced for better AI interaction.",
-            });
+            }) as EnhancePromptResponse;
+
+            if (response.enhancedPrompt) {
+                onChange(response.enhancedPrompt);
+                toast({
+                    title: "Prompt Enhanced",
+                    description: "Your message has been enhanced for better AI interaction.",
+                });
+            }
         } catch (error) {
-            const apiError = handleApiError(error);
+            const apiError = handleApiError(error) as ApiErrorResponse;
             toast({
                 title: "Enhancement Failed",
-                description: apiError.message,
+                description: apiError.message || "Failed to enhance prompt",
                 variant: "destructive",
             });
         } finally {
@@ -127,10 +140,18 @@ export function MessageInput({
     const handleLinkPreview = async (url: string) => {
         setIsLoadingPreview(true);
         try {
-            const preview = await previewService.getLinkPreview({
+            const response = await previewService.getLinkPreview({
                 url
             });
-            setLinkPreview(preview);
+            if (response) {
+                setLinkPreview({
+                    title: response.title || '',
+                    description: response.description || '',
+                    image: response.image,
+                    favicon: response.favicon,
+                    siteName: response.siteName
+                });
+            }
         } catch (error) {
             if (ApiError.isApiError(error)) {
                 console.error('Failed to load link preview:', error.message);

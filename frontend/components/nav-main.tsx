@@ -13,10 +13,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  useSidebar,
 } from "@/components/ui/sidebar-new"
 
 export function NavMain({
@@ -49,23 +45,23 @@ export function NavMain({
               {item.items?.length ? (
                 <>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuAction className="data-[state=open]:rotate-90">
+                    <SidebarMenuButton className="data-[state=open]:rotate-90">
                       <ChevronRight />
                       <span className="sr-only">Toggle</span>
-                    </SidebarMenuAction>
+                    </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <SidebarMenuSub>
+                    <div className="pl-6">
                       {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild>
+                        <SidebarMenuItem key={subItem.title}>
+                          <SidebarMenuButton asChild>
                             <a href={subItem.url}>
                               <span>{subItem.title}</span>
                             </a>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
                       ))}
-                    </SidebarMenuSub>
+                    </div>
                   </CollapsibleContent>
                 </>
               ) : null}

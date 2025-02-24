@@ -74,17 +74,6 @@ I'm integrated with your development environment and can directly help with:
         messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
     }, []);
 
-    // Calculate context length
-    const contextLength = React.useMemo(() => {
-        return messages.reduce((acc, msg) => {
-            // Count characters in content
-            const contentLength = (msg.content?.length || 0);
-            // Count metadata as JSON string
-            const metadataLength = JSON.stringify(msg.metadata).length;
-            return acc + contentLength + metadataLength;
-        }, 0);
-    }, [messages]);
-
     // Initial scroll and on new messages
     React.useEffect(() => {
         scrollToBottom('auto');
@@ -111,8 +100,8 @@ I'm integrated with your development environment and can directly help with:
         );
     }, []);
 
-    const handleSendMessage = React.useCallback(async () => {
-        if (!input.trim() || !isConnected || !socket) {
+    const handleSendMessage = React.useCallback(async (message: string, files: File[]) => {
+        if (!message.trim() || !isConnected || !socket) {
             if (!isConnected) {
                 toast.error('Not connected to chat server');
             }
@@ -122,12 +111,14 @@ I'm integrated with your development environment and can directly help with:
         const newMessage: ExtendedChatMessage = {
             id: Date.now().toString(),
             role: 'user',
-            content: input.trim(),
+            content: message.trim(),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             type: 'text',
             status: 'sending',
-            metadata: {}
+            metadata: {
+                files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+            }
         };
 
         setMessages(prev => [...prev, newMessage]);

@@ -304,6 +304,54 @@ function SidebarMain({
   )
 }
 
+function SidebarInset({ children, className }: SidebarBaseProps) {
+  return (
+    <div className={cn("relative -mx-4 p-4 bg-muted", className)}>
+      {children}
+    </div>
+  );
+}
+
+function SidebarMenuSub({ children, className }: SidebarBaseProps) {
+  return (
+    <div className={cn("pl-6", className)}>
+      {children}
+    </div>
+  );
+}
+
+function SidebarMenuSubButton({
+  className,
+  ...props
+}: React.ComponentProps<"button"> & VariantProps<typeof sidebarMenuButtonVariants>) {
+  return (
+    <button
+      className={cn(sidebarMenuButtonVariants({ className }))}
+      {...props}
+    />
+  );
+}
+
+function SidebarMenuSubItem({ children, className }: SidebarBaseProps) {
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      {children}
+    </div>
+  );
+}
+
+function SidebarMenuAction({
+  className,
+  ...props
+}: React.ComponentProps<"button"> & VariantProps<typeof sidebarMenuButtonVariants>) {
+  return (
+    <button
+      className={cn(sidebarMenuButtonVariants({ className }), "justify-between")}
+      {...props}
+    />
+  );
+}
+
 export {
   SidebarMain as Sidebar,
   SidebarBase,
@@ -318,4 +366,9 @@ export {
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
+  SidebarInset,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarMenuAction,
 } 

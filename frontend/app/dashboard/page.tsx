@@ -1,5 +1,6 @@
 "use client"
 
+import { Menu } from "lucide-react"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
-  SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar-new"
@@ -23,16 +23,14 @@ import {
 
 export default function Page() {
   return (
-    <SidebarProvider
-      style={{
-        "--sidebar-width": "350px",
-      } as React.CSSProperties}
-    >
+    <SidebarProvider>
       <div className="flex h-screen">
         <AppSidebar />
-        <SidebarInset>
+        <main className="flex-1">
           <header className="bg-background sticky top-0 flex shrink-0 items-center gap-2 border-b p-4">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1">
+              <Menu className="h-4 w-4" />
+            </SidebarTrigger>
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
@@ -57,7 +55,7 @@ export default function Page() {
             </div>
             <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
           </div>
-        </SidebarInset>
+        </main>
       </div>
     </SidebarProvider>
   )
