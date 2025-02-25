@@ -11,6 +11,13 @@
         "Read the news headlines on bbc.com",
     ],
     "mcp_servers": {
+        "memory": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-memory"
+            ]
+        },
         "searxng": {
             "command": "npx",
             "args": ["-y", "@kevinwatt/mcp-server-searxng"]
