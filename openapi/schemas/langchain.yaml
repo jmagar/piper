@@ -2,12 +2,24 @@ components:
   schemas:
     ChatMessageType:
       type: string
-      enum: [text, code, system, file-list]
+      enum: [text, code, system, file-list, stream-chunk]
       default: text
 
     ChatMessageMetadata:
       type: object
       properties:
+        streamStatus:
+          type: string
+          enum: [streaming, complete, error]
+          default: complete
+        streamId:
+          type: string
+          format: uuid
+        streamIndex:
+          type: integer
+        isPartial:
+          type: boolean
+          default: false
         type:
           $ref: '#/components/schemas/ChatMessageType'
         timestamp:
@@ -86,5 +98,5 @@ components:
           $ref: '#/components/schemas/ChatMessageMetadata'
         status:
           type: string
-          enum: [sending, sent, error]
+          enum: [sending, streaming, sent, error]
           default: sending

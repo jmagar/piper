@@ -1,202 +1,255 @@
-import type { Server as HTTPServer } from 'http';
-
-import type { PrismaClient } from '@prisma/client';
+import { Server } from 'socket.io';
+import http from 'http';
 import debug from 'debug';
-import type { Socket } from 'socket.io';
-import { Server as SocketIOServer } from 'socket.io';
-
 import { ChatLangChainService } from './services/chat/chat-langchain.service.mjs';
-import { ChatService } from './services/chat/chat.service.js';
+import { PrismaClient } from '@prisma/client';
+import type { Socket } from 'socket.io';
+
+type HTTPServer = http.Server;
+
+// Make Node.js global types available
+/// <reference types="node" />
+
+// Use a module-level variable instead of global
+let socketServer: Server | undefined;
 
 const log = debug('mcp:websocket');
 const error = debug('mcp:websocket:error');
 
-interface User {
-  userId: string;
-  username: string;
-}
-
-interface ChatMessage {
+// Extended message type for WebSocket communication
+interface WebSocketMessage {
   id: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
-  conversationId?: string;
-  userId?: string;
-  username?: string;
-  parentId?: string;
-  threadSummary?: string;
-  metadata?: {
-    username?: string;
-    type?: 'text' | 'code' | 'system' | 'file-list';
-    [key: string]: unknown;
-  };
   createdAt: string;
   updatedAt: string;
-  status: 'sending' | 'sent' | 'error';
+  status: 'sending' | 'streaming' | 'sent' | 'error';
+  userId?: string;
+  username?: string;
+  conversationId?: string;
+  parentId?: string;
+  metadata?: {
+    timestamp?: string;
+    streamStatus?: 'streaming' | 'complete' | 'error';
+    streamStartTime?: string;
+    streamEndTime?: string;
+    type?: string;
+    error?: string;
+    [key: string]: unknown;
+  };
 }
 
+// Type definitions for Socket.IO events
 interface ServerToClientEvents {
-  'message:new': (message: ChatMessage) => void;
-  'message:update': (message: ChatMessage) => void;
-  'user:typing': (user: User) => void;
-  'user:stop_typing': (user: User) => void;
+  'message:new': (message: WebSocketMessage) => void;
+  'message:chunk': (data: { 
+    messageId: string, 
+    chunk: string,
+    status?: 'streaming',
+    metadata?: {
+      streamStatus?: 'streaming' | 'complete' | 'error',
+      timestamp?: string,
+      [key: string]: unknown
+    }
+  }) => void;
+  'message:complete': (data: { 
+    messageId: string,
+    metadata?: {
+      streamStatus?: 'complete',
+      streamEndTime?: string,
+      [key: string]: unknown
+    }
+  }) => void;
+  'message:error': (data: { messageId: string, error: string }) => void;
+  'debug:event': (logData: {
+    namespace: string;
+    args: string[];
+    timestamp: string;
+    level: string;
+  }) => void;
 }
 
 interface ClientToServerEvents {
-  'message:sent': (message: ChatMessage, callback: (response: { error?: string; message?: ChatMessage }) => void) => void;
-  'message:updated': (message: ChatMessage) => void;
-  'user:typing': () => void;
-  'user:stop_typing': () => void;
+  'message:sent': (message: WebSocketMessage, callback: (response: { error?: string; message?: WebSocketMessage }) => void) => void;
+  disconnect: () => void;
 }
 
-interface InterServerEvents {
-  ping: () => void;
+interface User {
+  id: string;
 }
 
-interface SocketData {
-  user: User;
-}
+// Setup debug namespaces to forward to frontend
+const debugNamespaces = [
+  'mcp:websocket',
+  'mcp:chat:langchain',
+  'mcp:langgraph',
+  'mcp:langgraph:error',
+  'mcp:chat:langchain:error'
+];
 
-const corsOptions = {
-  origin: '*',  // Allow all origins in development
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-};
+// Override debug functions to emit events to clients
+debugNamespaces.forEach(namespace => {
+  const debugInstance = debug(namespace);
+  const originalLog = debugInstance.log;
+  
+  // Override the log method to emit events
+  debugInstance.log = function(...args: string[]) {
+    // Call original log
+    originalLog.apply(this, args);
+    
+    // Forward to WebSocket clients if server is initialized
+    if (socketServer) {
+      socketServer.emit('debug:event', {
+        namespace,
+        args: args.map(arg => String(arg)),
+        timestamp: new Date().toISOString(),
+        level: namespace.includes(':error') ? 'error' : 'info'
+      });
+    }
+  };
+});
 
-export function initWebSocket(server: HTTPServer, prisma: PrismaClient) {
-  const io = new SocketIOServer<
+export async function initWebSocket(server: HTTPServer, prisma: PrismaClient): Promise<void> {
+  const io = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
-    InterServerEvents,
-    SocketData
+    Record<string, never>,
+    User
   >(server, {
-    cors: corsOptions,
-    allowEIO3: true,
-    transports: ['polling', 'websocket'],
-    pingTimeout: 45000,
-    pingInterval: 10000,
-    connectTimeout: 45000,
-    path: '/socket.io'
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST']
+    }
   });
 
-  // Initialize both services
-  const legacyService = new ChatService(prisma);
-  const langchainService = new ChatLangChainService(prisma);
+  // Store io instance in module-level variable
+  socketServer = io;
 
-  // Log all socket.io events in development
-  if (process.env['NODE_ENV'] !== 'production') {
-    io.engine.on('connection_error', (err) => {
-      error('Socket.IO connection error: %s', err.message);
-    });
-  }
+  // Create services
+  const chatLangChainService = new ChatLangChainService(prisma);
 
-  io.on('connection', async (socket: Socket) => {
+  // Socket.IO setup
+  io.on('connection', (socket: Socket) => {
     log('Client connected: %s', socket.id);
-
-    // Get user info from auth data
-    const auth = socket.handshake.auth;
-    const user = {
-      userId: auth['userId'] || 'anonymous',
-      username: auth['username'] || 'Anonymous'
-    };
-
-    // Store user data in socket
-    socket.data.user = user;
-
-    // Join user's room
-    socket.join(user.userId);
-
-    // Send welcome message
-    socket.emit('message:new', {
-      id: Date.now().toString(),
-      content: 'Connected to chat server',
-      role: 'system',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: {
-        type: 'system'
-      },
-      status: 'sent'
-    });
-
-    socket.on('message:sent', async (message: ChatMessage, callback) => {
-      try {
-        // Process message through LangChain service first, fallback to legacy
-        let response;
-        try {
-          response = await langchainService.processMessage(
-            message.content,
-            user.userId,
-            message.conversationId
-          );
-          log('Message processed by LangChain service');
-        } catch (err) {
-          error('LangChain service failed, falling back to legacy: %s', err instanceof Error ? err.message : String(err));
-          response = await legacyService.processMessage(message.content, user.userId);
-          log('Message processed by legacy service');
-        }
-        
-        // Send acknowledgment for the user message
-        callback({
-          message: {
-            ...message,
-            status: 'sent',
-            conversationId: response.conversationId // Update with the actual conversation ID
-          }
-        });
-
-        // Convert metadata to expected format
-        const metadata = response.metadata as Record<string, unknown> | undefined;
-
-        // Broadcast the assistant's response
-        const assistantMessage: ChatMessage = {
-          id: response.id,
-          content: response.content,
-          role: 'assistant',
-          userId: response.userId,
-          username: response.username,
-          conversationId: response.conversationId,
-          parentId: response.parentId,
-          metadata: {
-            type: response.type,
-            ...metadata
-          },
-          createdAt: response.createdAt.toISOString(),
-          updatedAt: (response.updatedAt || response.createdAt).toISOString(),
-          status: 'sent'
-        };
-        io.emit('message:new', assistantMessage);
-      } catch (err) {
-        error('Error handling message:sent: %s', err instanceof Error ? err.message : String(err));
-        callback({
-          error: 'Failed to process message. Please try again.'
-        });
-      }
-    });
-
-    socket.on('message:updated', async (message: ChatMessage) => {
-      try {
-        io.emit('message:update', message);
-      } catch (err) {
-        error('Error handling message:updated: %s', err instanceof Error ? err.message : String(err));
-      }
-    });
-
-    socket.on('user:typing', () => {
-      socket.broadcast.emit('user:typing', user);
-    });
-
-    socket.on('user:stop_typing', () => {
-      socket.broadcast.emit('user:stop_typing', user);
-    });
 
     socket.on('disconnect', () => {
       log('Client disconnected: %s', socket.id);
     });
-  });
 
-  return io;
+    socket.on('message:sent', async (message: WebSocketMessage, callback) => {
+      const userId = message.userId || 'anonymous';
+      log('Message from %s: %s', userId, message.content);
+      
+      try {
+        // Immediately update client that we received the message
+        const streamingMessage: WebSocketMessage = {
+          ...message,
+          status: 'streaming',
+          metadata: {
+            ...message.metadata,
+            streamStatus: 'streaming',
+            streamStartTime: new Date().toISOString()
+          }
+        };
+        
+        // Respond to original message with streaming update
+        callback({ message: streamingMessage });
+        
+        // Create a message ID for the assistant's response
+        const assistantMessageId = `assistant-${Date.now()}`;
+        
+        // Create and emit an empty message for the assistant's response
+        const assistantMessage: WebSocketMessage = {
+          id: assistantMessageId,
+          content: 'Thinking...',
+          role: 'assistant',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'streaming',
+          conversationId: message.conversationId,
+          parentId: message.id,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            streamStatus: 'streaming',
+            streamStartTime: new Date().toISOString(),
+            type: 'text'
+          }
+        };
+        
+        // Emit the assistant message to the client
+        socket.emit('message:new', assistantMessage);
+        
+        // Process message with streaming
+        let totalContent = ''; // Track total content streamed
+        let chunkCounter = 0;
+        const streamingOptions = {
+          onChunk: async (chunk: string) => {
+            // Track total streamed content so we never lose it
+            totalContent += chunk;
+            
+            // Always log chunk details for debugging
+            console.log(`Streaming chunk received: ${chunk.length} chars, total now: ${totalContent.length}`);
+            
+            socket.emit('message:chunk', {
+              messageId: assistantMessage.id,
+              chunk,
+              metadata: {
+                timestamp: new Date().toISOString(),
+                chunkNumber: chunkCounter++,
+                totalLength: totalContent.length
+              }
+            });
+          },
+          onError: async (err: Error) => {
+            log('Error during streaming: %s', err.message);
+            socket.emit('message:error', {
+              messageId: assistantMessage.id,
+              error: err.message
+            });
+          },
+          onComplete: async () => {
+            // Ensure we always have the final content length in logs
+            log('Streaming complete, total content length: %d', totalContent.length);
+            
+            // CRITICAL: Emit a fallback message if somehow no content was accumulated
+            if (totalContent.length === 0) {
+              log('WARNING: No content was accumulated during streaming!');
+              totalContent = "I apologize, but I wasn't able to generate a response. Please try again or rephrase your question.";
+            }
+            
+            // Always emit message complete with the final content
+            socket.emit('message:complete', {
+              messageId: assistantMessage.id,
+              metadata: {
+                timestamp: new Date().toISOString(),
+                totalContentLength: totalContent.length,
+                streamEndTime: new Date().toISOString(),
+                finalContent: totalContent.substring(0, 100) + '...',
+                completeContent: totalContent
+              }
+            });
+          }
+        };
+        
+        await chatLangChainService.processStreamingMessage(
+          message.content, 
+          userId,
+          streamingOptions,
+          message.conversationId
+        );
+        
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        error('Error processing message: %s', errorMessage);
+        
+        // Send error to client
+        socket.emit('message:error', {
+          messageId: message.id,
+          error: errorMessage
+        });
+        
+        callback({ error: errorMessage });
+      }
+    });
+  });
 }

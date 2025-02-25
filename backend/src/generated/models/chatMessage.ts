@@ -81,6 +81,7 @@ export namespace ChatMessage {
     }
     export enum StatusEnum {
         sending = <any> 'sending',
+        streaming = <any> 'streaming',
         sent = <any> 'sent',
         error = <any> 'error'
     }

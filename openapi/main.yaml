@@ -40,6 +40,21 @@ components:
             $ref: '#/components/schemas/ApiError'
 
   schemas:
+    StreamChunk:
+      type: object
+      required:
+        - type
+        - content
+      properties:
+        type:
+          type: string
+          enum: [chunk, error, done]
+        content:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
     ApiError:
       type: object
       required:
@@ -223,6 +238,8 @@ components:
           format: date-time
 
 paths:
+  /api/chat/stream:
+    $ref: './schemas/chat.yaml#/paths/~1api~1chat~1stream'
   /api/chat:
     $ref: './schemas/chat.yaml#/paths/~1api~1chat'
   /api/chat/conversations/{userId}:

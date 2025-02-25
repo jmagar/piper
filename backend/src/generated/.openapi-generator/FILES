@@ -20,7 +20,8 @@ models/chatMessageMetadataReactionsValueUsersInner.ts
 models/chatMessageType.ts
 models/conversation.ts
 models/conversationStats.ts
-models/createMessageRequest.ts
+models/createStreamingMessage200Response.ts
+models/createStreamingMessageRequest.ts
 models/editMessageRequest.ts
 models/enhancePrompt200Response.ts
 models/enhancePromptRequest.ts
@@ -43,6 +44,7 @@ models/models.ts
 models/sendEventRequest.ts
 models/starMessageRequest.ts
 models/starredMessage.ts
+models/streamChunk.ts
 models/tool.ts
 models/toolParametersInner.ts
 models/unstarMessageRequest.ts

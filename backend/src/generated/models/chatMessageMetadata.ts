@@ -15,6 +15,10 @@ import { ChatMessageMetadataReactionsValue } from './chatMessageMetadataReaction
 import { ChatMessageType } from './chatMessageType';
 
 export class ChatMessageMetadata extends any {
+    'streamStatus'?: ChatMessageMetadata.StreamStatusEnum = ChatMessageMetadata.StreamStatusEnum.complete;
+    'streamId'?: string;
+    'streamIndex'?: number;
+    'isPartial'?: boolean = false;
     'type'?: ChatMessageType;
     'timestamp'?: Date;
     'error'?: string;
@@ -25,6 +29,26 @@ export class ChatMessageMetadata extends any {
     static discriminator: string | undefined = undefined;
 
     static attributeTypeMap: Array<{name: string, baseName: string, type: string}> = [
+        {
+            "name": "streamStatus",
+            "baseName": "streamStatus",
+            "type": "ChatMessageMetadata.StreamStatusEnum"
+        },
+        {
+            "name": "streamId",
+            "baseName": "streamId",
+            "type": "string"
+        },
+        {
+            "name": "streamIndex",
+            "baseName": "streamIndex",
+            "type": "number"
+        },
+        {
+            "name": "isPartial",
+            "baseName": "isPartial",
+            "type": "boolean"
+        },
         {
             "name": "type",
             "baseName": "type",
@@ -62,4 +86,9 @@ export class ChatMessageMetadata extends any {
 }
 
 export namespace ChatMessageMetadata {
+    export enum StreamStatusEnum {
+        streaming = <any> 'streaming',
+        complete = <any> 'complete',
+        error = <any> 'error'
+    }
 }

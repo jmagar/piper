@@ -19,7 +19,8 @@ import { AddMessageReactionRequest } from '../models/addMessageReactionRequest';
 import { ApiError } from '../models/apiError';
 import { ChatMessage } from '../models/chatMessage';
 import { Conversation } from '../models/conversation';
-import { CreateMessageRequest } from '../models/createMessageRequest';
+import { CreateStreamingMessage200Response } from '../models/createStreamingMessage200Response';
+import { CreateStreamingMessageRequest } from '../models/createStreamingMessageRequest';
 import { EditMessageRequest } from '../models/editMessageRequest';
 import { GetChatStats200Response } from '../models/getChatStats200Response';
 import { GetMessages200Response } from '../models/getMessages200Response';
@@ -176,9 +177,9 @@ export class ChatApi {
     /**
      * 
      * @summary Create message
-     * @param createMessageRequest 
+     * @param createStreamingMessageRequest 
      */
-    public async createMessage (createMessageRequest: CreateMessageRequest, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: ChatMessage;  }> {
+    public async createMessage (createStreamingMessageRequest: CreateStreamingMessageRequest, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: ChatMessage;  }> {
         const localVarPath = this.basePath + '/api/chat';
         let localVarQueryParameters: any = {};
         let localVarHeaderParams: any = (<any>Object).assign({}, this._defaultHeaders);
@@ -191,9 +192,9 @@ export class ChatApi {
         }
         let localVarFormParams: any = {};
 
-        // verify required parameter 'createMessageRequest' is not null or undefined
-        if (createMessageRequest === null || createMessageRequest === undefined) {
-            throw new Error('Required parameter createMessageRequest was null or undefined when calling createMessage.');
+        // verify required parameter 'createStreamingMessageRequest' is not null or undefined
+        if (createStreamingMessageRequest === null || createStreamingMessageRequest === undefined) {
+            throw new Error('Required parameter createStreamingMessageRequest was null or undefined when calling createMessage.');
         }
 
         (<any>Object).assign(localVarHeaderParams, options.headers);
@@ -207,7 +208,7 @@ export class ChatApi {
             uri: localVarPath,
             useQuerystring: this._useQuerystring,
             json: true,
-            body: ObjectSerializer.serialize(createMessageRequest, "CreateMessageRequest")
+            body: ObjectSerializer.serialize(createStreamingMessageRequest, "CreateStreamingMessageRequest")
         };
 
         let authenticationPromise = Promise.resolve();
@@ -233,6 +234,75 @@ export class ChatApi {
                     } else {
                         if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
                             body = ObjectSerializer.deserialize(body, "ChatMessage");
+                            resolve({ response: response, body: body });
+                        } else {
+                            reject(new HttpError(response, body, response.statusCode));
+                        }
+                    }
+                });
+            });
+        });
+    }
+    /**
+     * 
+     * @summary Create streaming message
+     * @param createStreamingMessageRequest 
+     */
+    public async createStreamingMessage (createStreamingMessageRequest: CreateStreamingMessageRequest, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: CreateStreamingMessage200Response;  }> {
+        const localVarPath = this.basePath + '/api/chat/stream';
+        let localVarQueryParameters: any = {};
+        let localVarHeaderParams: any = (<any>Object).assign({}, this._defaultHeaders);
+        const produces = ['text/event-stream', 'application/json'];
+        // give precedence to 'application/json'
+        if (produces.indexOf('application/json') >= 0) {
+            localVarHeaderParams.Accept = 'application/json';
+        } else {
+            localVarHeaderParams.Accept = produces.join(',');
+        }
+        let localVarFormParams: any = {};
+
+        // verify required parameter 'createStreamingMessageRequest' is not null or undefined
+        if (createStreamingMessageRequest === null || createStreamingMessageRequest === undefined) {
+            throw new Error('Required parameter createStreamingMessageRequest was null or undefined when calling createStreamingMessage.');
+        }
+
+        (<any>Object).assign(localVarHeaderParams, options.headers);
+
+        let localVarUseFormData = false;
+
+        let localVarRequestOptions: localVarRequest.Options = {
+            method: 'POST',
+            qs: localVarQueryParameters,
+            headers: localVarHeaderParams,
+            uri: localVarPath,
+            useQuerystring: this._useQuerystring,
+            json: true,
+            body: ObjectSerializer.serialize(createStreamingMessageRequest, "CreateStreamingMessageRequest")
+        };
+
+        let authenticationPromise = Promise.resolve();
+        authenticationPromise = authenticationPromise.then(() => this.authentications.default.applyToRequest(localVarRequestOptions));
+
+        let interceptorPromise = authenticationPromise;
+        for (const interceptor of this.interceptors) {
+            interceptorPromise = interceptorPromise.then(() => interceptor(localVarRequestOptions));
+        }
+
+        return interceptorPromise.then(() => {
+            if (Object.keys(localVarFormParams).length) {
+                if (localVarUseFormData) {
+                    (<any>localVarRequestOptions).formData = localVarFormParams;
+                } else {
+                    localVarRequestOptions.form = localVarFormParams;
+                }
+            }
+            return new Promise<{ response: http.IncomingMessage; body: CreateStreamingMessage200Response;  }>((resolve, reject) => {
+                localVarRequest(localVarRequestOptions, (error, response, body) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
+                            body = ObjectSerializer.deserialize(body, "CreateStreamingMessage200Response");
                             resolve({ response: response, body: body });
                         } else {
                             reject(new HttpError(response, body, response.statusCode));

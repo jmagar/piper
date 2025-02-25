@@ -1,4 +1,61 @@
 paths:
+  /api/chat/stream:
+    post:
+      summary: Create streaming message
+      operationId: createStreamingMessage
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+                - username
+              properties:
+                content:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+                conversationId:
+                  type: string
+                  format: uuid
+                parentId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [text, code, system]
+                  default: text
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        200:
+          description: Streaming message chunks
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [chunk, error, done]
+                  content:
+                    type: string
+                  metadata:
+                    type: object
+                    additionalProperties: true
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
   /api/chat:
     get:
       summary: Get messages

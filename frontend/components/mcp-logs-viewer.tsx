@@ -1,14 +1,27 @@
 import * as React from 'react';
 import { useSocket } from '@/lib/socket';
+// We need the import for the module augmentation to work
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { ServerToClientEvents } from '@/types/socket';
 
 interface LogEntry {
   timestamp: string;
+  namespace: string;
   level: 'info' | 'error' | 'debug';
   message: string;
 }
 
 interface LogsViewerProps {
-  url: string;
+  url?: string;
+}
+
+// Extend the ServerToClientEvents type to include debug events
+declare module '@/types/socket' {
+  interface ServerToClientEvents {
+    [key: `debug:${string}`]: (message: string) => void;
+    [key: `mcp:${string}:log`]: (message: string) => void;
+    [key: `mcp:${string}:error`]: (message: string) => void;
+  }
 }
 
 export function McpLogsViewer({ url }: LogsViewerProps) {
@@ -16,52 +29,84 @@ export function McpLogsViewer({ url }: LogsViewerProps) {
   const [logs, setLogs] = React.useState<LogEntry[]>([]);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = React.useCallback(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  };
+  }, []);
 
   React.useEffect(() => {
     if (!socket || !isConnected) return;
 
-    const handleLog = (log: string) => {
+    const handleDebugLog = (namespace: string, message: string) => {
       const entry: LogEntry = {
         timestamp: new Date().toISOString(),
-        level: 'info',
-        message: log
+        namespace,
+        level: namespace.includes(':error') ? 'error' : 'debug',
+        message
       };
       setLogs(prev => [...prev, entry]);
-      setTimeout(scrollToBottom, 0);
+      window.setTimeout(scrollToBottom, 0);
     };
 
-    const handleError = (error: string) => {
-      const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: error
-      };
-      setLogs(prev => [...prev, entry]);
-      setTimeout(scrollToBottom, 0);
-    };
+    // Subscribe to all our debug namespaces
+    const debugNamespaces = [
+      'mcp:langgraph',
+      'mcp:langgraph:error',
+      'mcp:websocket',
+      'mcp:websocket:error',
+      'mcp:chat:langchain',
+      'mcp:chat:langchain:error',
+      'mcp:model',
+      'mcp:model:error',
+      'mcp:config',
+      'mcp:config:error',
+      'mcp:memory',
+      'mcp:memory:error',
+      'mcp:server',
+      'mcp:server:error',
+      'mcp:tool',
+      'mcp:tool:error'
+    ];
 
-    const handleClear = () => {
-      setLogs([]);
-    };
+    debugNamespaces.forEach(namespace => {
+      socket.on(`debug:${namespace}`, (message: string) => handleDebugLog(namespace, message));
+    });
 
-    // Extract server ID from URL
-    const serverId = url.split('/').pop() || 'default';
+    // Handle MCP server logs with [info] and [error] prefixes
+    socket.on('mcp:server:log', (message: string) => {
+      if (message.startsWith('[info]')) {
+        handleDebugLog('mcp:server:info', message.substring(7));
+      } else if (message.startsWith('[error]')) {
+        handleDebugLog('mcp:server:error', message.substring(8));
+      } else {
+        handleDebugLog('mcp:server:debug', message);
+      }
+    });
 
-    socket.on(`mcp:${serverId}:log`, handleLog);
-    socket.on(`mcp:${serverId}:error`, handleError);
-    socket.on(`mcp:${serverId}:clear`, handleClear);
+    // If URL is provided, also handle MCP server logs
+    if (url) {
+      const serverId = url.split('/').pop() || 'default';
+      socket.on(`mcp:${serverId}:log`, (message: string) => 
+        handleDebugLog(`mcp:${serverId}`, message)
+      );
+      socket.on(`mcp:${serverId}:error`, (message: string) => 
+        handleDebugLog(`mcp:${serverId}:error`, message)
+      );
+    }
 
     return () => {
-      socket.off(`mcp:${serverId}:log`, handleLog);
-      socket.off(`mcp:${serverId}:error`, handleError);
-      socket.off(`mcp:${serverId}:clear`, handleClear);
+      // Cleanup all listeners
+      debugNamespaces.forEach(namespace => {
+        socket.off(`debug:${namespace}`);
+      });
+      if (url) {
+        const serverId = url.split('/').pop() || 'default';
+        socket.off(`mcp:${serverId}:log`);
+        socket.off(`mcp:${serverId}:error`);
+      }
     };
-  }, [socket, isConnected, url]);
+  }, [socket, isConnected, url, scrollToBottom]);
 
   return (
     <div ref={containerRef} className="h-full w-full bg-black text-white font-mono p-4 overflow-auto">
@@ -71,12 +116,13 @@ export function McpLogsViewer({ url }: LogsViewerProps) {
       {logs.map((log, index) => (
         <div key={index} className="whitespace-pre-wrap">
           <span className="text-gray-400">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+          <span className="text-purple-400"> {log.namespace}</span>
           <span className={
             log.level === 'error' ? ' text-red-500' :
             log.level === 'debug' ? ' text-cyan-500' :
             ' text-green-500'
           }> {log.level.toUpperCase()}</span>
-          <span>: {log.message}</span>
+          <span className="text-white">: {log.message}</span>
         </div>
       ))}
       {isConnected && logs.length === 0 && (

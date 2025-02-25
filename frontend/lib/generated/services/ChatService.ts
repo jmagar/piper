@@ -13,6 +13,39 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class ChatService {
   /**
+   * Create streaming message
+   * @returns any Streaming message chunks
+   * @throws ApiError
+   */
+  public static createStreamingMessage({
+    requestBody,
+  }: {
+    requestBody: {
+      content: string;
+      userId: string;
+      username: string;
+      conversationId?: string;
+      parentId?: string;
+      type?: 'text' | 'code' | 'system';
+      metadata?: Record<string, any>;
+    },
+  }): CancelablePromise<{
+    type?: 'chunk' | 'error' | 'done';
+    content?: string;
+    metadata?: Record<string, any>;
+  }> {
+    return __request(OpenAPI, {
+      method: 'POST',
+      url: '/api/chat/stream',
+      body: requestBody,
+      mediaType: 'application/json',
+      errors: {
+        400: `Error response`,
+        500: `Error response`,
+      },
+    });
+  }
+  /**
    * Get messages
    * @returns any List of messages
    * @throws ApiError

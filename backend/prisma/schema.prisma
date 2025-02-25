@@ -52,6 +52,7 @@ model ChatMessage {
   role            String        // "user" or "assistant"
   content         String        @db.Text
   metadata        Json?         // Stores message metadata (e.g., tool usage)
+  status          String        @default("sent") // "sending", "sent", "delivered", "error"
   conversation    Conversation  @relation(fields: [conversation_id], references: [id])
   conversation_id String
   user           User?         @relation(fields: [user_id], references: [id])

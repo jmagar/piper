@@ -12,6 +12,6 @@ export type ChatMessage = {
   createdAt: string;
   updatedAt: string;
   metadata?: ChatMessageMetadata;
-  status?: 'sending' | 'sent' | 'error';
+  status?: 'sending' | 'streaming' | 'sent' | 'error';
 };
 

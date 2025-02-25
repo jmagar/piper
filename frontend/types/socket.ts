@@ -2,11 +2,6 @@ import type { ExtendedChatMessage } from './chat';
 import type { Socket as SocketIOSocket } from 'socket.io-client';
 
 /**
- * Re-export Socket type from socket.io-client
- */
-export type Socket = SocketIOSocket<ServerToClientEvents, ClientToServerEvents>;
-
-/**
  * Socket connection status
  */
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -25,14 +20,11 @@ export interface SocketOptions {
 export interface ServerToClientEvents {
     'message:new': (message: ExtendedChatMessage) => void;
     'message:update': (message: ExtendedChatMessage) => void;
-    'thread:message:new': (message: ExtendedChatMessage) => void;
-    'thread:message:update': (message: ExtendedChatMessage) => void;
+    'message:chunk': (data: { messageId: string; chunk: string }) => void;
+    'message:error': (data: { messageId: string; error: string }) => void;
+    'message:complete': (data: { messageId: string }) => void;
     'user:typing': (user: { userId: string; username: string }) => void;
     'user:stop_typing': (user: { userId: string; username: string }) => void;
-
-    [key: `mcp:${string}:log`]: (log: string) => void;
-    [key: `mcp:${string}:error`]: (error: string) => void;
-    [key: `mcp:${string}:clear`]: () => void;
 }
 
 /**
@@ -43,17 +35,15 @@ export interface ClientToServerEvents {
         message: ExtendedChatMessage,
         callback: (response: { error?: string; message?: ExtendedChatMessage }) => void
     ) => void;
-    'thread:message': (
-        message: ExtendedChatMessage,
-        callback: (response: { error?: string; message?: ExtendedChatMessage }) => void
-    ) => void;
+    'message:updated': (message: ExtendedChatMessage) => void;
     'user:typing': () => void;
     'user:stop_typing': () => void;
-
-    [key: `mcp:${string}:start`]: () => void;
-    [key: `mcp:${string}:stop`]: () => void;
-    [key: `mcp:${string}:restart`]: () => void;
 }
+
+/**
+ * Socket type with event interfaces
+ */
+export type Socket = SocketIOSocket<ServerToClientEvents, ClientToServerEvents>;
 
 export interface InterServerEvents {
     ping: () => void;
@@ -62,4 +52,4 @@ export interface InterServerEvents {
 export interface SocketData {
     userId: string;
     username: string;
-} 
+}

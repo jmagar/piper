@@ -16,6 +16,7 @@ export type { ConversationStats } from './models/ConversationStats';
 export type { LangChainOptions } from './models/LangChainOptions';
 export type { MessageReaction } from './models/MessageReaction';
 export type { StarredMessage } from './models/StarredMessage';
+export type { StreamChunk } from './models/StreamChunk';
 export type { Tool } from './models/Tool';
 export type { UserStats } from './models/UserStats';
 
@@ -28,6 +29,7 @@ export { $ConversationStats } from './schemas/$ConversationStats';
 export { $LangChainOptions } from './schemas/$LangChainOptions';
 export { $MessageReaction } from './schemas/$MessageReaction';
 export { $StarredMessage } from './schemas/$StarredMessage';
+export { $StreamChunk } from './schemas/$StreamChunk';
 export { $Tool } from './schemas/$Tool';
 export { $UserStats } from './schemas/$UserStats';
 

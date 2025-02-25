@@ -40,21 +40,18 @@ export function SocketProvider({ children }: SocketProviderProps) {
                 socketRef.current = socket;
 
                 // Manager-level error handling
-                socket.io.on('error', (error) => {
-                    console.error('Socket.IO manager error:', error);
+                socket.io.on('error', (_err) => {
                     toast.error('Connection error occurred');
                 });
 
                 // Connection lifecycle events
                 socket.io.on('reconnect_attempt', (attempt) => {
-                    console.info(`Socket.IO reconnection attempt ${attempt}`);
                     if (attempt <= MAX_RECONNECT_ATTEMPTS) {
                         toast.info('Attempting to reconnect...');
                     }
                 });
 
-                socket.io.on('reconnect', (attempt) => {
-                    console.info(`Socket.IO reconnected after ${attempt} attempts`);
+                socket.io.on('reconnect', () => {
                     toast.success('Reconnected to chat server');
                     reconnectAttemptsRef.current = 0;
                     setIsConnected(true);
@@ -62,8 +59,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
                     setError(null);
                 });
 
-                socket.on('connect_error', (error) => {
-                    console.error('Socket.IO connection error:', error);
+                socket.on('connect_error', () => {
                     reconnectAttemptsRef.current++;
                     
                     if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
@@ -80,7 +76,6 @@ export function SocketProvider({ children }: SocketProviderProps) {
                 });
 
                 socket.on('connect', () => {
-                    console.info('Socket connected');
                     reconnectAttemptsRef.current = 0;
                     toast.success('Connected to chat server');
                     setIsConnected(true);
@@ -89,7 +84,6 @@ export function SocketProvider({ children }: SocketProviderProps) {
                 });
 
                 socket.on('disconnect', (reason) => {
-                    console.info('Socket disconnected:', reason);
                     setIsConnected(false);
                     
                     if (reason === 'io server disconnect' || reason === 'io client disconnect') {
@@ -103,15 +97,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
                         setError('Connection lost. Reconnecting...');
                     }
                 });
-
-                // Debug logging in development
-                if (process.env.NODE_ENV !== 'production') {
-                    socket.onAny((event, ...args) => {
-                        console.debug('Socket.IO event:', event, args);
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to initialize socket:', error);
+            } catch (_err) {
                 toast.error('Failed to initialize chat connection');
                 setError('Failed to initialize chat connection');
                 setIsConnecting(false);
@@ -153,4 +139,4 @@ export function useSocket(): SocketContextValue {
     }
     
     return context;
-} 
+}

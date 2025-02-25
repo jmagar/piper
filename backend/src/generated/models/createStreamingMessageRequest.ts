@@ -12,13 +12,13 @@
 
 import { RequestFile } from './models';
 
-export class CreateMessageRequest {
+export class CreateStreamingMessageRequest {
     'content': string;
     'userId': string;
     'username': string;
     'conversationId'?: string;
     'parentId'?: string;
-    'type'?: CreateMessageRequest.TypeEnum = CreateMessageRequest.TypeEnum.text;
+    'type'?: CreateStreamingMessageRequest.TypeEnum = CreateStreamingMessageRequest.TypeEnum.text;
     'metadata'?: { [key: string]: any | undefined; };
 
     static discriminator: string | undefined = undefined;
@@ -52,7 +52,7 @@ export class CreateMessageRequest {
         {
             "name": "type",
             "baseName": "type",
-            "type": "CreateMessageRequest.TypeEnum"
+            "type": "CreateStreamingMessageRequest.TypeEnum"
         },
         {
             "name": "metadata",
@@ -61,11 +61,11 @@ export class CreateMessageRequest {
         }    ];
 
     static getAttributeTypeMap() {
-        return CreateMessageRequest.attributeTypeMap;
+        return CreateStreamingMessageRequest.attributeTypeMap;
     }
 }
 
-export namespace CreateMessageRequest {
+export namespace CreateStreamingMessageRequest {
     export enum TypeEnum {
         text = <any> 'text',
         code = <any> 'code',

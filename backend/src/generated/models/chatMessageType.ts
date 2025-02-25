@@ -16,5 +16,6 @@ export enum ChatMessageType {
     text = <any> 'text',
     code = <any> 'code',
     system = <any> 'system',
-    fileList = <any> 'file-list'
+    fileList = <any> 'file-list',
+    streamChunk = <any> 'stream-chunk'
 }

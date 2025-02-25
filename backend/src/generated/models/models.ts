@@ -9,7 +9,8 @@ export * from './chatMessageMetadataReactionsValueUsersInner';
 export * from './chatMessageType';
 export * from './conversation';
 export * from './conversationStats';
-export * from './createMessageRequest';
+export * from './createStreamingMessage200Response';
+export * from './createStreamingMessageRequest';
 export * from './editMessageRequest';
 export * from './enhancePrompt200Response';
 export * from './enhancePromptRequest';
@@ -31,6 +32,7 @@ export * from './messageReaction';
 export * from './sendEventRequest';
 export * from './starMessageRequest';
 export * from './starredMessage';
+export * from './streamChunk';
 export * from './tool';
 export * from './toolParametersInner';
 export * from './unstarMessageRequest';
@@ -60,7 +62,8 @@ import { ChatMessageMetadataReactionsValueUsersInner } from './chatMessageMetada
 import { ChatMessageType } from './chatMessageType';
 import { Conversation } from './conversation';
 import { ConversationStats } from './conversationStats';
-import { CreateMessageRequest } from './createMessageRequest';
+import { CreateStreamingMessage200Response } from './createStreamingMessage200Response';
+import { CreateStreamingMessageRequest } from './createStreamingMessageRequest';
 import { EditMessageRequest } from './editMessageRequest';
 import { EnhancePrompt200Response } from './enhancePrompt200Response';
 import { EnhancePromptRequest } from './enhancePromptRequest';
@@ -82,6 +85,7 @@ import { MessageReaction } from './messageReaction';
 import { SendEventRequest } from './sendEventRequest';
 import { StarMessageRequest } from './starMessageRequest';
 import { StarredMessage } from './starredMessage';
+import { StreamChunk } from './streamChunk';
 import { Tool } from './tool';
 import { ToolParametersInner } from './toolParametersInner';
 import { UnstarMessageRequest } from './unstarMessageRequest';
@@ -104,10 +108,13 @@ let primitives = [
 let enumsMap: {[index: string]: any} = {
         "ChatMessage.RoleEnum": ChatMessage.RoleEnum,
         "ChatMessage.StatusEnum": ChatMessage.StatusEnum,
+        "ChatMessageMetadata.StreamStatusEnum": ChatMessageMetadata.StreamStatusEnum,
         "ChatMessageType": ChatMessageType,
-        "CreateMessageRequest.TypeEnum": CreateMessageRequest.TypeEnum,
+        "CreateStreamingMessage200Response.TypeEnum": CreateStreamingMessage200Response.TypeEnum,
+        "CreateStreamingMessageRequest.TypeEnum": CreateStreamingMessageRequest.TypeEnum,
         "GetRealtimeStatus200Response.StatusEnum": GetRealtimeStatus200Response.StatusEnum,
         "LangChainOptions.FallbackProviderEnum": LangChainOptions.FallbackProviderEnum,
+        "StreamChunk.TypeEnum": StreamChunk.TypeEnum,
         "Tool.TypeEnum": Tool.TypeEnum,
 }
 
@@ -120,7 +127,8 @@ let typeMap: {[index: string]: any} = {
     "ChatMessageMetadataReactionsValueUsersInner": ChatMessageMetadataReactionsValueUsersInner,
     "Conversation": Conversation,
     "ConversationStats": ConversationStats,
-    "CreateMessageRequest": CreateMessageRequest,
+    "CreateStreamingMessage200Response": CreateStreamingMessage200Response,
+    "CreateStreamingMessageRequest": CreateStreamingMessageRequest,
     "EditMessageRequest": EditMessageRequest,
     "EnhancePrompt200Response": EnhancePrompt200Response,
     "EnhancePromptRequest": EnhancePromptRequest,
@@ -142,6 +150,7 @@ let typeMap: {[index: string]: any} = {
     "SendEventRequest": SendEventRequest,
     "StarMessageRequest": StarMessageRequest,
     "StarredMessage": StarredMessage,
+    "StreamChunk": StreamChunk,
     "Tool": Tool,
     "ToolParametersInner": ToolParametersInner,
     "UnstarMessageRequest": UnstarMessageRequest,

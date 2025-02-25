@@ -5,7 +5,7 @@ export interface ChatMessage {
     username?: string;
     conversationId?: string;
     parentId?: string;
-    type?: 'text' | 'code' | 'system';
+    type?: 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk';
     metadata?: Record<string, unknown>;
 }
 
@@ -19,12 +19,16 @@ export interface ExtendedChatMessage {
     username?: string;
     conversationId?: string;
     parentId?: string;
-    type: 'text' | 'code' | 'system';
-    status: 'sending' | 'sent' | 'delivered' | 'error';
+    type: 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk';
+    status: 'sending' | 'streaming' | 'sent' | 'delivered' | 'error';
     metadata: {
         edited?: boolean;
         editedAt?: Date;
         timestamp?: string | number;
+        streamStatus?: 'streaming' | 'complete' | 'error';
+        streamId?: string;
+        streamIndex?: number;
+        isPartial?: boolean;
         reactions?: Record<string, {
             count: number;
             users: {
@@ -44,6 +48,23 @@ export interface ExtendedChatMessage {
         };
         [key: string]: unknown;
     };
+}
+
+export interface ServerToClientEvents {
+    'message:new': (message: ExtendedChatMessage) => void;
+    'message:update': (message: ExtendedChatMessage) => void;
+    'message:chunk': (data: { messageId: string; chunk: string }) => void;
+    'message:error': (data: { messageId: string; error: string }) => void;
+    'message:complete': (data: { messageId: string }) => void;
+    'user:typing': (user: { userId: string; username: string }) => void;
+    'user:stop_typing': (user: { userId: string; username: string }) => void;
+}
+
+export interface ClientToServerEvents {
+    'message:sent': (message: ExtendedChatMessage, callback: (response: { error?: string; message?: ExtendedChatMessage }) => void) => void;
+    'message:updated': (message: ExtendedChatMessage) => void;
+    'user:typing': () => void;
+    'user:stop_typing': () => void;
 }
 
 export interface TypingIndicator {

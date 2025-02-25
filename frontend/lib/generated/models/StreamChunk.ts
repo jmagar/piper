@@ -2,4 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type ChatMessageType = 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk';
+export type StreamChunk = {
+  type: 'chunk' | 'error' | 'done';
+  content: string;
+  metadata?: Record<string, any>;
+};
+

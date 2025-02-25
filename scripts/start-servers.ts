@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+/* eslint-env node */
+/* global setTimeout clearTimeout */
+
+/// <reference lib="dom" />
+/// <reference types="node" />
+
 // Node.js built-in imports
 import { spawn, exec } from 'child_process';
 import { createWriteStream } from 'fs';
@@ -213,10 +219,12 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             ...process.env, 
             FORCE_COLOR: 'true',
             PORT: port.toString(),
+            DEBUG: name === 'Frontend' 
+                ? 'next:build:*,next:server:*,next:error:*'  // Frontend debug logging
+                : 'mcp:*,mcp:*:*',  // Backend debug logging for MCP
             ...(name === 'Frontend' ? {
                 NEXT_TURBO_DEV_LOG: '1',
                 NEXT_TURBO_TRACE: '1',
-                DEBUG: 'next:build:*,next:server:*,next:error:*'  // More selective debug logging
             } : {})
         };
 

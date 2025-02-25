@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Check, CheckCheck, Clock, XCircle } from 'lucide-react';
+import { Check, CheckCheck, Clock, XCircle, Loader2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { ExtendedChatMessage } from '@/types/chat';
@@ -20,6 +20,8 @@ export function MessageStatus({ message, className }: MessageStatusProps) {
     switch (message.status) {
       case 'sending':
         return <Clock className="h-3 w-3 animate-pulse" />;
+      case 'streaming':
+        return <Loader2 className="h-3 w-3 animate-spin" />;
       case 'sent':
         return <Check className="h-3 w-3" />;
       case 'delivered':
@@ -35,6 +37,8 @@ export function MessageStatus({ message, className }: MessageStatusProps) {
     switch (message.status) {
       case 'sending':
         return 'Sending...';
+      case 'streaming':
+        return 'Streaming...';
       case 'sent':
         return 'Sent';
       case 'delivered':
@@ -60,4 +64,4 @@ export function MessageStatus({ message, className }: MessageStatusProps) {
       {getStatusIcon()}
     </div>
   );
-} 
+}
