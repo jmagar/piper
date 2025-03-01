@@ -1,96 +1,139 @@
 {
-    "llm": {
-        "model_provider": "anthropic",
-        "model": "claude-3-5-sonnet-20241022",
-        "temperature": 0.7,
-        "max_tokens": 1000,
+  llm: {
+    model_provider: 'anthropic',
+    model: 'claude-3-5-sonnet-20241022',
+    temperature: 0.7,
+    max_tokens: 1000,
+  },
+  example_queries: [
+    "Tomorrow's weather in SF?",
+    'Read and briefly summarize the LICENSE file',
+    'Read the news headlines on bbc.com',
+  ],
+  mcp_servers: {
+    memory: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-memory',
+      ],
     },
-    "example_queries": [
-        "Tomorrow's weather in SF?",
-        "Read and briefly summarize the LICENSE file",
-        "Read the news headlines on bbc.com",
-    ],
-    "mcp_servers": {
-        "memory": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-memory"
-            ]
-        },
-        "searxng": {
-            "command": "npx",
-            "args": ["-y", "@kevinwatt/mcp-server-searxng"]
-        },
-        "mediaProcessor": {
-            "command": "npx",
-            "args": ["-y", "mcp-media-processor@latest"]
-        },
-        "modal-toolbox": {
-            "command": "uvx",
-            "args": ["modal-mcp-toolbox"]
-        },
-        "shell": {
-            "command": "npx",
-            "args": ["-y", "@kevinwatt/shell-mcp"]
-        },
-        "mcp-server-commands": {
-            "command": "npx",
-            "args": ["mcp-server-commands"]
-        },
-        "docker-mcp": {
-            "command": "uvx",
-            "args": ["docker-mcp"]
-        },
-        "sequential-thinking": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
-        },
-        "mcp-installer": {
-            "command": "npx",
-            "args": ["@anaisbetts/mcp-installer"]
-        },
-        "aindreyway-mcp-neurolora": {
-            "command": "npx",
-            "args": ["-y", "@aindreyway/mcp-neurolora@latest"],
-            "env": {
-                "NODE_OPTIONS": "--max-old-space-size=256",
-                "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-            }
-        },
-        "time": {
-            "command": "uvx",
-            "args": ["mcp-server-time"]
-        },
-        "filesystem": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
-        },
-        "fetch": {
-            "command": "uvx",
-            "args": ["mcp-server-fetch"]
-        },
-        "weather": {
-            "command": "npx",
-            "args": ["-y", "@h1deya/mcp-server-weather"]
-        },
-        "puppeteer": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
-        },
-        "brave-search": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-            "env": {
-                "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-            }
-        },
-        "github": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-github"],
-            "env": {
-                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-            }
-        }
-    }
+    searxng: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@kevinwatt/mcp-server-searxng',
+      ],
+    },
+    mediaProcessor: {
+      command: 'npx',
+      args: [
+        '-y',
+        'mcp-media-processor@latest',
+      ],
+    },
+    'modal-toolbox': {
+      command: 'uvx',
+      args: [
+        'modal-mcp-toolbox',
+      ],
+    },
+    shell: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@kevinwatt/shell-mcp',
+      ],
+    },
+    'mcp-server-commands': {
+      command: 'npx',
+      args: [
+        'mcp-server-commands',
+      ],
+    },
+    'docker-mcp': {
+      command: 'uvx',
+      args: [
+        'docker-mcp',
+      ],
+    },
+    'sequential-thinking': {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-sequential-thinking',
+      ],
+    },
+    'mcp-installer': {
+      command: 'npx',
+      args: [
+        '@anaisbetts/mcp-installer',
+      ],
+    },
+    'aindreyway-mcp-neurolora': {
+      command: 'npx',
+      args: [
+        '-y',
+        '@aindreyway/mcp-neurolora@latest',
+      ],
+      env: {
+        NODE_OPTIONS: '--max-old-space-size=256',
+        OPENAI_API_KEY: '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',
+      },
+    },
+    time: {
+      command: 'uvx',
+      args: [
+        'mcp-server-time',
+      ],
+    },
+    filesystem: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-filesystem',
+        '.',
+      ],
+    },
+    fetch: {
+      command: 'uvx',
+      args: [
+        'mcp-server-fetch',
+      ],
+    },
+    weather: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@h1deya/mcp-server-weather',
+      ],
+    },
+    puppeteer: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-puppeteer',
+      ],
+    },
+    'brave-search': {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-brave-search',
+      ],
+      env: {
+        BRAVE_API_KEY: 'BSAqnAtouLsR8AtRrsdv7Xy78ddheDR',
+      },
+    },
+    github: {
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-github',
+      ],
+      env: {
+        GITHUB_PERSONAL_ACCESS_TOKEN: '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',
+      },
+    },
+  },
 }
