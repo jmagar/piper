@@ -1,0 +1,169 @@
+
+> pooper-backend@0.1.0 dev /home/jmagar/code/pooper/backend
+> tsx watch src/index.ts
+
+prisma:tryLoadEnv Environment variables not found at null +6ms
+prisma:tryLoadEnv Environment variables loaded from /home/jmagar/code/pooper/backend/.env +1ms
+prisma:client checkPlatformCaching:postinstall true +9ms
+prisma:client checkPlatformCaching:ciName undefined +0ms
+prisma:tryLoadEnv Environment variables not found at null +1ms
+prisma:tryLoadEnv Environment variables loaded from /home/jmagar/code/pooper/backend/.env +0ms
+prisma:client dirname /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client +0ms
+prisma:client relativePath ../../../../../../prisma +0ms
+prisma:client cwd /home/jmagar/code/pooper/backend/prisma +0ms
+prisma:client clientVersion 6.4.0 +1ms
+prisma:client:libraryEngine internalSetup +0ms
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/servers'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/tools'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/tools/:name/execute'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/tools/:name/execute'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/tools/:name/execute'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/health'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/health'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/health'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+prisma:client checkPlatformCaching:postinstall true +94ms
+prisma:client checkPlatformCaching:ciName undefined +0ms
+prisma:tryLoadEnv Environment variables not found at null +0ms
+prisma:tryLoadEnv Environment variables loaded from /home/jmagar/code/pooper/backend/.env +0ms
+prisma:client dirname /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client +1ms
+prisma:client relativePath ../../../../../../prisma +0ms
+prisma:client cwd /home/jmagar/code/pooper/backend/prisma +0ms
+prisma:client clientVersion 6.4.0 +0ms
+prisma:client:libraryEngine internalSetup +0ms
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/messages/star'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/messages/star'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/messages/star'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/messages/unstar'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/messages/unstar'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route post '/messages/unstar'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route get '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+prisma:client checkPlatformCaching:postinstall true +55ms
+prisma:client checkPlatformCaching:ciName undefined +0ms
+prisma:tryLoadEnv Environment variables not found at null +0ms
+prisma:tryLoadEnv Environment variables loaded from /home/jmagar/code/pooper/backend/.env +0ms
+prisma:client dirname /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client +2ms
+prisma:client relativePath ../../../../../../prisma +0ms
+prisma:client cwd /home/jmagar/code/pooper/backend/prisma +0ms
+prisma:client clientVersion 6.4.0 +0ms
+prisma:client:libraryEngine internalSetup +0ms
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "x-powered-by" to true
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "etag" to 'weak'
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "etag fn" to [Function: generateETag]
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "env" to 'development'
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "query parser" to 'extended'
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "query parser fn" to [Function: parseExtendedQueryString]
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "subdomain offset" to 2
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "trust proxy" to false
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "trust proxy fn" to [Function: trustNone]
+Fri, 21 Feb 2025 00:17:07 GMT express:application booting in development mode
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "view" to [Function: View]
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "views" to '/home/jmagar/code/pooper/backend/views'
+Fri, 21 Feb 2025 00:17:07 GMT express:application set "jsonp callback name" to 'callback'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' query
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' expressInit
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' corsMiddleware
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' jsonParser
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route new '*'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '*'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:route options '*'
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/health' router
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/health'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/api/mcp' router
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/api/mcp'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/api/chat' router
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/api/chat'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/api/config' router
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/api/config'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' <anonymous>
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+Fri, 21 Feb 2025 00:17:07 GMT express:router use '/' <anonymous>
+Fri, 21 Feb 2025 00:17:07 GMT express:router:layer new '/'
+2025-02-21T00:17:07.580Z socket.io:server initializing namespace /
+2025-02-21T00:17:07.580Z socket.io:server creating engine.io instance with opts {"cors":{"origin":["http://localhost:3000","http://localhost:3001","http://localhost:3002","http://localhost:3003"],"methods":["GET","POST","PUT","DELETE","OPTIONS"],"allowedHeaders":["Content-Type","Authorization"],"credentials":false},"allowEIO3":true,"transports":["websocket","polling"],"pingTimeout":60000,"pingInterval":25000,"connectTimeout":30000,"path":"/socket.io","cleanupEmptyChildNamespaces":false}
+2025-02-21T00:17:07.581Z socket.io:server attaching client serving req handler
+(node:3881788) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Server running on port 4100
+WebSocket server running at ws://localhost:4100
+Environment variables loaded: {
+  ANTHROPIC_API_KEY: '***',
+  OPENAI_API_KEY: '***',
+  BRAVE_API_KEY: '***',
+  GITHUB_PERSONAL_ACCESS_TOKEN: '***'
+}
+prisma:get-platform Found distro info:
+{
+  "targetDistro": "debian",
+  "familyDistro": "debian",
+  "originalDistro": "ubuntu"
+} +17ms
+prisma:get-platform Trying platform-specific paths for "debian" (and "ubuntu") +1ms
+prisma:get-platform Found distro info:
+{
+  "targetDistro": "debian",
+  "familyDistro": "debian",
+  "originalDistro": "ubuntu"
+} +0ms
+prisma:get-platform Trying platform-specific paths for "debian" (and "ubuntu") +0ms
+prisma:get-platform Found distro info:
+{
+  "targetDistro": "debian",
+  "familyDistro": "debian",
+  "originalDistro": "ubuntu"
+} +0ms
+prisma:get-platform Trying platform-specific paths for "debian" (and "ubuntu") +1ms
+prisma:get-platform Found libssl.so file using platform-specific paths: libssl.so.3 +5ms
+prisma:get-platform The parsed libssl version is: 3.0.x +0ms
+prisma:client:engines:resolveEnginePath enginePath /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node +1ms
+prisma:get-platform Found libssl.so file using platform-specific paths: libssl.so.3 +17ms
+prisma:get-platform The parsed libssl version is: 3.0.x +0ms
+prisma:client:engines:resolveEnginePath enginePath /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node +1ms
+prisma:get-platform Found libssl.so file using platform-specific paths: libssl.so.3 +2ms
+prisma:get-platform The parsed libssl version is: 3.0.x +0ms
+prisma:client:engines:resolveEnginePath enginePath /home/jmagar/code/pooper/backend/node_modules/.pnpm/@prisma+client@6.4.0_prisma@6.4.0_typescript@5.7.3__typescript@5.7.3/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node +1ms

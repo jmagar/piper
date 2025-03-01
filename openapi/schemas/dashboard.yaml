@@ -1,0 +1,88 @@
+paths:
+  /dashboard/stats:
+    get:
+      summary: Get server stats
+      description: Returns various server statistics and metrics
+      operationId: getServerStats
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Server stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+                  totalRequests:
+                    type: number
+                    description: Total number of requests processed
+                  activeConnections:
+                    type: number
+                    description: Current number of active connections
+                  memoryUsage:
+                    type: object
+                    properties:
+                      heapTotal:
+                        type: number
+                        description: Total size of the heap in bytes
+                      heapUsed:
+                        type: number
+                        description: Actual memory used in bytes
+                      external:
+                        type: number
+                        description: Memory used by external resources
+                      rss:
+                        type: number
+                        description: Resident Set Size in bytes
+                  systemLoad:
+                    type: array
+                    items:
+                      type: number
+                    description: System load averages for 1, 5, and 15 minutes
+                  cpuUsage:
+                    type: object
+                    properties:
+                      user:
+                        type: number
+                        description: CPU time spent in user code
+                      system:
+                        type: number
+                        description: CPU time spent in system code
+                  lastError:
+                    type: object
+                    nullable: true
+                    properties:
+                      message:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                required:
+                  - uptime
+                  - totalRequests
+                  - activeConnections
+                  - memoryUsage
+                  - systemLoad
+                  - cpuUsage
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string 

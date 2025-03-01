@@ -1,0 +1,88 @@
+paths:
+  /api/config:
+    get:
+      summary: Get server configuration
+      operationId: getConfig
+      tags: [Config]
+      responses:
+        200:
+          description: Server configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  features:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                  limits:
+                    type: object
+                    properties:
+                      maxMessageLength:
+                        type: integer
+                      maxFileSize:
+                        type: integer
+                      maxFilesPerMessage:
+                        type: integer
+                  providers:
+                    type: object
+                    properties:
+                      openai:
+                        type: boolean
+                      anthropic:
+                        type: boolean
+                      groq:
+                        type: boolean
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+    put:
+      summary: Update server configuration
+      operationId: updateConfig
+      tags: [Config]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                features:
+                  type: object
+                  additionalProperties:
+                    type: boolean
+                limits:
+                  type: object
+                  properties:
+                    maxMessageLength:
+                      type: integer
+                    maxFileSize:
+                      type: integer
+                    maxFilesPerMessage:
+                      type: integer
+                providers:
+                  type: object
+                  properties:
+                    openai:
+                      type: boolean
+                    anthropic:
+                      type: boolean
+                    groq:
+                      type: boolean
+      responses:
+        200:
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

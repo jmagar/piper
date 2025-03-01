@@ -1,0 +1,131 @@
+---
+description: ESLint Configuration
+globs: 
+alwaysApply: false
+---
+# ESLint Configuration Rules
+
+Rules for ESLint configuration and code style enforcement.
+
+<rule>
+name: eslint_standards
+description: Standards for ESLint configuration and code style
+filters:
+  - type: file_path
+    pattern: "eslint\\.config\\.js$|\\.eslintrc.*$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these ESLint configuration standards:
+      
+      1. TypeScript Rules:
+         - Use strict type checking:
+           * no-explicit-any
+           * explicit-function-return-type
+           * no-unused-vars
+         - Configure proper type imports:
+           * consistent-type-imports
+           * no-unnecessary-type-assertion
+         - Handle promises properly:
+           * no-floating-promises
+           * await-thenable
+         - Use proper nullish checks
+         - Follow TS patterns
+      
+      2. React Rules:
+         - Configure proper JSX:
+           * jsx-uses-react: error
+           * jsx-uses-vars: error
+           * jsx-filename-extension: ['.tsx']
+         - Handle hooks properly:
+           * rules-of-hooks: error
+           * exhaustive-deps: warn
+         - Configure proper patterns:
+           * no-array-index-key: warn
+           * jsx-no-leaked-render: error
+         - Follow React patterns
+         - Use proper validation
+      
+      3. Import Rules:
+         - Configure proper order:
+           * builtin -> external -> internal
+           * proper grouping and spacing
+         - Handle type imports:
+           * prefer-top-level
+           * no-duplicates
+         - Configure proper paths:
+           * no-unresolved
+           * no-cycle
+         - Follow import patterns
+         - Use proper validation
+      
+      4. Code Style:
+         - Configure proper console usage:
+           * Allow: warn, error, info, debug
+         - Handle proper spacing
+         - Configure proper quotes
+         - Handle proper formatting
+         - Follow style patterns
+      
+      5. Next.js Rules:
+         - Configure proper pages:
+           * no-html-link-for-pages
+           * no-img-element
+         - Handle proper optimization:
+           * no-unwanted-polyfillio
+           * no-sync-scripts
+         - Follow Next.js patterns
+         - Use proper validation
+         - Handle proper routing
+
+examples:
+  - input: |
+      // Bad ESLint config
+      export default {
+        rules: {
+          'no-console': 'error',
+          '@typescript-eslint/no-explicit-any': 'off'
+        }
+      }
+
+      // Good ESLint config
+      export default [
+        js.configs.recommended,
+        {
+          files: ['**/*.{js,jsx,ts,tsx}'],
+          plugins: {
+            '@typescript-eslint': typescript,
+            'react': reactPlugin,
+            'react-hooks': reactHooksPlugin,
+            'jsx-a11y': a11yPlugin,
+            'import': importPlugin,
+            'next': nextPlugin,
+          },
+          rules: {
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/explicit-function-return-type': ['error', {
+              allowExpressions: true,
+              allowTypedFunctionExpressions: true,
+              allowHigherOrderFunctions: true
+            }],
+            'react/jsx-no-leaked-render': ['error', {
+              validStrategies: ['ternary', 'coalesce']
+            }],
+            'import/order': ['error', {
+              groups: ['builtin', 'external', 'internal'],
+              'newlines-between': 'always',
+              alphabetize: { order: 'asc' }
+            }],
+            'no-console': ['warn', {
+              allow: ['warn', 'error', 'info', 'debug', 'group', 'groupEnd']
+            }]
+          }
+        }
+      ]
+    output: "Properly configured ESLint with proper rules and patterns"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

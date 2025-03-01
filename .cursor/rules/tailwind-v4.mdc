@@ -1,0 +1,212 @@
+---
+description: TailwindCSS v4 Configuration
+globs: tailwind.config.*
+alwaysApply: false
+---
+# Tailwind v4 Rules
+
+Rules for Tailwind CSS v4 configuration and usage.
+
+<rule>
+name: tailwind_v4_standards
+description: Standards for Tailwind CSS v4 configuration and imports
+filters:
+  - type: file_path
+    pattern: ".*\\.css$|tailwind\\.config\\.(js|ts)$|postcss\\.config\\.(js|ts|mjs)$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these Tailwind v4 standards:
+      
+      1. PostCSS Configuration:
+         - Use `@tailwindcss/postcss` instead of `tailwindcss`
+         - Required config format:
+           ```js
+           /** @type {import('postcss-load-config').Config} */
+           export default {
+             plugins: {
+               '@tailwindcss/postcss': {},
+               'autoprefixer': {},
+             },
+           };
+           ```
+      
+      2. Tailwind Configuration:
+         - Use proper type import:
+           ```js
+           /** @type {import('@tailwindcss/postcss').Config} */
+           ```
+         - Required dependencies:
+           * @tailwindcss/postcss: ^4.0.7
+           * @tailwindcss/forms: latest
+           * @tailwindcss/typography: latest
+           * @tailwindcss/container-queries: latest
+         - Use modern features:
+           * hoverOnlyWhenSupported
+           * respectDefaultRingColorOpacity
+           * disableColorOpacityUtilitiesByDefault
+           * enableTransitionValue
+      
+      3. Color System:
+         - Use HSL values for colors
+         - Define colors in :root
+         - Use proper dark mode variants
+         - Follow shadcn/ui color patterns
+         - Use semantic color names
+         - Include brand colors
+         - Include surface colors
+         - All color utilities must use direct HSL values:
+           ```css
+           /* Color Utilities */
+           
+           /* Bad - Don't use semantic names directly */
+           @apply bg-background text-foreground border-border;
+           
+           /* Good - Use HSL values with CSS variables */
+           @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))] border-[hsl(var(--border))];
+           
+           /* Opacity Handling */
+           
+           /* Bad - Don't use semantic names with opacity */
+           @apply bg-background/95;
+           
+           /* Good - Use HSL with opacity */
+           @apply bg-[hsl(var(--background))]/95;
+           
+           /* Component Examples */
+           
+           /* Bad */
+           .card {
+             @apply bg-card text-card-foreground border-border;
+           }
+           
+           /* Good */
+           .card {
+             @apply 
+               bg-[hsl(var(--card))] 
+               text-[hsl(var(--card-foreground))] 
+               border-[hsl(var(--border))];
+           }
+           
+           /* Bad */
+           .sidebar {
+             @apply 
+               bg-background/80 
+               text-foreground 
+               border-border/50;
+           }
+           
+           /* Good */
+           .sidebar {
+             @apply 
+               bg-[hsl(var(--background))]/80 
+               text-[hsl(var(--foreground))] 
+               border-[hsl(var(--border))]/50;
+           }
+           ```
+      
+      4. Typography System:
+         - Use proper font stacks
+         - Define size scales
+         - Include line heights
+         - Use CSS variables for fonts
+      
+      5. Spacing System:
+         - Use consistent scales
+         - Define custom spacing
+         - Use semantic names
+         - Include component-specific spacing
+      
+      6. Animation System:
+         - Define keyframes
+         - Use consistent timing
+         - Include transitions
+         - Support reduced motion
+      
+      7. Border Radius:
+         - Use CSS variables
+         - Define consistent scales
+         - Include component-specific values
+      
+      8. Shadows:
+         - Define consistent scales
+         - Use RGB values for opacity
+         - Include component-specific shadows
+      
+      9. CSS Import:
+         - ONLY use `@import "tailwindcss";`
+         - DO NOT use @tailwind directives
+         - DO NOT use @import "tailwindcss/preflight"
+         - DO NOT use @import "tailwindcss/utilities"
+
+examples:
+  - input: |
+      // Bad postcss.config.js
+      module.exports = {
+        plugins: {
+          'tailwindcss': {},
+          'autoprefixer': {},
+        }
+      }
+      
+      // Good postcss.config.mjs
+      /** @type {import('postcss-load-config').Config} */
+      export default {
+        plugins: {
+          '@tailwindcss/postcss': {},
+          'autoprefixer': {},
+        },
+      };
+      
+      // Bad tailwind.config.js
+      /** @type {import('tailwindcss').Config} */
+      module.exports = {
+        content: ['./src/**/*.{js,jsx,ts,tsx}'],
+        theme: {
+          extend: {},
+        },
+        plugins: [],
+      }
+      
+      // Good tailwind.config.js
+      /** @type {import('@tailwindcss/postcss').Config} */
+      module.exports = {
+        darkMode: 'class',
+        content: [
+          './app/**/*.{js,ts,jsx,tsx,mdx}',
+          './components/**/*.{js,ts,jsx,tsx,mdx}',
+          './lib/**/*.{js,ts,jsx,tsx,mdx}',
+        ],
+        future: {
+          hoverOnlyWhenSupported: true,
+          respectDefaultRingColorOpacity: true,
+          disableColorOpacityUtilitiesByDefault: false,
+          enableTransitionValue: true,
+        },
+        theme: {
+          extend: {
+            colors: {
+              border: 'hsl(var(--border))',
+              background: 'hsl(var(--background))',
+              foreground: 'hsl(var(--foreground))',
+              primary: {
+                DEFAULT: 'hsl(var(--primary))',
+                foreground: 'hsl(var(--primary-foreground))',
+              },
+            },
+          },
+        },
+        plugins: [
+          require('@tailwindcss/container-queries'),
+          require('@tailwindcss/forms'),
+          require('@tailwindcss/typography'),
+          require('tailwindcss-animate'),
+        ],
+      };
+    output: "Proper Tailwind v4 configuration"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

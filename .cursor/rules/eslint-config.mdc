@@ -1,0 +1,9 @@
+---
+description: eslint 9 config rules
+globs: eslintrc.*
+alwaysApply: false
+---
+
+# ESLint 9
+
+- We are using ESLint 9, which uses a flat config, the correct file name is eslint.config.*

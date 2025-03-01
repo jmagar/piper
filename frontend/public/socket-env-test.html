@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket Environment Variable Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    pre {
+      background: #f1f1f1;
+      padding: 10px;
+      overflow: auto;
+      border-radius: 4px;
+    }
+    .connected { color: green; }
+    .disconnected { color: red; }
+    .error { color: red; }
+    .success { color: green; }
+    button {
+      padding: 8px 12px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #logs {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .timestamp {
+      color: #666;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Socket Environment Variable Test</h1>
+  
+  <div>
+    <h2>Connection Options</h2>
+    <div>
+      <label for="socketUrl">Socket URL from Environment:</label>
+      <input type="text" id="socketUrl" style="width: 350px;" readonly>
+    </div>
+    <div style="margin-top: 10px;">
+      <label for="transport">Transport:</label>
+      <select id="transport">
+        <option value="polling,websocket">polling → websocket</option>
+        <option value="websocket,polling">websocket → polling</option>
+        <option value="polling">polling only</option>
+        <option value="websocket">websocket only</option>
+      </select>
+    </div>
+    <div style="margin-top: 10px;">
+      <label for="path">Path:</label>
+      <input type="text" id="path" value="/socket.io" style="width: 150px;">
+    </div>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn">Disconnect</button>
+    <button id="testMessageBtn">Send Test Message</button>
+    <button id="clearLogsBtn">Clear Logs</button>
+  </div>
+  
+  <h2>Status: <span id="status" class="disconnected">Disconnected</span></h2>
+  <div>Socket ID: <span id="socketId">-</span></div>
+  <div>Transport: <span id="activeTransport">-</span></div>
+  
+  <h3>Socket Details</h3>
+  <pre id="socketDetails">-</pre>
+  
+  <h3>Logs</h3>
+  <div id="logs"></div>
+  
+  <script>
+    let socket = null;
+    
+    // Load environment variable from Next.js
+    async function loadEnvVariable() {
+      try {
+        const response = await fetch('/api/env/websocket');
+        const data = await response.json();
+        return data.url || 'http://localhost:4100'; // Fallback
+      } catch (err) {
+        console.error('Error fetching WebSocket URL:', err);
+        return 'http://localhost:4100'; // Fallback
+      }
+    }
+    
+    // DOM elements
+    const status = document.getElementById('status');
+    const socketId = document.getElementById('socketId');
+    const activeTransport = document.getElementById('activeTransport');
+    const socketDetails = document.getElementById('socketDetails');
+    const logs = document.getElementById('logs');
+    
+    // Get input elements
+    const socketUrlInput = document.getElementById('socketUrl');
+    const transport = document.getElementById('transport');
+    const pathInput = document.getElementById('path');
+    
+    // Buttons
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const testMessageBtn = document.getElementById('testMessageBtn');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    
+    // Logging function
+    function log(message, type = 'info') {
+      const timestamp = new Date().toISOString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="timestamp">${timestamp}</span> - ${message}`;
+      logs.prepend(entry);
+    }
+    
+    // Update socket details display
+    function updateSocketDetails() {
+      if (!socket) {
+        socketDetails.textContent = 'No socket connection';
+        return;
+      }
+      
+      const details = {
+        id: socket.id,
+        connected: socket.connected,
+        disconnected: socket.disconnected,
+        auth: socket.auth,
+        io: {
+          uri: socket.io?.uri,
+          opts: socket.io?.opts
+        }
+      };
+      
+      socketDetails.textContent = JSON.stringify(details, null, 2);
+    }
+    
+    // Connect to socket.io server
+    function connect() {
+      // Clean up any existing socket
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      
+      const url = socketUrlInput.value;
+      const selectedTransport = transport.value.split(',');
+      const path = pathInput.value;
+      
+      log(`Connecting to ${url} with transport ${selectedTransport.join(',')} and path ${path}`);
+      
+      try {
+        // Create new socket connection
+        socket = io(url, {
+          transports: selectedTransport,
+          path: path,
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 20000,
+          autoConnect: true,
+          auth: {
+            userId: 'test-user-direct',
+            username: 'Test User Direct',
+            timestamp: Date.now()
+          }
+        });
+        
+        // Register event handlers
+        socket.on('connect', () => {
+          log('Socket connected!', 'success');
+          status.textContent = 'Connected';
+          status.className = 'connected';
+          socketId.textContent = socket.id;
+          activeTransport.textContent = socket.io.engine.transport.name;
+          updateSocketDetails();
+        });
+        
+        socket.on('connect_error', (err) => {
+          log(`Connection error: ${err.message}`, 'error');
+          status.textContent = `Error: ${err.message}`;
+          status.className = 'error';
+          updateSocketDetails();
+          
+          // Log additional details
+          console.error('Connect error details:', {
+            message: err.message,
+            description: err.description,
+            context: err.context
+          });
+        });
+        
+        socket.on('disconnect', (reason) => {
+          log(`Socket disconnected: ${reason}`);
+          status.textContent = `Disconnected: ${reason}`;
+          status.className = 'disconnected';
+          socketId.textContent = '-';
+          activeTransport.textContent = '-';
+          updateSocketDetails();
+        });
+        
+        socket.on('error', (err) => {
+          log(`Socket error: ${err}`, 'error');
+        });
+        
+        // Listen for transport upgrade
+        socket.io.engine.on('upgrade', () => {
+          const transport = socket.io.engine.transport.name;
+          log(`Transport upgraded to: ${transport}`, 'success');
+          activeTransport.textContent = transport;
+        });
+        
+        // Listen for all events (for debugging)
+        const originalOnevent = socket.onevent;
+        socket.onevent = function(packet) {
+          const args = packet.data || [];
+          if (args.length > 0) {
+            const eventName = args[0];
+            if (!['connect', 'disconnect', 'connect_error', 'error'].includes(eventName)) {
+              log(`Event received: ${eventName} - ${JSON.stringify(args.slice(1))}`);
+            }
+          }
+          originalOnevent.call(this, packet);
+        };
+        
+        // Connect the socket
+        if (!socket.connected) {
+          socket.connect();
+        }
+        
+        log('Socket initialized and connecting...');
+        updateSocketDetails();
+      } catch (err) {
+        log(`Error creating socket: ${err.message}`, 'error');
+        console.error('Socket creation error:', err);
+      }
+    }
+    
+    // Disconnect from server
+    function disconnect() {
+      if (socket) {
+        log('Manually disconnecting socket');
+        socket.disconnect();
+        updateSocketDetails();
+      } else {
+        log('No socket connection to disconnect');
+      }
+    }
+    
+    // Send test message
+    function sendTestMessage() {
+      if (!socket || !socket.connected) {
+        log('Cannot send message - socket not connected', 'error');
+        return;
+      }
+      
+      const testMessage = {
+        id: `test-${Date.now()}`,
+        content: 'Test message from environment variable socket test',
+        timestamp: new Date().toISOString()
+      };
+      
+      log(`Sending test message: ${JSON.stringify(testMessage)}`);
+      
+      // Try different event names to see what works
+      socket.emit('chat:message', testMessage, (response) => {
+        log(`Response to chat:message: ${JSON.stringify(response)}`, 'success');
+      });
+      
+      socket.emit('message', testMessage, (response) => {
+        log(`Response to message: ${JSON.stringify(response)}`, 'success');
+      });
+    }
+    
+    // Clear logs
+    function clearLogs() {
+      logs.innerHTML = '';
+      log('Logs cleared');
+    }
+    
+    // Event listeners
+    connectBtn.addEventListener('click', connect);
+    disconnectBtn.addEventListener('click', disconnect);
+    testMessageBtn.addEventListener('click', sendTestMessage);
+    clearLogsBtn.addEventListener('click', clearLogs);
+    
+    // Initialize
+    async function init() {
+      // Set the socket URL from environment or to default
+      socketUrlInput.value = 'http://localhost:4100'; // Default
+      
+      // Attempt to get from window
+      if (window.env && window.env.NEXT_PUBLIC_WEBSOCKET_URL) {
+        socketUrlInput.value = window.env.NEXT_PUBLIC_WEBSOCKET_URL;
+        log(`Using WebSocket URL from window.env: ${socketUrlInput.value}`);
+      } else {
+        log('Environment variables not available from window.env, using default URL');
+      }
+      
+      log('Socket.IO test page loaded. Click "Connect" to start.');
+      updateSocketDetails();
+    }
+    
+    init();
+  </script>
+</body>
+</html>

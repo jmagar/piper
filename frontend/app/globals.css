@@ -1,0 +1,283 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    /* Surface colors */
+    --surface: 0 0% 100%;
+    --surface-raised: 0 0% 99%;
+    --surface-overlay: 0 0% 97%;
+    --surface-sunken: 0 0% 95%;
+    
+    /* Card colors */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    
+    /* Popover colors */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    
+    /* Primary colors */
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --primary-muted: 223 47% 20%;
+    --primary-emphasis: 224 46% 5%;
+    
+    /* Secondary colors */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    
+    /* Muted colors */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    /* Accent colors */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    /* Semantic colors */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+    --info: 198 93% 60%;
+    --info-foreground: 210 40% 98%;
+    
+    /* Border colors */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 215 20.2% 65.1%;
+    
+    /* Border radius */
+    --radius: 0.5rem;
+    
+    /* Font definitions */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    
+    /* Animation definitions */
+    --accordion-down: accordion-down 0.2s ease-out;
+    --accordion-up: accordion-up 0.2s ease-out;
+    
+    /* Layout definitions */
+    --sidebar-width: 280px;
+    --sidebar-width-icon: 4rem; /* 4rem = 64px = w-16 */
+    --sidebar-width-mobile: 18rem;
+    --sidebar-collapsed-width: 64px;
+    --sidebar-expanded: 1;
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    
+    /* Surface colors */
+    --surface: 222.2 84% 4.9%;
+    --surface-raised: 223 47% 11%;
+    --surface-overlay: 223 47% 13%;
+    --surface-sunken: 222 47% 2%;
+    
+    /* Card colors */
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    
+    /* Popover colors */
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary colors */
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-muted: 210 40% 90%;
+    --primary-emphasis: 210 40% 100%;
+    
+    /* Secondary colors */
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Muted colors */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
+    /* Accent colors */
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    
+    /* Semantic colors */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --success: 142 71% 35%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 40%;
+    --warning-foreground: 210 40% 98%;
+    --info: 198 93% 50%;
+    --info-foreground: 210 40% 98%;
+    
+    /* Border colors */
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217.2 32.6% 17.5%;
+  }
+}
+
+/* Media query for mobile */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-expanded: 0;
+  }
+}
+
+@layer utilities {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  
+  /* Enhanced color utilities for direct HSL usage */
+  .bg-surface {
+    @apply bg-[hsl(var(--surface))];
+  }
+  .bg-surface-raised {
+    @apply bg-[hsl(var(--surface-raised))];
+  }
+  .bg-surface-overlay {
+    @apply bg-[hsl(var(--surface-overlay))];
+  }
+  .bg-surface-sunken {
+    @apply bg-[hsl(var(--surface-sunken))];
+  }
+  
+  .text-primary-muted {
+    @apply text-[hsl(var(--primary-muted))];
+  }
+  .text-primary-emphasis {
+    @apply text-[hsl(var(--primary-emphasis))];
+  }
+  
+  .border-primary-muted {
+    @apply border-[hsl(var(--primary-muted))];
+  }
+  
+  /* Success, warning, info utilities */
+  .bg-success {
+    @apply bg-[hsl(var(--success))];
+  }
+  .text-success {
+    @apply text-[hsl(var(--success))];
+  }
+  .bg-warning {
+    @apply bg-[hsl(var(--warning))];
+  }
+  .text-warning {
+    @apply text-[hsl(var(--warning))];
+  }
+  .bg-info {
+    @apply bg-[hsl(var(--info))];
+  }
+  .text-info {
+    @apply text-[hsl(var(--info))];
+  }
+  
+  /* Sidebar utilities */
+  .with-sidebar-margin {
+    @apply transition-[margin-left] duration-300;
+    margin-left: calc(var(--sidebar-expanded) * var(--sidebar-width) + (1 - var(--sidebar-expanded)) * var(--sidebar-collapsed-width));
+  }
+  
+  /* Z-index utilities */
+  .z-35 {
+    z-index: 35;
+  }
+  
+  .z-40 {
+    z-index: 40;
+  }
+  
+  .z-50 {
+    z-index: 50;
+  }
+  
+  /* Debug utilities for development */
+  .debug {
+    outline: 1px solid red;
+  }
+  
+  .debug-blue {
+    outline: 1px solid blue;
+  }
+  
+  .debug-green {
+    outline: 1px solid green;
+  }
+}
+
+/* Animations */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+/* Custom utility classes */
+.w-\(--sidebar-width\) {
+  width: var(--sidebar-width);
+}
+
+.w-\(--sidebar-width-icon\) {
+  width: var(--sidebar-width-icon);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.mask-fade-out {
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+}
+
+.chat-container-left-aligned {
+  margin-left: 0;
+  margin-right: auto;
+  max-width: 100%;
+}

@@ -1,0 +1,56 @@
+paths:
+  /api/realtime/status:
+    get:
+      summary: Get realtime connection status
+      operationId: getRealtimeStatus
+      tags: [Realtime]
+      responses:
+        200:
+          description: Realtime connection status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [connected, disconnected]
+                  connectedClients:
+                    type: integer
+                  uptime:
+                    type: integer
+                    description: Server uptime in seconds
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /api/realtime/events:
+    post:
+      summary: Send realtime event
+      operationId: sendEvent
+      tags: [Realtime]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+                target:
+                  type: string
+                  format: uuid
+                  description: Target user ID, if not specified broadcast to all
+      responses:
+        200:
+          description: Event sent
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

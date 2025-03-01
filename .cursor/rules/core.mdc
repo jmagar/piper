@@ -1,0 +1,83 @@
+---
+description: Core project rules
+globs: 
+alwaysApply: false
+---
+# Core Project Rules
+
+These rules apply to all code in the project.
+
+<rule>
+name: core_standards
+description: Core standards for the entire project
+filters:
+  - type: file_extension
+    pattern: "\\.tsx?$|\\.jsx?$"
+
+actions:
+  - type: suggest
+    message: |
+      Follow these core standards:
+      
+      1. TypeScript:
+         - Use strict type checking
+         - No explicit any
+         - Prefer type imports
+         - Use proper error boundaries
+         - Handle async operations properly
+      
+      2. React:
+         - Use functional components
+         - Proper hooks usage
+         - Handle cleanup in useEffect
+         - Use proper error boundaries
+         - Follow accessibility best practices
+      
+      3. Code Style:
+         - Use modern ES6+ features
+         - Prefer const over let
+         - Use proper error handling
+         - Follow project ESLint rules
+         - Use proper JSDoc comments
+      
+      4. Performance:
+         - Optimize imports
+         - Use proper memoization
+         - Handle large lists properly
+         - Implement proper caching
+         - Use code splitting when needed
+      
+      5. Security:
+         - Validate all inputs
+         - Sanitize user data
+         - No hardcoded secrets
+         - Use proper CSRF protection
+         - Follow security best practices
+
+examples:
+  - input: |
+      // Bad
+      function getData(input: any) {
+        return fetch('/api/data').then(res => res.json())
+      }
+
+      // Good
+      async function getData(input: string): Promise<Data> {
+        try {
+          const response = await fetch('/api/data')
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+          const data = await response.json()
+          return validateData(data)
+        } catch (error) {
+          console.error('Failed to fetch data:', error)
+          throw error
+        }
+      }
+    output: "Properly typed async function with error handling"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

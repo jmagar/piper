@@ -1,0 +1,110 @@
+components:
+  schemas:
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - content
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        content:
+          type: string
+          description: Text content of the message
+        role:
+          type: string
+          enum: [user, assistant, system]
+          description: Role of the message sender
+        userId:
+          type: string
+          format: uuid
+          description: User who sent or received the message
+        username:
+          type: string
+          description: Display name of the user
+        conversationId:
+          type: string
+          format: uuid
+          description: Conversation this message belongs to
+        parentId:
+          type: string
+          format: uuid
+          description: Parent message ID for threaded replies
+        type:
+          type: string
+          enum: [text, code, system, file-list, stream-chunk]
+          default: text
+          description: Type of message content
+        status:
+          type: string
+          enum: [sending, streaming, sent, delivered, error]
+          default: delivered
+          description: Delivery status of the message
+        createdAt:
+          type: string
+          format: date-time
+          description: When the message was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the message was last updated
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata for the message
+          properties:
+            edited:
+              type: boolean
+              description: Whether the message has been edited
+            editedAt:
+              type: string
+              format: date-time
+              description: When the message was last edited
+            reaction:
+              type: string
+              enum: [up, down]
+              description: User reaction to the message
+            starred:
+              type: boolean
+              description: Whether the message is starred
+            streaming:
+              type: boolean
+              description: Whether the message is currently streaming
+            streamComplete:
+              type: boolean
+              description: Whether streaming is complete
+            streamEndTime:
+              type: string
+              format: date-time
+              description: When streaming ended
+            error:
+              type: string
+              description: Error message if status is error
+            files:
+              type: array
+              description: File attachments for this message
+              items:
+                $ref: './file-attachment.yaml#/components/schemas/FileAttachment'
+            tools:
+              type: array
+              description: Tools used in generating this message
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Name of the tool
+                  icon:
+                    type: string
+                    description: Icon identifier for the tool
+                  description:
+                    type: string
+                    description: Description of the tool
+                  status:
+                    type: string
+                    enum: [success, error, running]
+                    description: Status of the tool execution 

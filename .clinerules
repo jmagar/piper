@@ -1,0 +1,197 @@
+// Cursor Rules Configuration
+{
+    "rules": {
+        // Package management rules
+        "package": {
+            "noDowngrade": true,
+            "preferExact": true,
+            "requiredDependencies": {
+                "next": "15.0.0-canary",
+                "react": "19.0.0",
+                "tailwindcss": "4.0.0",
+                "@shadcn/ui": "latest",
+                "pnpm": "10.4.1",
+                "eslint": "9.0.0"
+            },
+            "requiredDevDependencies": [
+                "typescript",
+                "@types/node",
+                "@modelcontextprotocol/sdk"
+            ]
+        },
+        
+        // Code style rules
+        "style": {
+            "preferArrowFunctions": true,
+            "preferConst": true,
+            "maxLineLength": 100,
+            "useTabs": false,
+            "tabWidth": 2
+        },
+        
+        // TypeScript rules
+        "typescript": {
+            "strict": true,
+            "noImplicitAny": true,
+            "noUncheckedIndexedAccess": true,
+            "exactOptionalPropertyTypes": true
+        },
+        
+        // React rules
+        "react": {
+            "preferFunctionComponents": true,
+            "useStrictMode": true,
+            "noDefaultExports": false,
+            "preferNamedExports": true
+        },
+        
+        // Testing rules
+        "testing": {
+            "requireTests": true,
+            "testPattern": "**/*.test.{ts,tsx}",
+            "coverageThreshold": 80
+        },
+        
+        // Documentation rules
+        "documentation": {
+            "requireJSDoc": true,
+            "requireParamDescription": true,
+            "requireReturnDescription": true,
+            "links": {
+                "tailwind": "https://tailwindcss.com/docs/installation/framework-guides/nextjs",
+                "react": "https://react.dev/reference/react",
+                "next": "https://nextjs.org/docs",
+                "shadcn": "https://ui.shadcn.com/docs/tailwind-v4#nextjs",
+                "eslint": "https://eslint.org/docs",
+                "turbopack": "https://nextjs.org/docs/app/api-reference/turbopack"
+            }
+        },
+        
+        // Import rules
+        "imports": {
+            "preferNamed": true,
+            "groupOrder": [
+                "builtin",
+                "external",
+                "internal",
+                "parent",
+                "sibling",
+                "index"
+            ]
+        },
+        
+        // Error handling rules
+        "errorHandling": {
+            "requireTryCatch": true,
+            "requireErrorBoundaries": true
+        },
+        
+        // API rules
+        "api": {
+            "preferOpenAPI": true,
+            "requireValidation": true,
+            "requireErrorHandling": true,
+            "generator": "openapi-typescript-codegen"
+        },
+        
+        // Security rules
+        "security": {
+            "noHardcodedSecrets": true,
+            "requireCSRF": true,
+            "requireSanitization": true
+        },
+        
+        // Performance rules
+        "performance": {
+            "preferMemo": true,
+            "preferCallback": true,
+            "requireLazy": true
+        },
+        
+        // File organization rules
+        "fileOrganization": {
+            "maxFileLength": 500,
+            "isMonorepo": true,
+            "componentStructure": {
+                "components": "frontend/components",
+                "pages": "frontend/app",
+                "hooks": "frontend/hooks",
+                "utils": "frontend/lib",
+                "types": "frontend/types",
+                "api": "backend/src",
+                "mcp": {
+                    "server": "backend/src/modules/servers",
+                    "client": "frontend/lib/mcp",
+                    "types": "frontend/types/mcp"
+                }
+            }
+        },
+        
+        // MCP rules
+        "mcp": {
+            "protocolVersion": "2024-11-05",
+            "requireHealthChecks": false,
+            "requireToolValidation": true,
+            "requireErrorHandling": true,
+            "serverConfig": {
+                "enforceCapabilities": true,
+                "validateToolSchema": true,
+                "requireToolDescription": true,
+                "requireParameterTypes": true
+            },
+            "clientConfig": {
+                "validateResponses": true,
+                "handleReconnection": true,
+                "enforceTimeout": true,
+                "requireErrorBoundaries": true
+            }
+        },
+        
+        // Framework and tooling rules
+        "framework": {
+            "bundler": "turbopack",
+            "neverUseWebpack": true
+        },
+        
+        // Project scripts
+        "scripts": {
+            "apiGeneration": "scripts/generate-api.sh",
+            "serverStart": "scripts/start-server.ts"
+        },
+        
+        // ESLint configuration
+        "eslint": {
+            "configFile": "eslint.config.js",
+            "useFlatConfig": true,
+            "version": 9
+        }
+    },
+    
+    // Global constraints
+    "constraints": {
+        "noPackageDowngrades": true,
+        "noDeprecatedPackages": true,
+        "enforceDockerCompose": true,
+        "readEntireFileBeforeEdit": true,
+        "searchBeforeCreate": true
+    },
+    
+    // Ignore patterns
+    "ignore": [
+        "node_modules",
+        "dist",
+        ".next",
+        "coverage",
+        "*.test.{ts,tsx}",
+        "*.spec.{ts,tsx}"
+    ],
+    
+    // Custom prompts for specific file types
+    "prompts": {
+        "*.tsx": "Ensure component follows React best practices and includes proper type definitions",
+        "*.test.tsx": "Include comprehensive test cases covering edge cases and error scenarios",
+        "api/*.ts": "Follow REST API best practices and include proper error handling",
+        "types/*.ts": "Ensure type definitions are complete and well-documented",
+        "mcp/*.ts": "Follow MCP 2024-11-05 specification and include proper error handling"
+    }
+} 

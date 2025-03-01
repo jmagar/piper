@@ -1,0 +1,61 @@
+components:
+  schemas:
+    FileAttachment:
+      type: object
+      required:
+        - id
+        - name
+        - url
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the file attachment
+        name:
+          type: string
+          description: Original filename of the attachment
+        url:
+          type: string
+          format: uri
+          description: URL to access the file content
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes
+        type:
+          type: string
+          description: MIME type of the file
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata for the file
+          properties:
+            width:
+              type: integer
+              description: Width in pixels (for images)
+            height:
+              type: integer
+              description: Height in pixels (for images)
+            duration:
+              type: number
+              description: Duration in seconds (for audio/video)
+            thumbnailUrl:
+              type: string
+              format: uri
+              description: URL to a thumbnail (for images/videos)
+            createdAt:
+              type: string
+              format: date-time
+              description: When the file was uploaded
+            updatedAt:
+              type: string
+              format: date-time
+              description: When the file was last modified
+            userId:
+              type: string
+              format: uuid
+              description: User who uploaded the file
+            conversationId:
+              type: string
+              format: uuid
+              description: Conversation the file is associated with 

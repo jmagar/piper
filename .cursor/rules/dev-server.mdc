@@ -1,0 +1,11 @@
+---
+description: Development server rules
+globs: 
+alwaysApply: false
+---
+
+# Dev Server Rules
+
+If the servers aren't running and you need to start them, we run them with pnpm run dev from project root. This uses [start-servers.ts](mdc:scripts/start-servers.ts) to start them both, this will also start our docker containers if they're not running.
+
+You don't need to restart the servers everytime you make a change because we have hot reload enabled on the servers.

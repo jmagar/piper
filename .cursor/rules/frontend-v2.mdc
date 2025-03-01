@@ -1,0 +1,173 @@
+---
+description: Frontend rules for React 19, NextJS 15 Canary, TalwindCSS 4, shadcn UI, Typescript
+globs: 
+alwaysApply: false
+---
+# Frontend V2 Implementation Rules
+
+## Core Technology Requirements
+
+- React 19.0.0 with latest features
+- Next.js 15.0.0-canary with App Router
+- TailwindCSS 4.0.0 with latest improvements
+- shadcn UI (latest) with Tailwind v4 compatibility
+- TypeScript 5.x with strict typing
+
+## Architecture Rules
+
+### Mobile-First Design
+- All components must be designed mobile-first
+- Touch targets must be minimum 44×44px
+- Support all screen sizes and orientations
+- Optimize for variable network conditions
+- Use container queries for component-level responsiveness
+- Implement dynamic viewport units for mobile
+
+### React 19 Features
+- Use Actions API for form handling
+- Implement useOptimistic for async operations
+- Utilize use directive for resource handling
+- Apply Suspense for loading states
+- Implement proper Error Boundaries
+- Use asset loading improvements
+
+### Component Structure
+```
+frontend/
+├── components/     # Current components
+└── components-v2/  # New React 19 components
+    ├── ui/         # shadcn components
+    ├── layout/     # Layout components
+    ├── chat/       # Chat components
+    └── shared/     # Shared utilities
+```
+
+### State Management
+- Use feature flags for parallel implementation
+- Implement shared state layer between versions
+- Use adapter patterns for data sources
+- Create event system for cross-version communication
+
+## Implementation Rules
+
+### Component Development
+- All components must include TypeScript types
+- No 'any' types allowed
+- Implement proper error boundaries
+- Use Suspense for loading states
+- Follow mobile-first responsive design
+- Meet WCAG 2.1 AA standards minimum
+- Optimize using React 19 features
+- Include full JSDoc documentation
+- Write unit tests for all components
+
+### Styling Rules
+- Use TailwindCSS 4 logical properties
+- Implement proper dark mode support
+- Use CSS variables for theming
+- Follow container query patterns
+- Use proper color system
+- Implement consistent spacing
+- Follow accessibility contrast guidelines
+
+### Performance Requirements
+- Implement code splitting
+- Use proper lazy loading
+- Optimize bundle size
+- Use proper caching strategies
+- Implement proper preloading
+- Monitor and optimize Core Web Vitals
+
+### Security Rules
+- Validate all user inputs
+- Implement proper CSRF protection
+- Use secure authentication patterns
+- Follow secure data handling practices
+- Implement proper error handling
+- Use secure state management
+
+### Testing Requirements
+- Write unit tests for all components
+- Implement integration tests
+- Test mobile responsiveness
+- Verify accessibility compliance
+- Test performance metrics
+- Validate security measures
+
+## File Organization
+
+### Layout Components
+- Implement proper sidebar management
+- Create responsive header component
+- Use proper navigation patterns
+- Implement proper mobile menus
+- Follow consistent layout structure
+
+### Chat Components
+- Implement proper message handling
+- Use optimistic updates
+- Handle real-time features
+- Implement proper input handling
+- Follow proper chat UI patterns
+
+### UI Components
+- Follow shadcn UI patterns
+- Implement proper form controls
+- Use consistent button styles
+- Follow proper modal patterns
+- Implement proper dropdown menus
+
+## Documentation Requirements
+
+### Code Documentation
+- Use proper JSDoc comments
+- Document component props
+- Include usage examples
+- Document breaking changes
+- Include accessibility notes
+
+### Type Definitions
+- Use proper TypeScript types
+- Document type constraints
+- Include proper interfaces
+- Use proper generics
+- Follow type naming conventions
+
+## Quality Assurance
+
+### Code Quality
+- Follow ESLint rules
+- Use proper formatting
+- Follow naming conventions
+- Implement proper error handling
+- Follow SOLID principles
+
+### Performance Metrics
+- Monitor bundle size
+- Track load times
+- Measure interaction times
+- Monitor memory usage
+- Track API response times
+
+### Accessibility Checks
+- Use proper ARIA attributes
+- Test with screen readers
+- Verify keyboard navigation
+- Check color contrast
+- Validate focus management
+
+## Development Workflow
+
+### Version Control
+- Use proper branch naming
+- Write clear commit messages
+- Follow PR templates
+- Include proper documentation
+- Update changelogs
+
+### Deployment
+- Use proper staging
+- Implement feature flags
+- Follow CI/CD pipeline
+- Monitor deployments
+- Track performance impact 

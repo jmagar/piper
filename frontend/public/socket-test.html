@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.IO Connection Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .status-indicator {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      display: inline-block;
+      background-color: #ccc;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    .connected {
+      background-color: #4caf50;
+    }
+    .connecting {
+      background-color: #ff9800;
+      animation: pulse 1s infinite;
+    }
+    .disconnected {
+      background-color: #f44336;
+    }
+    .status-text {
+      font-weight: bold;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .log-container {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+      font-family: monospace;
+    }
+    .log-entry {
+      margin: 5px 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .log-error {
+      color: #f44336;
+    }
+    .log-success {
+      color: #4caf50;
+    }
+    .log-info {
+      color: #2196f3;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0b7dda;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    #error-details {
+      color: #f44336;
+      font-weight: bold;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Socket.IO Connection Test</h1>
+  <p>Testing direct connection to backend WebSocket server</p>
+  
+  <div class="status">
+    <div id="status-indicator" class="status-indicator disconnected"></div>
+    <span id="status-text" class="status-text">Disconnected</span>
+    <span id="socket-id"></span>
+  </div>
+  
+  <div id="error-details"></div>
+  
+  <div class="controls">
+    <button id="connect-btn">Connect</button>
+    <button id="disconnect-btn" disabled>Disconnect</button>
+    <button id="send-test-btn" disabled>Send Test Message</button>
+    <button id="clear-logs-btn">Clear Logs</button>
+  </div>
+  
+  <div class="log-container" id="log-container"></div>
+  
+  <!-- Import Socket.IO client library -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  
+  <script>
+    // DOM elements
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    const socketIdEl = document.getElementById('socket-id');
+    const errorDetails = document.getElementById('error-details');
+    const logContainer = document.getElementById('log-container');
+    const connectBtn = document.getElementById('connect-btn');
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    const sendTestBtn = document.getElementById('send-test-btn');
+    const clearLogsBtn = document.getElementById('clear-logs-btn');
+    
+    // Socket reference
+    let socket = null;
+    
+    // Logging function
+    function log(message, type = 'info', data = null) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      entry.textContent = `[${timestamp}] ${message}`;
+      
+      if (data) {
+        try {
+          const dataStr = typeof data === 'object' ? JSON.stringify(data) : String(data);
+          if (dataStr.length > 100) {
+            entry.textContent += ` (data truncated, see console)`;
+            console.log('Log data:', data);
+          } else {
+            entry.textContent += ` ${dataStr}`;
+          }
+        } catch (err) {
+          entry.textContent += ` [Error stringifying data]`;
+          console.log('Log data:', data);
+        }
+      }
+      
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    // Update connection status UI
+    function updateStatus(status, id = null, error = null) {
+      statusIndicator.className = 'status-indicator ' + status;
+      statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      
+      if (id) {
+        socketIdEl.textContent = `(ID: ${id})`;
+      } else {
+        socketIdEl.textContent = '';
+      }
+      
+      if (error) {
+        errorDetails.textContent = `Error: ${error}`;
+        errorDetails.style.display = 'block';
+      } else {
+        errorDetails.style.display = 'none';
+      }
+      
+      // Update button states
+      connectBtn.disabled = status === 'connected' || status === 'connecting';
+      disconnectBtn.disabled = status === 'disconnected';
+      sendTestBtn.disabled = status !== 'connected';
+    }
+    
+    // Connect to socket
+    function connectSocket() {
+      if (socket) {
+        log('Socket already exists, disconnecting first...', 'warn');
+        socket.disconnect();
+      }
+      
+      updateStatus('connecting');
+      log('Connecting to socket server...', 'info');
+      
+      // Try both localhost and the explicit IP for testing
+      const urls = [
+        'http://localhost:4100',
+        'http://127.0.0.1:4100',
+        // Add your server's public IP if needed
+      ];
+      
+      // Use the first URL for initial connection
+      const url = urls[0];
+      log(`Using URL: ${url}`, 'info');
+      
+      try {
+        socket = io(url, {
+          transports: ['polling', 'websocket'],  // Try polling first
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 1000,
+          timeout: 20000,
+          forceNew: true,
+          auth: {
+            userId: 'browser-test-user',
+            username: 'Browser Test User',
+            timestamp: Date.now()
+          }
+        });
+        
+        log('Socket object created', 'info');
+        
+        // Socket event handlers
+        socket.on('connect', () => {
+          log('Connected!', 'success');
+          updateStatus('connected', socket.id);
+        });
+        
+        socket.on('connect_error', (err) => {
+          log(`Connection error: ${err.message}`, 'error', err);
+          updateStatus('disconnected', null, err.message);
+          
+          // If first URL fails, try the next URL
+          if (url === urls[0] && urls.length > 1) {
+            log(`Trying alternative URL: ${urls[1]}`, 'info');
+            socket.io.uri = urls[1];
+            socket.connect();
+          }
+        });
+        
+        socket.on('disconnect', (reason) => {
+          log(`Disconnected: ${reason}`, 'warn');
+          updateStatus('disconnected');
+        });
+        
+        socket.io.on('reconnect_attempt', (attempt) => {
+          log(`Reconnection attempt ${attempt}`, 'info');
+          updateStatus('connecting');
+        });
+        
+        socket.io.on('reconnect', (attempt) => {
+          log(`Reconnected after ${attempt} attempts`, 'success');
+          updateStatus('connected', socket.id);
+        });
+        
+        socket.io.on('reconnect_failed', () => {
+          log('Failed to reconnect after all attempts', 'error');
+          updateStatus('disconnected', null, 'Reconnection failed');
+        });
+        
+        // Handle any event
+        socket.onAny((event, ...args) => {
+          log(`Event received: ${event}`, 'info', args);
+        });
+        
+      } catch (err) {
+        log(`Error creating socket: ${err.message}`, 'error');
+        updateStatus('disconnected', null, err.message);
+      }
+    }
+    
+    // Disconnect socket
+    function disconnectSocket() {
+      if (!socket) {
+        log('No socket to disconnect', 'warn');
+        return;
+      }
+      
+      log('Manually disconnecting socket...', 'info');
+      socket.disconnect();
+      updateStatus('disconnected');
+    }
+    
+    // Send test message
+    function sendTestMessage() {
+      if (!socket || !socket.connected) {
+        log('Cannot send message: Socket not connected', 'error');
+        return;
+      }
+      
+      const testMessage = {
+        id: `test-${Date.now()}`,
+        content: 'This is a test message',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'sending',
+        userId: 'browser-test-user',
+        username: 'Browser Test'
+      };
+      
+      log('Sending test message', 'info', testMessage);
+      
+      socket.emit('message:sent', testMessage, (response) => {
+        log('Message response received', 'success', response);
+      });
+    }
+    
+    // Button event handlers
+    connectBtn.addEventListener('click', connectSocket);
+    disconnectBtn.addEventListener('click', disconnectSocket);
+    sendTestBtn.addEventListener('click', sendTestMessage);
+    clearLogsBtn.addEventListener('click', () => {
+      logContainer.innerHTML = '';
+      log('Logs cleared', 'info');
+    });
+    
+    // Initialize
+    log('Socket test page loaded', 'info');
+    updateStatus('disconnected');
+  </script>
+</body>
+</html> 

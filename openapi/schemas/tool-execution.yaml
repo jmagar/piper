@@ -1,0 +1,80 @@
+paths:
+  /tools/executions:
+    get:
+      summary: Get tool execution history
+      operationId: getToolExecutions
+      tags: [Tools]
+      parameters:
+        - name: toolId
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: List of tool executions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        toolId:
+                          type: string
+                        userId:
+                          type: string
+                          format: uuid
+                        status:
+                          type: string
+                          enum: [pending, running, completed, failed]
+                        input:
+                          type: object
+                          additionalProperties: true
+                        output:
+                          type: object
+                          additionalProperties: true
+                        error:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                            message:
+                              type: string
+                            details:
+                              type: object
+                              additionalProperties: true
+                        startTime:
+                          type: string
+                          format: date-time
+                        endTime:
+                          type: string
+                          format: date-time
+                  nextCursor:
+                    type: string
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

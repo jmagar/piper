@@ -1,0 +1,60 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022"],
+        "outDir": "dist",
+        "rootDir": ".",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"],
+            "@generated/*": ["src/generated/*"]
+        },
+        "types": ["node", "vitest"],
+        "allowJs": true,
+        "declaration": true,
+        "sourceMap": true,
+        "declarationMap": true,
+        "composite": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "noImplicitThis": true,
+        "useUnknownInCatchVariables": true,
+        "alwaysStrict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "exactOptionalPropertyTypes": false,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": false,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": false,
+        "allowUnusedLabels": false,
+        "allowUnreachableCode": false
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.mts",
+        "src/**/*.js",
+        "src/**/*.mjs",
+        "prisma/**/*.ts",
+        "*.config.ts",
+        "*.config.js",
+        "*.config.mjs",
+        "**/*.test.ts",
+        "**/*.spec.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

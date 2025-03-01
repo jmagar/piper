@@ -1,0 +1,53 @@
+paths:
+  /api/analytics/metrics:
+    get:
+      summary: Get analytics metrics
+      operationId: getMetrics
+      tags: [Analytics]
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Analytics metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messageCount:
+                    type: integer
+                  userCount:
+                    type: integer
+                  toolUsage:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  activeUsers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        messageCount:
+                          type: integer
+                        lastActive:
+                          type: string
+                          format: date-time
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'

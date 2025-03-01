@@ -1,0 +1,59 @@
+paths:
+  /api/tools:
+    get:
+      summary: Get available tools
+      operationId: getAvailableTools
+      tags: [Tools]
+      responses:
+        200:
+          description: List of available tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../main.yaml#/components/schemas/Tool'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError'
+
+  /api/tools/{toolId}/invoke:
+    post:
+      summary: Invoke a tool
+      operationId: invokeTool
+      tags: [Tools]
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - parameters
+              properties:
+                parameters:
+                  type: object
+                  additionalProperties: true
+      responses:
+        200:
+          description: Tool invocation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    additionalProperties: true
+        400:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        404:
+          $ref: '../main.yaml#/components/responses/ApiError'
+        500:
+          $ref: '../main.yaml#/components/responses/ApiError' 

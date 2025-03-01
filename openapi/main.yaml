@@ -1,0 +1,1014 @@
+openapi: 3.0.0
+info:
+  title: Pooper API
+  version: 1.0.0
+  description: |
+    API for the Pooper chat application.
+    Provides endpoints for chat, MCP, tools, analytics, realtime, config, prompt, and preview services.
+
+servers:
+  - url: http://localhost:4100
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Chat
+    description: Chat related endpoints
+  - name: Config
+    description: Configuration endpoints
+  - name: MCP
+    description: Model Context Protocol endpoints
+  - name: Tools
+    description: Tool management endpoints
+  - name: Analytics
+    description: Analytics and metrics endpoints
+  - name: Realtime
+    description: Realtime communication endpoints
+  - name: Prompt
+    description: Prompt enhancement and management endpoints
+  - name: Dashboard
+    description: Dashboard and statistics endpoints
+
+components:
+  responses:
+    ApiError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    StreamChunk:
+      type: object
+      required:
+        - type
+        - content
+      properties:
+        type:
+          type: string
+          enum: [chunk, error, done]
+        content:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ApiError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ChatMessage:
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessage'
+
+    ChatMessageType:
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessageType'
+
+    ChatMessageMetadata:
+      $ref: './schemas/langchain.yaml#/components/schemas/ChatMessageMetadata'
+
+    LangChainOptions:
+      $ref: './schemas/langchain.yaml#/components/schemas/LangChainOptions'
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - title
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    StarredMessage:
+      type: object
+      required:
+        - id
+        - messageId
+        - userId
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageReaction:
+      type: object
+      required:
+        - id
+        - messageId
+        - userId
+        - emoji
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        emoji:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UserStats:
+      type: object
+      required:
+        - userId
+        - messageCount
+        - conversationCount
+      properties:
+        userId:
+          type: string
+          format: uuid
+        messageCount:
+          type: integer
+        conversationCount:
+          type: integer
+        lastActive:
+          type: string
+          format: date-time
+
+    ConversationStats:
+      type: object
+      required:
+        - conversationId
+        - messageCount
+        - participantCount
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        messageCount:
+          type: integer
+        participantCount:
+          type: integer
+        lastMessage:
+          type: string
+          format: date-time
+
+    Tool:
+      type: object
+      required:
+        - id
+        - name
+        - serverId
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        serverId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [system, plugin, custom]
+          default: custom
+        parameters:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              description:
+                type: string
+              required:
+                type: boolean
+                default: false
+              schema:
+                type: object
+                additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+paths:
+  # Health routes
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Check if the API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  # Chat routes
+  /api/chat:
+    get:
+      tags:
+        - Chat
+      summary: Get chat messages
+      description: Retrieve chat messages
+      responses:
+        '200':
+          description: Chat messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatMessage'
+    post:
+      tags:
+        - Chat
+      summary: Send a chat message
+      description: Send a new chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+                - userId
+              properties:
+                content:
+                  type: string
+                userId:
+                  type: string
+                  format: uuid
+                conversationId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Chat message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+
+  /api/chat/conversations/{userId}:
+    get:
+      tags:
+        - Chat
+      summary: Get user conversations
+      description: Retrieve conversations for a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+
+  /api/chat/messages/star:
+    post:
+      tags:
+        - Chat
+      summary: Star a message
+      description: Mark a message as starred
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Message starred successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StarredMessage'
+
+  /api/chat/messages/unstar:
+    post:
+      tags:
+        - Chat
+      summary: Unstar a message
+      description: Remove star from a message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - userId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Message unstarred successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  # Config routes
+  /api/config:
+    get:
+      tags:
+        - Config
+      summary: Get configuration
+      description: Retrieve application configuration
+      responses:
+        '200':
+          description: Configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+    put:
+      tags:
+        - Config
+      summary: Update configuration
+      description: Update application configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  # MCP routes
+  /api/mcp/servers:
+    get:
+      tags:
+        - MCP
+      summary: Get MCP servers
+      description: Retrieve list of MCP servers
+      responses:
+        '200':
+          description: MCP servers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags:
+        - MCP
+      summary: Create MCP server
+      description: Create a new MCP server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - url
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                url:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '201':
+          description: MCP server created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/servers/{serverId}:
+    get:
+      tags:
+        - MCP
+      summary: Get MCP server details
+      description: Retrieve details for a specific MCP server
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: MCP server details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    delete:
+      tags:
+        - MCP
+      summary: Delete MCP server
+      description: Delete a specific MCP server
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: MCP server deleted successfully
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/tools:
+    get:
+      tags:
+        - MCP
+      summary: Get MCP tools
+      description: Retrieve list of MCP tools
+      responses:
+        '200':
+          description: MCP tools retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tool'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    post:
+      tags:
+        - MCP
+      summary: Create MCP tool
+      description: Create a new MCP tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tool'
+      responses:
+        '201':
+          description: MCP tool created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/tools/{toolId}:
+    get:
+      tags:
+        - MCP
+      summary: Get MCP tool
+      description: Get a specific MCP tool by ID
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: MCP tool retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    put:
+      tags:
+        - MCP
+      summary: Update MCP tool
+      description: Update a specific MCP tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tool'
+      responses:
+        '200':
+          description: MCP tool updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tool'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    delete:
+      tags:
+        - MCP
+      summary: Delete MCP tool
+      description: Delete a specific MCP tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: MCP tool deleted successfully
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/tools/{name}/execute:
+    post:
+      tags:
+        - MCP
+      summary: Execute MCP tool
+      description: Execute a specific MCP tool
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                params:
+                  type: object
+                  additionalProperties: true
+                serverId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Tool executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/health:
+    get:
+      tags:
+        - MCP
+      summary: MCP health check
+      description: Check if MCP is healthy
+      responses:
+        '200':
+          description: MCP is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                  uptime:
+                    type: number
+                  memoryUsage:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                      used:
+                        type: number
+                      free:
+                        type: number
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/config:
+    get:
+      tags:
+        - MCP
+      summary: Get MCP configuration
+      description: Retrieve MCP configuration
+      responses:
+        '200':
+          description: MCP configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    put:
+      tags:
+        - MCP
+      summary: Update MCP configuration
+      description: Update MCP configuration
+      parameters:
+        - name: createBackup
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Whether to create a backup of the current configuration before updating
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: MCP configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  backupCreated:
+                    type: boolean
+                  backupPath:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/config/backup:
+    get:
+      tags:
+        - MCP
+      summary: Get configuration backups
+      description: Get a list of MCP configuration backups
+      responses:
+        '200':
+          description: Configuration backups retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        path:
+                          type: string
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    post:
+      tags:
+        - MCP
+      summary: Create backup
+      description: Create a backup of the current MCP configuration
+      responses:
+        '200':
+          description: Configuration backup created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  backupPath:
+                    type: string
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/config/backup/{backupId}:
+    get:
+      tags:
+        - MCP
+      summary: Get backup
+      description: Get a specific MCP configuration backup
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration backup retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    post:
+      tags:
+        - MCP
+      summary: Restore backup
+      description: Restore a specific MCP configuration backup
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: createBackup
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Whether to create a backup of the current configuration before restoring
+      responses:
+        '200':
+          description: Configuration backup restored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  backupCreated:
+                    type: boolean
+                  backupPath:
+                    type: string
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    delete:
+      tags:
+        - MCP
+      summary: Delete backup
+      description: Delete a specific MCP configuration backup
+      parameters:
+        - name: backupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration backup deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/mcp/config/validate:
+    post:
+      tags:
+        - MCP
+      summary: Validate configuration
+      description: Validate an MCP configuration without saving it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Configuration validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path:
+                          type: string
+                        message:
+                          type: string
+                        severity:
+                          type: string
+                          enum: [error, warning, info]
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  # Prompt routes
+  /api/prompt/enhance:
+    post:
+      tags:
+        - Prompt
+      summary: Enhance prompt
+      description: Enhance a user prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  type: string
+                options:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Prompt enhanced successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enhancedPrompt:
+                    type: string
+
+  # Dashboard routes
+  /api/dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard statistics
+      description: Retrieve statistics for the dashboard
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userStats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserStats'
+                  conversationStats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationStats'
