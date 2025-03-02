@@ -13,16 +13,96 @@ export enum ConnectionState {
 }
 
 /**
+ * Message status enum
+ */
+export enum MessageStatus {
+  SENDING = 'sending',
+  SENT = 'sent',
+  DELIVERED = 'delivered',
+  READ = 'read',
+  ERROR = 'error'
+}
+
+/**
  * Socket connection status
  */
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 /**
- * Socket connection options
+ * Socket auth options
+ */
+export interface SocketAuthOptions {
+  token: string;
+  userId: string;
+}
+
+/**
+ * Socket connection configuration
+ */
+export interface SocketConnectionConfig {
+  url: string;
+  path: string;
+  autoConnect: boolean;
+  reconnectionAttempts: number;
+  reconnectionDelay: number;
+  reconnectionDelayMax: number;
+  timeout: number;
+}
+
+/**
+ * Socket options
  */
 export interface SocketOptions {
     userId: string;
     username: string;
+}
+
+/**
+ * Chat message interface for socket communications
+ */
+export interface ChatMessage {
+  id: string;
+  content: string;
+  role: "user" | "assistant" | "system";
+  createdAt: string;
+  updatedAt?: string;
+  status?: string;
+  type?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Message chunk interface for streaming responses
+ */
+export interface MessageChunk {
+  messageId: string;
+  chunk: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Message complete interface for streaming completion
+ */
+export interface MessageComplete {
+  messageId: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Message error interface for error handling
+ */
+export interface MessageError {
+  messageId: string;
+  error: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Message callback interface for response handling
+ */
+export interface MessageCallback {
+  (response: { error?: string; message?: ChatMessage; [key: string]: unknown }): void;
 }
 
 /**
@@ -43,6 +123,10 @@ export interface ServerToClientEvents {
  * Events sent from client to server
  */
 export interface ClientToServerEvents {
+    'message:send': (
+        message: ExtendedChatMessage,
+        callback: (response: { error?: string; message?: ExtendedChatMessage }) => void
+    ) => void;
     'message:sent': (
         message: ExtendedChatMessage,
         callback: (response: { error?: string; message?: ExtendedChatMessage }) => void

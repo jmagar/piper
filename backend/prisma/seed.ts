@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+    console.log('🌱 Starting database seed...');
+    
     // Create test user
     const user = await prisma.user.upsert({
         where: { email: 'test@example.com' },
@@ -17,6 +19,8 @@ async function main() {
             }
         }
     });
+
+    console.log(`Created user: ${user.name} (${user.email})`);
 
     // Create user stats
     await prisma.userStats.upsert({
@@ -43,6 +47,8 @@ async function main() {
             last_message_at: new Date()
         }
     });
+
+    console.log(`Created conversation: ${conversation.title}`);
 
     // Create conversation stats
     await prisma.conversationStats.upsert({
@@ -75,12 +81,54 @@ async function main() {
         }
     });
 
-    console.log('Seed completed');
+    // Create MCP server
+    const mcpServer = await prisma.mcpServer.upsert({
+        where: { id: 'clr3z1qw50000z1g5gqpg4x3c' },
+        update: {},
+        create: {
+            id: 'clr3z1qw50000z1g5gqpg4x3c',
+            name: 'Primary MCP Server',
+            url: 'http://localhost:4100/api/mcp',
+            type: 'primary',
+            status: 'active',
+            metadata: {
+                version: '1.0.0',
+                capabilities: ['text', 'image', 'code', 'data'],
+            }
+        }
+    });
+
+    console.log(`Created MCP server: ${mcpServer.name}`);
+
+    // Create MCP tools
+    await prisma.mcpTool.upsert({
+        where: { id: 'clr3z1qw50001z1g5gqpg4x3d' },
+        update: {},
+        create: {
+            id: 'clr3z1qw50001z1g5gqpg4x3d',
+            name: 'web_search',
+            description: 'Search the web for information',
+            type: 'system',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: {
+                        type: 'string',
+                        description: 'The search query',
+                    },
+                },
+                required: ['query'],
+            },
+            serverId: 'clr3z1qw50000z1g5gqpg4x3c'
+        }
+    });
+
+    console.log('✅ Seed completed successfully');
 }
 
 main()
     .catch((e) => {
-        console.error(e);
+        console.error('❌ Error seeding the database:', e);
         process.exit(1);
     })
     .finally(async () => {

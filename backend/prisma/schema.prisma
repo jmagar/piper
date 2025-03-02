@@ -1,0 +1,259 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User model for authentication and preferences
+model User {
+  id            String         @id @default(uuid())
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  email         String        @unique
+  name          String?
+  preferences   Json?         // Stores user preferences as JSON: { theme?: 'light' | 'dark', notifications?: boolean, language?: string }
+  conversations Conversation[]
+  messages      ChatMessage[]
+  reactions     MessageReaction[]
+  bookmarks     MessageBookmark[]
+  starred_messages StarredMessage[]
+  usage_stats   UserStats?
+  socket_events SocketEvent[]
+
+  @@map("users")
+}
+
+// Conversation model for chat history
+model Conversation {
+  id              String        @id @default(uuid())
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  title           String?
+  summary         String?       @db.Text  // AI-generated summary of the conversation
+  last_message_at DateTime      @default(now())
+  is_archived     Boolean       @default(false)  // For history management
+  messages        ChatMessage[]
+  user           User?         @relation(fields: [user_id], references: [id])
+  user_id        String?
+  stats          ConversationStats?
+  langgraph_states LangGraphState[]
+
+  @@index([is_archived])
+  @@map("conversations")
+}
+
+// ChatMessage model for individual messages
+model ChatMessage {
+  id              String        @id @default(uuid())
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  role            String        // "user" or "assistant"
+  content         String        @db.Text
+  metadata        Json?         // Stores message metadata (e.g., tool usage)
+  status          String        @default("sent") // "sending", "sent", "delivered", "error"
+  conversation    Conversation  @relation(fields: [conversation_id], references: [id])
+  conversation_id String
+  user           User?         @relation(fields: [user_id], references: [id])
+  user_id        String?
+  
+  // Threading support
+  parent_message  ChatMessage?  @relation("MessageThread", fields: [parent_id], references: [id])
+  parent_id      String?
+  replies        ChatMessage[]  @relation("MessageThread")
+  thread_summary String?       @db.Text
+
+  // Reactions
+  reactions      MessageReaction[]
+  bookmarks      MessageBookmark[]
+
+  starred_by     StarredMessage[]
+
+  @@index([conversation_id])
+  @@index([user_id])
+  @@index([parent_id])
+  @@index([created_at])
+  @@index([content]) // For full-text search
+  @@map("chat_messages")
+}
+
+// StarredMessage model for favorited messages
+model StarredMessage {
+  id          String      @id @default(uuid())
+  created_at  DateTime    @default(now())
+  note        String?     @db.Text  // Optional note about why it was starred
+  message     ChatMessage @relation(fields: [message_id], references: [id])
+  message_id  String
+  user        User        @relation(fields: [user_id], references: [id])
+  user_id     String
+
+  @@unique([message_id, user_id])  // One star per message per user
+  @@map("starred_messages")
+}
+
+// UserStats model for tracking user activity
+model UserStats {
+  id                      String   @id @default(uuid())
+  user                    User     @relation(fields: [user_id], references: [id])
+  user_id                 String   @unique
+  total_conversations     Int      @default(0)
+  total_messages          Int      @default(0)
+  total_starred          Int      @default(0)
+  average_response_length Float    @default(0)
+  last_active            DateTime @default(now())
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  @@map("user_stats")
+}
+
+// ConversationStats model for conversation metrics
+model ConversationStats {
+  id                  String       @id @default(uuid())
+  conversation        Conversation @relation(fields: [conversation_id], references: [id])
+  conversation_id     String       @unique
+  message_count       Int          @default(0)
+  user_message_count  Int          @default(0)
+  bot_message_count   Int          @default(0)
+  average_response_time Float      @default(0)
+  tool_usage_count    Int          @default(0)
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  @@map("conversation_stats")
+}
+
+// ToolResult model for caching tool outputs
+model ToolResult {
+  id          String   @id @default(uuid())
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  tool_name   String
+  input_hash  String   // Base64 encoded hash of the input
+  result      Json     // The cached result
+  expires_at  DateTime
+
+  @@unique([tool_name, input_hash])
+  @@index([expires_at])
+  @@map("tool_results")
+}
+
+// New model for flexible reactions
+model MessageReaction {
+    id          String      @id @default(uuid())
+    created_at  DateTime    @default(now())
+    emoji       String      // Unicode emoji or custom emoji code
+    message     ChatMessage @relation(fields: [message_id], references: [id])
+    message_id  String
+    user        User        @relation(fields: [user_id], references: [id])
+    user_id     String
+    group       String?     // For grouping similar reactions
+
+    @@unique([message_id, user_id, emoji])
+    @@index([message_id])
+    @@index([user_id])
+    @@map("message_reactions")
+}
+
+// New model for bookmarks
+model MessageBookmark {
+    id          String      @id @default(uuid())
+    created_at  DateTime    @default(now())
+    note        String?     @db.Text
+    tags        String[]    // Array of tags for organization
+    message     ChatMessage @relation(fields: [message_id], references: [id])
+    message_id  String
+    user        User        @relation(fields: [user_id], references: [id])
+    user_id     String
+
+    @@unique([message_id, user_id])
+    @@index([user_id])
+    @@index([tags])
+    @@map("message_bookmarks")
+}
+
+model McpServer {
+    id          String      @id @default(cuid())
+    name        String
+    url         String
+    type        String      // 'primary', 'secondary', 'replica'
+    status      String      @default("active") // 'active', 'inactive', 'maintenance'
+    metadata    Json?
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @updatedAt @map("updated_at")
+    tools       McpTool[]   @relation("ServerTools")
+
+    @@map("mcp_servers")
+}
+
+model McpTool {
+    id          String      @id @default(cuid())
+    name        String
+    description String
+    type        String      // 'system', 'user', 'plugin'
+    parameters  Json        // Array of parameter objects
+    metadata    Json?
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @updatedAt @map("updated_at")
+    server      McpServer   @relation("ServerTools", fields: [serverId], references: [id])
+    serverId    String      @map("server_id")
+
+    @@map("mcp_tools")
+}
+
+// Model for tracking socket connections and events
+model SocketEvent {
+    id          String      @id @default(uuid())
+    created_at  DateTime    @default(now())
+    event_type  String      // 'connection', 'disconnection', 'chat:message', 'chat:typing', etc.
+    socket_id   String      
+    user        User?       @relation(fields: [user_id], references: [id])
+    user_id     String?
+    payload     Json?       // Event data
+    duration    Int?        // Duration of event/connection in milliseconds
+    client_info Json?       // Client information (IP, user agent, etc.)
+    
+    @@index([socket_id])
+    @@index([event_type])
+    @@index([created_at])
+    @@map("socket_events")
+}
+
+// Model for persisting LangGraph state
+model LangGraphState {
+    id              String       @id @default(uuid())
+    created_at      DateTime     @default(now())
+    updated_at      DateTime     @updatedAt
+    thread_id       String       // LangGraph thread identifier
+    conversation    Conversation @relation(fields: [conversation_id], references: [id])
+    conversation_id String
+    state           Json         // Serialized graph state
+    ttl             DateTime?    // Optional expiration time
+    is_completed    Boolean      @default(false)
+    
+    @@unique([thread_id])
+    @@index([conversation_id])
+    @@index([ttl])
+    @@map("langgraph_state")
+}
+
+// Model for caching LLM responses
+model CachedLLMResponse {
+    id              String       @id @default(uuid())
+    created_at      DateTime     @default(now())
+    updated_at      DateTime     @updatedAt
+    input_hash      String       @unique // Hash of the input query
+    prompt          String       @db.Text // Original input query
+    response        String       @db.Text // Cached response
+    model           String       // Model used for generation
+    temperature     Float        // Temperature used
+    token_count     Int?         // Number of tokens in the response
+    expires_at      DateTime?    // Optional expiration time
+    
+    @@index([input_hash])
+    @@index([expires_at])
+    @@map("cached_llm_responses")
+} 

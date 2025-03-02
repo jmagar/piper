@@ -6,9 +6,9 @@ import dotenv from 'dotenv';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 
+// Import route files with default exports
 import chatRoutes from './routes/chat.routes.js';
 import configRoutes from './routes/config.routes.js';
-import dashboardRoutes from './routes/dashboard.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import mcpRoutes from './routes/mcp.routes.js';
 import promptRoutes from './routes/prompt.routes.js';
@@ -44,7 +44,6 @@ app.use('/api/health', healthRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/config', configRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/prompt', promptRoutes);
 
 // Basic error handling
@@ -70,8 +69,6 @@ const io = initWebSocket(httpServer, prisma);
 
 // Get port from environment or use default
 const port = process.env.PORT || 4100;
-const serverUrl = `http://localhost:${port}`;
-const wsUrl = `ws://localhost:${port}`;
 
 // Start server
 httpServer.listen(port, () => {

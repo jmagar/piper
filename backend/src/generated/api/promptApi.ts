@@ -15,8 +15,8 @@ import localVarRequest from 'request';
 import http from 'http';
 
 /* tslint:disable:no-unused-locals */
-import { ApiPromptEnhancePost200Response } from '../models/apiPromptEnhancePost200Response';
-import { ApiPromptEnhancePostRequest } from '../models/apiPromptEnhancePostRequest';
+import { ApiPromptEnhancePost200Response } from '../model/apiPromptEnhancePost200Response';
+import { ApiPromptEnhancePostRequest } from '../model/apiPromptEnhancePostRequest';
 
 import { ObjectSerializer, Authentication, VoidAuth, Interceptor } from '../model/models';
 

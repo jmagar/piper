@@ -89,7 +89,7 @@ export class ConfigApi {
      * Retrieve application configuration
      * @summary Get configuration
      */
-    public async apiConfigGet (options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: { [key: string]: any | undefined; };  }> {
+    public async apiConfigGet (options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: { [key: string]: any; };  }> {
         const localVarPath = this.basePath + '/api/config';
         let localVarQueryParameters: any = {};
         let localVarHeaderParams: any = (<any>Object).assign({}, this._defaultHeaders);
@@ -131,13 +131,13 @@ export class ConfigApi {
                     localVarRequestOptions.form = localVarFormParams;
                 }
             }
-            return new Promise<{ response: http.IncomingMessage; body: { [key: string]: any | undefined; };  }>((resolve, reject) => {
+            return new Promise<{ response: http.IncomingMessage; body: { [key: string]: any; };  }>((resolve, reject) => {
                 localVarRequest(localVarRequestOptions, (error, response, body) => {
                     if (error) {
                         reject(error);
                     } else {
                         if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-                            body = ObjectSerializer.deserialize(body, "{ [key: string]: any | undefined; }");
+                            body = ObjectSerializer.deserialize(body, "{ [key: string]: any; }");
                             resolve({ response: response, body: body });
                         } else {
                             reject(new HttpError(response, body, response.statusCode));
@@ -152,7 +152,7 @@ export class ConfigApi {
      * @summary Update configuration
      * @param requestBody 
      */
-    public async apiConfigPut (requestBody: { [key: string]: any | undefined; }, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: { [key: string]: any | undefined; };  }> {
+    public async apiConfigPut (requestBody: { [key: string]: any; }, options: {headers: {[name: string]: string}} = {headers: {}}) : Promise<{ response: http.IncomingMessage; body: { [key: string]: any; };  }> {
         const localVarPath = this.basePath + '/api/config';
         let localVarQueryParameters: any = {};
         let localVarHeaderParams: any = (<any>Object).assign({}, this._defaultHeaders);
@@ -181,7 +181,7 @@ export class ConfigApi {
             uri: localVarPath,
             useQuerystring: this._useQuerystring,
             json: true,
-            body: ObjectSerializer.serialize(requestBody, "{ [key: string]: any | undefined; }")
+            body: ObjectSerializer.serialize(requestBody, "{ [key: string]: any; }")
         };
 
         let authenticationPromise = Promise.resolve();
@@ -200,13 +200,13 @@ export class ConfigApi {
                     localVarRequestOptions.form = localVarFormParams;
                 }
             }
-            return new Promise<{ response: http.IncomingMessage; body: { [key: string]: any | undefined; };  }>((resolve, reject) => {
+            return new Promise<{ response: http.IncomingMessage; body: { [key: string]: any; };  }>((resolve, reject) => {
                 localVarRequest(localVarRequestOptions, (error, response, body) => {
                     if (error) {
                         reject(error);
                     } else {
                         if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-                            body = ObjectSerializer.deserialize(body, "{ [key: string]: any | undefined; }");
+                            body = ObjectSerializer.deserialize(body, "{ [key: string]: any; }");
                             resolve({ response: response, body: body });
                         } else {
                             reject(new HttpError(response, body, response.statusCode));

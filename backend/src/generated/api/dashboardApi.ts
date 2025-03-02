@@ -15,7 +15,7 @@ import localVarRequest from 'request';
 import http from 'http';
 
 /* tslint:disable:no-unused-locals */
-import { ApiDashboardStatsGet200Response } from '../models/apiDashboardStatsGet200Response';
+import { ApiDashboardStatsGet200Response } from '../model/apiDashboardStatsGet200Response';
 
 import { ObjectSerializer, Authentication, VoidAuth, Interceptor } from '../model/models';
 

@@ -15,7 +15,7 @@ import localVarRequest from 'request';
 import http from 'http';
 
 /* tslint:disable:no-unused-locals */
-import { ApiHealthGet200Response } from '../models/apiHealthGet200Response';
+import { ApiHealthGet200Response } from '../model/apiHealthGet200Response';
 
 import { ObjectSerializer, Authentication, VoidAuth, Interceptor } from '../model/models';
 

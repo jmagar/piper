@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import debug from 'debug';
 import crypto from 'crypto';
 import { HumanMessage } from '@langchain/core/messages';
@@ -13,6 +13,7 @@ import type {
   StreamingMetadataFields
 } from '../../types/chat.mjs';
 import { createMetadata, createStreamingMetadata } from '../../types/chat.mjs';
+import { chatCacheService } from './chat-cache.service.mjs';
 
 const log = debug('mcp:chat:langchain');
 const error = debug('mcp:chat:langchain:error');
@@ -28,6 +29,10 @@ interface StreamingState {
   error?: Error;
 }
 
+/**
+ * Unified chat service that combines functionality from both previous services.
+ * Handles both streaming and non-streaming chat interactions, caching, and tool responses.
+ */
 export class ChatLangChainService {
   private agent: Awaited<ReturnType<typeof createLangGraph>> | null = null;
   private prisma: PrismaClient;
@@ -35,6 +40,7 @@ export class ChatLangChainService {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
+    log('Initialized ChatLangChainService');
   }
 
   private generateStreamId(): string {
@@ -45,7 +51,7 @@ export class ChatLangChainService {
     if (!this.agent) {
       try {
         log('Initializing LangGraph agent...');
-        this.agent = await createLangGraph();
+        this.agent = await createLangGraph(this.prisma);
         log('LangGraph agent initialized successfully');
       } catch (err) {
         error('Failed to initialize LangGraph agent: %s', err instanceof Error ? err.message : String(err));
@@ -55,6 +61,50 @@ export class ChatLangChainService {
     return this.agent;
   }
 
+  /**
+   * Format a tool response for better readability
+   * @param response Raw response string from the tool
+   * @returns Formatted response
+   */
+  private formatToolResponse(response: string): string {
+    try {
+      // Try to parse as JSON first
+      const data = JSON.parse(response);
+      
+      // Handle file listing response
+      if (Array.isArray(data) && data.every(item => typeof item === 'object' && 'name' in item)) {
+        const fileList = data
+          .map(file => `${file.type === 'directory' ? '📁' : '📄'} ${file.name}`)
+          .join('\n');
+        return `Directory contents:\n\n${fileList}`;
+      }
+      
+      // For other JSON responses, pretty print
+      return JSON.stringify(data, null, 2);
+    } catch {
+      // If not JSON, return as is
+      return response;
+    }
+  }
+  
+  /**
+   * Check if a query is deterministic and might be cacheable
+   */
+  private isDeterministicQuery(message: string): boolean {
+    return message.startsWith('list') || 
+           message.startsWith('show') || 
+           message.includes('what is') ||
+           message.includes('how to');
+  }
+
+  /**
+   * Process a message with streaming responses
+   * @param message User message
+   * @param userId User ID
+   * @param options Streaming options with callbacks
+   * @param conversationId Optional conversation ID
+   * @returns Processed chat message
+   */
   async processStreamingMessage(
     message: string,
     userId: string,
@@ -79,6 +129,186 @@ export class ChatLangChainService {
     });
 
     try {
+      // First check if this is a deterministic query that might be in cache
+      if (this.isDeterministicQuery(message)) {
+        try {
+          const cachedResponse = await chatCacheService.getLLMResponse(message, { temperature: 0 });
+          if (cachedResponse) {
+            log('Cache hit for streaming message (using cached response): %s', message);
+            // Create the message structure but do "fake streaming" of the cached response
+            const { userMessage, conversation, user } = await this.createInitialMessage(
+              message,
+              userId,
+              conversationId,
+              'streaming'
+            );
+            
+            // Create initial assistant message
+            const initialMetadata: Partial<StreamingMetadataFields> = {
+              type: 'stream-chunk',
+              streamStartTime,
+              streamEndTime: undefined,
+              streamDuration: 0
+            };
+            
+            const assistantMessage = await this.prisma.chatMessage.create({
+              data: {
+                content: '',
+                role: 'assistant',
+                conversation_id: conversation.id,
+                user_id: userId,
+                parent_id: userMessage.id,
+                metadata: createStreamingMetadata(streamId, 'streaming', initialMetadata),
+                status: 'streaming' as MessageStatus
+              }
+            });
+            
+            // Store message ID in streaming state
+            const state = this.streamingMessages.get(streamId);
+            if (state) {
+              state.messageId = assistantMessage.id;
+            }
+            
+            // Set a small delay for realistic streaming effect
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Stream the cached response in chunks for a more natural streaming effect
+            const chunkSize = 10;
+            const chunks = [];
+            for (let i = 0; i < cachedResponse.length; i += chunkSize) {
+              chunks.push(cachedResponse.slice(i, i + chunkSize));
+            }
+            
+            for (const chunk of chunks) {
+              // Add a small delay between chunks
+              await new Promise(resolve => setTimeout(resolve, 15));
+              
+              // Process chunk like a normal streaming chunk
+              const streamState = this.streamingMessages.get(streamId);
+              if (streamState && !streamState.isComplete && !streamState.error) {
+                streamState.content += chunk;
+                streamState.chunks.push(chunk);
+                
+                // Update message in DB
+                try {
+                  await this.prisma.chatMessage.update({
+                    where: { id: assistantMessage.id },
+                    data: {
+                      content: streamState.content,
+                      metadata: createStreamingMetadata(streamId, 'streaming', {
+                        ...initialMetadata,
+                        chunkCount: streamState.chunks.length,
+                        totalLength: streamState.content.length
+                      })
+                    }
+                  });
+                } catch (err) {
+                  error('Failed to update cached message content: %s', err instanceof Error ? err.message : String(err));
+                }
+                
+                // Call the chunk callback
+                options.onChunk(chunk);
+              }
+            }
+            
+            // Simulate completion
+            const endTime = new Date().toISOString();
+            const duration = Date.now() - new Date(streamStartTime).getTime();
+            
+            const finalStreamState = this.streamingMessages.get(streamId);
+            if (finalStreamState) {
+              finalStreamState.isComplete = true;
+              finalStreamState.streamEndTime = endTime;
+              finalStreamState.streamDuration = duration;
+              
+              // Create a custom metadata object
+              const completeMetadataObject = {
+                streamStatus: 'complete' as const,
+                streamId,
+                type: 'text' as const,
+                chunkCount: finalStreamState.chunks.length,
+                totalLength: cachedResponse.length,
+                streamStartTime: finalStreamState.streamStartTime,
+                streamEndTime: finalStreamState.streamEndTime,
+                streamDuration: finalStreamState.streamDuration,
+                timestamp: new Date().toISOString(),
+                fromCache: true // Custom property
+              };
+              
+              // Cast to Prisma.JsonObject for database storage
+              const metadataWithCache = completeMetadataObject as Prisma.JsonObject;
+              
+              await this.prisma.chatMessage.update({
+                where: { id: assistantMessage.id },
+                data: {
+                  content: cachedResponse,
+                  metadata: metadataWithCache,
+                  status: 'sent' as MessageStatus
+                }
+              });
+            }
+            
+            // Call the completion callback
+            options.onComplete?.();
+            
+            // Cache the user message for future retrieval
+            await chatCacheService.cacheMessage(userMessage);
+            await chatCacheService.cacheMessage({
+              ...assistantMessage,
+              content: cachedResponse,
+              metadata: {
+                streamStatus: 'complete' as const,
+                streamId,
+                type: 'text' as const,
+                timestamp: new Date().toISOString(),
+                fromCache: true
+              } as Prisma.JsonObject
+            });
+            await chatCacheService.cacheConversation(conversation);
+            
+            // Clean up and return result
+            const finalState = this.streamingMessages.get(streamId) || {
+              content: cachedResponse,
+              chunks: [cachedResponse],
+              streamStartTime,
+              streamEndTime: endTime,
+              streamDuration: duration,
+              isComplete: true
+            };
+            
+            this.streamingMessages.delete(streamId);
+            
+            return {
+              id: assistantMessage.id,
+              content: cachedResponse,
+              role: 'assistant',
+              userId: assistantMessage.user_id ?? '',
+              username: user.name ?? '',
+              conversationId: conversation.id,
+              parentId: assistantMessage.parent_id ?? undefined,
+              type: 'text',
+              metadata: {
+                streamStatus: 'complete' as const,
+                streamId,
+                type: 'text' as const,
+                chunkCount: finalState.chunks.length,
+                totalLength: cachedResponse.length,
+                streamStartTime: finalState.streamStartTime,
+                streamEndTime: finalState.streamEndTime,
+                streamDuration: finalState.streamDuration,
+                timestamp: new Date().toISOString(),
+                fromCache: true
+              } as Prisma.JsonObject as ChatMetadata,
+              createdAt: assistantMessage.created_at,
+              updatedAt: assistantMessage.updated_at
+            };
+          }
+        } catch (cacheErr) {
+          // Non-fatal, just log and continue with normal processing
+          error('Error checking cache for streaming: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+        }
+      }
+
       log('Creating initial message for user %s with streamId %s', userId, streamId);
       
       // Create or find user and conversation first
@@ -215,6 +445,17 @@ export class ChatLangChainService {
               error('Failed to update final message state: %s', updateErr instanceof Error ? updateErr.message : String(updateErr));
             }
           }
+          
+          // Cache deterministic responses
+          if (this.isDeterministicQuery(message) && state && state.content && state.content.length > 0) {
+            try {
+              await chatCacheService.cacheLLMResponse(message, state.content, { temperature: 0 });
+              log('Cached deterministic streaming response for future use');
+            } catch (cacheErr) {
+              error('Error caching streamed response: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+            }
+          }
+          
           options.onComplete();
         }
       };
@@ -262,6 +503,20 @@ export class ChatLangChainService {
         });
       }
 
+      // Cache messages and conversation
+      try {
+        await chatCacheService.cacheMessage(userMessage);
+        await chatCacheService.cacheMessage({
+          ...assistantMessage,
+          content: finalState.content,
+          status: 'sent'
+        });
+        await chatCacheService.cacheConversation(conversation);
+      } catch (cacheErr) {
+        // Non-fatal, just log
+        error('Error caching streaming entities: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+      }
+
       // Clean up streaming state
       this.streamingMessages.delete(streamId);
 
@@ -275,14 +530,18 @@ export class ChatLangChainService {
         conversationId: conversation.id,
         parentId: assistantMessage.parent_id ?? undefined,
         type: 'text',
-        metadata: createStreamingMetadata(streamId, 'complete', {
-          type: 'text',
+        metadata: {
+          streamStatus: 'complete' as const,
+          streamId,
+          type: 'text' as const,
           chunkCount: finalState.chunks.length,
           totalLength: finalState.content.length,
           streamStartTime: finalState.streamStartTime,
           streamEndTime: finalState.streamEndTime,
-          streamDuration: finalState.streamDuration
-        }),
+          streamDuration: finalState.streamDuration,
+          timestamp: new Date().toISOString(),
+          fromCache: true
+        } as Prisma.JsonObject as ChatMetadata,
         createdAt: assistantMessage.created_at,
         updatedAt: assistantMessage.updated_at
       };
@@ -326,6 +585,13 @@ export class ChatLangChainService {
     }
   }
 
+  /**
+   * Process a message without streaming
+   * @param message User message
+   * @param userId User ID
+   * @param conversationId Optional conversation ID
+   * @returns Processed chat message
+   */
   async processMessage(
     message: string,
     userId: string,
@@ -334,6 +600,89 @@ export class ChatLangChainService {
     let initialUserMessage;
     try {
       log('Processing message from user %s: %s', userId, message);
+
+      // Check if this is a deterministic query that might be in cache
+      const isDeterministic = this.isDeterministicQuery(message);
+      
+      if (isDeterministic) {
+        try {
+          // Try to get from cache
+          const cachedResponse = await chatCacheService.getLLMResponse(message, { temperature: 0 });
+          
+          if (cachedResponse) {
+            log('Cache hit for deterministic query: %s', message);
+            
+            // Still need to create the database entities
+            const { userMessage, conversation, user } = await this.createInitialMessage(
+              message,
+              userId,
+              conversationId,
+              'sending'
+            );
+            initialUserMessage = userMessage;
+            
+            // Update user message status to 'sent' after successful processing
+            await this.prisma.chatMessage.update({
+              where: { id: initialUserMessage.id },
+              data: { status: 'sent' as MessageStatus }
+            });
+            
+            // Create assistant message with cached response
+            const metadataObj = createMetadata({
+              type: 'text',
+              timestamp: new Date().toISOString(),
+            });
+            
+            // Add custom field for caching - this works because createMetadata ultimately returns a Prisma.JsonObject
+            // which can accept any JSON-serializable fields
+            const metadataWithCache = {
+              ...metadataObj,
+              fromCache: true
+            };
+            
+            // Store assistant response with explicit 'sent' status
+            const assistantMessage = await this.prisma.chatMessage.create({
+              data: {
+                content: cachedResponse,
+                role: 'assistant',
+                conversation_id: conversation.id,
+                user_id: userId,
+                parent_id: initialUserMessage.id,
+                metadata: metadataWithCache,
+                status: 'sent' as MessageStatus
+              }
+            });
+            
+            // Cache messages and conversation
+            try {
+              await chatCacheService.cacheMessage(userMessage);
+              await chatCacheService.cacheMessage(assistantMessage);
+              await chatCacheService.cacheConversation(conversation);
+            } catch (cacheErr) {
+              // Non-fatal, just log
+              error('Error caching entities: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+            }
+            
+            // Return response
+            return {
+              id: assistantMessage.id,
+              content: cachedResponse,
+              role: 'assistant',
+              userId: assistantMessage.user_id ?? '',
+              username: user.name ?? '',
+              conversationId: conversation.id,
+              parentId: assistantMessage.parent_id ?? undefined,
+              type: 'text',
+              metadata: assistantMessage.metadata as ChatMetadata,
+              createdAt: assistantMessage.created_at,
+              updatedAt: assistantMessage.updated_at
+            };
+          }
+        } catch (cacheErr) {
+          // Non-fatal, just log and continue with normal processing
+          error('Error checking cache: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+        }
+      }
 
       const { userMessage, conversation, user } = await this.createInitialMessage(
         message,
@@ -363,7 +712,9 @@ export class ChatLangChainService {
               }
             }
           ) as string;
-          response = result;
+          
+          // Format the response for better readability if it's a tool response
+          response = this.formatToolResponse(result);
           
           // Add metadata for special responses
           messageType = message.toLowerCase().includes('list') && message.toLowerCase().includes('file')
@@ -374,13 +725,23 @@ export class ChatLangChainService {
             type: messageType
           });
           
-          log('Got response from LangGraph agent, content length: %d', result.length);
+          log('Got response from LangGraph agent, content length: %d', response.length);
 
           // Update user message status to 'sent' after successful processing
           await this.prisma.chatMessage.update({
             where: { id: initialUserMessage.id },
             data: { status: 'sent' as MessageStatus }
           });
+          
+          // Cache deterministic responses for future use
+          if (isDeterministic) {
+            try {
+              await chatCacheService.cacheLLMResponse(message, response, { temperature: 0 });
+            } catch (cacheErr) {
+              // Non-fatal, just log
+              error('Error caching LLM response: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+            }
+          }
         } else {
           error('Agent not available');
           response = "I'm currently experiencing some technical difficulties with my tools. I can still chat, but some advanced features might not be available.";
@@ -425,6 +786,33 @@ export class ChatLangChainService {
           status: 'sent' as MessageStatus
         }
       });
+      
+      // Cache messages and conversation
+      try {
+        await chatCacheService.cacheMessage(initialUserMessage);
+        await chatCacheService.cacheMessage(assistantMessage);
+        await chatCacheService.cacheConversation(conversation);
+        
+        // Check if user's conversations are cached and update if needed
+        const cachedConversations = await chatCacheService.getUserConversations(userId);
+        if (!cachedConversations) {
+          // If not cached, fetch and cache for future requests
+          const conversations = await this.prisma.conversation.findMany({
+            where: { user_id: userId },
+            orderBy: { last_message_at: 'desc' }
+          });
+          
+          if (conversations.length > 0) {
+            await chatCacheService.cacheUserConversations(userId, conversations);
+          }
+        } else {
+          // Invalidate user conversations cache to include this new conversation
+          await chatCacheService.invalidateUserConversations(userId);
+        }
+      } catch (cacheErr) {
+        // Non-fatal, just log
+        error('Error caching entities: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+      }
 
       // Create response object
       return {
@@ -458,6 +846,9 @@ export class ChatLangChainService {
     }
   }
 
+  /**
+   * Create initial message structure with user, conversation, and first message
+   */
   private async createInitialMessage(
     message: string,
     userId: string,
@@ -515,6 +906,9 @@ export class ChatLangChainService {
     return { userMessage, conversation, user };
   }
 
+  /**
+   * Clean up all resources used by the service
+   */
   async cleanupResources() {
     this.streamingMessages.clear();
     if (this.agent) {

@@ -6,11 +6,11 @@ import {
   ConnectionState as SocketConnectionState, 
   MessageStatus,
   ChatMessage,
-  MessageCallback,
   MessageChunk,
   MessageComplete,
   MessageError
 } from '@/types/socket';
+import { ExtendedChatMessage } from '@/types/chat';
 
 /**
  * Re-export ConnectionState enum from our types for backward compatibility
@@ -39,14 +39,6 @@ interface GenericMessageResponse {
   error?: string | undefined;
   message?: GenericMessage | undefined;
   [key: string]: unknown;
-}
-
-/**
- * ChatMessage response from server
- */
-interface ChatMessageResponse {
-  error?: string;
-  message?: ChatMessage;
 }
 
 /**
@@ -106,11 +98,10 @@ export function useSocketIO(props?: UseSocketIOProps) {
   useEffect(() => {
     if (!socket) return;
     
-    const handleMessage = (message: ChatMessage) => {
+    const handleMessage = (message: ExtendedChatMessage) => {
       // Convert to generic message format
       const genericMessage: GenericMessage = {
         ...message,
-        type: 'text',
         status: message.status as string
       };
       
@@ -173,12 +164,7 @@ export function useSocketIO(props?: UseSocketIOProps) {
     
     // Use onAny to catch all events for backward compatibility
     const handleAnyEvent = (event: string, ...args: unknown[]) => {
-      if ((event === 'message' || event === 'message:update') && args.length > 0) {
-        const message = args[0];
-        if (typeof message === 'object' && message !== null && 'id' in message) {
-          handleMessage(message as ChatMessage);
-        }
-      }
+      console.log(`[Socket] Event: ${event}`, args);
     };
     
     socket.onAny(handleAnyEvent);
@@ -198,31 +184,27 @@ export function useSocketIO(props?: UseSocketIOProps) {
       return false;
     }
     
-    // Convert GenericMessage to proper format for socket emission
-    // Create a copy without the index signature, ensuring status is a valid MessageStatus
-    const messageCopy = {
+    // Convert GenericMessage to ExtendedChatMessage format for socket emission
+    const messageCopy: ExtendedChatMessage = {
       id: message.id,
       content: message.content,
       role: message.role || 'user',
       createdAt: message.createdAt || new Date().toISOString(),
       updatedAt: message.updatedAt || new Date().toISOString(),
-      status: (message.status || 'sending') as MessageStatus,
+      status: (message.status || 'sending') as 'sending' | 'streaming' | 'sent' | 'delivered' | 'error',
+      type: message.type as 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk' || 'text',
       metadata: message.metadata || {}
     };
 
     // Create a correctly typed callback for Socket.IO
-    const socketCallback: MessageCallback = (response) => {
-      if (callback) {
-        const genericResponse: GenericMessageResponse = {
-          error: response.error,
-          // Convert ChatMessage to GenericMessage if it exists
-          message: response.message ? {
-            ...response.message,
-            // Ensure it has index signature capability
-            status: response.message.status as string
-          } : undefined
-        };
-        callback(genericResponse);
+    const socketCallback = (response: { error?: string; message?: ExtendedChatMessage; [key: string]: unknown }) => {
+      if (response.error) {
+        console.error('[Socket] Error sending message:', response.error);
+        return;
+      }
+
+      if (response.message) {
+        console.log('[Socket] Message sent:', response.message);
       }
     };
 

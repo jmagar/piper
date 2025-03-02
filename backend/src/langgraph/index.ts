@@ -6,9 +6,11 @@ import { createReactAgent, type AgentState } from '@langchain/langgraph/prebuilt
 import type { Callbacks } from '@langchain/core/callbacks/manager';
 import debug from 'debug';
 import { join } from 'path';
+import { PrismaClient } from '@prisma/client';
 
 import { initChatModel } from '../init-chat-model.js';
 import { loadConfig } from '../load-config.js';
+import { LangGraphStatePersistence } from '../services/langgraph/state-persistence.mjs';
 
 const log = debug('mcp:langgraph');
 const error = debug('mcp:langgraph:error');
@@ -44,7 +46,7 @@ interface InvokeOptions {
 /**
  * Creates a LangGraph agent with proper state management and tool handling
  */
-export async function createLangGraph() {
+export async function createLangGraph(prismaClient?: PrismaClient) {
   // Load config and initialize model
   const config = loadConfig(configPath);
   
@@ -64,6 +66,13 @@ export async function createLangGraph() {
 
   // Create conversation store
   const conversations = new Map<string, ConversationHistory>();
+  
+  // Initialize Prisma client if not provided
+  const prisma = prismaClient || new PrismaClient();
+  
+  // Initialize state persistence with Redis and PostgreSQL
+  const statePersistence = new LangGraphStatePersistence(prisma);
+  log('Initialized LangGraph state persistence with Redis and PostgreSQL');
 
   // System message for context
   const baseSystemPrompt = `You are a helpful AI assistant with access to various tools.
@@ -102,6 +111,21 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
           : conversationIdOrOptions;
         
         log('Processing message for conversation %s', conversationId);
+        
+        // Check for existing state in Redis/PostgreSQL
+        if (options.configurable?.thread_id) {
+          const threadId = options.configurable.thread_id as string;
+          try {
+            const existingState = await statePersistence.getState(threadId);
+            if (existingState) {
+              log('Found existing state for thread %s in persistent storage', threadId);
+              // We could use this state to hydrate the conversation if needed
+            }
+          } catch (stateErr) {
+            error('Error checking thread state: %s', stateErr instanceof Error ? stateErr.message : String(stateErr));
+            // Continue with in-memory state only
+          }
+        }
         
         // Get or create conversation history
         let history = conversations.get(conversationId);
@@ -257,6 +281,34 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
           throw err;
         }
 
+        // After agent invocation, persist the state if thread_id is provided
+        if (options.configurable?.thread_id && !options.streaming) {
+          try {
+            // Get the current thread ID
+            const threadId = options.configurable.thread_id as string;
+            
+            // Save the state to Redis and PostgreSQL
+            await statePersistence.saveState(
+              threadId,
+              {
+                messages: history.messages.map(msg => ({
+                  role: msg._getType(),
+                  content: msg.content
+                })),
+                lastUpdated: history.lastUpdated.toISOString()
+              },
+              {
+                conversationId: conversationId,
+                isComplete: true
+              }
+            );
+            log('Persisted state for thread %s to Redis and PostgreSQL', threadId);
+          } catch (persistErr) {
+            error('Error persisting thread state: %s', persistErr instanceof Error ? persistErr.message : String(persistErr));
+            // Non-fatal, continue with in-memory state
+          }
+        }
+
         // For streaming, return the accumulated content
         return streamedContent;
       } catch (error) {
@@ -274,6 +326,16 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
       } else {
         conversations.clear();
       }
+      
+      // Also clear persistent state if conversationId is provided
+      if (conversationId) {
+        try {
+          await statePersistence.deleteState(conversationId);
+          log('Cleared persistent state for thread %s', conversationId);
+        } catch (clearErr) {
+          error('Error clearing persistent state: %s', clearErr instanceof Error ? clearErr.message : String(clearErr));
+        }
+      }
     },
 
     /**
@@ -288,8 +350,20 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
      * Cleanup all resources including conversations and tools
      */
     async cleanupResources() {
-      conversations.clear();
-      await cleanupTools();
+      try {
+        // Existing cleanups
+        await cleanupTools();
+        conversations.clear();
+        
+        // Close Prisma client if we created it internally
+        if (!prismaClient) {
+          await prisma.$disconnect();
+        }
+        
+        log('Cleaned up all resources');
+      } catch (err) {
+        error('Error in cleanup: %s', err instanceof Error ? err.message : String(err));
+      }
     }
   };
 } 

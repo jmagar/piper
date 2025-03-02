@@ -1,46 +1,41 @@
 "use client";
 
-import * as React from 'react';
-import { useSocket } from '@/lib/socket/socket-provider';
+import React from 'react';
+import { useSocket } from '@/lib/socket/client';
 
 /**
- * Client component button for manual socket reconnection
+ * Button that shows connection status and allows users to reconnect
  */
 export function ReconnectButton() {
-  const { reconnect, isConnected } = useSocket();
-  
+  const { isConnected, connectionState, reconnect } = useSocket();
+
+  // Handle reconnect click
+  const handleReconnect = () => {
+    if (!isConnected) {
+      reconnect();
+    }
+  };
+
   return (
-    <button 
-      onClick={() => {
-        try {
-          // First try using the context's reconnect function
-          reconnect();
-          console.log('Manual reconnection triggered via context');
-        } catch (err) {
-          console.error('Failed to reconnect via context:', err);
-          
-          // Fall back to global reconnect function if available
-          try {
-            const socket = window.__socketReconnect?.();
-            if (socket) {
-              console.log('Manual reconnection triggered via global function');
-            } else {
-              console.error('Socket reconnect function not available');
-              window.location.reload();
-            }
-          } catch (err) {
-            console.error('Failed to reconnect socket:', err);
-            window.location.reload();
-          }
-        }
-      }}
-      className={`px-3 py-1 rounded text-sm transition-colors ${
-        isConnected 
-          ? 'bg-green-600 text-white hover:bg-green-700' 
-          : 'bg-red-600 text-white hover:bg-red-700'
-      }`}
-    >
-      {isConnected ? 'Connected ✓' : 'Reconnect Socket'}
-    </button>
+    <div className="flex items-center gap-2">
+      <div 
+        className={`h-3 w-3 rounded-full ${
+          isConnected ? 'bg-green-500' : 'bg-red-500'
+        }`}
+        title={`Socket status: ${connectionState}`}
+      />
+      
+      <button
+        onClick={handleReconnect}
+        disabled={isConnected}
+        className={`px-3 py-1 text-sm rounded-md transition-colors ${
+          isConnected 
+            ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+            : 'bg-blue-500 text-white hover:bg-blue-600'
+        }`}
+      >
+        {isConnected ? 'Connected' : 'Reconnect'}
+      </button>
+    </div>
   );
 } 

@@ -14,7 +14,6 @@
     "lint:fix": "eslint --config eslint.config.mjs . --fix",
     "test": "pnpm -r test",
     "generate": "pnpm -r generate",
-    "generate-api": "tsx scripts/generate-api.ts",
     "clean": "tsx scripts/turboclean.ts"
   },
   "devDependencies": {
@@ -35,6 +34,7 @@
     "@types/prismjs": "^1.26.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/request": "^2.48.12",
     "@types/swagger-parser": "^7.0.1",
     "@typescript-eslint/eslint-plugin": "^8.24.1",
@@ -69,7 +69,6 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tanstack/react-query": "^5.66.9",
-    "@types/react-syntax-highlighter": "^15.5.13",
     "cheerio": "^1.0.0",
     "cmdk": "^1.0.4",
     "date-fns": "^4.1.0",
