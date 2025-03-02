@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppLayout } from '@/components/layout/app-layout';
 
 export default function ChatLayout({
   children,
@@ -6,8 +7,10 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col">
-      {children}
-    </div>
+    <AppLayout title="Chat">
+      <div className="flex h-full flex-col">
+        {children}
+      </div>
+    </AppLayout>
   );
 } 

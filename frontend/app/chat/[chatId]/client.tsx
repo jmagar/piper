@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { ChatLayout } from '@/components/chat/chat-layout';
-import { SocketProvider } from '@/lib/socket/client';
-import { useSocket } from '@/lib/socket/client';
+import { useSocket } from '@/lib/socket-setup.js';
+
 import { ChatProvider } from '@/components/chat/chat-provider';
 import { ExtendedChatMessage, ChatConversation } from '@/types/chat';
 
@@ -12,10 +12,6 @@ import { ExtendedChatMessage, ChatConversation } from '@/types/chat';
  */
 interface ChatClientProps {
   chatId: string;
-  initialData?: {
-    conversation: ChatConversation;
-    messages: ExtendedChatMessage[];
-  };
 }
 
 /**
@@ -24,65 +20,79 @@ interface ChatClientProps {
  */
 export function ChatClient({
   chatId,
-  initialData
 }: ChatClientProps) {
-  const initialMessages = initialData?.messages || [];
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [initialData, setInitialData] = React.useState<{
+    conversation: ChatConversation;
+    messages: ExtendedChatMessage[];
+  }>({
+    conversation: {
+      id: chatId,
+      title: 'Chat Session',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      userId: 'user-1',
+      metadata: {
+        messageCount: 0,
+        userMessageCount: 0,
+        botMessageCount: 0,
+        toolUsageCount: 0
+      }
+    },
+    messages: []
+  });
+  
+  // Get socket state from the context
+  const socketContext = useSocket();
+  
+  // Extract socket connection state
+  const connectionState = socketContext.isConnecting ? 'connecting' : socketContext.isConnected ? 'connected' : 'disconnected';
+  const isConnected = socketContext.isConnected;
+  
+  // Fetch conversation data on the client side
+  React.useEffect(() => {
+    async function fetchData() {
+      try {
+        // In a real implementation, we'd fetch from an API here
+        const response = await fetch(`/api/chat/${chatId}`);
+        
+        // If the API call succeeds, update with real data
+        if (response.ok) {
+          const data = await response.json();
+          setInitialData(data);
+        } else {
+          // If API call fails, we'll use the default data that was already set
+          console.log('Using default data as API call failed');
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [chatId]);
   
   return (
-    <SocketProvider
-      initialAuth={{ 
-        token: 'demo-token', // This should be retrieved from auth system
-        userId: 'user-1' 
-      }}
-      config={{
-        url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4100',
-        autoConnect: true
-      }}
-    >
-      <SocketStatus />
-      <ChatProvider
-        initialMessages={initialMessages}
-        conversationId={chatId}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex-1 overflow-hidden">
-            <ChatLayout 
-              enableFileUpload={true}
-              enableEmojiPicker={true}
-              enableCommandPalette={false}
-            />
-          </div>
-        </div>
-      </ChatProvider>
-    </SocketProvider>
+    <>
+      {isLoading ? (
+        <div className="flex h-full items-center justify-center">Loading...</div>
+      ) : (
+        <ChatProvider
+          initialMessages={initialData.messages}
+          conversationId={chatId}
+        >
+          <ChatLayout enableFileUpload={true} enableEmojiPicker={true} enableCommandPalette={false} />
+        </ChatProvider>
+      )}
+      
+      {/* Connection status indicator - updated to not be fixed positioned */}
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-background p-2 shadow-md">
+        <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+        <span className="text-xs">{connectionState}</span>
+      </div>
+    </>
   );
 }
-
-/**
- * Socket status component
- * Displays the current connection status
- */
-export function SocketStatus() {
-  const { connectionState, isConnected, reconnect } = useSocket();
-  
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-background p-2 shadow-md">
-      <div 
-        className={`h-3 w-3 rounded-full ${
-          isConnected ? 'bg-green-500' : 'bg-red-500'
-        }`}
-      />
-      <span className="text-xs">
-        {connectionState}
-      </span>
-      {!isConnected && (
-        <button
-          onClick={reconnect}
-          className="ml-2 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
-        >
-          Reconnect
-        </button>
-      )}
-    </div>
-  );
-} 

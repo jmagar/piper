@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
 import { ExtendedChatMessage } from '@/types/chat';
-import { useSocket, useSocketEvent, useSocketEmit } from '@/lib/socket/client';
+import { Socket } from 'socket.io-client';
+import { useSocket, useSocketEvent } from '@/lib/socket-setup.js';
 import { toast } from 'sonner';
 
 // Chat state
@@ -95,22 +96,122 @@ export function ChatProvider({
 
   // Get socket functionality
   const { socket, isConnected } = useSocket();
-  const { emit } = useSocketEmit();
 
-  // Register socket event handlers
-  useSocketEvent('message:new', (message) => {
-    dispatch({ type: 'ADD_MESSAGE', message });
-  });
+  // Set up socket event handlers
+  React.useEffect(() => {
+    if (!socket) return;
+    
+    const messageNewHandler = (message: ExtendedChatMessage) => {
+      dispatch({ type: 'ADD_MESSAGE', message });
+    };
 
-  useSocketEvent('message:update', (message) => {
-    dispatch({ type: 'UPDATE_MESSAGE', message });
-  });
+    const messageUpdateHandler = (message: ExtendedChatMessage) => {
+      dispatch({ type: 'UPDATE_MESSAGE', message });
+    };
 
-  useSocketEvent('message:error', (data) => {
-    const { messageId, error } = data;
-    toast.error(`Error: ${error}`);
-    dispatch({ type: 'SET_ERROR', error });
-  });
+    const messageErrorHandler = (data: { messageId: string, error: string }) => {
+      dispatch({ type: 'SET_ERROR', error: data.error });
+      
+      // Update message status if it exists
+      const message = state.messages.find(m => m.id === data.messageId);
+      if (message) {
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          message: { ...message, status: 'error', metadata: { ...message.metadata, error: data.error } }
+        });
+      }
+    };
+    
+    // Add handler for message chunks during streaming
+    const messageChunkHandler = (data: { messageId: string, chunk: string, timestamp: string }) => {
+      // Find the temporary message to update or create a new assistant message
+      const tempMessage = state.messages.find(m => m.id === data.messageId);
+      
+      if (tempMessage) {
+        // This chunk is for an existing message - append to content
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          message: {
+            ...tempMessage,
+            content: tempMessage.content + data.chunk,
+            status: 'streaming',
+            metadata: { 
+              ...tempMessage.metadata,
+              lastChunkAt: data.timestamp,
+            }
+          }
+        });
+      } else {
+        // Create a new message for the assistant's response
+        const assistantMessage: ExtendedChatMessage = {
+          id: data.messageId || `response-${Date.now()}`,
+          role: 'assistant',
+          content: data.chunk,
+          createdAt: data.timestamp || new Date().toISOString(),
+          type: 'text',
+          status: 'streaming',
+          metadata: {
+            timestamp: Date.now(),
+            lastChunkAt: data.timestamp,
+          },
+        };
+        
+        dispatch({ type: 'ADD_MESSAGE', message: assistantMessage });
+      }
+    };
+    
+    // Add handler for message completion
+    const messageCompleteHandler = (data: { messageId: string, timestamp: string }) => {
+      // Find the message that's being completed
+      const message = state.messages.find(m => m.id === data.messageId);
+      
+      if (message) {
+        // Update the message status to complete
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          message: {
+            ...message,
+            status: 'delivered',
+            metadata: { 
+              ...message.metadata,
+              completedAt: data.timestamp,
+            }
+          }
+        });
+      }
+    };
+    
+    // Add typing indicator handlers
+    const userTypingHandler = (data: { userId: string, username: string }) => {
+      console.log('User typing:', data.username);
+      // Could add typing indicator UI here
+    };
+    
+    const userStopTypingHandler = (data: { userId: string, username: string }) => {
+      console.log('User stopped typing:', data.username);
+      // Could remove typing indicator UI here
+    };
+    
+    // Add event listeners
+    socket.on('message:new', messageNewHandler);
+    socket.on('message:update', messageUpdateHandler);
+    socket.on('message:error', messageErrorHandler);
+    socket.on('message:chunk', messageChunkHandler);
+    socket.on('message:complete', messageCompleteHandler);
+    socket.on('user:typing', userTypingHandler);
+    socket.on('user:stop_typing', userStopTypingHandler);
+    
+    // Cleanup on unmount
+    return () => {
+      socket.off('message:new', messageNewHandler);
+      socket.off('message:update', messageUpdateHandler);
+      socket.off('message:error', messageErrorHandler);
+      socket.off('message:chunk', messageChunkHandler);
+      socket.off('message:complete', messageCompleteHandler);
+      socket.off('user:typing', userTypingHandler);
+      socket.off('user:stop_typing', userStopTypingHandler);
+    };
+  }, [socket, state.messages]);
 
   // Send a message through socket
   const sendMessage = useCallback(
@@ -140,7 +241,7 @@ export function ChatProvider({
 
         // Send via socket
         if (socket) {
-          emit('message:sent', tempMessage);
+          socket.emit('message:sent', tempMessage);
         }
       } catch (error) {
         console.error('Failed to send message:', error);
@@ -150,7 +251,7 @@ export function ChatProvider({
         dispatch({ type: 'SET_LOADING', isLoading: false });
       }
     },
-    [socket, isConnected, emit]
+    [socket, isConnected]
   );
 
   // Load previous messages
@@ -211,4 +312,4 @@ export function useChatStore() {
     sendMessage,
     loadMessages,
   };
-} 
+}

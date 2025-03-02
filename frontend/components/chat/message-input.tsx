@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { SendIcon, Paperclip, Smile, Terminal } from "lucide-react";
+import { SendIcon, Paperclip, Smile, Terminal, Sparkles } from "lucide-react";
 
 export interface MessageInputProps {
   value: string;
@@ -14,6 +14,7 @@ export interface MessageInputProps {
   showFileUpload?: boolean;
   showEmojiPicker?: boolean;
   showCommandPalette?: boolean;
+  showPromptEnhance?: boolean;
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export function MessageInput({
   showFileUpload = true,
   showEmojiPicker = true,
   showCommandPalette = true,
+  showPromptEnhance = true,
   className,
 }: MessageInputProps) {
   const [isSending, setIsSending] = React.useState(false);
@@ -69,6 +71,18 @@ export function MessageInput({
       e.preventDefault();
       handleSend();
     }
+  };
+  
+  // Handle prompt enhancement
+  const enhancePrompt = () => {
+    if (!value.trim() || disabled) return;
+    
+    // Add prefix for prompt enhancement
+    const enhancedPrompt = `Enhance this prompt: ${value.trim()}`;
+    onChange(enhancedPrompt);
+    
+    // Focus back on the input
+    inputRef.current?.focus();
   };
   
   // Placeholder components for advanced features
@@ -118,6 +132,24 @@ export function MessageInput({
     </Button>
   ) : null;
   
+  const PromptEnhanceButton = showPromptEnhance ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      disabled={disabled || !value.trim()}
+      className={cn(
+        "h-9 w-9 rounded-full",
+        value.trim() ? "text-primary hover:text-primary-emphasis" : "text-muted-foreground"
+      )}
+      aria-label="Enhance prompt"
+      title="Enhance this prompt with AI"
+      onClick={enhancePrompt}
+    >
+      <Sparkles className="h-5 w-5" />
+    </Button>
+  ) : null;
+  
   return (
     <div
       className={cn(
@@ -151,6 +183,9 @@ export function MessageInput({
           )}
         />
       </div>
+      
+      {/* Prompt enhance button - positioned before send button */}
+      {PromptEnhanceButton}
       
       {/* Send button */}
       <Button

@@ -3,7 +3,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ExtendedChatMessage } from "@/types/chat";
-import { AlertCircle, Check, Clock, Loader2 } from "lucide-react";
+import { 
+  AlertCircle, 
+  Check, 
+  Clock, 
+  Loader2, 
+  ThumbsUp, 
+  ThumbsDown, 
+  Copy, 
+  Star, 
+  Edit, 
+  RefreshCw 
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * Props for the message bubble component
@@ -12,6 +24,8 @@ interface MessageBubbleProps {
   message: ExtendedChatMessage;
   className?: string;
   isLast?: boolean;
+  onEdit?: (messageId: string, content: string) => void;
+  onRegenerate?: (messageId: string) => void;
 }
 
 /**
@@ -39,7 +53,21 @@ function formatMessageContent(content: string): React.ReactNode {
                     {language}
                   </div>
                 )}
-                <pre className="p-4">
+                <pre className="p-4 relative group">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      if (code) {
+                        navigator.clipboard.writeText(code);
+                      }
+                    }}
+                    aria-label="Copy code"
+                    title="Copy code"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
                   <code>{code}</code>
                 </pre>
               </div>
@@ -61,9 +89,61 @@ function formatMessageContent(content: string): React.ReactNode {
 /**
  * Message bubble component for chat messages
  */
-export function MessageBubble({ message, className }: MessageBubbleProps) {
+export function MessageBubble({ 
+  message, 
+  className,
+  onEdit,
+  onRegenerate 
+}: MessageBubbleProps) {
   // Determine if message is from user
   const isUserMessage = message.role === "user";
+  
+  // Reactions state
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [reaction, setReaction] = React.useState<'up' | 'down' | null>(
+    message.metadata?.reaction ? message.metadata.reaction : null
+  );
+  const [isStarred, setIsStarred] = React.useState<boolean>(
+    message.metadata?.starred || false
+  );
+  
+  // Handle reactions
+  const handleReaction = (type: 'up' | 'down') => {
+    setReaction(prev => prev === type ? null : type);
+    // Here you would also send the reaction to the server
+    console.log(`Reacted ${type} to message ${message.id}`);
+  };
+  
+  // Handle starring
+  const handleStar = () => {
+    setIsStarred(prev => !prev);
+    // Here you would also send the star update to the server
+    console.log(`${isStarred ? 'Unstarred' : 'Starred'} message ${message.id}`);
+  };
+  
+  // Handle copying message content
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    console.log(`Copied message ${message.id}`);
+  };
+
+  // Handle edit message
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(message.id, message.content);
+    } else {
+      console.log(`Edit message ${message.id}`);
+    }
+  };
+
+  // Handle regenerate message
+  const handleRegenerate = () => {
+    if (onRegenerate) {
+      onRegenerate(message.id);
+    } else {
+      console.log(`Regenerate message ${message.id}`);
+    }
+  };
   
   // Status indicator component based on message status
   const StatusIndicator = () => {
@@ -89,8 +169,10 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
         isUserMessage ? "justify-end" : "justify-start",
         className
       )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={cn("flex max-w-[85%] flex-col")}>
+      <div className={cn("flex max-w-[85%] flex-col relative")}>
         {/* Message header with role and status */}
         <div
           className={cn(
@@ -107,26 +189,118 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
         {/* Message content */}
         <div
           className={cn(
-            "rounded-lg px-4 py-2",
+            "rounded-lg px-4 py-2 shadow-sm",
             isUserMessage
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground"
+              ? "bg-blue-600 text-white" // Blue for user messages
+              : "bg-surface-raised text-foreground" // Default surface for assistant
           )}
         >
           {formatMessageContent(message.content)}
         </div>
         
-        {/* Message timestamp */}
+        {/* Message timestamp and reactions */}
         <div
           className={cn(
-            "mt-1 text-xs text-zinc-500",
-            isUserMessage ? "text-right" : "text-left"
+            "mt-1 flex items-center",
+            isUserMessage ? "justify-end" : "justify-start"
           )}
         >
-          {new Date(message.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          <span className="text-xs text-zinc-500">
+            {new Date(message.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          
+          {/* User message actions */}
+          {isUserMessage && isHovered && (
+            <div className="ml-2 flex items-center space-x-1 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={handleEdit}
+                aria-label="Edit message"
+                title="Edit message"
+              >
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+          
+          {/* Assistant message actions */}
+          {!isUserMessage && (
+            <div 
+              className={cn(
+                "ml-2 flex items-center space-x-1 transition-opacity",
+                isHovered ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-6 w-6 rounded-full",
+                  reaction === 'up' && "text-green-500"
+                )}
+                onClick={() => handleReaction('up')}
+                aria-label="Thumbs up"
+                title="Helpful response"
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-6 w-6 rounded-full",
+                  reaction === 'down' && "text-red-500"
+                )}
+                onClick={() => handleReaction('down')}
+                aria-label="Thumbs down"
+                title="Not helpful"
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={handleCopy}
+                aria-label="Copy message"
+                title="Copy message"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-6 w-6 rounded-full",
+                  isStarred && "text-yellow-400"
+                )}
+                onClick={handleStar}
+                aria-label={isStarred ? "Remove star" : "Star"}
+                title={isStarred ? "Remove from starred" : "Add to starred messages"}
+              >
+                <Star className="h-3.5 w-3.5" fill={isStarred ? "currentColor" : "none"} />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={handleRegenerate}
+                aria-label="Regenerate response"
+                title="Regenerate response"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

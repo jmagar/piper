@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider"
 import { Toaster } from "sonner"
 import { cn } from "../lib/utils"
 import { EnvProvider } from "./env-provider"
-import { SocketProvider } from "@/lib/socket-setup"
+import { SocketProvider } from "@/lib/socket-setup.js"
 import { AppErrorBoundary } from "@/components/shared/error-boundary"
 
 // Load Inter font with latin subset for optimal performance

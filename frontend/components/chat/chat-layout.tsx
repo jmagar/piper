@@ -87,6 +87,7 @@ export function ChatLayout({
           showFileUpload={enableFileUpload}
           showEmojiPicker={enableEmojiPicker}
           showCommandPalette={enableCommandPalette}
+          showPromptEnhance={true}
           disabled={isLoading}
           placeholder="Type a message..."
         />

@@ -32,12 +32,6 @@
         'mcp-media-processor@latest',
       ],
     },
-    'modal-toolbox': {
-      command: 'uvx',
-      args: [
-        'modal-mcp-toolbox',
-      ],
-    },
     shell: {
       command: 'npx',
       args: [

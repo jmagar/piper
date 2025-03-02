@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 
+import { getWebSocketUrl } from './env';
 import type { Socket, SocketOptions } from '@/types/socket';
 
 /**
@@ -16,15 +17,13 @@ export const DEFAULT_OPTIONS: SocketOptions = {
 } as const;
 
 /**
- * API URL is hardcoded for reliability
- */
-export const API_URL = 'http://localhost:4100';
-
-/**
  * Initialize and configure the socket connection
  */
 export function initSocket(options: SocketOptions = DEFAULT_OPTIONS): Socket {
-    return io(API_URL, {
+    // Get the WebSocket URL from environment variables
+    const wsUrl = getWebSocketUrl();
+    console.log('Connecting to WebSocket server at:', wsUrl);
+    return io(wsUrl, {
         path: '/socket.io',
         transports: ['polling', 'websocket'],
         autoConnect: true,

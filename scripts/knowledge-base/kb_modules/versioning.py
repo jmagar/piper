@@ -84,6 +84,41 @@ class VersionManager:
         """Initialize version manager."""
         pass
     
+    def get_timestamp(self) -> int:
+        """
+        Get current Unix timestamp in seconds.
+        
+        Returns:
+            int: Current timestamp
+        """
+        return get_current_timestamp()
+    
+    def format_timestamp(self, timestamp: int) -> str:
+        """
+        Format Unix timestamp as human-readable string.
+        
+        Args:
+            timestamp: Unix timestamp
+            
+        Returns:
+            str: Formatted date string (YYYY-MM-DD HH:MM:SS)
+        """
+        return format_timestamp(timestamp)
+    
+    def get_versioned_id(self, base_id: str, timestamp: int, chunk_index: int = 0) -> str:
+        """
+        Get a versioned ID for a document chunk. Alias for create_versioned_id.
+        
+        Args:
+            base_id: Base identifier for the document (usually path)
+            timestamp: Document version timestamp
+            chunk_index: Chunk index
+            
+        Returns:
+            str: Versioned document ID (as a UUID)
+        """
+        return self.create_versioned_id(path=base_id, timestamp=timestamp, chunk_index=chunk_index)
+    
     def create_versioned_id(self, path: str, timestamp: int, chunk_index: int = 0) -> str:
         """
         Create a versioned ID for a document chunk.

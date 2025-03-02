@@ -8,7 +8,7 @@ Handles generating embeddings using OpenAI's API.
 import time
 import logging
 import random
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, Tuple
 import openai
 from openai import OpenAIError, RateLimitError, APITimeoutError, APIConnectionError
 
@@ -30,7 +30,7 @@ class EmbeddingError(Exception):
 class EmbeddingGenerator:
     """Handles generating embeddings using OpenAI's API."""
     
-    def __init__(self, api_key: str = None, model: str = None, max_retries: int = 5):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, max_retries: int = 5):
         """
         Initialize the embedding generator.
         

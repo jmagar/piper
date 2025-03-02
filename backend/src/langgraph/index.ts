@@ -4,6 +4,7 @@ import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent, type AgentState } from '@langchain/langgraph/prebuilt';
 import type { Callbacks } from '@langchain/core/callbacks/manager';
+import type { StructuredTool } from '@langchain/core/tools';
 import debug from 'debug';
 import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
@@ -44,6 +45,24 @@ interface InvokeOptions {
 }
 
 /**
+ * Extended options for MCP tool initialization
+ */
+interface ExtendedMcpOptions {
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  initTimeout?: number;
+  continueOnError?: boolean;
+}
+
+/**
+ * Extended result from MCP tool initialization
+ */
+interface ExtendedMcpResult {
+  tools: StructuredTool[];
+  cleanup: () => Promise<void>;
+  failedServers?: string[];
+}
+
+/**
  * Creates a LangGraph agent with proper state management and tool handling
  */
 export async function createLangGraph(prismaClient?: PrismaClient) {
@@ -58,11 +77,37 @@ export async function createLangGraph(prismaClient?: PrismaClient) {
     maxTokens: config.llm.max_tokens
   });
   
-  // Initialize MCP tools
-  const { tools, cleanup: cleanupTools } = await convertMcpToLangchainTools(
-    config.mcp_servers,
-    { logLevel: 'info' }
-  );
+  // Initialize MCP tools with enhanced error handling
+  let tools: StructuredTool[] = [];
+  let cleanupTools = async () => {};
+  try {
+    log('Initializing MCP tools from %d configured servers', Object.keys(config.mcp_servers).length);
+    // Cast to custom options and result types
+    const mcpResult = await convertMcpToLangchainTools(
+      config.mcp_servers,
+      { 
+        logLevel: 'info',
+        // Additional options for graceful degradation
+        // @ts-expect-error - We're adding custom options that may not be in the type definition
+        initTimeout: 10000, // 10 seconds timeout for each server
+        continueOnError: true // Continue even if some servers fail
+      } as ExtendedMcpOptions
+    ) as ExtendedMcpResult;
+    
+    tools = mcpResult.tools;
+    cleanupTools = mcpResult.cleanup;
+    log('Successfully initialized %d MCP tools from available servers', tools.length);
+    
+    // Log which servers are operational vs failed
+    if (mcpResult.failedServers && mcpResult.failedServers.length > 0) {
+      error('The following MCP servers failed to initialize and will be skipped: %s', 
+        mcpResult.failedServers.join(', '));
+    }
+  } catch (err) {
+    error('Error during MCP tools initialization: %s', err instanceof Error ? err.message : String(err));
+    error('Continuing with limited or no tools available');
+    tools = []; // Start with empty tools rather than failing
+  }
 
   // Create conversation store
   const conversations = new Map<string, ConversationHistory>();

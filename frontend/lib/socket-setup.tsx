@@ -1,22 +1,29 @@
 "use client";
 
-import { io } from 'socket.io-client';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { getWebSocketUrl } from './env';
 
 // Get WebSocket URL from environment
-// Force use port 4100 which is where our backend is running
-const SOCKET_URL = 'http://localhost:4100';
+const SOCKET_URL = typeof window !== 'undefined' ? (window.env?.WEBSOCKET_URL || getWebSocketUrl()) : getWebSocketUrl();
 
-// Socket context
-const SocketContext = createContext(null);
+// Define the socket context value type
+interface SocketContextValue {
+  socket: Socket | null;
+  isConnected: boolean;
+  isConnecting: boolean;
+  error: string | null;
+}
 
-export function SocketProvider({ children }) {
+// Socket context with proper typing
+const SocketContext = createContext<SocketContextValue | null>(null);
+
+export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
-  const [error, setError] = useState(null);
-  const socketRef = useRef(null);
+  const [error, setError] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -119,8 +126,8 @@ export function SocketProvider({ children }) {
   );
 }
 
-// Hook to use socket
-export function useSocket() {
+// Hook to use socket with proper typing
+export function useSocket(): SocketContextValue {
   const context = useContext(SocketContext);
   
   if (!context) {
@@ -130,8 +137,15 @@ export function useSocket() {
   return context;
 }
 
+// Generic event callback type
+type EventCallback<T = any> = (data: T) => void;
+
 // Hook for listening to socket events
-export function useSocketEvent(eventName, callback, deps = []) {
+export function useSocketEvent<T = any>(
+  eventName: string, 
+  callback: EventCallback<T>, 
+  deps: React.DependencyList = []
+): void {
   const { socket } = useSocket();
   
   // Use a ref to avoid recreating the handler on each render
@@ -147,8 +161,8 @@ export function useSocketEvent(eventName, callback, deps = []) {
     if (!socket) return;
     
     // Create handler that uses the latest callback
-    const handler = (...args) => {
-      callbackRef.current(...args);
+    const handler = (data: T) => {
+      callbackRef.current(data);
     };
     
     // Add event listener
@@ -165,25 +179,31 @@ export function useSocketEvent(eventName, callback, deps = []) {
 export function useSocketEmit() {
   const { socket } = useSocket();
   
-  return function emit(event, data, waitForAck = false) {
-    if (!socket) {
-      console.error(`[SOCKET] Cannot emit event: ${event} - socket not connected`);
-      return Promise.reject(new Error('Socket not connected'));
-    }
-    
-    if (waitForAck) {
-      return new Promise((resolve, reject) => {
-        socket.emit(event, data, (response) => {
-          if (response && response.error) {
-            reject(new Error(response.error));
-          } else {
-            resolve(response);
-          }
+  return {
+    emit: function<T = any>(
+      event: string, 
+      data: any, 
+      waitForAck: boolean = false
+    ): Promise<T> {
+      if (!socket) {
+        console.error(`[SOCKET] Cannot emit event: ${event} - socket not connected`);
+        return Promise.reject(new Error('Socket not connected'));
+      }
+      
+      if (waitForAck) {
+        return new Promise<T>((resolve, reject) => {
+          socket.emit(event, data, (response: any) => {
+            if (response && response.error) {
+              reject(new Error(response.error));
+            } else {
+              resolve(response as T);
+            }
+          });
         });
-      });
-    } else {
-      socket.emit(event, data);
-      return Promise.resolve();
+      } else {
+        socket.emit(event, data);
+        return Promise.resolve({} as T);
+      }
     }
   };
 }

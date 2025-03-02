@@ -622,3 +622,1175 @@ ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be aw
  GET /chat/installHook.js.map [32m200[39m in 115ms
 
 EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1945ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 3.2s (834 modules)
+
+ GET / [33m404[39m in 4090ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 1735ms (965 modules)
+
+ GET /chat/new [32m200[39m in 2339ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 1177ms (1028 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m   params[33m:[39m { chatId[33m:[39m string } [0m
+[0m [90m 87 |[39m }) {[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 90 |[39m   [0m
+[0m [90m 91 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 2105ms
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m   params[33m:[39m { chatId[33m:[39m string } [0m
+[0m [90m 87 |[39m }) {[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 90 |[39m   [0m
+[0m [90m 91 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/installHook.js.map [32m200[39m in 407ms
+
+ [32m[1m✓[22m[39m Compiled in 635ms (1028 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m   params[33m:[39m { chatId[33m:[39m string } [0m
+[0m [90m 87 |[39m }) {[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 90 |[39m   [0m
+[0m [90m 91 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 484ms
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m   params[33m:[39m { chatId[33m:[39m string } [0m
+[0m [90m 87 |[39m }) {[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 90 |[39m   [0m
+[0m [90m 91 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/installHook.js.map [32m200[39m in 247ms
+
+ [32m[1m✓[22m[39m Compiled in 728ms (610 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 368ms
+
+ GET /chat/new [32m200[39m in 213ms
+
+ [32m[1m✓[22m[39m Compiled in 872ms (1026 modules)
+
+ [32m[1m✓[22m[39m Compiled in 469ms (1026 modules)
+
+ [32m[1m✓[22m[39m Compiled in 972ms (1039 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 246ms
+
+ [32m[1m✓[22m[39m Compiled in 532ms (1039 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 144ms
+
+ [32m[1m✓[22m[39m Compiled in 634ms (1041 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 373ms
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 275ms
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/installHook.js.map [32m200[39m in 173ms
+
+ [32m[1m✓[22m[39m Compiled in 948ms (1024 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 556ms
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ [32m[1m✓[22m[39m Compiled in 1256ms (1024 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 1282ms
+
+ [32m[1m✓[22m[39m Compiled in 1260ms (1024 modules)
+
+ [32m[1m✓[22m[39m Compiled in 425ms (1024 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:89:17)
+[0m [90m 87 |[39m }) {[0m
+[0m [90m 88 |[39m   [90m// Fix: properly await params when using dynamic params[39m[0m
+[0m[31m[1m>[22m[39m[90m 89 |[39m   [36mconst[39m chatId [33m=[39m params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                 [31m[1m^[22m[39m[0m
+[0m [90m 90 |[39m   [36mconst[39m initialData [33m=[39m [36mawait[39m getServerSideProps(chatId)[33m;[39m[0m
+[0m [90m 91 |[39m   [0m
+[0m [90m 92 |[39m   [36mreturn[39m ([0m
+
+ GET /chat/installHook.js.map [32m200[39m in 511ms
+
+ [32m[1m✓[22m[39m Compiled in 782ms (610 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m }) {[0m
+[0m [90m 87 |[39m   [90m// Use the params directly (no need to await in new Next.js App Router)[39m[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [0m
+[0m [90m 90 |[39m   [90m// Use a client component that will handle data fetching[39m[0m
+[0m [90m 91 |[39m   [0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 246ms
+
+ [32m[1m✓[22m[39m Compiled in 678ms (1024 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m }) {[0m
+[0m [90m 87 |[39m   [90m// Use the params directly (no need to await in new Next.js App Router)[39m[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [0m
+[0m [90m 90 |[39m   [90m// Use a client component that will handle data fetching[39m[0m
+[0m [90m 91 |[39m   [0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 354ms
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m }) {[0m
+[0m [90m 87 |[39m   [90m// Use the params directly (no need to await in new Next.js App Router)[39m[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default-chat-id'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [0m
+[0m [90m 90 |[39m   [90m// Use a client component that will handle data fetching[39m[0m
+[0m [90m 91 |[39m   [0m
+
+ GET /chat/installHook.js.map [32m200[39m in 190ms
+
+ [32m[1m✓[22m[39m Compiled in 252ms (610 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:88:24)
+[0m [90m 86 |[39m }) {[0m
+[0m [90m 87 |[39m   [90m// We pass just the ID to the client component which will handle the data fetching[39m[0m
+[0m[31m[1m>[22m[39m[90m 88 |[39m   [36mconst[39m chatId [33m=[39m [33mString[39m(params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default'[39m)[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 89 |[39m   [0m
+[0m [90m 90 |[39m   [36mreturn[39m ([0m
+[0m [90m 91 |[39m     [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex flex-col h-full"[39m[33m>[39m[0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 170ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/[chatId]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/[chatId]/page.tsx[0m:13:1]
+ [2m10[0m | /**
+ [2m11[0m |  * Generate metadata for this page
+ [2m12[0m |  */
+ [2m13[0m | export const metadata: Metadata = {
+    : [35;1m             ^^^^^^^^[0m
+ [2m14[0m |   title: 'Chat',
+ [2m15[0m |   description: 'Chat with your AI assistant',
+ [2m16[0m | };
+    `----
+
+Import trace for requested module:
+./app/chat/[chatId]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/[chatId]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/[chatId]/page.tsx[0m:13:1]
+ [2m10[0m | /**
+ [2m11[0m |  * Generate metadata for this page
+ [2m12[0m |  */
+ [2m13[0m | export const metadata: Metadata = {
+    : [35;1m             ^^^^^^^^[0m
+ [2m14[0m |   title: 'Chat',
+ [2m15[0m |   description: 'Chat with your AI assistant',
+ [2m16[0m | };
+    `----
+
+Import trace for requested module:
+./app/chat/[chatId]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/[chatId]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/[chatId]/page.tsx[0m:13:1]
+ [2m10[0m | /**
+ [2m11[0m |  * Generate metadata for this page
+ [2m12[0m |  */
+ [2m13[0m | export const metadata: Metadata = {
+    : [35;1m             ^^^^^^^^[0m
+ [2m14[0m |   title: 'Chat',
+ [2m15[0m |   description: 'Chat with your AI assistant',
+ [2m16[0m | };
+    `----
+
+Import trace for requested module:
+./app/chat/[chatId]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/[chatId]/page.tsx
+Error:   [31mx[0m Expression expected
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/[chatId]/page.tsx[0m:7:1]
+ [2m 4[0m | import { ChatClient } from './client';
+ [2m 5[0m | import { ReconnectButton } from '../../../components/chat/reconnect-button';
+ [2m 6[0m | 
+ [2m 7[0m |  * @returns Chat data including conversation and messages
+    : [35;1m ^[0m
+ [2m 8[0m |  */
+ [2m 9[0m | async function getServerSideProps(chatId: string) {
+ [2m10[0m |   try {
+    `----
+  [31mx[0m Expression expected
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/[chatId]/page.tsx[0m:7:1]
+ [2m 4[0m | import { ChatClient } from './client';
+ [2m 5[0m | import { ReconnectButton } from '../../../components/chat/reconnect-button';
+ [2m 6[0m | 
+ [2m 7[0m |  * @returns Chat data including conversation and messages
+    : [35;1m   ^[0m
+ [2m 8[0m |  */
+ [2m 9[0m | async function getServerSideProps(chatId: string) {
+ [2m10[0m |   try {
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/chat/[chatId]/page.tsx
+
+ [32m[1m✓[22m[39m Compiled in 733ms (1025 modules)
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 207ms
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:19:24)
+[0m [90m 17 |[39m }) {[0m
+[0m [90m 18 |[39m   [90m// We pass just the ID to the client component which will handle the data fetching[39m[0m
+[0m[31m[1m>[22m[39m[90m 19 |[39m   [36mconst[39m chatId [33m=[39m params[33m.[39mchatId [33m||[39m [32m'default'[39m[33m;[39m[0m
+[0m [90m    |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 20 |[39m   [0m
+[0m [90m 21 |[39m   [36mreturn[39m ([0m
+[0m [90m 22 |[39m     [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex flex-col h-full"[39m[33m>[39m[0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 485ms
+
+ [32m[1m✓[22m[39m Compiled in 1890ms (1025 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:17:30)
+[0m [90m 15 |[39m [36mexport[39m [36mdefault[39m [36masync[39m [36mfunction[39m [33mChatPage[39m({ params }[33m:[39m [33mChatPageProps[39m) {[0m
+[0m [90m 16 |[39m   [90m// We need to convert/process params before using to avoid the dynamic API error[39m[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m   [36mconst[39m chatIdString [33m=[39m [33mString[39m(params[33m?[39m[33m.[39mchatId [33m||[39m [32m'default'[39m)[33m;[39m[0m
+[0m [90m    |[39m                              [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   [0m
+[0m [90m 19 |[39m   [36mreturn[39m ([0m
+[0m [90m 20 |[39m     [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex flex-col h-full"[39m[33m>[39m[0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 545ms
+
+ [32m[1m✓[22m[39m Compiled in 388ms (611 modules)
+
+ERROR: Error: Route "/chat/[chatId]" used `params.chatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at ChatPage (app/chat/[chatId]/page.tsx:13:31)
+[0m [90m 11 |[39m }) {[0m
+[0m [90m 12 |[39m   [90m// Convert to string to avoid Next.js dynamic params error[39m[0m
+[0m[31m[1m>[22m[39m[90m 13 |[39m   [36mconst[39m chatId [33m=[39m [33mString[39m(params[33m.[39mchatId [33m||[39m [32m'default'[39m)[33m;[39m[0m
+[0m [90m    |[39m                               [31m[1m^[22m[39m[0m
+[0m [90m 14 |[39m   [0m
+[0m [90m 15 |[39m   [36mreturn[39m ([0m
+[0m [90m 16 |[39m     [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex flex-col h-full"[39m[33m>[39m[0m
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 209ms
+
+ [32m[1m✓[22m[39m Compiled in 277ms (611 modules)
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 161ms
+
+ [32m[1m✓[22m[39m Compiled in 748ms (1019 modules)
+
+ [32m[1m✓[22m[39m Compiled in 474ms (1019 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 362ms
+
+ GET /chat/e42ad442-342e-46fc-8e03-820160053b47 [32m200[39m in 149ms
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 12.6s
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 3s (961 modules)
+
+ GET /chat/new [32m200[39m in 4702ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 5s (1019 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 7398ms
+
+ GET /chat/new [32m200[39m in 336ms
+
+ [37m[1m○[22m[39m Compiling /favicon.ico ...
+
+ [32m[1m✓[22m[39m Compiled /favicon.ico in 1096ms (624 modules)
+
+ GET /favicon.ico [32m200[39m in 1851ms
+
+ERROR: (node:14036) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ GET /chat/installHook.js.map [32m200[39m in 837ms
+
+ GET /chat/fc53bb72-3dae-45fd-a66d-3fb0b9a93664 [32m200[39m in 125ms
+
+ [32m[1m✓[22m[39m Compiled in 512ms (608 modules)
+
+ GET /chat/fc53bb72-3dae-45fd-a66d-3fb0b9a93664 [32m200[39m in 306ms
+
+ GET /chat/fc53bb72-3dae-45fd-a66d-3fb0b9a93664 [32m200[39m in 349ms
+
+ GET /chat/installHook.js.map [32m200[39m in 184ms
+
+ [32m[1m✓[22m[39m Compiled in 713ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 262ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 316ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 546ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 560ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 404ms (1025 modules)
+
+ GET /chat/fc53bb72-3dae-45fd-a66d-3fb0b9a93664 [32m200[39m in 281ms
+
+ GET /chat/installHook.js.map [32m200[39m in 127ms
+
+ GET /chat/fc53bb72-3dae-45fd-a66d-3fb0b9a93664 [32m200[39m in 129ms
+
+ GET /chat/installHook.js.map [32m200[39m in 96ms
+
+ GET /chat/new [32m200[39m in 180ms
+
+ GET /chat/installHook.js.map [32m200[39m in 238ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 72ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 77ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 86ms
+
+ GET /chat/installHook.js.map [32m200[39m in 146ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 161ms
+
+ GET /chat/installHook.js.map [32m200[39m in 75ms
+
+ [32m[1m✓[22m[39m Compiled in 1081ms (1025 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 300ms
+
+ [32m[1m✓[22m[39m Compiled in 631ms (1025 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 284ms
+
+ GET /chat/installHook.js.map [32m200[39m in 136ms
+
+ [32m[1m✓[22m[39m Compiled in 819ms (1025 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 417ms
+
+ [32m[1m✓[22m[39m Compiled in 598ms (1025 modules)
+
+ [32m[1m✓[22m[39m Compiled in 719ms (1019 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/installHook.js.map [31m500[39m in 563ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [31m500[39m in 188ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/installHook.js.map [31m500[39m in 133ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/installHook.js.map [31m500[39m in 154ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [31m500[39m in 111ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/installHook.js.map [31m500[39m in 88ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useSocket is not defined
+    at ChatClient (app/chat/[chatId]/client.tsx:43:43)
+[0m [90m 41 |[39m     messages[33m:[39m [][0m
+[0m [90m 42 |[39m   })[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 43 |[39m   [36mconst[39m { connectionState[33m,[39m isConnected } [33m=[39m useSocket()[33m;[39m[0m
+[0m [90m    |[39m                                           [31m[1m^[22m[39m[0m
+[0m [90m 44 |[39m   [0m
+[0m [90m 45 |[39m   [90m// Fetch conversation data on the client side[39m[0m
+[0m [90m 46 |[39m   [33mReact[39m[33m.[39museEffect(() [33m=>[39m {[0m {
+  digest: [32m'270227164'[39m
+}
+
+ GET /chat/installHook.js.map [31m500[39m in 174ms
+
+ [32m[1m✓[22m[39m Compiled in 864ms (1019 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 466ms
+
+ GET /chat/installHook.js.map [32m200[39m in 109ms
+
+ GET /chat/installHook.js.map [32m200[39m in 135ms
+
+ [32m[1m✓[22m[39m Compiled in 898ms (1019 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ [32m[1m✓[22m[39m Compiled in 937ms (1019 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 355ms
+
+ GET /chat/installHook.js.map [32m200[39m in 111ms
+
+ [32m[1m✓[22m[39m Compiled in 1170ms (1019 modules)
+
+ [32m[1m✓[22m[39m Compiled in 746ms (1019 modules)
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1692ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 6.2s (951 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 7337ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 88ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 94ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 136ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 517ms (931 modules)
+
+ GET / [33m404[39m in 675ms
+
+ [32m[1m✓[22m[39m Compiled in 393ms (946 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 168ms
+
+ [32m[1m✓[22m[39m Compiled in 353ms (946 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 227ms
+
+ [32m[1m✓[22m[39m Compiled in 313ms (948 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 182ms
+
+ [32m[1m✓[22m[39m Compiled in 386ms (948 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 188ms
+
+ [32m[1m✓[22m[39m Compiled in 429ms (946 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 168ms
+
+ [32m[1m✓[22m[39m Compiled in 669ms (942 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 168ms
+
+ [32m[1m✓[22m[39m Compiled in 760ms (942 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 172ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 173ms
+
+ [32m[1m✓[22m[39m Compiled in 725ms (942 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 191ms
+
+ [32m[1m✓[22m[39m Compiled in 366ms (942 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 175ms
+
+ [32m[1m✓[22m[39m Compiled in 213ms (942 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 107ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 262ms
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1588ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 8.1s (949 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 8966ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 122ms
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1455ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 1633ms (926 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 2481ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 129ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 127ms
+
+ [32m[1m✓[22m[39m Compiled in 966ms (940 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 151ms
+
+ [32m[1m✓[22m[39m Compiled in 475ms (940 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 107ms
+
+ [32m[1m✓[22m[39m Compiled in 317ms (940 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 150ms
+
+ GET /chat/installHook.js.map [32m200[39m in 342ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 56ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 112ms
+
+ GET /chat/installHook.js.map [32m200[39m in 107ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 92ms
+
+ [32m[1m✓[22m[39m Compiled in 221ms (408 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 90ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/globals.css.webpack[javascript/auto]!=!./node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[2]!./node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[3]!./app/globals.css
+Error: Package path ./preflight is not exported from package /home/jmagar/code/pooper/frontend/node_modules/@tailwindcss/postcss (see exports field in /home/jmagar/code/pooper/frontend/node_modules/@tailwindcss/postcss/package.json)
+Import trace for requested module:
+./app/globals.css.webpack[javascript/auto]!=!./node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[2]!./node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[3]!./app/globals.css
+./app/globals.css
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 1847ms (1366 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [31m500[39m in 4801ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 275ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 29ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 21ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 159ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 107ms
+
+ [32m[1m✓[22m[39m Compiled in 484ms (1276 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 141ms
+
+ERROR:  [31m[1m⨯[22m[39m Failed to generate static paths for /chat/[chatId]:
+
+ERROR: ReferenceError: require is not defined
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:771:27)
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:777:3) {
+  type: [32m'ReferenceError'[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 304ms (652 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: require is not defined
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:771:27)
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:777:3) {
+  type: [32m'ReferenceError'[39m,
+  page: [32m'/chat/73c18391-df3d-4b14-84c6-bac8207b7c6e'[39m
+}
+
+ [32m[1m✓[22m[39m Compiled /_error in 341ms (1352 modules)
+
+ERROR:  [31m[1m⨯[22m[39m [Error: Cannot find module '/home/jmagar/code/pooper/frontend/.next/server/pages/_document.js'
+Require stack:
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/require.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/load-components.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/utils.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/swc/options.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/swc/index.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/analysis/parse-module.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/router-server.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/start-server.js] {
+  code: [32m'MODULE_NOT_FOUND'[39m,
+  requireStack: [36m[Array][39m
+}
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [31m500[39m in 676ms
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: require is not defined
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:771:27)
+    at <unknown> (.next/server/app/chat/[chatId]/page.js:777:3) {
+  type: [32m'ReferenceError'[39m,
+  page: [32m'/chat/73c18391-df3d-4b14-84c6-bac8207b7c6e'[39m
+}
+
+ERROR:  [31m[1m⨯[22m[39m [Error: Cannot find module '/home/jmagar/code/pooper/frontend/.next/server/pages/_document.js'
+Require stack:
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/require.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/load-components.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/utils.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/swc/options.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/swc/index.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/analysis/parse-module.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/router-server.js
+- /home/jmagar/code/pooper/frontend/node_modules/.pnpm/next@15.2.0-canary.67_@opentelemetry+api@1.9.0_react-dom@19.1.0-canary-fcb4e0f1-2025021_9c62afac6a0b01acf3df7c7404ac5d32/node_modules/next/dist/server/lib/start-server.js] {
+  code: [32m'MODULE_NOT_FOUND'[39m,
+  requireStack: [36m[Array][39m
+}
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [31m500[39m in 445ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 541ms (1356 modules)
+
+ GET /_next/static/chunks/fallback/main.js [33m404[39m in 927ms
+
+ GET /_next/static/chunks/fallback/webpack.js [33m404[39m in 925ms
+
+ GET /_next/static/chunks/fallback/pages/_app.js [33m404[39m in 934ms
+
+ GET /_next/static/chunks/fallback/pages/_error.js [33m404[39m in 826ms
+
+ GET /_next/static/chunks/fallback/react-refresh.js [33m404[39m in 839ms
+
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1505ms
+
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1167ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 3.9s (949 modules)
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 4508ms
+
+ GET /chat/73c18391-df3d-4b14-84c6-bac8207b7c6e [32m200[39m in 71ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 1221ms (1032 modules)
+
+ GET /chat/new [32m200[39m in 1379ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 61ms
+
+ERROR:  [31m[1m⨯[22m[39m ./components/layout/app-layout.tsx:4:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/layout/sidebar[39m'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { SidebarProvider } from "@/components/layout/sidebar";
+    | ^
+  5 | import { AppSidebar } from "@/components/layout/app-sidebar";
+  6 | import { HeaderProvider } from "@/components/layout/header/header-context";
+  7 | import { Header } from "@/components/layout/header/header";
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./components/layout/app-layout.tsx:4:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/layout/sidebar[39m'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { SidebarProvider } from "@/components/layout/sidebar";
+    | ^
+  5 | import { AppSidebar } from "@/components/layout/app-sidebar";
+  6 | import { HeaderProvider } from "@/components/layout/header/header-context";
+  7 | import { Header } from "@/components/layout/header/header";
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./components/layout/app-layout.tsx:4:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/layout/sidebar[39m'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { SidebarProvider } from "@/components/layout/sidebar";
+    | ^
+  5 | import { AppSidebar } from "@/components/layout/app-sidebar";
+  6 | import { HeaderProvider } from "@/components/layout/header/header-context";
+  7 | import { Header } from "@/components/layout/header/header";
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./components/layout/app-layout.tsx:4:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/layout/sidebar[39m'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { SidebarProvider } from "@/components/layout/sidebar";
+    | ^
+  5 | import { AppSidebar } from "@/components/layout/app-sidebar";
+  6 | import { HeaderProvider } from "@/components/layout/header/header-context";
+  7 | import { Header } from "@/components/layout/header/header";
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ERROR:  [31m[1m⨯[22m[39m ./components/layout/app-layout.tsx:4:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/layout/sidebar[39m'
+  2 |
+  3 | import * as React from "react";
+> 4 | import { SidebarProvider } from "@/components/layout/sidebar";
+    | ^
+  5 | import { AppSidebar } from "@/components/layout/app-sidebar";
+  6 | import { HeaderProvider } from "@/components/layout/header/header-context";
+  7 | import { Header } from "@/components/layout/header/header";
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [31m500[39m in 5278ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [31m500[39m in 24ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [31m500[39m in 12ms
+
+ [32m[1m✓[22m[39m Compiled /_error in 1229ms (1704 modules)
+
+ERROR:  [31m[1m⨯[22m[39m [Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.] {
+  digest: [32m'1813206974'[39m
+}
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [31m500[39m in 668ms
+
+ [32m[1m✓[22m[39m Compiled in 1187ms (1726 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 109ms
+
+ [32m[1m✓[22m[39m Compiled in 435ms (1726 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 87ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 261ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 451ms (1716 modules)
+
+ GET /avatars/user.png [33m404[39m in 557ms
+
+ GET /debug/websocket [33m404[39m in 16ms
+
+ GET /debug/websocket [33m404[39m in 47ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 279ms
+
+ GET /avatars/user.png [33m404[39m in 55ms
+
+ [32m[1m✓[22m[39m Compiled in 962ms (1726 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 108ms
+
+ [32m[1m✓[22m[39m Compiled in 1803ms (1726 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 174ms
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 583ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 596ms (1716 modules)
+
+ GET /avatars/user.png [33m404[39m in 753ms
+
+ [32m[1m✓[22m[39m Compiled in 720ms (1738 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 229ms
+
+ [32m[1m✓[22m[39m Compiled in 397ms (1738 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 150ms
+
+ [32m[1m✓[22m[39m Compiled in 521ms (1738 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 101ms
+
+ [32m[1m✓[22m[39m Compiled in 1196ms (1732 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 121ms
+
+ [32m[1m✓[22m[39m Compiled in 801ms (1736 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 126ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 898ms (1726 modules)
+
+ GET /avatars/user.png [33m404[39m in 1054ms
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+   - Environments: .env
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1715ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 2.8s (1270 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 3724ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 785ms (1274 modules)
+
+ GET /avatars/user.png [33m404[39m in 933ms
+
+ [32m[1m✓[22m[39m Compiled in 1783ms (1284 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 139ms
+
+ [32m[1m✓[22m[39m Compiled in 445ms (1284 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 161ms
+
+ [32m[1m✓[22m[39m Compiled in 833ms (1284 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 247ms
+
+ [32m[1m✓[22m[39m Compiled in 846ms (1284 modules)
+
+ GET /chat/df9a6f69-d837-4b1d-adec-935d9cb135be [32m200[39m in 224ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 790ms (1274 modules)
+
+ GET /avatars/user.png [33m404[39m in 1095ms
+
+ GET / [33m404[39m in 39ms
+
+ GET / [33m404[39m in 42ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 617ms (1300 modules)
+
+ GET /chat/new [32m200[39m in 898ms
+
+ GET /avatars/user.png [33m404[39m in 50ms
+
+ GET /chat/9e70e289-2b73-460f-9af8-397e66038939 [32m200[39m in 80ms
+
+ERROR: (node:1774372) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ GET /chat/new [32m200[39m in 75ms
+
+ GET /avatars/user.png [33m404[39m in 89ms
+
+ GET /chat/5df6c4d0-a06d-453d-adf4-078b0ccce7dc [32m200[39m in 50ms
+

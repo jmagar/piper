@@ -42,7 +42,7 @@ MAX_RETRIES = 3
 class VectorStore:
     """Handles vector database operations using Qdrant."""
     
-    def __init__(self, url: str = None, api_key: str = None):
+    def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None):
         """
         Initialize vector store.
         
@@ -252,7 +252,7 @@ class VectorStore:
             # Prepare filter
             filter_query = None
             if filter_conditions:
-                filter_query = models.Filter(must=filter_conditions)
+                filter_query = models.Filter(must=list(filter_conditions))
             
             # Search Qdrant
             logger.debug(f"Searching with filter: {filter_query}")
@@ -271,11 +271,28 @@ class VectorStore:
             if latest_only:
                 logger.info("Filtering to latest version only")
                 # Group by path
-                path_groups = {}
+                path_groups: Dict[str, Tuple[models.ScoredPoint, float]] = {}
                 for hit in search_result:
-                    path = hit.payload.get("metadata", {}).get("path", "unknown")
-                    if path not in path_groups or hit.payload.get("timestamp", 0) > path_groups[path][0].payload.get("timestamp", 0):
+                    if hit.payload is None:
+                        continue
+                        
+                    metadata = hit.payload.get("metadata", {})
+                    path = metadata.get("path", "unknown") if metadata is not None else "unknown"
+                    timestamp = hit.payload.get("timestamp", 0)
+                    
+                    # Check if path exists in path_groups first
+                    if path not in path_groups:
                         path_groups[path] = (hit, hit.score)
+                    else:
+                        # Then safely check the timestamp
+                        existing_hit, existing_score = path_groups[path]
+                        existing_payload = existing_hit.payload
+                        existing_timestamp = 0
+                        if existing_payload is not None:
+                            existing_timestamp = existing_payload.get("timestamp", 0)
+                        
+                        if timestamp > existing_timestamp:
+                            path_groups[path] = (hit, hit.score)
                 
                 # Sort by score and take top 'limit' results
                 results_by_score = sorted(path_groups.values(), key=lambda x: x[1], reverse=True)[:limit]
@@ -285,9 +302,14 @@ class VectorStore:
             # Format results
             results = []
             for hit in search_result:
+                if hit.payload is None:
+                    # Skip points with no payload
+                    continue
+                    
+                metadata = hit.payload.get("metadata", {})
                 result = {
                     "text": hit.payload.get("text", ""),
-                    "metadata": hit.payload.get("metadata", {}),
+                    "metadata": metadata,
                     "score": hit.score,
                     "timestamp": hit.payload.get("timestamp"),
                     "version_date": hit.payload.get("version_date"),
@@ -342,6 +364,9 @@ class VectorStore:
             # Extract unique timestamps/versions
             versions = {}
             for point in points:
+                if point.payload is None:
+                    continue
+                    
                 timestamp = point.payload.get("timestamp")
                 if timestamp and point.payload.get("chunk_index", 0) == 0:  # Only consider first chunks
                     versions[timestamp] = point.payload.get("version_date", format_timestamp(timestamp))

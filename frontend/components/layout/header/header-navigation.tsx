@@ -34,8 +34,7 @@ export function HeaderNavigation({ className }: HeaderNavigationProps) {
   
   // Navigation items - these would typically be dynamic or from a config
   const navItems = React.useMemo<NavigationItem[]>(() => [
-    { href: '/chat', label: 'Chat' },
-    { href: '/debug/websocket', label: 'WebSocket Debug' }
+    { href: '/chat', label: 'Chat' }
   ], []);
   
   return (

@@ -18,15 +18,21 @@ import { chatCacheService } from './chat-cache.service.mjs';
 const log = debug('mcp:chat:langchain');
 const error = debug('mcp:chat:langchain:error');
 
+/**
+ * Interface representing streaming message state
+ */
 interface StreamingState {
-  content: string;
   chunks: string[];
+  content: string;
   messageId?: string;
+  status: 'initializing' | 'streaming' | 'complete' | 'error';
+  isComplete?: boolean;
+  startTime: number;
+  endTime?: number;
   streamStartTime: string;
   streamEndTime?: string;
-  streamDuration: number;
-  isComplete: boolean;
-  error?: Error;
+  streamDuration?: number;
+  error?: string;
 }
 
 /**
@@ -55,10 +61,31 @@ export class ChatLangChainService {
         log('LangGraph agent initialized successfully');
       } catch (err) {
         error('Failed to initialize LangGraph agent: %s', err instanceof Error ? err.message : String(err));
+        // Don't throw an error, just return null to allow graceful degradation
         return null;
       }
     }
     return this.agent;
+  }
+
+  /**
+   * Gets a fallback response when agent is unavailable
+   * @param message User's message
+   * @returns Fallback response text
+   */
+  private getFallbackResponse(message: string): string {
+    // Simple keyword-based handling for common queries when agent is unavailable
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi ')) {
+      return "Hello! I'm currently operating with limited capabilities due to some technical issues. I can still chat with you, but some of my advanced features might not be available.";
+    } else if (lowerMessage.includes('help')) {
+      return "I'm here to help, though I'm currently operating with limited capabilities. What can I assist you with? For complex tasks, you might need to wait until my full capabilities are restored.";
+    } else if (lowerMessage.includes('weather') || lowerMessage.includes('forecast')) {
+      return "I'd like to help with weather information, but I'm currently unable to access my weather tools. Please try again later or check a weather website directly.";
+    } else {
+      return "I'm currently experiencing some technical difficulties with my tools and advanced capabilities. I can still chat with you, but for complex tasks, you might need to try again later.";
+    }
   }
 
   /**
@@ -117,200 +144,20 @@ export class ChatLangChainService {
   ): Promise<ChatMessage> {
     const streamId = this.generateStreamId();
     const streamStartTime = new Date().toISOString();
-    log('Starting streaming message processing, streamId: %s', streamId);
     
-    // Initialize streaming state
-    this.streamingMessages.set(streamId, { 
-      content: '', 
+    // Initialize stream state with empty string for content
+    this.streamingMessages.set(streamId, {
       chunks: [],
-      streamStartTime,
-      streamDuration: 0,
-      isComplete: false
+      messageId: undefined,
+      status: 'initializing',
+      startTime: Date.now(),
+      endTime: undefined,
+      content: '', // Initialize as empty string
+      streamStartTime // Initialize with current time
     });
+    log('Starting streaming message processing, streamId: %s', streamId);
 
     try {
-      // First check if this is a deterministic query that might be in cache
-      if (this.isDeterministicQuery(message)) {
-        try {
-          const cachedResponse = await chatCacheService.getLLMResponse(message, { temperature: 0 });
-          if (cachedResponse) {
-            log('Cache hit for streaming message (using cached response): %s', message);
-            // Create the message structure but do "fake streaming" of the cached response
-            const { userMessage, conversation, user } = await this.createInitialMessage(
-              message,
-              userId,
-              conversationId,
-              'streaming'
-            );
-            
-            // Create initial assistant message
-            const initialMetadata: Partial<StreamingMetadataFields> = {
-              type: 'stream-chunk',
-              streamStartTime,
-              streamEndTime: undefined,
-              streamDuration: 0
-            };
-            
-            const assistantMessage = await this.prisma.chatMessage.create({
-              data: {
-                content: '',
-                role: 'assistant',
-                conversation_id: conversation.id,
-                user_id: userId,
-                parent_id: userMessage.id,
-                metadata: createStreamingMetadata(streamId, 'streaming', initialMetadata),
-                status: 'streaming' as MessageStatus
-              }
-            });
-            
-            // Store message ID in streaming state
-            const state = this.streamingMessages.get(streamId);
-            if (state) {
-              state.messageId = assistantMessage.id;
-            }
-            
-            // Set a small delay for realistic streaming effect
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Stream the cached response in chunks for a more natural streaming effect
-            const chunkSize = 10;
-            const chunks = [];
-            for (let i = 0; i < cachedResponse.length; i += chunkSize) {
-              chunks.push(cachedResponse.slice(i, i + chunkSize));
-            }
-            
-            for (const chunk of chunks) {
-              // Add a small delay between chunks
-              await new Promise(resolve => setTimeout(resolve, 15));
-              
-              // Process chunk like a normal streaming chunk
-              const streamState = this.streamingMessages.get(streamId);
-              if (streamState && !streamState.isComplete && !streamState.error) {
-                streamState.content += chunk;
-                streamState.chunks.push(chunk);
-                
-                // Update message in DB
-                try {
-                  await this.prisma.chatMessage.update({
-                    where: { id: assistantMessage.id },
-                    data: {
-                      content: streamState.content,
-                      metadata: createStreamingMetadata(streamId, 'streaming', {
-                        ...initialMetadata,
-                        chunkCount: streamState.chunks.length,
-                        totalLength: streamState.content.length
-                      })
-                    }
-                  });
-                } catch (err) {
-                  error('Failed to update cached message content: %s', err instanceof Error ? err.message : String(err));
-                }
-                
-                // Call the chunk callback
-                options.onChunk(chunk);
-              }
-            }
-            
-            // Simulate completion
-            const endTime = new Date().toISOString();
-            const duration = Date.now() - new Date(streamStartTime).getTime();
-            
-            const finalStreamState = this.streamingMessages.get(streamId);
-            if (finalStreamState) {
-              finalStreamState.isComplete = true;
-              finalStreamState.streamEndTime = endTime;
-              finalStreamState.streamDuration = duration;
-              
-              // Create a custom metadata object
-              const completeMetadataObject = {
-                streamStatus: 'complete' as const,
-                streamId,
-                type: 'text' as const,
-                chunkCount: finalStreamState.chunks.length,
-                totalLength: cachedResponse.length,
-                streamStartTime: finalStreamState.streamStartTime,
-                streamEndTime: finalStreamState.streamEndTime,
-                streamDuration: finalStreamState.streamDuration,
-                timestamp: new Date().toISOString(),
-                fromCache: true // Custom property
-              };
-              
-              // Cast to Prisma.JsonObject for database storage
-              const metadataWithCache = completeMetadataObject as Prisma.JsonObject;
-              
-              await this.prisma.chatMessage.update({
-                where: { id: assistantMessage.id },
-                data: {
-                  content: cachedResponse,
-                  metadata: metadataWithCache,
-                  status: 'sent' as MessageStatus
-                }
-              });
-            }
-            
-            // Call the completion callback
-            options.onComplete?.();
-            
-            // Cache the user message for future retrieval
-            await chatCacheService.cacheMessage(userMessage);
-            await chatCacheService.cacheMessage({
-              ...assistantMessage,
-              content: cachedResponse,
-              metadata: {
-                streamStatus: 'complete' as const,
-                streamId,
-                type: 'text' as const,
-                timestamp: new Date().toISOString(),
-                fromCache: true
-              } as Prisma.JsonObject
-            });
-            await chatCacheService.cacheConversation(conversation);
-            
-            // Clean up and return result
-            const finalState = this.streamingMessages.get(streamId) || {
-              content: cachedResponse,
-              chunks: [cachedResponse],
-              streamStartTime,
-              streamEndTime: endTime,
-              streamDuration: duration,
-              isComplete: true
-            };
-            
-            this.streamingMessages.delete(streamId);
-            
-            return {
-              id: assistantMessage.id,
-              content: cachedResponse,
-              role: 'assistant',
-              userId: assistantMessage.user_id ?? '',
-              username: user.name ?? '',
-              conversationId: conversation.id,
-              parentId: assistantMessage.parent_id ?? undefined,
-              type: 'text',
-              metadata: {
-                streamStatus: 'complete' as const,
-                streamId,
-                type: 'text' as const,
-                chunkCount: finalState.chunks.length,
-                totalLength: cachedResponse.length,
-                streamStartTime: finalState.streamStartTime,
-                streamEndTime: finalState.streamEndTime,
-                streamDuration: finalState.streamDuration,
-                timestamp: new Date().toISOString(),
-                fromCache: true
-              } as Prisma.JsonObject as ChatMetadata,
-              createdAt: assistantMessage.created_at,
-              updatedAt: assistantMessage.updated_at
-            };
-          }
-        } catch (cacheErr) {
-          // Non-fatal, just log and continue with normal processing
-          error('Error checking cache for streaming: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
-        }
-      }
-
-      log('Creating initial message for user %s with streamId %s', userId, streamId);
-      
       // Create or find user and conversation first
       const { userMessage, conversation, user } = await this.createInitialMessage(
         message,
@@ -351,9 +198,65 @@ export class ChatLangChainService {
       // Start streaming process
       const agent = await this.initAgent();
       if (!agent) {
-        throw new Error('Agent initialization failed');
+        // Handle case when agent initialization fails
+        log('Agent unavailable, using fallback response');
+        
+        // Get fallback response
+        const fallbackResponse = this.getFallbackResponse(message);
+        
+        // Emit fallback response as a chunk
+        await options.onChunk?.(fallbackResponse);
+        
+        // Store chunk in streaming state
+        const streamState = this.streamingMessages.get(streamId);
+        if (streamState) {
+          streamState.chunks.push(fallbackResponse);
+          streamState.content = fallbackResponse; // Ensure content is set
+          streamState.status = 'complete';
+          streamState.endTime = Date.now();
+        }
+        
+        // Update the message in the database
+        await this.prisma.chatMessage.update({
+          where: { id: assistantMessage.id },
+          data: {
+            content: fallbackResponse,
+            status: 'sent' as MessageStatus,
+            metadata: createStreamingMetadata(streamId, 'complete', {
+              type: 'text',
+              streamStartTime: new Date(streamStartTime).toISOString(),
+              streamEndTime: new Date(Date.now()).toISOString(),
+              streamDuration: Date.now() - Date.parse(streamStartTime),
+              error: 'agent_unavailable'
+            })
+          }
+        });
+        
+        // Signal completion
+        await options.onComplete?.();
+        
+        // Convert to ChatMessage format
+        return {
+          id: assistantMessage.id,
+          content: fallbackResponse,
+          role: assistantMessage.role as 'assistant',
+          userId: assistantMessage.user_id || '',
+          username: user?.name || 'Assistant',
+          conversationId: conversation.id,
+          parentId: assistantMessage.parent_id || undefined,
+          type: 'text',
+          metadata: {
+            streamStatus: 'complete',
+            error: 'agent_unavailable'
+          } as ChatMetadata,
+          createdAt: assistantMessage.created_at,
+          updatedAt: assistantMessage.updated_at
+        };
       }
 
+      // Process streaming response with the agent
+      log('Invoking agent with streaming for streamId %s', streamId);
+      
       // Process streaming response
       log('Invoking agent with streaming for streamId %s', streamId);
       const enhancedOptions = {
@@ -389,7 +292,7 @@ export class ChatLangChainService {
           error('Error stack: %s', err.stack);
           const state = this.streamingMessages.get(streamId);
           if (state && !state.isComplete) {
-            state.error = err;
+            state.error = err.message;
             try {
               await this.prisma.chatMessage.update({
                 where: { id: assistantMessage.id },
@@ -520,11 +423,11 @@ export class ChatLangChainService {
       // Clean up streaming state
       this.streamingMessages.delete(streamId);
 
-      // Return final message state
+      // Return final message state with guaranteed content (no undefined)
       return {
         id: assistantMessage.id,
-        content: finalState.content,
-        role: 'assistant',
+        content: finalState.content || '', // Ensure content is never undefined
+        role: assistantMessage.role as 'assistant',
         userId: assistantMessage.user_id ?? '',
         username: user.name ?? '',
         conversationId: conversation.id,
@@ -537,8 +440,8 @@ export class ChatLangChainService {
           chunkCount: finalState.chunks.length,
           totalLength: finalState.content.length,
           streamStartTime: finalState.streamStartTime,
-          streamEndTime: finalState.streamEndTime,
-          streamDuration: finalState.streamDuration,
+          streamEndTime: finalState.streamEndTime || undefined,
+          streamDuration: finalState.streamDuration || 0,
           timestamp: new Date().toISOString(),
           fromCache: true
         } as Prisma.JsonObject as ChatMetadata,
@@ -564,7 +467,7 @@ export class ChatLangChainService {
                 error: errorMessage,
                 errorStack: err instanceof Error ? err.stack : undefined,
                 errorCode: err instanceof Error ? err.name : 'UnknownError',
-                streamStartTime: errorState.streamStartTime,
+                streamStartTime: errorState.streamStartTime || new Date().toISOString(),
                 streamEndTime: new Date().toISOString()
               }),
               status: 'error' as MessageStatus
