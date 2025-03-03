@@ -27,8 +27,8 @@ export function ChatDebug() {
         reconnection: true,
         forceNew: true,
         auth: {
-          userId: "test-user-1",
-          username: "Test User",
+          userId: "admin",
+          username: "admin",
           timestamp: Date.now(),
         },
       });

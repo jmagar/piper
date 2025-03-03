@@ -1,10 +1,9 @@
 import { ChatAnthropic } from '@langchain/anthropic';
 import type { BaseChatModel, BindToolsInput } from '@langchain/core/language_models/chat_models';
 import { ChatOpenAI } from '@langchain/openai';
-import debug from 'debug';
+import createLogger from './utils/debug';
 
-const log = debug('mcp:model');
-const error = debug('mcp:model:error');
+const { log, error } = createLogger('mcp:model');
 
 interface ChatModelConfig {
   modelProvider: string;

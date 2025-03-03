@@ -1,11 +1,10 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 
-import debug from 'debug';
 import JSON5 from 'json5';
+import createLogger from './utils/debug';
 
-const log = debug('mcp:config');
-const error = debug('mcp:config:error');
+const { log, error } = createLogger('mcp:config');
 
 export interface LLMConfig {
   model_provider: string;

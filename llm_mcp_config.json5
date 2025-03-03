@@ -1,8 +1,7 @@
 {
   llm: {
     model_provider: 'anthropic',
-    model: 'claude-3-5-sonnet-20241022',
-    temperature: 0.7,
+    model: 'claude-3-5-sonnet-20240620',
     max_tokens: 1000,
   },
   example_queries: [
@@ -51,30 +50,30 @@
         'docker-mcp',
       ],
     },
-    'sequential-thinking': {
-      command: 'npx',
-      args: [
-        '-y',
-        '@modelcontextprotocol/server-sequential-thinking',
-      ],
-    },
+    // 'sequential-thinking': {
+    //   command: 'npx',
+    //   args: [
+    //     '-y',
+    //     '@modelcontextprotocol/server-sequential-thinking',
+    //   ],
+    // },
     'mcp-installer': {
       command: 'npx',
       args: [
         '@anaisbetts/mcp-installer',
       ],
     },
-    'aindreyway-mcp-neurolora': {
-      command: 'npx',
-      args: [
-        '-y',
-        '@aindreyway/mcp-neurolora@latest',
-      ],
-      env: {
-        NODE_OPTIONS: '--max-old-space-size=256',
-        OPENAI_API_KEY: '${OPENAI_API_KEY}',
-      },
-    },
+    // 'aindreyway-mcp-neurolora': {
+    //   command: 'npx',
+    //   args: [
+    //     '-y',
+    //     '@aindreyway/mcp-neurolora@latest',
+    //   ],
+    //   env: {
+    //     NODE_OPTIONS: '--max-old-space-size=256',
+    //     OPENAI_API_KEY: '${OPENAI_API_KEY}',
+    //   },
+    // },
     time: {
       command: 'uvx',
       args: [
@@ -102,13 +101,13 @@
         '@h1deya/mcp-server-weather',
       ],
     },
-    puppeteer: {
-      command: 'npx',
-      args: [
-        '-y',
-        '@modelcontextprotocol/server-puppeteer',
-      ],
-    },
+    // puppeteer: {
+    //   command: 'npx',
+    //   args: [
+    //     '-y',
+    //     '@modelcontextprotocol/server-puppeteer',
+    //   ],
+    // },
     'brave-search': {
       command: 'npx',
       args: [

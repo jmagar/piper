@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 // Configuration constants
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-export const DEFAULT_USER_ID = "test-user-1"; // This should be a valid user ID in the database
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4100";
+export const DEFAULT_USER_ID = "admin"; // This should be a valid user ID in the database
 
 // Type definitions
 export interface ChatMessage {

@@ -1,32 +1,27 @@
 import "./globals.css"
 import { Inter } from "next/font/google"
 import { Metadata, Viewport } from "next"
-import { ThemeProvider } from "@/components/shared/theme-provider"
-import { Toaster } from "sonner"
-import { cn } from "../lib/utils"
-import { EnvProvider } from "./env-provider"
-import { SocketProvider } from "@/lib/socket-setup.js"
-import { AppErrorBoundary } from "@/components/shared/error-boundary"
+import ClientLayout from "./client-layout"
 
 // Load Inter font with latin subset for optimal performance
 const inter = Inter({ 
-  subsets: ["latin"], 
+  subsets: ["latin"],
   variable: "--font-sans",
   display: "swap", // Optimize font loading
 })
 
 export const metadata: Metadata = {
-  title: "Pooper Chat",
-  description: "A modern chat application",
+  title: "Pooper AI Chat",
+  description: "AI-powered chat for document assistance",
+  icons: {
+    icon: "/favicon.ico",
+  },
 }
 
 export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "#09090b" }
+    { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
 }
 
@@ -45,35 +40,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* No direct scripts here - they cause conflicts */}
-      </head>
-      <body className={cn(
-        inter.variable, 
-        "font-sans antialiased min-h-screen",
-        "text-foreground bg-background",
-      )}>
-        <AppErrorBoundary>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <EnvProvider />
-            <SocketProvider>
-              {children}
-              <Toaster 
-                position="bottom-right" 
-                richColors 
-                closeButton
-                toastOptions={{
-                  className: "max-w-[90vw] sm:max-w-md",
-                }}
-              />
-            </SocketProvider>
-          </ThemeProvider>
-        </AppErrorBoundary>
+      <body className={`${inter.variable} font-sans antialiased min-h-screen text-foreground bg-background`}>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   )

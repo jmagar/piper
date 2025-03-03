@@ -256,4 +256,22 @@ model CachedLLMResponse {
     @@index([input_hash])
     @@index([expires_at])
     @@map("cached_llm_responses")
+}
+
+// LogEntry model for storing MCP logs
+model LogEntry {
+  id        String      @id @default(uuid())
+  timestamp DateTime    @default(now())
+  namespace String      // Debug namespace for identifying the module
+  level     String      // Log level: debug, info, error
+  message   String      @db.Text // The actual log message
+  server    String?     // Optional source of the log (Backend, Frontend, etc.)
+  metadata  Json?       // Additional metadata about the log
+  
+  created_at DateTime   @default(now())
+
+  @@index([namespace])
+  @@index([level])
+  @@index([timestamp])
+  @@map("log_entries")
 } 

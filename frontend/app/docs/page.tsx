@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import 'swagger-ui-react/swagger-ui.css';
 import { Book, Code, Loader2 } from "lucide-react";
 
-import { AppSidebar } from "@/components/app-sidebar";
+// Import CSS directly from node_modules
+import 'swagger-ui-react/swagger-ui.css';
+
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar-new";
 

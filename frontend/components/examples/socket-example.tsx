@@ -1,155 +1,95 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { SocketProvider } from '@/lib/socket/socket-provider';
-import { SocketStatus } from '@/components/ui/socket-status';
-import { SocketTools } from '@/components/ui/socket-tools';
-import { useSocketEmit } from '@/lib/socket/use-socket-emit';
-import { useSocketEvent } from '@/lib/socket/use-socket-event';
-import { logEvent } from '@/lib/utils/logger';
-
-interface SocketExampleProps {
-  socketUrl?: string;
-}
 
 /**
- * Example component demonstrating socket integration
+ * A simple example component demonstrating socket functionality
  */
-export function SocketExample({ socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL }: SocketExampleProps) {
-  const [messages, setMessages] = React.useState<string[]>([]);
-  const [inputMessage, setInputMessage] = React.useState('');
+export function SocketExample() {
+  const [messages, setMessages] = React.useState<Array<{ text: string; sender: string }>>([]);
+  const [inputValue, setInputValue] = React.useState('');
+  const [isConnected, setIsConnected] = React.useState(false);
   
-  // Configure socket options
-  const socketOptions = React.useMemo(() => ({
-    url: socketUrl,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 2000,
-    autoConnect: true,
-    userId: 'example-user',
-    username: 'Example User'
-  }), [socketUrl]);
-  
-  return (
-    <SocketProvider options={socketOptions}>
-      <div className="w-full max-w-md mx-auto border rounded-lg shadow-sm p-6 bg-white">
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-xl font-semibold leading-none tracking-tight">Socket.IO Example</h3>
-            <SocketStatus size="md" />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Demonstrates how to use socket hooks with Socket.IO
-          </p>
-        </div>
-        
-        <div className="my-4">
-          <ChatMessages messages={messages} setMessages={setMessages} />
-          <ChatInput 
-            value={inputMessage} 
-            onChange={setInputMessage} 
-            onSend={() => {
-              if (inputMessage.trim()) {
-                setMessages(prev => [...prev, `You: ${inputMessage}`]);
-                setInputMessage('');
-              }
-            }} 
-          />
-        </div>
-        
-        <div className="flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            {messages.length === 0 ? 'No messages yet' : `${messages.length} messages`}
-          </div>
-          
-          {/* Socket Tools (combined status and debug) */}
-          <SocketTools 
-            position="bottom-right"
-            showStatus={true}
-            showDebug={true}
-          />
-        </div>
-      </div>
-    </SocketProvider>
-  );
-}
-
-interface ChatMessagesProps {
-  messages: string[];
-  setMessages: React.Dispatch<React.SetStateAction<string[]>>;
-}
-
-function ChatMessages({ messages, setMessages }: ChatMessagesProps) {
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
-  
-  // Setup socket event listener for incoming messages
-  useSocketEvent<{ text: string; sender: string }>('chat:message', (data) => {
-    logEvent('debug', 'Received chat message', data);
-    setMessages(prev => [...prev, `${data.sender}: ${data.text}`]);
-  }, [setMessages]);
-  
-  // Auto-scroll to bottom when messages update
+  // Simulate connection on mount
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Simulate connection after 1 second
+    const timer = setTimeout(() => {
+      setIsConnected(true);
+      setMessages(prev => [...prev, { 
+        text: 'Connected to server', 
+        sender: 'system' 
+      }]);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
-  return (
-    <div className="h-64 overflow-y-auto p-3 border rounded-md mb-4">
-      {messages.length === 0 ? (
-        <div className="h-full flex items-center justify-center text-muted-foreground">
-          No messages yet. Start the conversation!
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {messages.map((message, i) => (
-            <div key={i} className="text-sm">
-              {message}
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface ChatInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSend: () => void;
-}
-
-function ChatInput({ value, onChange, onSend }: ChatInputProps) {
-  // Setup socket emit function
-  const emitMessage = useSocketEmit();
-  
-  const handleSend = () => {
-    if (value.trim()) {
-      // Emit the message to the server
-      emitMessage<{ text: string }, { success: boolean }>('chat:send', { text: value.trim() }, true, 5000)
-        .then(response => {
-          logEvent('debug', 'Message sent successfully', response);
-          onSend();
-        })
-        .catch(error => {
-          logEvent('error', 'Failed to send message', error);
-        });
-    }
+  // Function to handle sending messages
+  const sendMessage = () => {
+    if (!inputValue.trim()) return;
+    
+    // Add user message
+    setMessages(prev => [...prev, { 
+      text: inputValue, 
+      sender: 'user' 
+    }]);
+    
+    // Simulate server response
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        text: `Echo: ${inputValue}`, 
+        sender: 'server' 
+      }]);
+    }, 500);
+    
+    setInputValue('');
   };
   
   return (
-    <div className="flex space-x-2">
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') {
-            handleSend();
-          }
-        }}
-        className="flex-1 px-3 py-2 border rounded-md"
-        placeholder="Type a message..."
-      />
-      <Button onClick={handleSend}>Send</Button>
+    <div className="flex flex-col space-y-4 p-4 border rounded-lg">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Socket Example</h2>
+        <div className="text-sm">
+          Connection Status: 
+          <span className={`ml-2 font-medium ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </span>
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-auto p-2 border rounded-lg min-h-[200px] max-h-[400px]">
+        {messages.map((msg, i) => (
+          <div 
+            key={i} 
+            className={`mb-2 p-2 rounded-lg ${
+              msg.sender === 'user' 
+                ? 'bg-blue-100 ml-auto max-w-[80%]' 
+                : msg.sender === 'system'
+                  ? 'bg-gray-100 text-center w-full italic text-sm'
+                  : 'bg-green-100 mr-auto max-w-[80%]'
+            }`}
+          >
+            {msg.text}
+          </div>
+        ))}
+      </div>
+      
+      <div className="flex space-x-2">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Type a message..."
+          className="flex-1 p-2 border rounded-lg"
+          disabled={!isConnected}
+        />
+        <Button 
+          onClick={sendMessage}
+          disabled={!isConnected || !inputValue.trim()}
+        >
+          Send
+        </Button>
+      </div>
     </div>
   );
 } 

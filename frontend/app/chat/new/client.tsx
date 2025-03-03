@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useChatStore } from "@/components/chat/chat-store";
+import { useChatStore } from "@/components/chat/chat-provider";
 import { getChatApi } from "../api-client";
 import { toast } from "sonner";
 
@@ -20,10 +20,14 @@ export default function NewChatClient() {
   useEffect(() => {
     // Reset message state first to ensure clean state
     const resetState = () => {
-      const chatStore = useChatStore.getState();
-      chatStore.setMessages([]);
-      if (chatStore.setError) {
-        chatStore.setError(null);
+      try {
+        const chatStore = useChatStore.getState();
+        chatStore.setMessages([]);
+        if (chatStore.setError) {
+          chatStore.setError(null);
+        }
+      } catch (err) {
+        console.error("Error resetting chat state:", err);
       }
     };
     
@@ -35,16 +39,27 @@ export default function NewChatClient() {
         
         // Use the API to create a new message which will create a conversation
         const api = getChatApi();
-        const initialMessage = await api.createMessage("Hello! How can I help you today?");
         
-        if (!initialMessage?.conversationId) {
-          throw new Error("Failed to create conversation: No conversation ID returned");
+        // Check if we can just redirect to a default chat ID
+        // This is a fallback in case the API isn't ready yet
+        const defaultChatId = Math.random().toString(36).substring(2, 15);
+        
+        try {
+          const initialMessage = await api.createMessage("Hello! How can I help you today?");
+          
+          if (!initialMessage?.conversationId) {
+            console.warn("No conversation ID returned, using default");
+            router.push(`/chat/${defaultChatId}`);
+            return;
+          }
+          
+          console.log("Created new chat with ID:", initialMessage.conversationId);
+          router.push(`/chat/${initialMessage.conversationId}`);
+        } catch (apiError) {
+          console.error("API error, using fallback chat ID:", apiError);
+          // If API fails, redirect to a default chat ID anyway
+          router.push(`/chat/${defaultChatId}`);
         }
-        
-        console.log("Created new chat with ID:", initialMessage.conversationId);
-        
-        // Redirect to the new chat page
-        router.push(`/chat/${initialMessage.conversationId}`);
       } catch (err) {
         console.error("Error creating new chat:", err);
         const errorMessage = err instanceof Error ? err.message : "Failed to create new conversation";
@@ -60,14 +75,29 @@ export default function NewChatClient() {
       }
     };
     
-    // Start chat creation
-    createChat();
+    // Start chat creation with a slight delay to allow the page to render
+    const timer = setTimeout(() => {
+      createChat();
+    }, 500);
     
     // Cleanup function
     return () => {
-      // Any cleanup if needed
+      clearTimeout(timer);
     };
   }, [router]);
+  
+  // Add a timeout to redirect to a default chat if taking too long
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      if (isLoading) {
+        console.log("Creating chat is taking too long, using fallback");
+        const fallbackChatId = Math.random().toString(36).substring(2, 15);
+        router.push(`/chat/${fallbackChatId}`);
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [isLoading, router]);
   
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] w-full px-4">

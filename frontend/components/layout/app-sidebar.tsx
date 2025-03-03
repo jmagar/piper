@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { 
-  Sidebar, 
+import {
+  Sidebar,
   SidebarItem,
   SidebarSection
 } from "@/components/layout/sidebar";
+import { ChatHistorySection } from "@/components/layout/sidebar/chat-history-section";
+import { ChatHistoryProvider } from "@/components/chat/history/chat-history-provider";
 import { 
   Home, 
   MessageCircle,
@@ -32,117 +34,98 @@ import {
  */
 export function AppSidebar() {
   return (
-    <Sidebar>
-      {/* Logo/Brand section */}
-      <div className="p-4 flex justify-center">
-        <div className="text-xl font-semibold">AI Chat</div>
-      </div>
-      
-      {/* Main navigation divided into logical sections */}
-      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-6">
-        {/* General section */}
-        <SidebarSection 
-          title="General"
-          icon={LayoutDashboard}
-        >
-          <SidebarItem
-            title="Dashboard"
-            href="/dashboard"
-            icon={Home}
-          />
-          
-          <SidebarItem
-            title="Prompts"
-            href="/prompts"
-            icon={Sparkles}
-          />
-        </SidebarSection>
+    <ChatHistoryProvider>
+      <Sidebar>
+        {/* Logo/Brand section */}
+        <div className="p-4 flex justify-center">
+          <div className="text-xl font-semibold">AI Chat</div>
+        </div>
         
-        {/* Chat section */}
-        <SidebarSection 
-          title="Chat"
-          icon={MessagesSquare}
-        >
-          <SidebarItem 
-            title="New Conversation" 
-            href="/chat/new"
-            icon={PlusCircle} 
-          />
+        {/* Main navigation divided into logical sections */}
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-6">
+          {/* General section */}
+          <SidebarSection
+            title="General"
+            icon={LayoutDashboard}
+          >
+            <SidebarItem
+              title="Dashboard"
+              href="/dashboard"
+              icon={Home}
+            />
+            
+            <SidebarItem
+              title="Prompts"
+              href="/prompts"
+              icon={Sparkles}
+            />
+          </SidebarSection>
           
-          <SidebarItem 
-            title="My Conversations" 
-            href="/chat/history"
-            icon={MessageCircle} 
-          />
+          {/* Enhanced Chat section with conversation history */}
+          <ChatHistorySection />
           
-          <SidebarItem 
-            title="Starred" 
-            href="/chat/starred"
-            icon={Star} 
-          />
-        </SidebarSection>
-        
-        {/* Model Context Protocol section */}
-        <SidebarSection 
-          title="Model Context Protocol"
-          icon={Bot}
-        >
-          <SidebarItem 
-            title="Logs" 
-            href="/mcp/logs"
-            icon={FileCode} 
-          />
+          {/* Model Context Protocol section */}
+          <SidebarSection 
+            title="Model Context Protocol"
+            icon={Bot}
+          >
+            <SidebarItem 
+              title="Logs" 
+              href="/mcp/logs"
+              icon={FileCode} 
+            />
+            
+            <SidebarItem 
+              title="Configuration" 
+              href="/mcp/config"
+              icon={Settings} 
+            />
+            
+            <SidebarItem 
+              title="Servers" 
+              href="/mcp/servers"
+              icon={ServerCrash} 
+            />
+          </SidebarSection>
           
-          <SidebarItem 
-            title="Config" 
-            href="/mcp/config"
-            icon={Settings} 
-          />
+          {/* Knowledge section (was Learn) */}
+          <SidebarSection 
+            title="Knowledge"
+            icon={Lightbulb}
+          >
+            <SidebarItem 
+              title="Documents" 
+              href="/knowledge/documents"
+              icon={BookOpen} 
+            />
+            
+            <SidebarItem 
+              title="Search" 
+              href="/knowledge/search"
+              icon={Search} 
+            />
+          </SidebarSection>
           
-          <SidebarItem 
-            title="Servers" 
-            href="/mcp/servers"
-            icon={ServerCrash} 
-          />
-        </SidebarSection>
-        
-        {/* Knowledge section (was Learn) */}
-        <SidebarSection 
-          title="Knowledge"
-          icon={Lightbulb}
-        >
-          <SidebarItem 
-            title="Documents" 
-            href="/knowledge/documents"
-            icon={BookOpen} 
-          />
-          
-          <SidebarItem 
-            title="Search" 
-            href="/knowledge/search"
-            icon={Search} 
-          />
-        </SidebarSection>
-        
-        {/* Resources section */}
-        <SidebarSection 
-          title="Resources"
-          icon={Library}
-        >
-          <SidebarItem 
-            title="Github" 
-            href="https://github.com/example/repo"
-            icon={Github}
-            isExternal
-          />
-          
-          <SidebarItem 
-            title="Documentation" 
-            href="/docs"
-            icon={FileText}
-          />
-        </SidebarSection>
-      </div>
-    </Sidebar>
+          {/* Resources section */}
+          <SidebarSection 
+            title="Resources"
+            icon={Library}
+          >
+            <SidebarItem 
+              title="Github" 
+              href="https://github.com/example/repo"
+              icon={Github}
+              isExternal
+            />
+            
+            <SidebarItem 
+              title="Documentation" 
+              href="/docs"
+              icon={FileText}
+            />
+          </SidebarSection>
+        </div>
+      </Sidebar>
+    </ChatHistoryProvider>
   );
-} 
+}

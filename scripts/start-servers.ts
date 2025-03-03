@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * Start servers for development
+ */
 
 /* eslint-env node */
 /* global setTimeout clearTimeout */
@@ -7,14 +10,17 @@
 /// <reference types="node" />
 
 // Node.js built-in imports
-import { spawn, exec } from 'child_process';
+import { spawn, exec, ChildProcess, SpawnOptions } from 'child_process';
 import { createWriteStream } from 'fs';
-import http from 'http';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { join, resolve } from 'path';
 import { promisify } from 'util';
+import { platform } from 'os';
+import * as http from 'http';
 
 // Third-party imports
 import chalk from 'chalk';
+import { exit } from 'process';
 
 // Types
 type NodeTimer = ReturnType<typeof setTimeout>;
@@ -27,8 +33,13 @@ const DOCKER_CONTAINERS = ['pooper-redis', 'pooper-db'];
 const DOCKER_NETWORK = 'jakenet';
 
 let isShuttingDown = false;
-let frontendProcess: ReturnType<typeof spawn> | null = null;
-let backendProcess: ReturnType<typeof spawn> | null = null;
+let frontendProcess: ChildProcess | null = null;
+let backendProcess: ChildProcess | null = null;
+
+// Function to create EST timestamp formatter
+function getTimestampOptions(): string {
+    return 'HH:MM:ss';
+}
 
 async function waitForServerReady(port: number, timeout = 30000): Promise<boolean> {
     const start = Date.now();
@@ -214,19 +225,43 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             return;
         }
 
+        // Always use root .env file
+        const rootEnvPath = join(process.cwd(), '.env');
+        console.info(chalk.blue(`[${name}] Using root .env file: ${chalk.cyan(rootEnvPath)}`));
+
         // Add debug environment variables for frontend
-        const env = { 
+        const customEnv = { 
             ...process.env, 
             FORCE_COLOR: 'true',
             PORT: port.toString(),
             DEBUG: name === 'Frontend' 
                 ? 'next:build:*,next:server:*,next:error:*'  // Frontend debug logging
-                : 'mcp:*,mcp:*:*',  // Backend debug logging for MCP
+                : 'mcp:*,mcp:*:*,langchain:*,socket:*,agent:*',  // Enhanced Backend debug logging
+            DEBUG_COLORS: 'true',
+            DEBUG_HIDE_DATE: 'false',
+            DEBUG_TIMESTAMP_FORMAT: getTimestampOptions(),
+            // Force dotenv to use root .env file
+            DOTENV_CONFIG_PATH: rootEnvPath,
+            // Force debug to use stdout instead of stderr to prevent [ERROR] labels
+            DEBUG_FD: '1',
+            // Add explicit LLM/MCP logging flags
+            ...(name === 'Backend' ? {
+                DEBUG_LLM_INITIALIZATION: 'true',
+                DEBUG_MCP_TOOLS: 'true',
+                DEBUG_SOCKET_STREAMING: 'true',
+                NODE_ENV: 'development', // This will be overridden correctly
+                VERBOSE_LOGGING: 'true',
+            } : {}),
             ...(name === 'Frontend' ? {
                 NEXT_TURBO_DEV_LOG: '1',
                 NEXT_TURBO_TRACE: '1',
             } : {})
         };
+
+        // Ensure NODE_ENV is a valid value
+        if (customEnv.NODE_ENV && !['development', 'production', 'test'].includes(customEnv.NODE_ENV)) {
+            customEnv.NODE_ENV = 'development';
+        }
 
         // Create debug log file for frontend with absolute path
         const debugLogPath = name === 'Frontend' 
@@ -237,12 +272,14 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             ? createWriteStream(debugLogPath, { flags: 'a' })
             : null;
 
-        const child = spawn(command, args, {
+        const spawnOptions: SpawnOptions = {
             cwd,
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: true,
-            env
-        });
+            env: customEnv as NodeJS.ProcessEnv // Type assertion here
+        };
+
+        const child: ChildProcess = spawn(command, args, spawnOptions);
         
         // Store process reference
         if (name === 'Frontend') {
@@ -261,10 +298,20 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             }
         }, name === 'Backend' ? 30000 : 60000); // 30s for backend, 60s for frontend
         
-        child.stdout?.on('data', (data) => {
+        child.stdout?.on('data', (data: Buffer) => {
             const output = data.toString();
+            
+            // Better detection of debug messages vs actual errors
+            let formattedOutput = output;
+            const isMcpDebug = output.includes('mcp:') && !output.includes('Error:') && !output.includes('ERROR:') && !output.includes('Exception:');
+            
+            if (isMcpDebug) {
+                // Format MCP debug messages correctly
+                formattedOutput = output.replace(/\[Backend ERROR\]/g, chalk.cyan('[Backend INFO]'));
+            }
+            
             const prefix = chalk.cyan(`[${name}]`);
-            console.info(`${prefix} ${output}`);
+            console.info(`${prefix} ${formattedOutput}`);
             
             // Write to debug log if frontend
             if (debugLogStream !== null) {
@@ -295,8 +342,25 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             }
         });
         
-        child.stderr?.on('data', (data) => {
+        child.stderr?.on('data', (data: Buffer) => {
             const error = data.toString();
+            
+            // Improved handling of debug messages in stderr
+            let formattedError = error;
+            const isMcpDebug = error.includes('mcp:') && !error.includes('Error:') && !error.includes('ERROR:') && !error.includes('Exception:');
+            
+            if (isMcpDebug) {
+                // This is a debug message incorrectly sent to stderr
+                formattedError = error.replace(/\[Backend ERROR\]/g, chalk.cyan('[Backend INFO]'));
+                
+                // Output to stdout with INFO prefix
+                const prefix = chalk.cyan(`[${name} INFO]`);
+                console.info(`${prefix} ${formattedError}`);
+                
+                // Don't proceed to error output
+                return;
+            }
+            
             // Write errors to debug log for frontend
             if (debugLogStream !== null) {
                 debugLogStream.write(`ERROR: ${error}\n`);
@@ -310,12 +374,12 @@ function startServer(command: string, args: string[], cwd: string, name: string,
 
             if (hasNoPortWarning) {
                 const prefix = chalk.red(`[${name} ERROR]`);
-                console.error(`${prefix} ${error}`);
+                console.error(`${prefix} ${formattedError}`);
                 errorOutput += error;
             }
         });
         
-        child.on('error', (error) => {
+        child.on('error', (error: Error) => {
             const prefix = chalk.red(`[${name} ERROR]`);
             console.error(`${prefix} Failed to start:`, error);
             if (debugLogStream !== null) {
@@ -330,7 +394,7 @@ function startServer(command: string, args: string[], cwd: string, name: string,
             }
         });
 
-        child.on('exit', async (code, signal) => {
+        child.on('exit', async (code: number | null, signal: string | null) => {
             const prefix = chalk.cyan(`[${name}]`);
             if (code !== null) {
                 console.info(`${prefix} Process exited with code ${chalk.yellow(code)}`);
@@ -439,6 +503,31 @@ async function main() {
     const rootDir = process.cwd();
     const backendDir = join(rootDir, 'backend');
     const frontendDir = join(rootDir, 'frontend');
+
+    // Check for competing .env files
+    const rootEnvPath = join(rootDir, '.env');
+    const backendEnvPath = join(backendDir, '.env');
+    const frontendEnvPath = join(frontendDir, '.env');
+
+    if (!existsSync(rootEnvPath)) {
+        console.error(chalk.red(`Error: Root .env file not found at ${chalk.bold(rootEnvPath)}`));
+        console.error(chalk.red('Please create a .env file at the project root with all environment variables.'));
+        process.exit(1);
+    }
+
+    // Check for competing .env files and remove them if they exist
+    if (existsSync(backendEnvPath)) {
+        console.warn(chalk.yellow(`Warning: Competing .env file found in backend directory.`));
+        console.warn(chalk.yellow(`Please remove ${chalk.bold(backendEnvPath)} and only use the root .env file.`));
+    }
+
+    if (existsSync(frontendEnvPath)) {
+        console.warn(chalk.yellow(`Warning: Competing .env file found in frontend directory.`));
+        console.warn(chalk.yellow(`Please remove ${chalk.bold(frontendEnvPath)} and only use the root .env file.`));
+    }
+
+    console.info(chalk.blue('Using root .env file as single source of truth:'));
+    console.info(chalk.blue(` - Path: ${chalk.cyan(rootEnvPath)}`));
 
     try {
         // Start backend server

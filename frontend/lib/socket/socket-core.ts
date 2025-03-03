@@ -131,24 +131,31 @@ export function createSocket(
   
   // Prepare socket.io options
   const socketOptions: Partial<ManagerOptions & IOSocketOptions> = {
-    autoConnect: mergedConfig.autoConnect,
-    reconnectionAttempts: mergedConfig.reconnectionAttempts,
-    reconnectionDelay: mergedConfig.reconnectionDelay,
-    reconnectionDelayMax: mergedConfig.reconnectionDelayMax,
-    timeout: mergedConfig.timeout,
+    autoConnect: mergedConfig.autoConnect ?? true,
+    reconnectionAttempts: mergedConfig.reconnectionAttempts ?? 5,
+    reconnectionDelay: mergedConfig.reconnectionDelay ?? 1000,
+    reconnectionDelayMax: mergedConfig.reconnectionDelayMax ?? 5000,
+    timeout: mergedConfig.timeout ?? 20000,
     auth: {
       token: auth.token,
       userId: auth.userId
     },
-    path: mergedConfig.path
+    path: mergedConfig.path ?? '/socket.io'
   };
 
   // Create the socket instance
-  const socket: Socket = io(mergedConfig.url, socketOptions);
+  const socket: Socket = io(mergedConfig.url ?? 'http://localhost:4100', socketOptions);
+  
+  // Debug: Log all incoming events
+  const originalOn = socket.on;
+  socket.on = function(event, ...args) {
+    console.log(`Socket event received: ${String(event)}`);
+    return originalOn.apply(this, [event, ...args]);
+  };
   
   // Set initial connection state
   connectionManager.setState(
-    mergedConfig.autoConnect ? ConnectionState.CONNECTING : ConnectionState.DISCONNECTED
+    mergedConfig.autoConnect ?? true ? ConnectionState.CONNECTING : ConnectionState.DISCONNECTED
   );
   
   // Register socket event handlers

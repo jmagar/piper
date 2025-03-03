@@ -1012,3 +1012,13 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ConversationStats'
+
+  # MCP logs routes
+  /api/mcp/logs:
+    $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1logs'
+    
+  /api/mcp/logs/stream:
+    $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1logs~1stream'
+    
+  /api/mcp/config/schema:
+    $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1config~1schema'

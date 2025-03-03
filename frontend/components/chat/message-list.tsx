@@ -8,7 +8,7 @@ import { useIntersection } from "./hooks/use-intersection";
 import { Loader2 } from "lucide-react";
 
 interface MessageListProps {
-  messages: ExtendedChatMessage[];
+  messages?: ExtendedChatMessage[];
   isLoading?: boolean;
   onLoadMore?: () => Promise<void>;
   className?: string;
@@ -19,7 +19,7 @@ interface MessageListProps {
  * Supports infinite scrolling with intersection observer
  */
 export function MessageList({
-  messages,
+  messages = [],
   isLoading = false,
   onLoadMore,
   className,
@@ -31,9 +31,10 @@ export function MessageList({
   // Detect when user scrolls up to possibly load more messages
   const { ref: loadMoreRef, isIntersecting } = useIntersection("0px 0px 300px 0px");
   
-  // Group messages by sender
+  // Group messages by sender - with safety check
   const groupedMessages = React.useMemo(() => {
-    return groupMessagesBySender(messages);
+    // Ensure messages is an array before processing
+    return Array.isArray(messages) ? groupMessagesBySender(messages) : {};
   }, [messages]);
   
   // Handle loading more messages when scrolling to top
@@ -145,9 +146,17 @@ export function MessageList({
  * Utility function to group messages by sender
  */
 function groupMessagesBySender(messages: ExtendedChatMessage[]): Record<string, ExtendedChatMessage[]> {
+  // Handle edge cases: null or undefined messages
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return {};
+  }
+  
   return messages.reduce<Record<string, ExtendedChatMessage[]>>((groups, message) => {
+    // Skip invalid messages
+    if (!message) return groups;
+    
     // Use unique ID for each user, or just role for a simpler grouping
-    const key = message.userId || message.role;
+    const key = message.userId || message.role || 'unknown';
     
     if (!groups[key]) {
       groups[key] = [];

@@ -13,6 +13,7 @@ import { HeaderActions } from "./header-actions";
 import { ThemeSwitcher } from "@/components/shared/theme-switcher";
 import { User, Bell, Settings } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
+import { SocketStatusIcon } from "@/components/ui/socket-status-icon";
 
 interface HeaderProps {
   /**
@@ -76,6 +77,7 @@ export function Header({ title = "Pooper App", className }: HeaderProps) {
           </div>
           
           <div className="flex items-center gap-2">
+            <SocketStatusIcon className="mr-2" />
             <HeaderActions />
           </div>
         </div>
@@ -110,6 +112,7 @@ export function Header({ title = "Pooper App", className }: HeaderProps) {
         </div>
         
         <div className="flex items-center">
+          <SocketStatusIcon className="mr-2" />
           {/* Menu trigger */}
           <Button
             variant="ghost"

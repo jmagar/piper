@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from 'react';
-import { useSocket, useSocketEvent } from '@/lib/socket-setup';
+import { useSocket } from '@/lib/socket-provider';
+import { useSocketEvent } from '@/lib/socket/use-socket-event';
 
 /**
  * Simple component to handle socket events for chat messages

@@ -1,97 +1,38 @@
-import * as React from 'react';
-import { Metadata } from 'next';
-import { ChatConversation } from '../api-client';
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { AppLayout } from "@/components/layout/app-layout";
+import { ChatHistoryProvider } from "@/components/chat/history/chat-history-provider";
+import { MessageSquare } from "lucide-react";
 
 /**
- * Generate metadata for this page
+ * ChatHistoryPage Component
+ * Displays the chat history with a list of previous conversations
+ * Integrates with the app's existing layout
  */
-export const metadata: Metadata = {
-  title: 'Chat History',
-  description: 'View your past AI conversations',
-};
-
-/**
- * Server-side props for the history page
- */
-async function getServerSideProps() {
-  try {
-    // Fetch conversation history
-    // This would be replaced with actual API call
-    const conversations: ChatConversation[] = [
-      {
-        id: 'demo-1',
-        title: 'Chat Demo 1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        metadata: {
-          messageCount: 10,
-          userMessageCount: 5,
-          botMessageCount: 5,
-          toolUsageCount: 2
-        }
-      },
-      {
-        id: 'demo-2',
-        title: 'Chat Demo 2',
-        createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        updatedAt: new Date(Date.now() - 86400000).toISOString(),
-        metadata: {
-          messageCount: 8,
-          userMessageCount: 4,
-          botMessageCount: 4,
-          toolUsageCount: 1
-        }
-      }
-    ];
-    
-    return { conversations };
-  } catch (error) {
-    console.error('Error loading chat history:', error);
-    return { conversations: [] };
-  }
-}
-
-/**
- * History page component that displays a list of past chat conversations
- */
-export default async function HistoryPage() {
-  const { conversations } = await getServerSideProps();
+export default function ChatHistoryPage() {
+  const router = useRouter();
   
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <h1 className="text-2xl font-bold mb-6">Chat History</h1>
-      
-      {conversations.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <h2 className="text-xl font-semibold mb-2">No chat history</h2>
-          <p className="text-gray-500 mb-4">You haven't had any conversations yet.</p>
-          <a 
-            href="/chat/new"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    <ChatHistoryProvider>
+      <AppLayout title="Chat History">
+        <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--muted))]">
+            <MessageSquare className="h-12 w-12 text-[hsl(var(--muted-foreground))]" />
+          </div>
+          <h1 className="mt-6 text-2xl font-semibold">Chat History</h1>
+          <p className="mt-2 max-w-md text-[hsl(var(--muted-foreground))]">
+            Select a conversation from the sidebar to view your chat history, or start a new conversation.
+          </p>
+          <button
+            onClick={() => router.push("/chat/new")}
+            className="mt-6 inline-flex items-center justify-center rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow transition-colors hover:bg-[hsl(var(--primary))]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2"
           >
-            Start a new chat
-          </a>
+            Start New Conversation
+          </button>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {conversations.map((conversation) => (
-            <a
-              key={conversation.id}
-              href={`/chat/${conversation.id}`}
-              className="flex flex-col rounded-lg border shadow-sm hover:shadow-md transition-shadow p-4"
-            >
-              <h2 className="text-lg font-semibold mb-1 truncate">{conversation.title}</h2>
-              <p className="text-gray-500 text-sm mb-2">
-                {new Date(conversation.updatedAt).toLocaleString()}
-              </p>
-              <div className="mt-auto pt-3 flex justify-between text-xs text-gray-500 border-t">
-                <span>{conversation.metadata.messageCount} messages</span>
-                <span>{conversation.metadata.toolUsageCount} tools used</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
+      </AppLayout>
+    </ChatHistoryProvider>
   );
-} 
+}

@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { useSocket } from '@/lib/socket/socket-provider';
-import { ConnectionState } from '@/types/socket';
+import { useSocket } from '@/lib/socket-provider';
 import { AlertCircle, CheckCircle2, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,7 +21,7 @@ export function SocketStatus({
   showConnectionState = false,
   size = 'sm'
 }: SocketStatusProps) {
-  const { connectionState, error, reconnect, isConnected } = useSocket();
+  const { isConnected, isConnecting, error } = useSocket();
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
   
   // Show success message temporarily when connection is established
@@ -39,17 +38,20 @@ export function SocketStatus({
   
   // Status indicator classes
   const getStatusClasses = () => {
-    switch (connectionState) {
-      case ConnectionState.CONNECTED:
-        return 'bg-green-500';
-      case ConnectionState.CONNECTING:
-      case ConnectionState.RECONNECTING:
-        return 'bg-yellow-500 animate-pulse';
-      case ConnectionState.FAILED:
-      case ConnectionState.DISCONNECTED:
-      default:
-        return 'bg-red-500';
+    if (isConnected) {
+      return 'bg-green-500';
+    } else if (isConnecting) {
+      return 'bg-yellow-500 animate-pulse';
+    } else {
+      return 'bg-red-500';
     }
+  };
+  
+  // Get connection state text
+  const getConnectionState = (): string => {
+    if (isConnected) return 'Connected';
+    if (isConnecting) return 'Connecting';
+    return 'Disconnected';
   };
   
   // Size classes
@@ -95,12 +97,12 @@ export function SocketStatus({
               />
               
               <span className="font-medium">
-                {showConnectionState ? connectionState : (isConnected ? 'Connected' : 'Disconnected')}
+                {showConnectionState ? getConnectionState() : (isConnected ? 'Connected' : 'Disconnected')}
               </span>
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Socket.IO connection status: {connectionState}</p>
+            <p>Socket.IO connection status: {getConnectionState()}</p>
             {error && <p className="text-red-500">{error}</p>}
           </TooltipContent>
         </Tooltip>
@@ -111,7 +113,10 @@ export function SocketStatus({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => reconnect()}
+                onClick={() => {
+                  // Refresh the page to reconnect
+                  window.location.reload();
+                }}
                 className={sizeClasses.button}
               >
                 <RefreshCw className="h-4 w-4" />
@@ -119,7 +124,7 @@ export function SocketStatus({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Reconnect to the server</p>
+              <p>Refresh to reconnect to the server</p>
             </TooltipContent>
           </Tooltip>
         )}

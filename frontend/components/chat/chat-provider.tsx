@@ -1,10 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useReducer, useMemo, useCallback, useEffect } from 'react';
 import { ExtendedChatMessage } from '@/types/chat';
-import { Socket } from 'socket.io-client';
-import { useSocket, useSocketEvent } from '@/lib/socket-setup.js';
+import { 
+  useChatModelStream, 
+  useChatModelComplete, 
+  useChatModelError,
+  useSocket 
+} from '@/lib/socket-provider';
 import { toast } from 'sonner';
+import { create } from 'zustand';
 
 // Chat state
 interface ChatState {
@@ -24,7 +30,7 @@ const initialState: ChatState = {
   conversationId: null,
 };
 
-// Action types
+// Action types for reducer
 type ChatAction =
   | { type: 'SET_MESSAGES'; messages: ExtendedChatMessage[] }
   | { type: 'ADD_MESSAGE'; message: ExtendedChatMessage }
@@ -34,40 +40,51 @@ type ChatAction =
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_CONVERSATION_ID'; conversationId: string };
 
-// Chat reducer
+// Reducer function
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'SET_MESSAGES':
       return { ...state, messages: action.messages };
+      
     case 'ADD_MESSAGE':
-      return { ...state, messages: [...state.messages, action.message] };
+      return { 
+        ...state, 
+        messages: [...state.messages, action.message] 
+      };
+      
     case 'UPDATE_MESSAGE':
       return {
         ...state,
-        messages: state.messages.map((msg) =>
-          msg.id === action.message.id ? action.message : msg
+        messages: state.messages.map((message) =>
+          message.id === action.message.id
+            ? { ...message, ...action.message }
+            : message
         ),
       };
+      
     case 'SET_INPUT':
       return { ...state, input: action.input };
+      
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading };
+      
     case 'SET_ERROR':
       return { ...state, error: action.error };
+      
     case 'SET_CONVERSATION_ID':
       return { ...state, conversationId: action.conversationId };
+      
     default:
       return state;
   }
 }
 
-// Create context
+// Chat context for provider
 const ChatContext = createContext<
   | {
       state: ChatState;
       dispatch: React.Dispatch<ChatAction>;
       sendMessage: (content: string) => Promise<void>;
-      loadMessages: () => Promise<void>;
     }
   | undefined
 >(undefined);
@@ -79,237 +96,627 @@ interface ChatProviderProps {
   conversationId?: string;
 }
 
-/**
- * Chat provider component
- */
+// Create a Zustand store for easier access outside React components
+interface ChatStoreState {
+  messages: ExtendedChatMessage[];
+  input: string;
+  isLoading: boolean;
+  error: string | null;
+  conversationId: string | null;
+  setMessages: (messages: ExtendedChatMessage[]) => void;
+  setInput: (input: string) => void;
+  setLoading: (isLoading: boolean) => void;
+  setError: (error: string | null) => void;
+  sendMessage: (content: string) => Promise<void>;
+  loadMessages: () => Promise<void>;
+}
+
+// Create the store with socket integration
+export const useChatStore = create<ChatStoreState>((set, get) => {
+  // Get the socket - note this might be null during SSR
+  let socketInstance: any = null;
+  
+  if (typeof window !== 'undefined') {
+    // Import dynamically to avoid SSR issues
+    import('@/lib/socket-provider').then(module => {
+      try {
+        // Get the socket context from the hook
+        const { socket } = module.useSocket();
+        socketInstance = socket;
+      } catch (err) {
+        console.error('Error getting socket in store:', err);
+      }
+    });
+  }
+  
+  return {
+    messages: [],
+    input: '',
+    isLoading: false,
+    error: null,
+    conversationId: null,
+    setMessages: (messages) => set({ messages }),
+    setInput: (input) => set({ input }),
+    setLoading: (isLoading) => set({ isLoading }),
+    setError: (error) => set({ error }),
+    
+    // Send message via socket
+    sendMessage: async (content) => {
+      try {
+        if (!content.trim()) return;
+        
+        set({ isLoading: true });
+        
+        // Create a temporary message for immediate display
+        const tempMessage: ExtendedChatMessage = {
+          id: `user-${Date.now()}`,
+          content,
+          role: 'user',
+          type: 'text',
+          status: 'sending',
+          createdAt: new Date().toISOString(),
+          metadata: {
+            timestamp: Date.now()
+          }
+        };
+        
+        // Add to local state
+        const { messages, conversationId } = get();
+        set({ messages: [...messages, tempMessage], input: '' });
+        
+        // Try to get the socket from window if not available
+        if (!socketInstance && typeof window !== 'undefined') {
+          try {
+            // @ts-ignore - accessing window object with custom property
+            socketInstance = window.__socketInstance;
+          } catch (e) {
+            console.error('Could not access socket from window', e);
+          }
+        }
+        
+        if (!socketInstance) {
+          console.warn('Socket not available, cannot send message');
+          toast.error('Connection issue. Please reload the page.');
+          return;
+        }
+        
+        // Send via socket.io
+        socketInstance.emit('message:send', {
+          content,
+          conversationId: conversationId || 'default',
+          metadata: {
+            timestamp: Date.now()
+          }
+        }, (response: any) => {
+          if (response.error) {
+            console.error('Message send error:', response.error);
+            toast.error('Failed to send message');
+            set({ error: response.error });
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error sending message:', error);
+        set({ 
+          error: error instanceof Error ? error.message : 'Failed to send message' 
+        });
+        toast.error('Failed to send message');
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+    
+    loadMessages: async () => {
+      // No-op implementation for backward compatibility
+      return Promise.resolve();
+    }
+  };
+});
+
+// Chat provider component
 export function ChatProvider({
   children,
   initialMessages = [],
   conversationId,
 }: ChatProviderProps) {
-  // Initialize reducer with initial state
+  // Set up reducer
   const [state, dispatch] = useReducer(chatReducer, {
     ...initialState,
     messages: initialMessages,
     conversationId: conversationId || null,
   });
-
-  // Get socket functionality
-  const { socket, isConnected } = useSocket();
-
-  // Set up socket event handlers
+  
+  // Access socket context
+  const { socket, isConnected, eventEmitter } = useSocket();
+  
+  // Store socket in window for access from Zustand
   React.useEffect(() => {
+    if (socket && typeof window !== 'undefined') {
+      // @ts-ignore - extending window
+      window.__socketInstance = socket;
+    }
+  }, [socket]);
+  
+  // Message state tracking - using LangGraph style approach
+  const messageContentMap = useMemo(() => new Map<string, string>(), []);
+  
+  // Helper to convert simple message to extended format
+  const convertToExtendedMessage = (message: any): ExtendedChatMessage => {
+    return {
+      ...message,
+      type: message.type || 'text',
+      metadata: message.metadata || {},
+    };
+  };
+  
+  // Set up event listeners for socket events using LangGraph-style hooks
+  
+  // Handle new messages from server
+  const onNewMessage = useCallback((message: any) => {
+    console.log('Received new message:', message);
+    
+    // Create initial entry in content map for streaming messages
+    if (message.status === 'streaming') {
+      messageContentMap.set(message.id, '');
+      console.log(`Initialized content map for message: ${message.id}`);
+    }
+    
+    dispatch({ type: 'ADD_MESSAGE', message: convertToExtendedMessage(message) });
+    
+    // Also update Zustand store for consistency
+    const store = useChatStore.getState();
+    store.setMessages([...store.messages, convertToExtendedMessage(message)]);
+  }, [messageContentMap]);
+  
+  // Handle message updates
+  const onMessageUpdate = useCallback((message: any) => {
+    console.log('Message updated:', message);
+    dispatch({ type: 'UPDATE_MESSAGE', message: convertToExtendedMessage(message) });
+    
+    // Also update Zustand store for consistency
+    const store = useChatStore.getState();
+    const updatedMessages = store.messages.map(m => 
+      m.id === message.id ? { ...m, ...convertToExtendedMessage(message) } : m
+    );
+    store.setMessages(updatedMessages);
+  }, []);
+  
+  // Set up listeners for socket events
+  useEffect(() => {
     if (!socket) return;
     
-    const messageNewHandler = (message: ExtendedChatMessage) => {
-      dispatch({ type: 'ADD_MESSAGE', message });
-    };
-
-    const messageUpdateHandler = (message: ExtendedChatMessage) => {
-      dispatch({ type: 'UPDATE_MESSAGE', message });
-    };
-
-    const messageErrorHandler = (data: { messageId: string, error: string }) => {
-      dispatch({ type: 'SET_ERROR', error: data.error });
-      
-      // Update message status if it exists
-      const message = state.messages.find(m => m.id === data.messageId);
-      if (message) {
-        dispatch({
-          type: 'UPDATE_MESSAGE',
-          message: { ...message, status: 'error', metadata: { ...message.metadata, error: data.error } }
-        });
-      }
-    };
+    console.log('Setting up chat message listeners');
     
-    // Add handler for message chunks during streaming
-    const messageChunkHandler = (data: { messageId: string, chunk: string, timestamp: string }) => {
-      // Find the temporary message to update or create a new assistant message
-      const tempMessage = state.messages.find(m => m.id === data.messageId);
-      
-      if (tempMessage) {
-        // This chunk is for an existing message - append to content
-        dispatch({
-          type: 'UPDATE_MESSAGE',
-          message: {
-            ...tempMessage,
-            content: tempMessage.content + data.chunk,
-            status: 'streaming',
-            metadata: { 
-              ...tempMessage.metadata,
-              lastChunkAt: data.timestamp,
-            }
+    // Set up event handlers for standard socket events
+    socket.on('message:new', onNewMessage);
+    socket.on('message:update', onMessageUpdate);
+    
+    // Clean up event listeners
+    return () => {
+      socket.off('message:new', onNewMessage);
+      socket.off('message:update', onMessageUpdate);
+    };
+  }, [socket, onNewMessage, onMessageUpdate]);
+  
+  // Handle LangGraph stream tokens - replaces old chunk handling
+  useChatModelStream((token, messageId, metadata) => {
+    console.log(`[LangGraph] Received token for ${messageId}, length: ${token.length}`);
+    
+    // Initialize content map if needed
+    if (!messageContentMap.has(messageId)) {
+      messageContentMap.set(messageId, '');
+      console.log(`[LangGraph] Initialized content map for message: ${messageId}`);
+    }
+    
+    // Accumulate content
+    const currentContent = messageContentMap.get(messageId) || '';
+    const updatedContent = currentContent + token;
+    messageContentMap.set(messageId, updatedContent);
+    
+    // Find existing message
+    const existingMessage = state.messages.find(msg => msg.id === messageId);
+    
+    if (existingMessage) {
+      // Update the message
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        message: {
+          ...existingMessage,
+          content: updatedContent,
+          status: 'streaming' as const,
+          metadata: {
+            ...existingMessage.metadata,
+            streaming: true,
+            streamComplete: false,
+            lastChunkAt: new Date().toISOString(),
+            totalLength: updatedContent.length,
+            lastChunk: token
           }
-        });
-      } else {
-        // Create a new message for the assistant's response
-        const assistantMessage: ExtendedChatMessage = {
-          id: data.messageId || `response-${Date.now()}`,
-          role: 'assistant',
-          content: data.chunk,
-          createdAt: data.timestamp || new Date().toISOString(),
-          type: 'text',
+        }
+      });
+      
+      // Also update Zustand store
+      const store = useChatStore.getState();
+      const updatedMessages = store.messages.map(m => 
+        m.id === messageId ? {
+          ...m,
+          content: updatedContent,
           status: 'streaming',
           metadata: {
-            timestamp: Date.now(),
-            lastChunkAt: data.timestamp,
-          },
-        };
-        
-        dispatch({ type: 'ADD_MESSAGE', message: assistantMessage });
-      }
-    };
-    
-    // Add handler for message completion
-    const messageCompleteHandler = (data: { messageId: string, timestamp: string }) => {
-      // Find the message that's being completed
-      const message = state.messages.find(m => m.id === data.messageId);
+            ...m.metadata,
+            streaming: true,
+            streamComplete: false,
+            lastChunkAt: new Date().toISOString(),
+            totalLength: updatedContent.length,
+            lastChunk: token
+          }
+        } : m
+      );
+      store.setMessages(updatedMessages);
+    } else {
+      // Find any assistant message that might be streaming
+      const streamingMessage = state.messages.find(m => 
+        m.role === 'assistant' && m.status === 'streaming'
+      );
       
-      if (message) {
-        // Update the message status to complete
+      if (streamingMessage) {
+        // Found a streaming message, update its content
         dispatch({
           type: 'UPDATE_MESSAGE',
           message: {
-            ...message,
-            status: 'delivered',
-            metadata: { 
-              ...message.metadata,
-              completedAt: data.timestamp,
+            ...streamingMessage,
+            content: updatedContent,
+            metadata: {
+              ...streamingMessage.metadata,
+              streaming: true,
+              lastChunkAt: new Date().toISOString(),
+              totalLength: updatedContent.length,
+              lastChunk: token
             }
           }
         });
+        
+        // Also update Zustand store
+        const store = useChatStore.getState();
+        const updatedMessages = store.messages.map(m => 
+          m.id === streamingMessage.id ? {
+            ...m,
+            content: updatedContent,
+            metadata: {
+              ...m.metadata,
+              streaming: true,
+              lastChunkAt: new Date().toISOString(),
+              totalLength: updatedContent.length,
+              lastChunk: token
+            }
+          } : m
+        );
+        store.setMessages(updatedMessages);
+      } else {
+        console.warn(`[LangGraph] Received token for unknown message: ${messageId}`);
       }
-    };
+    }
+  });
+  
+  // Handle LangGraph completion events - replaces old completion handling
+  useChatModelComplete((messageId, metadata) => {
+    console.log(`[LangGraph] Message complete: ${messageId}`);
     
-    // Add typing indicator handlers
-    const userTypingHandler = (data: { userId: string, username: string }) => {
-      console.log('User typing:', data.username);
-      // Could add typing indicator UI here
-    };
+    // Get accumulated content
+    const content = messageContentMap.get(messageId) || '';
     
-    const userStopTypingHandler = (data: { userId: string, username: string }) => {
-      console.log('User stopped typing:', data.username);
-      // Could remove typing indicator UI here
-    };
+    // Try to find the message
+    const existingMessage = state.messages.find(m => m.id === messageId);
     
-    // Add event listeners
-    socket.on('message:new', messageNewHandler);
-    socket.on('message:update', messageUpdateHandler);
-    socket.on('message:error', messageErrorHandler);
-    socket.on('message:chunk', messageChunkHandler);
-    socket.on('message:complete', messageCompleteHandler);
-    socket.on('user:typing', userTypingHandler);
-    socket.on('user:stop_typing', userStopTypingHandler);
-    
-    // Cleanup on unmount
-    return () => {
-      socket.off('message:new', messageNewHandler);
-      socket.off('message:update', messageUpdateHandler);
-      socket.off('message:error', messageErrorHandler);
-      socket.off('message:chunk', messageChunkHandler);
-      socket.off('message:complete', messageCompleteHandler);
-      socket.off('user:typing', userTypingHandler);
-      socket.off('user:stop_typing', userStopTypingHandler);
-    };
-  }, [socket, state.messages]);
-
-  // Send a message through socket
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!content.trim() || !isConnected) return;
-
-      // Clear input
-      dispatch({ type: 'SET_INPUT', input: '' });
-      dispatch({ type: 'SET_LOADING', isLoading: true });
-
-      try {
-        // Create a temporary message
-        const tempMessage: ExtendedChatMessage = {
-          id: `temp-${Date.now()}`,
-          role: 'user',
-          content,
-          createdAt: new Date().toISOString(),
-          type: 'text',
-          status: 'sending',
+    if (existingMessage) {
+      // Update the message to mark it as complete
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        message: {
+          ...existingMessage,
+          content: content || existingMessage.content,
+          status: 'sent' as const,
           metadata: {
-            timestamp: Date.now(),
-          },
-        };
-
-        // Add to local state
-        dispatch({ type: 'ADD_MESSAGE', message: tempMessage });
-
-        // Send via socket
-        if (socket) {
-          socket.emit('message:sent', tempMessage);
+            ...existingMessage.metadata,
+            streaming: false,
+            streamComplete: true,
+            streamEndTime: metadata.timestamp || new Date().toISOString()
+          }
         }
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        dispatch({ type: 'SET_ERROR', error: 'Failed to send message' });
-        toast.error('Failed to send message');
-      } finally {
-        dispatch({ type: 'SET_LOADING', isLoading: false });
-      }
-    },
-    [socket, isConnected]
-  );
-
-  // Load previous messages
-  const loadMessages = useCallback(async () => {
-    if (!state.conversationId) return;
-
-    dispatch({ type: 'SET_LOADING', isLoading: true });
-
-    try {
-      // This would typically be an API call
-      // For now just mock the functionality
-      const messages: ExtendedChatMessage[] = [];
+      });
       
-      dispatch({ type: 'SET_MESSAGES', messages });
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-      dispatch({ type: 'SET_ERROR', error: 'Failed to load messages' });
+      // Clean up tracking
+      messageContentMap.delete(messageId);
+      
+      // Also update Zustand store
+      const store = useChatStore.getState();
+      const updatedMessages = store.messages.map(m => 
+        m.id === messageId ? {
+          ...m,
+          content: content || m.content,
+          status: 'sent',
+          metadata: {
+            ...m.metadata,
+            streaming: false,
+            streamComplete: true,
+            streamEndTime: metadata.timestamp || new Date().toISOString()
+          }
+        } : m
+      );
+      store.setMessages(updatedMessages);
+    } else {
+      // Try to find any streaming assistant message
+      const streamingMessage = state.messages.find(m => 
+        m.role === 'assistant' && m.status === 'streaming'
+      );
+      
+      if (streamingMessage) {
+        // Update the streaming message with the completion status
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          message: {
+            ...streamingMessage,
+            content: content || streamingMessage.content,
+            status: 'sent' as const,
+            metadata: {
+              ...streamingMessage.metadata,
+              streaming: false,
+              streamComplete: true,
+              streamEndTime: metadata.timestamp || new Date().toISOString()
+            }
+          }
+        });
+        
+        // Clean up tracking
+        messageContentMap.delete(messageId);
+        
+        // Also update Zustand store
+        const store = useChatStore.getState();
+        const updatedMessages = store.messages.map(m => 
+          m.id === streamingMessage.id ? {
+            ...m,
+            content: content || m.content,
+            status: 'sent',
+            metadata: {
+              ...m.metadata,
+              streaming: false,
+              streamComplete: true,
+              streamEndTime: metadata.timestamp || new Date().toISOString()
+            }
+          } : m
+        );
+        store.setMessages(updatedMessages);
+      } else {
+        console.warn(`[LangGraph] Completion for unknown message: ${messageId}`);
+      }
+    }
+  });
+  
+  // Handle LangGraph error events - replaces old error handling
+  useChatModelError((error, messageId, metadata) => {
+    console.error(`[LangGraph] Error for message ${messageId}:`, error);
+    
+    // Find the message that errored
+    const existingMessage = state.messages.find(m => m.id === messageId);
+    
+    if (existingMessage) {
+      // Update the message with error status
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        message: {
+          ...existingMessage,
+          status: 'error' as const,
+          metadata: {
+            ...existingMessage.metadata,
+            streaming: false,
+            streamComplete: false,
+            error: error.message || 'An error occurred',
+            errorTimestamp: new Date().toISOString()
+          }
+        }
+      });
+      
+      // Also update Zustand store
+      const store = useChatStore.getState();
+      const updatedMessages = store.messages.map(m => 
+        m.id === messageId ? {
+          ...m,
+          status: 'error',
+          metadata: {
+            ...m.metadata,
+            streaming: false,
+            streamComplete: false,
+            error: error.message || 'An error occurred',
+            errorTimestamp: new Date().toISOString()
+          }
+        } : m
+      );
+      store.setMessages(updatedMessages);
+    } else {
+      // Try to find any streaming assistant message
+      const streamingMessage = state.messages.find(m => 
+        m.role === 'assistant' && m.status === 'streaming'
+      );
+      
+      if (streamingMessage) {
+        // Update the streaming message with error status
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          message: {
+            ...streamingMessage,
+            status: 'error' as const,
+            metadata: {
+              ...streamingMessage.metadata,
+              streaming: false,
+              streamComplete: false,
+              error: error.message || 'An error occurred',
+              errorTimestamp: new Date().toISOString()
+            }
+          }
+        });
+        
+        // Also update Zustand store
+        const store = useChatStore.getState();
+        const updatedMessages = store.messages.map(m => 
+          m.id === streamingMessage.id ? {
+            ...m,
+            status: 'error',
+            metadata: {
+              ...m.metadata,
+              streaming: false,
+              streamComplete: false,
+              error: error.message || 'An error occurred',
+              errorTimestamp: new Date().toISOString()
+            }
+          } : m
+        );
+        store.setMessages(updatedMessages);
+      } else {
+        // No streaming message found, add a new error message
+        const errorMessage: ExtendedChatMessage = {
+          id: `error-${Date.now()}`,
+          content: `Error: ${error.message || 'An unknown error occurred'}`,
+          role: 'system',
+          type: 'system',
+          status: 'error',
+          createdAt: new Date().toISOString(),
+          metadata: {
+            error: error.message || 'An unknown error occurred',
+            relatedMessageId: messageId
+          }
+        };
+        
+        dispatch({ type: 'ADD_MESSAGE', message: errorMessage });
+        
+        // Also update Zustand store
+        const store = useChatStore.getState();
+        store.setMessages([...store.messages, errorMessage]);
+      }
+    }
+    
+    // Set error state
+    dispatch({ 
+      type: 'SET_ERROR', 
+      error: error.message || 'An error occurred processing your message' 
+    });
+    
+    // Also update Zustand store
+    const store = useChatStore.getState();
+    store.setError(error.message || 'An error occurred processing your message');
+    
+    // Show toast
+    toast.error(error.message || 'An error occurred processing your message');
+  });
+  
+  // Send message function
+  const sendMessage = async (content: string) => {
+    if (!socket || !isConnected) {
+      toast.error('Not connected to server');
+      return;
+    }
+    
+    if (!content.trim()) return;
+    
+    console.log('Sending message with content:', content);
+    
+    // Create user message
+    const userMessage: ExtendedChatMessage = {
+      id: `user-${Date.now()}`,
+      content,
+      role: 'user',
+      type: 'text',
+      status: 'sending',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        timestamp: Date.now()
+      }
+    };
+    
+    // Add to messages
+    dispatch({ type: 'ADD_MESSAGE', message: userMessage });
+    
+    // Set loading state
+    dispatch({ type: 'SET_LOADING', isLoading: true });
+    dispatch({ type: 'SET_INPUT', input: '' });
+    
+    try {
+      // Send to server
+      console.log('Socket connected, emitting message:send event');
+      socket.emit('message:send', {
+          content,
+          conversationId: state.conversationId || 'default',
+          metadata: {
+            timestamp: Date.now()
+          }
+        }, (response: any) => {
+          console.log('Message:send response:', response);
+          if (response.error) {
+            console.error('Message send error:', response.error);
+            toast.error('Failed to send message');
+            
+            // Update user message to reflect error
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              message: {
+                ...userMessage,
+                status: 'error',
+                metadata: {
+                  ...userMessage.metadata,
+                  error: response.error
+                }
+              }
+            });
+          } else if (response.message) {
+            // Update user message status to sent
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              message: {
+                ...userMessage,
+                status: 'delivered'
+              }
+            });
+            
+            // If a conversation ID was not set, set it from the response
+            if (!state.conversationId && response.message.conversationId) {
+              dispatch({
+                type: 'SET_CONVERSATION_ID',
+                conversationId: response.message.conversationId
+              });
+              
+              // Update Zustand store too
+              const store = useChatStore.getState();
+              store.conversationId = response.message.conversationId;
+            }
+          }
+        });
+    } catch (err) {
+      console.error('Error sending message:', err);
+      toast.error('Failed to send message');
+      
+      // Update user message to reflect error
+      dispatch({
+        type: 'UPDATE_MESSAGE',
+        message: {
+          ...userMessage,
+          status: 'error',
+          metadata: {
+            ...userMessage.metadata,
+            error: err instanceof Error ? err.message : 'Unknown error'
+          }
+        }
+      });
     } finally {
+      // Set loading state to false
       dispatch({ type: 'SET_LOADING', isLoading: false });
     }
-  }, [state.conversationId]);
-
-  // Create memoized value
-  const contextValue = useMemo(
-    () => ({
-      state,
-      dispatch,
-      sendMessage,
-      loadMessages,
-    }),
-    [state, sendMessage, loadMessages]
-  );
-
-  return (
-    <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>
-  );
-}
-
-/**
- * Custom hook to use chat store
- */
-export function useChatStore() {
-  const context = useContext(ChatContext);
-  
-  if (!context) {
-    throw new Error('useChatStore must be used within a ChatProvider');
-  }
-  
-  const { state, dispatch, sendMessage, loadMessages } = context;
-  
-  return {
-    messages: state.messages,
-    input: state.input,
-    isLoading: state.isLoading,
-    error: state.error,
-    conversationId: state.conversationId,
-    setInput: (input: string) => dispatch({ type: 'SET_INPUT', input }),
-    sendMessage,
-    loadMessages,
   };
+  
+  // Provide state and methods to children
+  const value = {
+    state,
+    dispatch,
+    sendMessage,
+  };
+  
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }

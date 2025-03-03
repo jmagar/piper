@@ -69,26 +69,49 @@ export async function createLangGraph(prismaClient?: PrismaClient) {
   // Load config and initialize model
   const config = loadConfig(configPath);
   
+  console.log('==== LangGraph Initialization ====');
+  console.log('Loading configuration from:', configPath);
+  console.log('Model provider:', config.llm.model_provider);
+  console.log('Model:', config.llm.model);
+  console.log('Temperature:', config.llm.temperature);
+  console.log('Max tokens:', config.llm.max_tokens);
+  
   // Initialize base model
-  const llm = initChatModel({
-    modelProvider: config.llm.model_provider,
-    model: config.llm.model,
-    temperature: config.llm.temperature,
-    maxTokens: config.llm.max_tokens
-  });
+  log('Initializing LLM model with provider %s and model %s', config.llm.model_provider, config.llm.model);
+  let llm;
+  try {
+    llm = initChatModel({
+      modelProvider: config.llm.model_provider,
+      model: config.llm.model,
+      temperature: config.llm.temperature,
+      maxTokens: config.llm.max_tokens
+    });
+    log('✅ LLM model initialized successfully');
+    console.log('✅ LLM model initialized successfully');
+  } catch (err) {
+    error('⛔ Failed to initialize LLM model: %s', err instanceof Error ? err.message : String(err));
+    console.error('⛔ CRITICAL ERROR: Failed to initialize LLM model:', err instanceof Error ? err.message : String(err));
+    if (err instanceof Error && err.stack) {
+      console.error('Error stack:', err.stack);
+    }
+    
+    throw new Error(`Failed to initialize LLM model: ${err instanceof Error ? err.message : String(err)}`);
+  }
   
   // Initialize MCP tools with enhanced error handling
   let tools: StructuredTool[] = [];
   let cleanupTools = async () => {};
   try {
-    log('Initializing MCP tools from %d configured servers', Object.keys(config.mcp_servers).length);
+    const serverCount = Object.keys(config.mcp_servers).length;
+    log('Initializing MCP tools from %d configured servers', serverCount);
+    console.log(`Initializing ${serverCount} MCP tool servers...`);
+    
     // Cast to custom options and result types
     const mcpResult = await convertMcpToLangchainTools(
       config.mcp_servers,
       { 
         logLevel: 'info',
         // Additional options for graceful degradation
-        // @ts-expect-error - We're adding custom options that may not be in the type definition
         initTimeout: 10000, // 10 seconds timeout for each server
         continueOnError: true // Continue even if some servers fail
       } as ExtendedMcpOptions
@@ -96,17 +119,103 @@ export async function createLangGraph(prismaClient?: PrismaClient) {
     
     tools = mcpResult.tools;
     cleanupTools = mcpResult.cleanup;
-    log('Successfully initialized %d MCP tools from available servers', tools.length);
     
     // Log which servers are operational vs failed
     if (mcpResult.failedServers && mcpResult.failedServers.length > 0) {
-      error('The following MCP servers failed to initialize and will be skipped: %s', 
-        mcpResult.failedServers.join(', '));
+      const failedServerCount = mcpResult.failedServers.length;
+      const successServerCount = serverCount - failedServerCount;
+      
+      error('⚠️ %d/%d MCP servers failed to initialize and will be skipped: %s', 
+        failedServerCount, serverCount, mcpResult.failedServers.join(', '));
+      console.warn(`⚠️ ${failedServerCount}/${serverCount} MCP servers failed to initialize`);
+      console.warn('Failed servers:', mcpResult.failedServers.join(', '));
+      console.log(`✅ Successfully initialized ${tools.length} MCP tools from ${successServerCount} available servers`);
+    } else {
+      log('✅ Successfully initialized %d MCP tools from all %d servers', tools.length, serverCount);
+      console.log(`✅ Successfully initialized ${tools.length} MCP tools from all ${serverCount} servers`);
     }
+
+    // Truncate tool descriptions to ensure they don't exceed OpenAI's limits
+    tools = truncateToolDescriptions(tools);
+    log('Tool descriptions truncated to comply with API limits');
   } catch (err) {
-    error('Error during MCP tools initialization: %s', err instanceof Error ? err.message : String(err));
-    error('Continuing with limited or no tools available');
+    error('⛔ Error during MCP tools initialization: %s', err instanceof Error ? err.message : String(err));
+    console.error('⛔ CRITICAL ERROR during MCP tools initialization:', err instanceof Error ? err.message : String(err));
+    if (err instanceof Error && err.stack) {
+      console.error('Error stack:', err.stack);
+    }
+    console.warn('⚠️ Continuing with limited or no tools available');
     tools = []; // Start with empty tools rather than failing
+  }
+
+  /**
+   * Truncates tool descriptions to ensure they don't exceed OpenAI's maximum length (1024 characters)
+   * @param tools The array of structured tools to process
+   * @returns The array of tools with truncated descriptions
+   */
+  function truncateToolDescriptions(tools: StructuredTool[]): StructuredTool[] {
+    const MAX_DESCRIPTION_LENGTH = 1024;
+    
+    return tools.map(tool => {
+      // Create a shallow copy of the tool - we'll only modify what's needed
+      const modifiedTool = { ...tool } as StructuredTool;
+      
+      try {
+        // Handle direct description property if it exists
+        if (typeof modifiedTool.description === 'string' && 
+            modifiedTool.description.length > MAX_DESCRIPTION_LENGTH) {
+          // Since we can't directly modify the read-only property, use Object.defineProperty
+          Object.defineProperty(modifiedTool, 'description', {
+            value: modifiedTool.description.substring(0, MAX_DESCRIPTION_LENGTH - 3) + '...',
+            writable: false,
+            enumerable: true,
+            configurable: true
+          });
+          
+          log('Truncated direct description for tool "%s" from %d to %d characters', 
+              modifiedTool.name, 
+              tool.description.length, 
+              modifiedTool.description.length);
+        }
+        
+        // Handle schema.description if it exists
+        if (modifiedTool.schema && 
+            typeof modifiedTool.schema === 'object' && 
+            modifiedTool.schema !== null) {
+          
+          // Access schema safely with type assertions
+          const schema = modifiedTool.schema as { description?: string };
+          
+          if (typeof schema.description === 'string' && 
+              schema.description.length > MAX_DESCRIPTION_LENGTH) {
+            
+            // Create a safe copy of the schema
+            const schemaCopy = { ...schema };
+            schemaCopy.description = schema.description.substring(0, MAX_DESCRIPTION_LENGTH - 3) + '...';
+            
+            // Replace the schema object with our modified copy
+            Object.defineProperty(modifiedTool, 'schema', {
+              value: schemaCopy,
+              writable: true,
+              enumerable: true,
+              configurable: true
+            });
+            
+            log('Truncated schema description for tool "%s" from %d to %d characters', 
+                modifiedTool.name,
+                schema.description.length,
+                schemaCopy.description.length);
+          }
+        }
+      } catch (err) {
+        // If any error occurs during truncation, log and return the original tool
+        error('Error truncating description for tool "%s": %s', 
+          tool.name, 
+          err instanceof Error ? err.message : String(err));
+      }
+      
+      return modifiedTool;
+    });
   }
 
   // Create conversation store
@@ -235,6 +344,35 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
           handleLLMNewToken: async (token: string) => {
             log('Streaming token: %d chars, content: "%s"', token.length, token.substring(0, 20) + (token.length > 20 ? '...' : ''));
             streamedContent += token;
+            
+            // Save partial streaming state periodically (every 5 tokens)
+            // This helps with resuming streams if there's a disruption
+            if (options.configurable?.thread_id && streamedContent.length > 0 && 
+                streamedContent.length % 5 === 0) {
+              try {
+                const threadId = options.configurable.thread_id as string;
+                await statePersistence.saveState(
+                  threadId,
+                  {
+                    messages: [...history.messages, { role: 'assistant', content: streamedContent }],
+                    lastUpdated: new Date().toISOString(),
+                    streaming: true,
+                    partialResponse: streamedContent
+                  },
+                  {
+                    conversationId: conversationId,
+                    isComplete: false // Mark as incomplete during streaming
+                  }
+                );
+                log('Saved partial streaming state for thread %s, content length: %d', 
+                   threadId, streamedContent.length);
+              } catch (persistErr) {
+                error('Error persisting partial streaming state: %s', 
+                      persistErr instanceof Error ? persistErr.message : String(persistErr));
+                // Non-fatal, continue streaming
+              }
+            }
+            
             await options.streamingOptions?.onChunk?.(token);
           },
           handleLLMError: async (errorObj: Error) => {
@@ -242,6 +380,32 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             error('Error stack: %s', errorObj.stack || 'No stack trace');
             error('Current streamed content length: %d', streamedContent.length);
             error('Last few tokens (if any): %s', streamedContent.slice(-50));
+            
+            // Save state on error for potential recovery
+            if (options.configurable?.thread_id && streamedContent.length > 0) {
+              try {
+                const threadId = options.configurable.thread_id as string;
+                await statePersistence.saveState(
+                  threadId,
+                  {
+                    messages: [...history.messages, { role: 'assistant', content: streamedContent }],
+                    lastUpdated: new Date().toISOString(),
+                    error: errorObj.message,
+                    streaming: false,
+                    partialResponse: streamedContent
+                  },
+                  {
+                    conversationId: conversationId,
+                    isComplete: false // Error state
+                  }
+                );
+                log('Saved error streaming state for thread %s', threadId);
+              } catch (persistErr) {
+                error('Error persisting streaming error state: %s', 
+                      persistErr instanceof Error ? persistErr.message : String(persistErr));
+              }
+            }
+            
             await options.streamingOptions?.onError?.(errorObj);
           },
           handleLLMEnd: async () => {
@@ -275,7 +439,39 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
                 );
               });
             }
-            await options.streamingOptions?.onComplete?.();
+            
+            // Persist the completed streaming state
+            if (options.configurable?.thread_id) {
+              try {
+                const threadId = options.configurable.thread_id as string;
+                await statePersistence.saveState(
+                  threadId,
+                  {
+                    messages: history.messages.map(msg => ({
+                      role: msg._getType(),
+                      content: msg.content
+                    })),
+                    lastUpdated: history.lastUpdated.toISOString(),
+                    streaming: false,
+                    completed: true
+                  },
+                  {
+                    conversationId: conversationId,
+                    isComplete: true // Completed successfully
+                  }
+                );
+                log('Persisted completed streaming state for thread %s', threadId);
+              } catch (persistErr) {
+                error('Error persisting completed streaming state: %s', 
+                      persistErr instanceof Error ? persistErr.message : String(persistErr));
+              }
+            }
+
+            // Make sure onComplete is always called, even if there's no content
+            if (options.streamingOptions?.onComplete) {
+              log('Calling onComplete callback from handleLLMEnd');
+              await options.streamingOptions.onComplete();
+            }
           }
         }] : [];
 
@@ -327,12 +523,12 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
         }
 
         // After agent invocation, persist the state if thread_id is provided
-        if (options.configurable?.thread_id && !options.streaming) {
+        if (options.configurable?.thread_id) {
           try {
             // Get the current thread ID
             const threadId = options.configurable.thread_id as string;
             
-            // Save the state to Redis and PostgreSQL
+            // Save the state to Redis and PostgreSQL with appropriate flags
             await statePersistence.saveState(
               threadId,
               {
@@ -340,11 +536,13 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
                   role: msg._getType(),
                   content: msg.content
                 })),
-                lastUpdated: history.lastUpdated.toISOString()
+                lastUpdated: history.lastUpdated.toISOString(),
+                streaming: options.streaming || false,
+                completed: !options.streaming // Only mark as completed for non-streaming responses
               },
               {
                 conversationId: conversationId,
-                isComplete: true
+                isComplete: !options.streaming // Non-streaming responses are complete immediately
               }
             );
             log('Persisted state for thread %s to Redis and PostgreSQL', threadId);

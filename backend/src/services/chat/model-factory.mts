@@ -45,9 +45,14 @@ export class ModelFactory {
   ): Promise<ChatModelInstance> {
     try {
       log('Creating OpenAI chat model with config: %o', config);
+      
+      // Check if model is o3-mini which doesn't support temperature
+      const isO3Mini = config.model === 'o3-mini';
+      
       const modelConfig = {
         modelName: config.model,
-        temperature: config.temperature ?? 0.7,
+        // Only include temperature if not using o3-mini
+        ...(isO3Mini ? {} : { temperature: config.temperature ?? 0.7 }),
         streaming: options.streaming ?? false,
         ...(config.maxTokens && { maxTokens: config.maxTokens }),
         ...(options.memory && {

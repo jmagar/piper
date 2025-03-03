@@ -12,8 +12,8 @@ export const MAX_RECONNECT_ATTEMPTS = 10;
  * Default socket options
  */
 export const DEFAULT_OPTIONS: SocketOptions = {
-    userId: 'test-user-1',
-    username: 'Test User'
+    userId: 'admin',
+    username: 'admin'
 } as const;
 
 /**

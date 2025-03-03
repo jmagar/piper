@@ -1,24 +1,48 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSocket } from '@/lib/socket/socket-provider';
-import { 
-  ConnectionState as SocketConnectionState, 
-  MessageStatus,
-  ChatMessage,
-  MessageChunk,
-  MessageComplete,
-  MessageError
-} from '@/types/socket';
+import { useSocket } from '@/lib/socket-provider';
 import { ExtendedChatMessage } from '@/types/chat';
+
+// Define enum for connection state to maintain compatibility
+enum ConnectionState {
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  DISCONNECTED = 'disconnected',
+  RECONNECTING = 'reconnecting',
+  FAILED = 'failed'
+}
+
+// Import types from socket.ts if needed for the hook
+// These local types are no longer needed as they're defined in the socket.ts types file
+// but keeping the interface names for code compatibility
+type MessageChunk = {
+  messageId: string;
+  content: string;
+  chunk: string;
+  index: number;
+  isLast: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+type MessageComplete = {
+  messageId: string;
+  metadata?: Record<string, unknown>;
+}
+
+type MessageError = {
+  messageId: string;
+  error: string;
+  metadata?: Record<string, unknown>;
+}
 
 /**
  * Re-export ConnectionState enum from our types for backward compatibility
  */
-export const ConnectionState = SocketConnectionState;
+export const SocketConnectionState = ConnectionState;
 
 /**
- * Message type for generic message handling
+ * Generic message interface for compatibility
  */
 interface GenericMessage {
   id: string;
@@ -33,16 +57,17 @@ interface GenericMessage {
 }
 
 /**
- * Response type for our own callbacks
+ * Generic message response for compatibility
+ * Keeping as a type definition for possible future use
  */
-interface GenericMessageResponse {
+type GenericMessageResponse = {
   error?: string | undefined;
   message?: GenericMessage | undefined;
   [key: string]: unknown;
 }
 
 /**
- * Socket handler props for useSocketIO hook
+ * Props for the useSocketIO hook
  */
 interface UseSocketIOProps {
   /**
@@ -85,138 +110,155 @@ export function useSocketIO(props?: UseSocketIOProps) {
   const {
     socket,
     isConnected,
-    connectionState,
-    error,
-    reconnect: socketReconnect,
-    disconnect
+    isConnecting,
+    error
   } = useSocket();
+  
+  // Create local state for connection state
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    isConnected ? ConnectionState.CONNECTED : 
+    isConnecting ? ConnectionState.CONNECTING : 
+    ConnectionState.DISCONNECTED
+  );
+  
+  // Update connection state when socket state changes
+  useEffect(() => {
+    if (isConnected) {
+      setConnectionState(ConnectionState.CONNECTED);
+    } else if (isConnecting) {
+      setConnectionState(ConnectionState.CONNECTING);
+    } else if (error) {
+      setConnectionState(ConnectionState.FAILED);
+    } else {
+      setConnectionState(ConnectionState.DISCONNECTED);
+    }
+  }, [isConnected, isConnecting, error]);
+  
+  // Implement reconnect and disconnect functions
+  const reconnect = useCallback(() => {
+    // Attempt to reconnect by refreshing the page or reinitializing socket
+    window.location.reload();
+  }, []);
+  
+  const disconnect = useCallback(() => {
+    // Close the socket if it exists
+    if (socket) {
+      socket.disconnect();
+    }
+  }, [socket]);
   
   const [lastMessage, setLastMessage] = useState<GenericMessage | null>(null);
   const [messages, setMessages] = useState<GenericMessage[]>([]);
   
-  // Listen for messages
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !isConnected) return;
     
+    const cleanupFunctions: (() => void)[] = [];
+    
+    // Handle new messages
     const handleMessage = (message: ExtendedChatMessage) => {
-      // Convert to generic message format
-      const genericMessage: GenericMessage = {
-        ...message,
-        status: message.status as string
-      };
+      setLastMessage(message as GenericMessage);
+      setMessages(prev => [...prev, message as GenericMessage]);
       
-      setLastMessage(genericMessage);
-      setMessages((prev) => [genericMessage, ...prev].slice(0, 50)); // Limit to last 50 messages
-      
-      // Call the handler passed in props
       if (props?.onMessage) {
-        props.onMessage(genericMessage);
+        props.onMessage(message as GenericMessage);
       }
     };
     
     // Handle message chunks
-    const handleMessageChunk = (data: MessageChunk) => {
+    const handleMessageChunk = (data: any) => {
       if (props?.onMessageChunk) {
         props.onMessageChunk({
           messageId: data.messageId,
-          chunk: data.chunk,
+          chunk: data.content || data.chunk,
           metadata: data.metadata || undefined
         });
       }
     };
     
     // Handle message completion
-    const handleMessageComplete = (data: MessageComplete) => {
+    const handleMessageComplete = (data: any) => {
       if (props?.onMessageComplete) {
         props.onMessageComplete({
-          messageId: data.messageId,
-          metadata: data.metadata || undefined
+          messageId: typeof data === 'string' ? data : data.messageId,
+          metadata: typeof data === 'object' ? data.metadata : undefined
         });
       }
     };
     
     // Handle message errors
-    const handleMessageError = (data: MessageError) => {
+    const handleMessageError = (data: any) => {
       if (props?.onMessageError) {
         props.onMessageError({
-          messageId: data.messageId,
-          error: data.error,
+          messageId: data.messageId || 'unknown',
+          error: typeof data === 'string' ? data : data.message || data.error || 'Unknown error',
           metadata: data.metadata || undefined
         });
       }
     };
     
-    // Register event handlers
-    const cleanupFunctions: Array<() => void> = [];
-    
-    // Properly register event handlers with type safety
-    socket.on('message:new', handleMessage);
-    cleanupFunctions.push(() => socket.off('message:new', handleMessage));
-    
-    socket.on('message:chunk', handleMessageChunk);
-    cleanupFunctions.push(() => socket.off('message:chunk', handleMessageChunk));
-    
-    socket.on('message:complete', handleMessageComplete);
-    cleanupFunctions.push(() => socket.off('message:complete', handleMessageComplete));
-    
-    socket.on('message:error', handleMessageError);
-    cleanupFunctions.push(() => socket.off('message:error', handleMessageError));
-    
     // Use onAny to catch all events for backward compatibility
     const handleAnyEvent = (event: string, ...args: unknown[]) => {
-      console.log(`[Socket] Event: ${event}`, args);
+      console.log(`Socket event: ${event}`, args);
     };
     
+    // Properly register event handlers with type safety
+    socket.on('message:new', handleMessage as any);
+    cleanupFunctions.push(() => socket.off('message:new', handleMessage as any));
+    
+    socket.on('message:chunk', handleMessageChunk as any);
+    cleanupFunctions.push(() => socket.off('message:chunk', handleMessageChunk as any));
+    
+    socket.on('message:complete', handleMessageComplete as any);
+    cleanupFunctions.push(() => socket.off('message:complete', handleMessageComplete as any));
+    
+    socket.on('message:error', handleMessageError as any);
+    cleanupFunctions.push(() => socket.off('message:error', handleMessageError as any));
+    
+    // Use onAny to catch all events for backward compatibility
     socket.onAny(handleAnyEvent);
     cleanupFunctions.push(() => socket.offAny(handleAnyEvent));
     
     return () => {
-      cleanupFunctions.forEach(cleanup => {
-        if (typeof cleanup === 'function') cleanup();
-      });
+      cleanupFunctions.forEach(fn => fn());
     };
-  }, [socket, props]);
+  }, [socket, isConnected, props]);
   
-  // Send message with compatibility layer
-  const sendMessage = useCallback((message: GenericMessage, callback?: (response: GenericMessageResponse) => void) => {
+  // Send message function
+  const sendMessage = useCallback((message: GenericMessage | string) => {
     if (!socket || !isConnected) {
-      if (callback) callback({ error: 'Socket not connected' });
+      console.error('Socket not connected');
       return false;
     }
     
-    // Convert GenericMessage to ExtendedChatMessage format for socket emission
-    const messageCopy: ExtendedChatMessage = {
-      id: message.id,
-      content: message.content,
-      role: message.role || 'user',
-      createdAt: message.createdAt || new Date().toISOString(),
-      updatedAt: message.updatedAt || new Date().toISOString(),
-      status: (message.status || 'sending') as 'sending' | 'streaming' | 'sent' | 'delivered' | 'error',
-      type: message.type as 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk' || 'text',
-      metadata: message.metadata || {}
-    };
-
-    // Create a correctly typed callback for Socket.IO
-    const socketCallback = (response: { error?: string; message?: ExtendedChatMessage; [key: string]: unknown }) => {
+    // Convert string to message object
+    const messageCopy = typeof message === 'string' 
+      ? { 
+          content: message, 
+          role: 'user' as const,
+          id: `temp-${Date.now()}`
+        } 
+      : { ...message };
+    
+    // Add default values if not present
+    if (!('id' in messageCopy) || !messageCopy.id) {
+      messageCopy.id = `temp-${Date.now()}`;
+    }
+    
+    // Socket callback function
+    const socketCallback = (response: any) => {
       if (response.error) {
-        console.error('[Socket] Error sending message:', response.error);
-        return;
-      }
-
-      if (response.message) {
-        console.log('[Socket] Message sent:', response.message);
+        console.error('Error sending message:', response.error);
+      } else if (response.message) {
+        console.log('Message sent successfully:', response.message);
       }
     };
-
+    
     // Use the socket with the properly typed callback
-    socket.emit('message:send', messageCopy, socketCallback);
+    socket.emit('message:send', messageCopy as any, socketCallback as any);
     
     return true;
   }, [socket, isConnected]);
-  
-  // Calculate isConnecting from connectionState
-  const isConnecting = connectionState === ConnectionState.CONNECTING || 
-                       connectionState === ConnectionState.RECONNECTING;
   
   // Return the same interface that was expected by the client code
   // Rename properties to match what's expected
@@ -225,10 +267,10 @@ export function useSocketIO(props?: UseSocketIOProps) {
     isConnected,
     isConnecting,
     connectionState,
-    connectionError: error,  // Rename error to connectionError
+    error,
     messages,
     lastMessage,
-    reconnect: socketReconnect,  // Rename connect to reconnect
+    reconnect,
     disconnect,
     sendMessage
   };

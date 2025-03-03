@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSocket } from '@/lib/socket/socket-provider';
+import { useSocket } from '@/lib/socket-provider';
 import { X, Minimize, Maximize, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,20 @@ export function SocketDebug({
   showFullLogs = false, 
   defaultOpen = false 
 }: SocketDebugProps) {
-  const { connectionState, error, reconnect, isConnected, socket } = useSocket();
+  const { error, isConnected, isConnecting, socket } = useSocket();
+  // Create a local connectionState for compatibility
+  const connectionState = React.useMemo(() => {
+    if (isConnected) return 'connected';
+    if (isConnecting) return 'connecting';
+    if (error) return 'failed';
+    return 'disconnected';
+  }, [isConnected, isConnecting, error]);
+  
+  // Implement reconnect function
+  const reconnect = React.useCallback(() => {
+    window.location.reload();
+  }, []);
+  
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [logs, setLogs] = React.useState<LogEntry[]>([]);

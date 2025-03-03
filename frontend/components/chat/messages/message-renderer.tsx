@@ -225,15 +225,23 @@ export function messageRenderer(message: ExtendedChatMessage): React.ReactNode {
   // Default: just display the content with line breaks
   return (
     <div className="whitespace-pre-wrap break-words">
-      {content.split('\n').map((line, index) => 
-        line.trim() ? (
+      {content.split('\n').map((line, index) => {
+        // Handle lines with quotes properly
+        const lineContent = line.trim() ? line : '';
+        
+        // Check if this line is likely to be part of a quoted text
+        const isQuoteLine = lineContent.includes('":"') || 
+                          (lineContent.startsWith('"') && !lineContent.endsWith('"')) ||
+                          (!lineContent.startsWith('"') && lineContent.endsWith('"'));
+        
+        return lineContent ? (
           <p key={`p-${index}`} className="mb-2">
-            {line}
+            {lineContent}
           </p>
         ) : (
           <br key={`br-${index}`} />
-        )
-      )}
+        );
+      })}
     </div>
   );
 } 

@@ -27,10 +27,13 @@ export * from './chatMessageMetadataReactionsValueUsersInner';
 export * from './chatMessageType';
 export * from './conversation';
 export * from './conversationStats';
+export * from './getMcpLogs200Response';
 export * from './langChainOptions';
+export * from './logEntry';
 export * from './messageReaction';
 export * from './starredMessage';
 export * from './streamChunk';
+export * from './streamMcpLogs200Response';
 export * from './tool';
 export * from './toolParametersInner';
 export * from './userStats';
@@ -75,10 +78,13 @@ import { ChatMessageMetadataReactionsValueUsersInner } from './chatMessageMetada
 import { ChatMessageType } from './chatMessageType';
 import { Conversation } from './conversation';
 import { ConversationStats } from './conversationStats';
+import { GetMcpLogs200Response } from './getMcpLogs200Response';
 import { LangChainOptions } from './langChainOptions';
+import { LogEntry } from './logEntry';
 import { MessageReaction } from './messageReaction';
 import { StarredMessage } from './starredMessage';
 import { StreamChunk } from './streamChunk';
+import { StreamMcpLogs200Response } from './streamMcpLogs200Response';
 import { Tool } from './tool';
 import { ToolParametersInner } from './toolParametersInner';
 import { UserStats } from './userStats';
@@ -102,7 +108,9 @@ let enumsMap: {[index: string]: any} = {
         "ChatMessageMetadata.StreamStatusEnum": ChatMessageMetadata.StreamStatusEnum,
         "ChatMessageType": ChatMessageType,
         "LangChainOptions.FallbackProviderEnum": LangChainOptions.FallbackProviderEnum,
+        "LogEntry.LevelEnum": LogEntry.LevelEnum,
         "StreamChunk.TypeEnum": StreamChunk.TypeEnum,
+        "StreamMcpLogs200Response.StatusEnum": StreamMcpLogs200Response.StatusEnum,
         "Tool.TypeEnum": Tool.TypeEnum,
 }
 
@@ -133,10 +141,13 @@ let typeMap: {[index: string]: any} = {
     "ChatMessageMetadataReactionsValueUsersInner": ChatMessageMetadataReactionsValueUsersInner,
     "Conversation": Conversation,
     "ConversationStats": ConversationStats,
+    "GetMcpLogs200Response": GetMcpLogs200Response,
     "LangChainOptions": LangChainOptions,
+    "LogEntry": LogEntry,
     "MessageReaction": MessageReaction,
     "StarredMessage": StarredMessage,
     "StreamChunk": StreamChunk,
+    "StreamMcpLogs200Response": StreamMcpLogs200Response,
     "Tool": Tool,
     "ToolParametersInner": ToolParametersInner,
     "UserStats": UserStats,

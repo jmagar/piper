@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { ChatLayout } from '@/components/chat/chat-layout';
-import { useSocket } from '@/lib/socket-setup.js';
+import { useSocket } from '@/lib/socket-provider';
 
 import { ChatProvider } from '@/components/chat/chat-provider';
 import { ExtendedChatMessage, ChatConversation } from '@/types/chat';
@@ -43,11 +43,12 @@ export function ChatClient({
   });
   
   // Get socket state from the context
-  const socketContext = useSocket();
+  const { isConnected } = useSocket();
   
-  // Extract socket connection state
-  const connectionState = socketContext.isConnecting ? 'connecting' : socketContext.isConnected ? 'connected' : 'disconnected';
-  const isConnected = socketContext.isConnected;
+  // Log socket connection status
+  React.useEffect(() => {
+    console.log('Socket connection status:', isConnected ? 'Connected' : 'Disconnected');
+  }, [isConnected]);
   
   // Fetch conversation data on the client side
   React.useEffect(() => {
@@ -88,11 +89,7 @@ export function ChatClient({
         </ChatProvider>
       )}
       
-      {/* Connection status indicator - updated to not be fixed positioned */}
-      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-background p-2 shadow-md">
-        <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-        <span className="text-xs">{connectionState}</span>
-      </div>
+      {/* Connection status indicator has been moved to the header */}
     </>
   );
 }

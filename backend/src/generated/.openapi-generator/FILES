@@ -36,11 +36,14 @@ model/chatMessageMetadataReactionsValueUsersInner.ts
 model/chatMessageType.ts
 model/conversation.ts
 model/conversationStats.ts
+model/getMcpLogs200Response.ts
 model/langChainOptions.ts
+model/logEntry.ts
 model/messageReaction.ts
 model/models.ts
 model/starredMessage.ts
 model/streamChunk.ts
+model/streamMcpLogs200Response.ts
 model/tool.ts
 model/toolParametersInner.ts
 model/userStats.ts

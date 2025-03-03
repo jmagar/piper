@@ -5,14 +5,22 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🌱 Starting database seed...');
     
-    // Create test user
+    // Create admin user
     const user = await prisma.user.upsert({
-        where: { email: 'test@example.com' },
-        update: {},
+        where: { email: 'admin@example.com' },
+        update: {
+            // Ensure ID is admin even if user already exists
+            id: 'admin',
+            name: 'Administrator',
+            preferences: {
+                theme: 'light',
+                notifications: true
+            }
+        },
         create: {
-            id: 'test-user-1',
-            email: 'test@example.com',
-            name: 'Test User',
+            id: 'admin',
+            email: 'admin@example.com',
+            name: 'Administrator',
             preferences: {
                 theme: 'light',
                 notifications: true
@@ -20,7 +28,7 @@ async function main() {
         }
     });
 
-    console.log(`Created user: ${user.name} (${user.email})`);
+    console.log(`Created user: ${user.name} (${user.email}) with ID: ${user.id}`);
 
     // Create user stats
     await prisma.userStats.upsert({
@@ -75,7 +83,7 @@ async function main() {
             conversation_id: conversation.id,
             user_id: user.id,
             metadata: {
-                username: 'Test User',
+                username: 'admin',
                 type: 'text'
             }
         }

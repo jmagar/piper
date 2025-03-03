@@ -2,6 +2,14 @@
 /* eslint-env node */
 /* global process */
 
+/**
+ * Next.js Configuration
+ * 
+ * NOTE: Environment variables come from the ROOT .env file only.
+ * Do NOT create a separate .env file in the frontend directory.
+ * All environment variables should be defined in the project root .env file.
+ */
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {

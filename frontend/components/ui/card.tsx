@@ -157,4 +157,4 @@ export type CompositeCard = typeof Card & {
 (Card as CompositeCard).Content = CardContent;
 (Card as CompositeCard).Footer = CardFooter;
 
-export { Card }; 
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }; 

@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import debug from 'debug';
 import crypto from 'crypto';
 import { HumanMessage } from '@langchain/core/messages';
+import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 
 import { createLangGraph } from '../../langgraph/index.js';
 import type { 
@@ -26,13 +27,166 @@ interface StreamingState {
   content: string;
   messageId?: string;
   status: 'initializing' | 'streaming' | 'complete' | 'error';
+  lastChunkTime?: number;
+  retryCount: number;
   isComplete?: boolean;
-  startTime: number;
+  completedViaCallback?: boolean;
+  startTime?: number;
   endTime?: number;
-  streamStartTime: string;
+  streamStartTime?: string;
   streamEndTime?: string;
   streamDuration?: number;
-  error?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Define callback handler class
+ */
+class StreamingCallbackHandler extends BaseCallbackHandler {
+  name = "streaming_handler";
+  private tokensReceived = 0;
+  private lastTokenTime = Date.now();
+  private lastChunkContent = '';
+
+  constructor(
+    private streamId: string,
+    private streamingMessages: Map<string, StreamingState>,
+    private enhancedOptions: StreamingOptions
+  ) {
+    super();
+  }
+
+  override async handleLLMNewToken(text: string | any): Promise<void> {
+    // Extract text content from the token, which might be an object
+    let safeText = '';
+    
+    try {
+      if (typeof text === 'string') {
+        safeText = text || '';
+      } else if (text && typeof text === 'object') {
+        // Handle structured token objects
+        safeText = text.text || text.content || text.message || 
+                  (text.data ? (text.data.content || text.data.text) : '') || 
+                  JSON.stringify(text);
+      } else {
+        safeText = String(text || '');
+      }
+    } catch (err) {
+      log('Error extracting text from token: %s', err instanceof Error ? err.message : String(err));
+      safeText = String(text || '');
+    }
+    
+    this.tokensReceived++;
+    this.lastTokenTime = Date.now();
+    this.lastChunkContent = safeText;
+    
+    log('Streaming token %d for stream %s, length: %d, content: %s', 
+      this.tokensReceived, this.streamId, safeText.length, 
+      safeText.substring(0, 20) + (safeText.length > 20 ? '...' : ''));
+    
+    // Always send the chunk, even if empty
+    try {
+      // Ensure we're actually sending data to the client
+      const result = await this.enhancedOptions.onChunk?.(safeText);
+      log('Chunk sent successfully for stream %s, token %d', this.streamId, this.tokensReceived);
+    } catch (err) {
+      log('Error in onChunk callback: %s', err instanceof Error ? err.message : String(err));
+      
+      // Try again with a fallback approach for robustness
+      try {
+        if (typeof this.enhancedOptions.onChunk === 'function') {
+          this.enhancedOptions.onChunk(safeText);
+          log('Fallback chunk send succeeded for stream %s', this.streamId);
+        }
+      } catch (fallbackErr) {
+        log('Fallback chunk send also failed: %s', 
+            fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr));
+      }
+    }
+    
+    // Update streaming state
+    const state = this.streamingMessages.get(this.streamId);
+    if (state) {
+      if (!state.isComplete) {
+        state.content += safeText;
+        state.chunks.push(safeText);
+        state.lastChunkTime = Date.now();
+      }
+    } else {
+      log('Warning: No streaming state found for stream %s when receiving token', this.streamId);
+    }
+  }
+
+  override async handleLLMEnd(): Promise<void> {
+    log('LLM stream ended for %s, received %d tokens total', this.streamId, this.tokensReceived);
+    
+    const state = this.streamingMessages.get(this.streamId);
+    if (state) {
+      // Mark as complete regardless of content
+      state.isComplete = true;
+      state.completedViaCallback = true;
+      state.endTime = Date.now();
+      
+      // If no tokens were received, ensure we send at least something
+      if (this.tokensReceived === 0 || state.content.trim().length === 0) {
+        log('No meaningful content received for stream %s, sending fallback response', this.streamId);
+        const fallbackResponse = "I apologize, but I'm having trouble generating a response right now. Please try again in a moment.";
+        
+        try {
+          // Try sending a fallback response
+          await this.enhancedOptions.onChunk?.(fallbackResponse);
+          state.content = fallbackResponse;
+          state.chunks.push(fallbackResponse);
+          log('Sent fallback response for stream %s', this.streamId);
+        } catch (err) {
+          log('Error sending fallback response: %s', err instanceof Error ? err.message : String(err));
+          
+          // Try with fallback approach
+          try {
+            if (typeof this.enhancedOptions.onChunk === 'function') {
+              this.enhancedOptions.onChunk(fallbackResponse);
+              state.content = fallbackResponse;
+              state.chunks.push(fallbackResponse);
+              log('Fallback approach for sending response succeeded for stream %s', this.streamId);
+            }
+          } catch (fallbackErr) {
+            log('Fallback approach also failed: %s', 
+                fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr));
+          }
+        }
+      }
+      
+      // Always call onComplete
+      log('Calling onComplete for stream %s with content length %d', this.streamId, state.content.length);
+      try {
+        // Ensure completion is sent properly
+        const completionResult = await this.enhancedOptions.onComplete?.();
+        log('Completion event sent successfully for stream %s', this.streamId);
+      } catch (err) {
+        log('Error in onComplete callback: %s', err instanceof Error ? err.message : String(err));
+        
+        // Try with fallback approach
+        try {
+          if (typeof this.enhancedOptions.onComplete === 'function') {
+            this.enhancedOptions.onComplete();
+            log('Fallback completion event sent for stream %s', this.streamId);
+          }
+        } catch (fallbackErr) {
+          log('Fallback completion event also failed: %s', 
+              fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr));
+        }
+      }
+    } else {
+      log('Warning: No streaming state found for stream %s when ending', this.streamId);
+      // Still try to complete even without state
+      try {
+        await this.enhancedOptions.onComplete?.();
+        log('Completion event sent for stream %s without state', this.streamId);
+      } catch (err) {
+        log('Error in onComplete callback without state: %s', err instanceof Error ? err.message : String(err));
+      }
+    }
+  }
 }
 
 /**
@@ -124,6 +278,42 @@ export class ChatLangChainService {
            message.includes('how to');
   }
 
+  // Add this helper method to extract text from structured responses
+  private extractTextFromResponse(response: any): string {
+    if (typeof response === 'string') {
+      return response;
+    }
+    
+    // Handle array of message objects (common LangGraph response format)
+    if (Array.isArray(response)) {
+      // Try to extract text from each message and join them
+      return response
+        .map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object') {
+            // Try to extract text content using common patterns
+            return item.text || item.content || item.message || 
+                   (item.data ? (item.data.content || item.data.text) : '') || 
+                   JSON.stringify(item);
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n\n');
+    }
+    
+    // Handle single object response
+    if (response && typeof response === 'object') {
+      // Try to extract text content using common patterns
+      return response.text || response.content || response.message || 
+             (response.data ? (response.data.content || response.data.text) : '') || 
+             JSON.stringify(response);
+    }
+    
+    // Fallback - convert to string
+    return String(response || '');
+  }
+
   /**
    * Process a message with streaming responses
    * @param message User message
@@ -153,7 +343,10 @@ export class ChatLangChainService {
       startTime: Date.now(),
       endTime: undefined,
       content: '', // Initialize as empty string
-      streamStartTime // Initialize with current time
+      streamStartTime, // Initialize with current time
+      isComplete: false, // Explicitly set to false initially
+      retryCount: 0, // Add the missing required field
+      metadata: {}
     });
     log('Starting streaming message processing, streamId: %s', streamId);
 
@@ -182,7 +375,7 @@ export class ChatLangChainService {
           content: '',
           role: 'assistant',
           conversation_id: conversation.id,
-          user_id: userId,
+          user_id: typeof userId === 'string' ? userId : 'anonymous',
           parent_id: userMessage.id,
           metadata: createStreamingMetadata(streamId, 'streaming', initialMetadata),
           status: 'streaming' as MessageStatus
@@ -255,133 +448,90 @@ export class ChatLangChainService {
       }
 
       // Process streaming response with the agent
-      log('Invoking agent with streaming for streamId %s', streamId);
-      
-      // Process streaming response
-      log('Invoking agent with streaming for streamId %s', streamId);
-      const enhancedOptions = {
-        ...options,
-        onChunk: async (chunk: string) => {
-          log('Received chunk for streamId %s, length: %d, content: %s', streamId, chunk.length, chunk.substring(0, 50));
-          const state = this.streamingMessages.get(streamId);
-          if (state && !state.isComplete && !state.error) {
-            state.content += chunk;
-            state.chunks.push(chunk);
-            
-            // Update message content in real-time
-            try {
-              await this.prisma.chatMessage.update({
-                where: { id: assistantMessage.id },
-                data: {
-                  content: state.content,
-                  metadata: createStreamingMetadata(streamId, 'streaming', {
-                    ...initialMetadata,
-                    chunkCount: state.chunks.length,
-                    totalLength: state.content.length
-                  })
-                }
-              });
-            } catch (err) {
-              error('Failed to update message content: %s', err instanceof Error ? err.message : String(err));
-            }
-          }
-          options.onChunk(chunk);
-        },
-        onError: async (err: Error) => {
-          error('Streaming error for streamId %s: %s', streamId, err.message);
-          error('Error stack: %s', err.stack);
-          const state = this.streamingMessages.get(streamId);
-          if (state && !state.isComplete) {
-            state.error = err.message;
-            try {
-              await this.prisma.chatMessage.update({
-                where: { id: assistantMessage.id },
-                data: {
-                  metadata: createStreamingMetadata(streamId, 'error', {
-                    type: 'stream-chunk',
-                    error: err.message,
-                    errorStack: err.stack,
-                    streamStartTime: state.streamStartTime,
-                    streamEndTime: new Date().toISOString()
-                  }),
-                  status: 'error' as MessageStatus
-                }
-              });
-            } catch (updateErr) {
-              error('Failed to update message error state: %s', updateErr instanceof Error ? updateErr.message : String(updateErr));
-            }
-          }
-          options.onError(err);
-        },
-        onComplete: async () => {
-          log('Streaming complete for streamId %s', streamId);
-          const state = this.streamingMessages.get(streamId);
-          if (state && !state.error) {
-            state.isComplete = true;
-            state.streamEndTime = new Date().toISOString();
-            state.streamDuration = Date.now() - new Date(state.streamStartTime).getTime();
-            log('Final content length: %d', state.content.length);
-            
-            // Handle empty content situation
-            if (state.content.length === 0) {
-              state.content = "I'm having trouble generating a response right now. Could you please try rephrasing your question or try again later?";
-              log('Using fallback response due to empty content');
-            }
-            
-            try {
-              await this.prisma.chatMessage.update({
-                where: { id: assistantMessage.id },
-                data: {
-                  content: state.content,
-                  metadata: createStreamingMetadata(streamId, 'complete', {
-                    type: 'text',
-                    chunkCount: state.chunks.length,
-                    totalLength: state.content.length,
-                    streamStartTime: state.streamStartTime,
-                    streamEndTime: state.streamEndTime,
-                    streamDuration: state.streamDuration
-                  }),
-                  status: 'sent' as MessageStatus
-                }
-              });
-            } catch (updateErr) {
-              error('Failed to update final message state: %s', updateErr instanceof Error ? updateErr.message : String(updateErr));
-            }
-          }
-          
-          // Cache deterministic responses
-          if (this.isDeterministicQuery(message) && state && state.content && state.content.length > 0) {
-            try {
-              await chatCacheService.cacheLLMResponse(message, state.content, { temperature: 0 });
-              log('Cached deterministic streaming response for future use');
-            } catch (cacheErr) {
-              error('Error caching streamed response: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
-            }
-          }
-          
-          options.onComplete();
-        }
-      };
-
-      log('Calling agent.invoke with message: %s', message);
+      log('Processing streaming message with agent');
       
       try {
-        // Pass the message in the format LangGraph expects - as a messages array
-        await agent.invoke(
+        // Create callback handler instance
+        const callbackHandler = new StreamingCallbackHandler(
+          streamId,
+          this.streamingMessages,
+          options
+        );
+
+        // Use invoke with streaming configuration
+        const response = await agent.invoke(
           { messages: [new HumanMessage(message)] },
           { 
-            streaming: true,
-            streamingOptions: enhancedOptions,
             configurable: {
               thread_id: conversation.id,
               direct_response: true,
               force_streaming: true,
-              standalone_question: true
+              standalone_question: true,
+              callbacks: [callbackHandler],
+              stream_id: streamId
             }
           }
         );
+
+        // If we get here, stream completed successfully
+        const finalState = this.streamingMessages.get(streamId);
+        if (finalState) {
+          finalState.isComplete = true;
+          finalState.completedViaCallback = true;
+          
+          // Process the response, extracting text content properly
+          let responseText = '';
+          
+          try {
+            // Extract text from structured or plain text response
+            responseText = this.extractTextFromResponse(response);
+            
+            log('Extracted response text, length: %d, preview: %s', 
+              responseText.length, 
+              responseText.substring(0, 50) + (responseText.length > 50 ? '...' : ''));
+            
+            if (responseText && responseText.length > 0) {
+              finalState.content = responseText;
+              
+              // Send the full extracted response as a chunk to ensure client receives it
+              try {
+                await options.onChunk?.(responseText);
+                log('Sent extracted response text as final chunk');
+              } catch (chunkErr) {
+                error('Error sending extracted response chunk: %s', chunkErr instanceof Error ? chunkErr.message : String(chunkErr));
+              }
+            }
+          } catch (extractErr) {
+            error('Error extracting text from response: %s', extractErr instanceof Error ? extractErr.message : String(extractErr));
+            log('Original response type: %s, preview: %s', 
+              typeof response, 
+              JSON.stringify(response).substring(0, 100));
+          }
+          
+          // If we still don't have content, provide a fallback
+          if (!responseText || responseText.trim().length === 0) {
+            // If we don't have content, provide a fallback
+            const fallbackResponse = "I apologize, but I'm having trouble generating a response right now. Please try again in a moment.";
+            finalState.content = fallbackResponse;
+            
+            try {
+              await options.onChunk?.(fallbackResponse);
+              log('Sent fallback response as final chunk');
+            } catch (chunkErr) {
+              error('Error sending fallback chunk: %s', chunkErr instanceof Error ? chunkErr.message : String(chunkErr));
+            }
+          }
+          
+          try {
+            await options.onComplete();
+            log('Successfully sent completion event after response processing');
+          } catch (completeErr) {
+            error('Error in final onComplete: %s', completeErr instanceof Error ? completeErr.message : String(completeErr));
+          }
+        }
+
       } catch (err) {
-        error('Error during agent.invoke: %s', err instanceof Error ? err.message : String(err));
+        error('Error during streaming: %s', err instanceof Error ? err.message : String(err));
         throw err;
       }
 
@@ -391,16 +541,41 @@ export class ChatLangChainService {
         throw new Error('Streaming state was unexpectedly cleared');
       }
 
+      // Capture all necessary data from state before any potential cleanup
+      const finalChunks = [...finalState.chunks];
+      const finalStreamStartTime = finalState.streamStartTime;
+      const finalStreamEndTime = finalState.streamEndTime || new Date().toISOString();
+      const finalStreamDuration = finalState.streamDuration || 
+        (finalState.streamStartTime ? (Date.now() - new Date(finalState.streamStartTime as string).getTime()) : 0);
+      const completedViaCallback = Boolean(finalState.completedViaCallback);
+      
+      // Make finalContent mutable since we might need to update it for empty responses
+      let finalContent = finalState.content || '';
+
+      // Check if stream was completed via callback - if not, log a warning and force call
+      if (!completedViaCallback) {
+        log('Warning: Stream %s completed without calling onComplete callback', streamId);
+        console.warn(`[STREAM WARNING][${streamId}] Stream completed without onComplete callback`);
+        
+        // Force call the onComplete ourselves to ensure the frontend receives the completion event
+        try {
+          log('Forcing onComplete callback for stream %s', streamId);
+          await options.onComplete();
+        } catch (callbackErr) {
+          error('Error forcing onComplete callback: %s', callbackErr instanceof Error ? callbackErr.message : String(callbackErr));
+        }
+      }
+
       // If we have an empty response, provide a fallback
-      if (finalState.content.length === 0) {
-        finalState.content = "I apologize, but I'm having trouble generating a response. Please try asking your question in a different way.";
+      if (finalContent.length === 0) {
+        finalContent = "I apologize, but I'm having trouble generating a response. Please try asking your question in a different way.";
         log('Using fallback response after streaming due to empty content');
         
         // Update the message in the database
         await this.prisma.chatMessage.update({
           where: { id: assistantMessage.id },
           data: {
-            content: finalState.content,
+            content: finalContent,
             status: 'sent' as MessageStatus
           }
         });
@@ -411,7 +586,7 @@ export class ChatLangChainService {
         await chatCacheService.cacheMessage(userMessage);
         await chatCacheService.cacheMessage({
           ...assistantMessage,
-          content: finalState.content,
+          content: finalContent,
           status: 'sent'
         });
         await chatCacheService.cacheConversation(conversation);
@@ -420,13 +595,14 @@ export class ChatLangChainService {
         error('Error caching streaming entities: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
       }
 
-      // Clean up streaming state
+      // Clean up streaming state AFTER all processing is complete
+      log('Cleaning up stream state for %s', streamId);
       this.streamingMessages.delete(streamId);
 
       // Return final message state with guaranteed content (no undefined)
       return {
         id: assistantMessage.id,
-        content: finalState.content || '', // Ensure content is never undefined
+        content: finalContent || '', // Ensure content is never undefined
         role: assistantMessage.role as 'assistant',
         userId: assistantMessage.user_id ?? '',
         username: user.name ?? '',
@@ -437,11 +613,11 @@ export class ChatLangChainService {
           streamStatus: 'complete' as const,
           streamId,
           type: 'text' as const,
-          chunkCount: finalState.chunks.length,
-          totalLength: finalState.content.length,
-          streamStartTime: finalState.streamStartTime,
-          streamEndTime: finalState.streamEndTime || undefined,
-          streamDuration: finalState.streamDuration || 0,
+          chunkCount: finalChunks.length,
+          totalLength: finalContent.length,
+          streamStartTime: finalStreamStartTime,
+          streamEndTime: finalStreamEndTime,
+          streamDuration: finalStreamDuration,
           timestamp: new Date().toISOString(),
           fromCache: true
         } as Prisma.JsonObject as ChatMetadata,
@@ -549,7 +725,7 @@ export class ChatLangChainService {
                 content: cachedResponse,
                 role: 'assistant',
                 conversation_id: conversation.id,
-                user_id: userId,
+                user_id: typeof userId === 'string' ? userId : 'anonymous',
                 parent_id: initialUserMessage.id,
                 metadata: metadataWithCache,
                 status: 'sent' as MessageStatus
@@ -683,7 +859,7 @@ export class ChatLangChainService {
           content: response,
           role: 'assistant',
           conversation_id: conversation.id,
-          user_id: userId,
+          user_id: typeof userId === 'string' ? userId : 'anonymous',
           parent_id: initialUserMessage.id,
           metadata: metadataObj,
           status: 'sent' as MessageStatus
@@ -701,7 +877,7 @@ export class ChatLangChainService {
         if (!cachedConversations) {
           // If not cached, fetch and cache for future requests
           const conversations = await this.prisma.conversation.findMany({
-            where: { user_id: userId },
+            where: { user_id: typeof userId === 'string' ? userId : 'anonymous' },
             orderBy: { last_message_at: 'desc' }
           });
           
@@ -750,7 +926,71 @@ export class ChatLangChainService {
   }
 
   /**
+   * Process a message with streaming options
+   * @param message User message
+   * @param options Streaming options
+   * @returns Processed chat message
+   */
+  async processMessageWithOptions(
+    message: string,
+    options: {
+      history?: any[];
+      streaming?: boolean;
+      onChunk?: (chunk: string) => Promise<void> | void;
+      onComplete?: () => Promise<void> | void;
+      onError?: (error: Error) => Promise<void> | void;
+      configurable?: {
+        thread_id?: string;
+        conversation_id?: string;
+        userId?: string;
+        [key: string]: any;
+      };
+    }
+  ): Promise<ChatMessage> {
+    try {
+      log('Processing message with streaming options: %s', message.substring(0, 50) + (message.length > 50 ? '...' : ''));
+      
+      // Extract userId and conversationId from configurable
+      const userId = options.configurable?.userId || 'anonymous';
+      const conversationId = options.configurable?.conversation_id;
+      // Unused variable: threadId - keeping commented in case we need it later
+      // const threadId = options.configurable?.thread_id;
+      
+      log('Using extracted userId: %s, conversationId: %s', 
+        userId, conversationId || 'none');
+      
+      if (options.streaming) {
+        // Use streaming version with callbacks
+        return this.processStreamingMessage(
+          message,
+          userId,
+          {
+            onChunk: options.onChunk ? options.onChunk : (_chunk: string) => {},
+            onComplete: options.onComplete ? options.onComplete : () => {},
+            onError: options.onError ? options.onError : (_error: Error) => {}
+          },
+          conversationId
+        );
+      } else {
+        // Use non-streaming version
+        return this.processMessage(message, userId, conversationId);
+      }
+    } catch (err) {
+      error('Error processing message with options: %s', err instanceof Error ? err.message : String(err));
+      if (options.onError) {
+        await options.onError(err instanceof Error ? err : new Error(String(err)));
+      }
+      throw err;
+    }
+  }
+
+  /**
    * Create initial message structure with user, conversation, and first message
+   * @param message User's message content
+   * @param userId User's ID (string)
+   * @param conversationId Optional conversation ID
+   * @param status Message status
+   * @returns Structure with user, conversation, and message objects
    */
   private async createInitialMessage(
     message: string,
@@ -758,6 +998,13 @@ export class ChatLangChainService {
     conversationId?: string,
     status: MessageStatus = 'sending'
   ) {
+    // Ensure userId is a string
+    if (typeof userId !== 'string') {
+      error('Invalid userId type: %s', typeof userId);
+      // Default to anonymous if userId is not a string
+      userId = 'anonymous';
+    }
+
     // Create or find user
     const user = await this.prisma.user.upsert({
       where: { id: userId },

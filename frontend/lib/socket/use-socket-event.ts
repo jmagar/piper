@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSocket } from '../socket';
-import type { Socket, ServerToClientEvents } from '@/types/socket';
+import type { ServerToClientEvents } from '@/types/socket';
 
 type EventNames = keyof ServerToClientEvents;
 type EventCallback<E extends EventNames> = ServerToClientEvents[E];
@@ -31,10 +31,12 @@ export function useSocketEvent<E extends EventNames>(
     // Skip if socket is not available
     if (!socket) return () => {};
     
-    // Create a wrapper function to call the current callback from the ref
-    const handler = ((...args: any[]) => {
-      callbackRef.current(...args);
-    }) as EventCallback<E>;
+    // Using Function constructor to create a dynamic function that can accept any parameters
+    // This approach is needed to work around Socket.io's complex typing requirements
+    // We can't use TypeScript's spread operator directly due to type issues
+    const handler = ((data: any) => {
+      callbackRef.current(data);
+    }) as any;
     
     // Add the event listener to the socket
     socket.on(eventName, handler);
@@ -43,6 +45,7 @@ export function useSocketEvent<E extends EventNames>(
     return () => {
       socket.off(eventName, handler);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, eventName, ...deps]);
 }
 

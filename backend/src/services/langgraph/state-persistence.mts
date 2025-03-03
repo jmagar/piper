@@ -5,6 +5,33 @@ import { cacheManager } from '../cache/cache-manager.mjs';
 const log = debug('langgraph:state');
 const error = debug('langgraph:state:error');
 
+// Define the interface for state object outside the class
+interface StateWithMeta {
+  _meta?: {
+    isStreaming?: boolean;
+    lastUpdated?: string;
+    persistedAt?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+// Interface for streaming state
+interface StreamingState {
+  partialResponse: string;
+  messageId?: string;
+  chunkCount?: number;
+  [key: string]: any;
+}
+
+// Configuration options for saving state
+interface SaveStateConfig {
+  conversationId?: string;
+  isComplete?: boolean;
+  ttl?: string | Date;
+  isStreaming?: boolean;
+}
+
 /**
  * Redis and PostgreSQL backed persistence for LangGraph state
  * Custom implementation that provides state persistence using both Redis (for speed) and PostgreSQL (for durability)
@@ -67,22 +94,19 @@ export class LangGraphStatePersistence {
    */
   async saveState(
     threadId: string, 
-    state: object, 
-    config: { 
-      conversationId?: string; 
-      isComplete?: boolean; 
-      ttl?: string | Date;
-    } = {}
+    state: StateWithMeta, 
+    config: SaveStateConfig = {}
   ): Promise<void> {
     try {
-      log('Storing state for thread %s', threadId);
+      log('Storing state for thread %s (streaming: %s, complete: %s)', 
+          threadId, 
+          Boolean(config.isStreaming),
+          Boolean(config.isComplete));
+      
       const cacheKey = `${this.keyPrefix}${threadId}`;
       
       // Get conversation ID from config
       const conversationId = config.conversationId || '';
-      
-      // Cache state in Redis for fast access
-      await cacheManager.set(cacheKey, state);
       
       // Determine if we should mark as completed
       const isComplete = Boolean(config.isComplete);
@@ -93,11 +117,32 @@ export class LangGraphStatePersistence {
         ttl = config.ttl instanceof Date ? config.ttl : new Date(config.ttl);
       }
       
+      // Add streaming metadata if needed
+      const stateToSave = {
+        ...state,
+        _meta: {
+          ...((state._meta) || {}),
+          isStreaming: config.isStreaming || false,
+          lastUpdated: new Date().toISOString(),
+          persistedAt: new Date().toISOString()
+        }
+      };
+      
+      // Cache state in Redis for fast access (with shorter TTL for streaming state)
+      if (config.isStreaming) {
+        // Use shorter TTL for streaming states to avoid Redis bloat
+        const streamingTtlMs = 15 * 60 * 1000; // 15 minutes
+        await cacheManager.set(cacheKey, stateToSave, streamingTtlMs);
+      } else {
+        // Standard caching for complete states
+        await cacheManager.set(cacheKey, stateToSave);
+      }
+      
       // Store in database for persistence
       await this.prisma.langGraphState.upsert({
         where: { thread_id: threadId },
         update: {
-          state: state as Prisma.JsonObject,
+          state: stateToSave as Prisma.JsonObject,
           updated_at: new Date(),
           is_completed: isComplete,
           ttl
@@ -105,7 +150,7 @@ export class LangGraphStatePersistence {
         create: {
           thread_id: threadId,
           conversation_id: conversationId,
-          state: state as Prisma.JsonObject,
+          state: stateToSave as Prisma.JsonObject,
           is_completed: isComplete,
           ttl
         }
@@ -116,6 +161,82 @@ export class LangGraphStatePersistence {
       error('Error storing state for thread %s: %s', threadId, err instanceof Error ? err.message : String(err));
       // Throw to notify caller - this is a critical operation
       throw err;
+    }
+  }
+  
+  /**
+   * Save streaming state for a thread
+   * @param threadId The thread ID to save streaming state for
+   * @param streamingState The streaming state to save
+   * @returns Promise that resolves when state is saved
+   */
+  async saveStreamingState(threadId: string, streamingState: Partial<StreamingState>): Promise<void> {
+    try {
+      const cacheKey = `${this.keyPrefix}${threadId}:streaming`;
+      
+      // Get existing state to merge with
+      const existingState = await cacheManager.get<StreamingState>(cacheKey) || {};
+      
+      // Merge existing state with new state
+      const mergedState: StreamingState = {
+        ...existingState,
+        ...streamingState,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Save to Redis with longer TTL for streaming
+      await cacheManager.set(
+        cacheKey, 
+        mergedState, 
+        30 * 60 * 1000 // 30 minute TTL for streaming state
+      );
+      
+      // For completed streams, update the database record for persistence
+      if (streamingState.completed) {
+        try {
+          // Attempt to update the database record
+          await this.prisma.langGraphState.updateMany({
+            where: { thread_id: threadId },
+            data: {
+              state: {
+                streaming: false,
+                streamCompleted: true,
+                streamCompletedAt: new Date().toISOString(),
+                chunks: mergedState.chunks || 0,
+                duration: mergedState.duration || 0
+              } as unknown as Prisma.JsonObject,
+              updated_at: new Date(),
+              is_completed: true
+            }
+          });
+          
+          log('Marked stream as completed in database for thread %s', threadId);
+        } catch (dbErr) {
+          // Just log the error, don't fail the overall operation
+          error('Error updating database for completed stream %s: %s', 
+                threadId, dbErr instanceof Error ? dbErr.message : String(dbErr));
+        }
+      }
+    } catch (err) {
+      // Non-fatal for streaming checkpoints, just log the error
+      error('Error in streaming state for thread %s: %s', 
+            threadId, err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  /**
+   * Get the current streaming state for a thread
+   * @param threadId The thread ID to get streaming state for
+   * @returns The streaming state or null if not found
+   */
+  async getStreamingState(threadId: string): Promise<object | null> {
+    try {
+      const cacheKey = `${this.keyPrefix}${threadId}:streaming`;
+      return await cacheManager.get<object>(cacheKey);
+    } catch (err) {
+      error('Error retrieving streaming state for thread %s: %s', 
+            threadId, err instanceof Error ? err.message : String(err));
+      return null;
     }
   }
   

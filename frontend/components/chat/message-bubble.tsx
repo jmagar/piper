@@ -78,7 +78,15 @@ function formatMessageContent(content: string): React.ReactNode {
         // Handle regular text with line breaks
         return (
           <p key={index} className="whitespace-pre-wrap">
-            {part}
+            {part.split('\n').map((line, lineIndex) => {
+              // Make sure each line is properly rendered
+              return (
+                <React.Fragment key={`line-${lineIndex}`}>
+                  {line}
+                  {lineIndex < part.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              );
+            })}
           </p>
         );
       })}
@@ -172,7 +180,11 @@ export function MessageBubble({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={cn("flex max-w-[85%] flex-col relative")}>
+      <div className={cn(
+        "flex max-w-[85%] flex-col relative",
+        // Increase max width for assistant messages to prevent truncation
+        !isUserMessage && "max-w-[90%] md:max-w-[95%]"
+      )}>
         {/* Message header with role and status */}
         <div
           className={cn(
@@ -192,7 +204,9 @@ export function MessageBubble({
             "rounded-lg px-4 py-2 shadow-sm",
             isUserMessage
               ? "bg-blue-600 text-white" // Blue for user messages
-              : "bg-surface-raised text-foreground" // Default surface for assistant
+              : "bg-surface-raised text-foreground break-words", // Added break-words for assistant
+            // Remove max-width limitation that could be causing truncation
+            "max-w-none"
           )}
         >
           {formatMessageContent(message.content)}

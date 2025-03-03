@@ -40,8 +40,13 @@ export function ChatLayout({
   
   // Mock typing users for demo purposes
   const typingUsers = React.useMemo(() => {
+    // Ensure messages is defined and has items
+    if (!messages || messages.length === 0) {
+      return [];
+    }
+    
     // Show typing indicator after user messages
-    if (messages.length > 0 && messages[messages.length - 1]?.role === 'user') {
+    if (messages[messages.length - 1]?.role === 'user') {
       return [{ userId: 'assistant', username: 'Assistant', timestamp: new Date() }];
     }
     return [];

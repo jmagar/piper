@@ -1,10 +1,15 @@
 import { createServer } from 'http';
+import { join } from 'path';
 
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import createLogger from './utils/debug';
+
+// Create main application logger
+const { log, error } = createLogger('app');
 
 // Import route files with default exports
 import chatRoutes from './routes/chat.routes.js';
@@ -14,8 +19,16 @@ import mcpRoutes from './routes/mcp.routes.js';
 import promptRoutes from './routes/prompt.routes.js';
 import { initWebSocket } from './websocket.js';
 
-// Initialize environment variables
-dotenv.config();
+// Initialize environment variables - explicitly use the root .env file
+// Determine the project root (one level up from backend)
+const projectRoot = process.cwd().endsWith('/backend') 
+  ? join(process.cwd(), '..') 
+  : process.cwd();
+
+// Load environment variables from the root .env file
+const rootEnvPath = join(projectRoot, '.env');
+log(`Loading environment variables from: ${rootEnvPath}`);
+dotenv.config({ path: rootEnvPath });
 
 // Initialize Prisma
 const prisma = new PrismaClient();

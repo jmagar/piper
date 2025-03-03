@@ -1,11 +1,9 @@
 import * as React from 'react';
-import { useSocket } from '@/lib/socket/socket-provider';
+import { useSocket } from '@/lib/socket-provider';
 import { useSocketEvent } from '@/lib/socket/use-socket-event';
 import { useSocketEmit } from '@/lib/socket/use-socket-emit';
-import type { 
-  ExtendedChatMessage, 
-  MessageChunk
-} from '@/types/domain/chat';
+import type { ExtendedChatMessage } from '@/types/domain/chat';
+import type { TypingIndicatorData, MessageChunk } from '@/types/socket';
 
 /**
  * Hook for chat-specific socket functionality
@@ -14,56 +12,82 @@ import type {
  * abstracting away the generic socket implementation.
  */
 export function useChatSocket() {
-  const { isConnected, isConnecting, connectionState, error } = useSocket();
+  const { isConnected, isConnecting, error } = useSocket();
+  // Create a local connectionState for compatibility
+  const connectionState = React.useMemo(() => {
+    if (isConnected) return 'connected';
+    if (isConnecting) return 'connecting';
+    if (error) return 'failed';
+    return 'disconnected';
+  }, [isConnected, isConnecting, error]);
+  
   const emit = useSocketEmit();
   
   // Register event handlers for receiving messages
   const onNewMessage = React.useCallback(
     (callback: (message: ExtendedChatMessage) => void) => {
-      useSocketEvent<ExtendedChatMessage>('message:new', callback);
+      // Type casting to handle the difference between ChatMessage and ExtendedChatMessage
+      useSocketEvent('message:new', ((message: any) => {
+        // Convert ChatMessage to ExtendedChatMessage if needed
+        const extendedMessage: ExtendedChatMessage = {
+          ...message,
+          type: message.type || 'text', // Provide default if missing
+          metadata: message.metadata || {}
+        };
+        callback(extendedMessage);
+      }) as any);
     },
     []
   );
   
   const onMessageUpdate = React.useCallback(
     (callback: (message: ExtendedChatMessage) => void) => {
-      useSocketEvent<ExtendedChatMessage>('message:update', callback);
+      // Type casting to handle the difference between ChatMessage and ExtendedChatMessage
+      useSocketEvent('message:update', ((message: any) => {
+        // Convert ChatMessage to ExtendedChatMessage if needed
+        const extendedMessage: ExtendedChatMessage = {
+          ...message,
+          type: message.type || 'text', // Provide default if missing
+          metadata: message.metadata || {}
+        };
+        callback(extendedMessage);
+      }) as any);
     },
     []
   );
   
   const onMessageChunk = React.useCallback(
     (callback: (data: MessageChunk) => void) => {
-      useSocketEvent<MessageChunk>('message:chunk', callback);
+      useSocketEvent('message:chunk', callback);
     },
     []
   );
   
   const onMessageComplete = React.useCallback(
-    (callback: (data: { messageId: string; metadata?: Record<string, unknown> }) => void) => {
-      useSocketEvent<{ messageId: string; metadata?: Record<string, unknown> }>('message:complete', callback);
+    (callback: (data: { messageId: string; timestamp: string }) => void) => {
+      useSocketEvent('message:complete', callback);
     },
     []
   );
   
   const onMessageError = React.useCallback(
-    (callback: (data: { messageId: string; error: string }) => void) => {
-      useSocketEvent<{ messageId: string; error: string }>('message:error', callback);
+    (callback: (data: { messageId: string; message: string }) => void) => {
+      useSocketEvent('message:error', callback);
     },
     []
   );
   
   // Typing indicators
   const onUserTyping = React.useCallback(
-    (callback: (user: { userId: string; username: string }) => void) => {
-      useSocketEvent<{ userId: string; username: string }>('user:typing', callback);
+    (callback: (data: TypingIndicatorData) => void) => {
+      useSocketEvent('user:typing', callback);
     },
     []
   );
   
   const onUserStopTyping = React.useCallback(
-    (callback: (user: { userId: string; username: string }) => void) => {
-      useSocketEvent<{ userId: string; username: string }>('user:stop_typing', callback);
+    (callback: (data: TypingIndicatorData) => void) => {
+      useSocketEvent('user:stop_typing', callback);
     },
     []
   );

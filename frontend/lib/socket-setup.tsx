@@ -45,8 +45,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           forceNew: true,
           withCredentials: false,
           auth: {
-            userId: 'test-user-1',
-            username: 'Test User'
+            userId: 'admin',
+            username: 'admin'
           }
         });
         

@@ -559,4 +559,160 @@ router.post('/config/validate', async (req: Request, res: Response): Promise<voi
   }
 });
 
+/**
+ * Logs Routes
+ */
+
+// GET /api/mcp/logs - Get MCP logs
+router.get('/logs', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      level = null,
+      server = null,
+      limit = 100,
+      skip = 0,
+      since = null
+    } = req.query;
+    
+    // Convert parameters to the correct types
+    const limitNum = Number(limit);
+    const skipNum = Number(skip);
+    
+    // Build query for the logs from the database
+    const query: any = {};
+    
+    // Add filter conditions
+    if (level) {
+      query.level = level;
+    }
+    
+    if (server) {
+      query.server = server;
+    }
+    
+    if (since) {
+      query.timestamp = {
+        gte: new Date(since as string)
+      };
+    }
+    
+    // Query logs from the database
+    const logs = await prisma.logEntry.findMany({
+      where: query,
+      orderBy: {
+        timestamp: 'desc'
+      },
+      take: limitNum,
+      skip: skipNum
+    });
+    
+    // Get total count for pagination
+    const total = await prisma.logEntry.count({
+      where: query
+    });
+    
+    res.json({
+      logs,
+      total
+    });
+  } catch (err) {
+    error('Failed to retrieve logs: %s', err instanceof Error ? err.message : String(err));
+    res.status(500).json({ error: 'Failed to retrieve logs' });
+  }
+});
+
+// GET /api/mcp/logs/stream - WebSocket endpoint (handled by socket-logger.ts)
+router.get('/logs/stream', (req: Request, res: Response): void => {
+  // This is just a placeholder endpoint to document in the API
+  // The actual WebSocket connection is handled by the socket-logger utility
+  res.json({
+    status: 'connected',
+    message: 'Please connect via WebSocket to receive log events'
+  });
+});
+
+/**
+ * Config Schema Routes
+ */
+
+// GET /api/mcp/config/schema - Get MCP config schema
+router.get('/config/schema', (_req: Request, res: Response): void => {
+  try {
+    // Define the schema for MCP configuration
+    // This represents the structure of the llm_mcp_config.json5 file
+    const schema = {
+      type: "object",
+      required: ["llm", "mcp_servers"],
+      properties: {
+        llm: {
+          type: "object",
+          required: ["model_provider", "model"],
+          properties: {
+            model_provider: {
+              type: "string",
+              enum: ["openai", "anthropic", "google", "ollama", "mistral", "custom"],
+              description: "The provider of the language model"
+            },
+            model: {
+              type: "string",
+              description: "The model identifier" 
+            },
+            temperature: {
+              type: "number",
+              minimum: 0,
+              maximum: 2,
+              description: "Controls randomness in output generation"
+            },
+            max_tokens: {
+              type: "integer",
+              minimum: 1,
+              description: "Maximum number of tokens to generate"
+            }
+          }
+        },
+        example_queries: {
+          type: "array",
+          items: {
+            type: "string"
+          },
+          description: "Example queries to show in the UI"
+        },
+        mcp_servers: {
+          type: "object",
+          additionalProperties: {
+            type: "object",
+            required: ["command", "args"],
+            properties: {
+              command: {
+                type: "string",
+                description: "The command to execute"
+              },
+              args: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "Arguments to pass to the command"
+              },
+              env: {
+                type: "object",
+                additionalProperties: {
+                  type: "string"
+                },
+                description: "Environment variables for the process"
+              }
+            }
+          },
+          description: "Configuration for MCP servers"
+        }
+      }
+    };
+    
+    res.json(schema);
+  } catch (err) {
+    error('Failed to retrieve config schema: %s', err instanceof Error ? err.message : String(err));
+    res.status(500).json({ error: 'Failed to retrieve config schema' });
+  }
+});
+
 export default router;

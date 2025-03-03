@@ -56,7 +56,7 @@ export async function sendMessage(params: {
         body: JSON.stringify({
             content: params.message,
             userId: params.userId,
-            username: 'User', // Default username
+            username: 'admin', // Default username
             conversationId: params.conversationId,
             type: 'text',
             role: 'user',
