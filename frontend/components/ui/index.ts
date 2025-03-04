@@ -10,6 +10,14 @@
 
 // Export components as needed
 
+// Accordion component
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "./accordion";
+
 // Button component
 export { Button, buttonVariants } from "./button";
 
@@ -18,6 +26,9 @@ export { Card } from "./card";
 
 // Input component
 export { Input, inputVariants } from "./input";
+
+// Textarea component
+export { Textarea } from "./textarea";
 
 // Select component
 export {
@@ -100,7 +111,6 @@ export {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
-  TooltipGlobalProvider,
 } from "./tooltip";
 
 // Avatar component
@@ -108,4 +118,4 @@ export {
   Avatar,
   AvatarImage,
   AvatarFallback,
-} from "./avatar"; 
+} from "./avatar";

@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import { ChatLayout } from '@/components/chat/chat-layout';
-import { useSocket } from '@/lib/socket-provider';
+import { useSocket } from '@/lib/socket/hooks/use-socket';
 
-import { ChatProvider } from '@/components/chat/chat-provider';
+import { ChatProvider } from '@/components/chat/providers/chat-provider';
 import { ExtendedChatMessage, ChatConversation } from '@/types/chat';
 
 /**

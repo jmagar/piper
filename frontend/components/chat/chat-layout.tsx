@@ -1,116 +1,121 @@
 "use client";
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
-import { useChatStore } from "./chat-provider";
-import { MessageList } from "./message-list";
-import { MessageInput } from "./message-input";
-import { TypingIndicator } from "./typing-indicator";
+import { useEffect, useRef } from 'react';
+import { useChatState } from '@/lib/chat/hooks/use-chat-state';
+import { useChatMessages } from '@/lib/chat/hooks/use-chat-messages';
+import { ChatMessagesList } from './messages/chat-messages-list';
+import { ChatInput } from './input/chat-input';
+import { ChatDebug } from './chat-debug';
+import ChatToolbar from './chat-toolbar';
+import React from "react";
 
-interface ChatLayoutProps {
-  className?: string;
+// Update interface to include missing properties
+export interface ChatLayoutProps {
+  children: React.ReactNode;
   enableFileUpload?: boolean;
   enableEmojiPicker?: boolean;
   enableCommandPalette?: boolean;
+  conversationId?: string;
+  threadId?: string;
+  showDebug?: boolean;
+  onToggleDebug?: () => void;
 }
 
 /**
- * Main chat layout component that combines all chat elements
- * Manages displaying messages, input area, and typing indicators
+ * Chat Layout component
+ * 
+ * Main layout for the chat interface. Handles:
+ * - Message display
+ * - Input handling
+ * - Debug panel (optional)
  */
 export function ChatLayout({
-  className,
-  enableFileUpload = true,
-  enableEmojiPicker = true,
-  enableCommandPalette = true,
+  conversationId,
+  threadId,
+  showDebug = false,
+  onToggleDebug
 }: ChatLayoutProps) {
-  // Get chat state and actions from the store
+  // Access chat state and functionality
   const {
     messages,
     isLoading,
-    input,
     error,
-    setInput,
-    sendMessage,
     loadMessages,
-  } = useChatStore();
+  } = useChatState();
   
-  // Ref for container to detect size changes
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const { sendMessage } = useChatMessages();
   
-  // Mock typing users for demo purposes
-  const typingUsers = React.useMemo(() => {
-    // Ensure messages is defined and has items
-    if (!messages || messages.length === 0) {
-      return [];
+  // Container ref for auto-scrolling
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Load messages when conversation ID changes
+  useEffect(() => {
+    if (conversationId) {
+      loadMessages(conversationId);
     }
-    
-    // Show typing indicator after user messages
-    if (messages[messages.length - 1]?.role === 'user') {
-      return [{ userId: 'assistant', username: 'Assistant', timestamp: new Date() }];
-    }
-    return [];
-  }, [messages]);
+  }, [conversationId, loadMessages]);
+  
+  // Handle message submission
+  const handleSendMessage = (content: string) => {
+    sendMessage(content);
+  };
+  
+  // Handle message regeneration
+  const handleRegenerateMessage = () => {
+    // Implement regeneration logic
+    console.log('Regenerating last message');
+  };
   
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "flex h-full flex-col overflow-hidden bg-background",
-        className
-      )}
-    >
-      {/* Error notification */}
-      {error && (
-        <div className="bg-destructive/15 border-b border-destructive/30 px-4 py-2 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-      
-      {/* Message list */}
-      <div className="flex-1 overflow-hidden">
-        <MessageList
-          messages={messages}
-          isLoading={isLoading}
-          onLoadMore={loadMessages}
-          className="h-full"
-        />
-      </div>
-      
-      {/* Typing indicator */}
-      <TypingIndicator 
-        typingUsers={typingUsers}
-        className="border-t border-border/50 px-4 py-1" 
+    <div className="flex flex-col h-full w-full">
+      {/* Chat header */}
+      <ChatToolbar
+        conversationId={conversationId}
+        threadId={threadId}
+        showDebug={showDebug}
+        onToggleDebug={onToggleDebug}
       />
       
-      {/* Message input */}
-      <div className="border-t border-border p-2 sm:p-4">
-        <MessageInput
-          value={input}
-          onChange={setInput}
-          onSend={sendMessage}
-          showFileUpload={enableFileUpload}
-          showEmojiPicker={enableEmojiPicker}
-          showCommandPalette={enableCommandPalette}
-          showPromptEnhance={true}
+      {/* Messages container */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-6"
+      >
+        {error && (
+          <div className="bg-red-50 text-red-500 p-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-pulse text-gray-400">
+              Loading messages...
+            </div>
+          </div>
+        ) : (
+          <ChatMessagesList 
+            messages={messages} 
+            isLoading={isLoading}
+          />
+        )}
+      </div>
+      
+      {/* Chat input */}
+      <div className="border-t p-4">
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          onRegenerateMessage={handleRegenerateMessage}
           disabled={isLoading}
-          placeholder="Type a message..."
         />
       </div>
+      
+      {/* Debug panel (if enabled) */}
+      {showDebug && (
+        <div className="border-t border-gray-200 bg-gray-50">
+          <ChatDebug />
+        </div>
+      )}
     </div>
   );
 }
-
-/**
- * Export all chat components for easier imports
- */
-export { 
-  ChatProvider, 
-  useChatStore 
-} from "./chat-provider";
-
-export { MessageList } from "./message-list";
-export { MessageGroup } from "./message-group";
-export { MessageBubble } from "./message-bubble";
-export { MessageInput } from "./message-input";
-export { TypingIndicator } from "./typing-indicator"; 

@@ -1,8 +1,4 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { Viewport } from "next";
-
-// Import the client component
 import NewChatClient from "./client";
 
 export const metadata: Metadata = {
@@ -10,27 +6,13 @@ export const metadata: Metadata = {
   description: "Start a new conversation",
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "#09090b" }
-  ],
-};
-
 /**
- * Page component for creating a new chat
- * 
- * @returns New chat page with client component
+ * New Chat Page (Server Component)
+ * Renders the client component that uses our refactored chat components
  */
-export default async function NewChatPage() {
-  // Server-side operations could be performed here
-  // For example, checking authentication, fetching user data, etc.
-
+export default function NewChatPage() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl h-full">
+    <div className="flex flex-col h-screen">
       <NewChatClient />
     </div>
   );

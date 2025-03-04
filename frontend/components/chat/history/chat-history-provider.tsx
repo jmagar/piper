@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSocket } from "@/lib/socket";
+import { useSocket } from "@/lib/socket/hooks";
 
 /**
  * Conversation interface representing a chat history item

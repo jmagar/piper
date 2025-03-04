@@ -16,6 +16,16 @@ import type {
 import { createMetadata, createStreamingMetadata } from '../../types/chat.mjs';
 import { chatCacheService } from './chat-cache.service.mjs';
 
+// Import statePersistence from an accessible scope
+let statePersistence: any = null;
+try {
+  // This is a workaround - ideally we would use dependency injection
+  statePersistence = global.statePersistence;
+} catch (err) {
+  // We'll handle missing statePersistence gracefully
+  console.error('Warning: statePersistence not available in chat-langchain.service');
+}
+
 const log = debug('mcp:chat:langchain');
 const error = debug('mcp:chat:langchain:error');
 
@@ -593,6 +603,62 @@ export class ChatLangChainService {
       } catch (cacheErr) {
         // Non-fatal, just log
         error('Error caching streaming entities: %s', cacheErr instanceof Error ? cacheErr.message : String(cacheErr));
+      }
+
+      // Ensure streaming state is properly marked as completed in the persistence layer
+      if (finalState && streamId) {
+        try {
+          // Replace call to external service with direct Prisma update
+          await this.prisma.chatMessage.update({
+            where: { id: assistantMessage.id },
+            data: {
+              content: finalContent,
+              metadata: {
+                streamStatus: 'complete',
+                streamId,
+                type: 'text',
+                chunkCount: finalChunks.length,
+                totalLength: finalContent.length,
+                streamStartTime: finalStreamStartTime,
+                streamEndTime: finalStreamEndTime,
+                streamDuration: finalStreamDuration,
+                timestamp: new Date().toISOString(),
+                fromCache: true
+              },
+              status: 'sent'
+            }
+          });
+          
+          // Also update the streaming state in the persistence layer to ensure proper merging
+          if (statePersistence) {
+            try {
+              await statePersistence.saveStreamingState(streamId, {
+                completed: true,
+                isComplete: true,
+                partialResponse: finalContent,
+                messageId: assistantMessage.id,
+                conversationId: conversation.id,
+                lastUpdated: new Date().toISOString()
+              });
+              
+              log('Stream state marked as completed in persistence layer for %s', streamId);
+              
+              // Give some time for the state to be processed before cleanup
+              await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (persistErr) {
+              // Non-fatal, just log
+              error('Error updating streaming state: %s', 
+                    persistErr instanceof Error ? persistErr.message : String(persistErr));
+            }
+          } else {
+            log('State persistence not available, skipping streaming state update');
+          }
+          
+          log('Stream state marked as completed for %s', streamId);
+        } catch (err) {
+          error('Failed to mark streaming state as completed: %s', 
+                err instanceof Error ? err.message : String(err));
+        }
       }
 
       // Clean up streaming state AFTER all processing is complete

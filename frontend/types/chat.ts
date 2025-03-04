@@ -27,6 +27,7 @@ export interface ExtendedChatMessage {
     userId?: string;
     username?: string;
     conversationId?: string;
+    threadId?: string;
     parentId?: string;
     type: 'text' | 'code' | 'system' | 'file-list' | 'stream-chunk';
     status: 'sending' | 'streaming' | 'sent' | 'delivered' | 'error';

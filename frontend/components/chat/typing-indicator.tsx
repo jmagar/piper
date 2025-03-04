@@ -1,62 +1,37 @@
 "use client";
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
-import { TypingIndicator as TypingIndicatorType } from "@/types/chat";
+import * as React from 'react';
+import { TypingUser } from '@/hooks/use-typing-indicator';
+import { cn } from '@/lib/utils';
 
 interface TypingIndicatorProps {
-  typingUsers?: TypingIndicatorType[];
-  showNames?: boolean;
+  users: TypingUser[];
   className?: string;
 }
 
 /**
- * Displays an animated typing indicator when users are typing
- * Can optionally show the names of users who are typing
+ * Component that displays typing indicators for active users
+ * Shows animated dots and usernames of people currently typing
  */
-export function TypingIndicator({
-  typingUsers = [],
-  showNames = true,
-  className,
-}: TypingIndicatorProps) {
-  // Display different text based on number of typing users
-  const typingText = React.useMemo(() => {
-    if (!showNames) {
-      return "Someone is typing...";
-    }
-    
-    if (typingUsers.length === 1) {
-      return `${typingUsers[0]?.username || 'Someone'} is typing...`;
-    }
-    
-    if (typingUsers.length === 2) {
-      return `${typingUsers[0]?.username || 'Someone'} and ${typingUsers[1]?.username || 'someone else'} are typing...`;
-    }
-    
-    return `${typingUsers[0]?.username || 'Someone'} and ${typingUsers.length - 1} others are typing...`;
-  }, [typingUsers, showNames]);
-  
-  // Skip rendering if no users are typing
-  if (typingUsers.length === 0) {
-    return null;
-  }
+export function TypingIndicator({ users, className }: TypingIndicatorProps) {
+  if (!users.length) return null;
   
   return (
-    <div
-      className={cn(
-        "flex h-8 items-center space-x-2 text-xs text-muted-foreground",
-        className
-      )}
-    >
-      {/* Animated dots */}
-      <div className="flex items-center space-x-1">
-        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/50 [animation-delay:0ms]" />
-        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/50 [animation-delay:150ms]" />
-        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/50 [animation-delay:300ms]" />
-      </div>
-      
-      {/* Typing message */}
-      <span>{typingText}</span>
+    <div className={cn(
+      "p-2 text-sm text-muted-foreground opacity-70 transition-opacity",
+      className
+    )}>
+      {users.map((user) => (
+        <div key={user.userId} className="flex items-center gap-1">
+          <span className="font-medium">{user.username}</span>
+          <span className="text-xs">is typing</span>
+          <span className="inline-flex">
+            <span className="animate-bounce">.</span>
+            <span className="animate-bounce animation-delay-200">.</span>
+            <span className="animate-bounce animation-delay-400">.</span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 } 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSocket } from '@/lib/socket-provider';
+import { useSocket } from '@/lib/socket/hooks/use-socket';
 import { X, Minimize, Maximize, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

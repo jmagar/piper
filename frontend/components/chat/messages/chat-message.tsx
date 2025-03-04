@@ -1,301 +1,98 @@
 "use client";
 
-import * as React from 'react';
-import { useState } from 'react';
-import { 
-  MessageCircle, 
-  ThumbsUp, 
-  ThumbsDown, 
-  MoreVertical, 
-  Clipboard, 
-  RefreshCw, 
-  Star,
-  Pencil,
-  Check,
-  Wrench
-} from "lucide-react";
-import { format } from 'date-fns';
-import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { ExtendedChatMessage } from "@/types/chat";
-import { messageRenderer } from '@/components/chat/messages/message-renderer';
+import React from 'react';
+import { User, Bot } from 'lucide-react';
+import { ExtendedChatMessage } from '@/types/chat';
+import { MessageRenderer } from './message-renderer';
 
-// Define a Tool interface for message tools
-export interface MessageTool {
-  name: string;
-  icon?: string;
-  description?: string;
-}
-
-export interface ChatMessageProps {
+interface ChatMessageProps {
   /**
    * The message to display
    */
   message: ExtendedChatMessage;
   
   /**
-   * Whether this message is the last one in the conversation
+   * Whether this is the last message in the list
    */
-  isLastMessage?: boolean;
+  isLastMessage?: boolean | undefined;
   
   /**
-   * Whether to show the avatar for this message
+   * Whether to show the avatar
    */
-  showAvatar?: boolean;
+  showAvatar?: boolean | undefined;
   
   /**
-   * Called when the user wants to edit this message
-   * Can be undefined if editing is not allowed
+   * Called when the message is edited
    */
   onEdit?: (() => void) | undefined;
   
   /**
-   * Called when the user wants to regenerate the response for this message
-   * Can be undefined if regeneration is not allowed
-   */
-  onRegenerate?: (() => void) | undefined;
-  
-  /**
-   * Called when the user reacts to this message
-   * Can be undefined if reactions are not allowed
+   * Called when a reaction is toggled on the message
    */
   onReact?: ((reaction: 'up' | 'down') => void) | undefined;
   
   /**
-   * Called when the user stars/unstars this message
-   * Can be undefined if starring is not allowed
+   * Called when the message is starred/unstarred
    */
   onStar?: ((starred: boolean) => void) | undefined;
+  
+  /**
+   * Called when the user wants to regenerate this message
+   */
+  onRegenerate?: (() => void) | undefined;
 }
 
 /**
- * Component to display a single chat message
+ * Chat Message component
+ * Renders a single chat message with proper styling based on role
  */
-export function ChatMessage({
+export function ChatMessage({ 
   message,
-  isLastMessage = false,
-  showAvatar = true,
-  onEdit,
-  onRegenerate,
-  onReact,
-  onStar
+  isLastMessage: _isLastMessage = false,
+  showAvatar: _showAvatar = true,
+  onEdit: _onEdit,
+  onReact: _onReact,
+  onStar: _onStar,
+  onRegenerate: _onRegenerate
 }: ChatMessageProps) {
-  const { content, role, status, createdAt, metadata = {} } = message;
-  const [isCopied, setIsCopied] = useState(false);
-  
-  const isUser = role === 'user';
-  const isAssistant = role === 'assistant';
-  const isError = status === 'error';
-  const isStreaming = status === 'streaming' || metadata?.streaming === true;
-  const isComplete = !isStreaming && (status === 'delivered' || status === 'sent');
-  const isEdited = Boolean(metadata?.edited);
-  const isStarred = Boolean(metadata?.starred);
-  const reaction = metadata?.reaction as 'up' | 'down' | undefined;
-  const timestamp = new Date(createdAt);
-  
-  // Extract tools from metadata if available
-  const tools = (metadata?.tools || []) as MessageTool[];
-  
-  // Handle copying the message content
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  const isUser = message.role === 'user';
   
   return (
-    <div 
-      className={cn(
-        "group flex items-start gap-3 py-2 px-1",
-        isUser ? "justify-end" : "justify-start",
-        isStreaming && "animate-pulse opacity-90"
-      )}
-      data-message-id={message.id}
-      data-message-role={role}
-      data-message-status={status}
-      data-message-streaming={isStreaming ? "true" : "false"}
-    >
-      {!isUser && showAvatar && (
-        <div className="flex-shrink-0 mt-0.5">
-          <Avatar className={cn(
-            "h-8 w-8",
-            isStreaming && "animate-pulse"
-          )}>
-            <MessageCircle className="h-5 w-5" />
-          </Avatar>
-        </div>
-      )}
-      
-      <div className={cn(
-        "max-w-[80%] lg:max-w-[65%]",
-        isUser ? "order-first" : "order-last"
-      )}>
-        <Card 
-          className={cn(
-            "px-4 py-3 relative overflow-hidden",
-            isUser 
-              ? "bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground" 
-              : "bg-background border dark:bg-card dark:border-muted",
-            isError && "border-red-500 dark:border-red-500",
-            isStreaming && "animate-pulse border-blue-500 dark:border-blue-500"
-          )}
-        >
-          {/* Message content */}
-          <div className={cn(
-            "prose prose-sm dark:prose-invert max-w-none",
-            isStreaming && "opacity-90"
-          )}>
-            {messageRenderer(message)}
-          </div>
-          
-          {/* Streaming indicator */}
-          {isStreaming && (
-            <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
-              <div className="animate-spin h-3 w-3 border-2 border-blue-500 rounded-full border-t-transparent" />
-              Generating response...
-            </div>
-          )}
-          
-          {/* Error message */}
-          {isError && metadata?.error && (
-            <div className="mt-2 text-xs text-red-500">
-              Error: {metadata.error}
-            </div>
-          )}
-          
-          {/* Tools used */}
-          {tools.length > 0 && isComplete && (
-            <div className="mt-2 pt-2 border-t border-border dark:border-muted flex flex-wrap gap-1">
-              {tools.map((tool, index) => (
-                <span 
-                  key={`${message.id}-tool-${index}`}
-                  className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-muted font-medium"
-                >
-                  <Wrench className="h-3 w-3 mr-1" />
-                  {tool.name}
-                </span>
-              ))}
-            </div>
-          )}
-          
-          {/* Edited indicator */}
-          {isEdited && (
-            <div className="text-xs text-muted-foreground mt-1">
-              (edited)
-            </div>
-          )}
-
-          {/* Message actions visible on hover */}
-          {isComplete && (
-            <div className={cn(
-              "opacity-0 group-hover:opacity-100 transition-opacity",
-              "absolute top-2 right-2 flex items-center gap-1",
-              isUser ? "text-primary-foreground" : "text-foreground"
-            )}>
-              {isAssistant && onStar && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          "h-6 w-6",
-                          isStarred ? "text-yellow-500 dark:text-yellow-400" : ""
-                        )}
-                        onClick={() => onStar(!isStarred)}
-                      >
-                        <Star className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isStarred ? "Unstar message" : "Star message"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={handleCopy}
-                    >
-                      {isCopied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {isCopied ? "Copied!" : "Copy message"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {/* Dropdown for additional actions */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {isUser && onEdit && (
-                    <DropdownMenuItem onClick={onEdit}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit message
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {isAssistant && onRegenerate && isLastMessage && (
-                    <DropdownMenuItem onClick={onRegenerate}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Regenerate response
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuItem onClick={handleCopy}>
-                    <Clipboard className="h-4 w-4 mr-2" />
-                    Copy message
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-        </Card>
-        
-        {/* Message metadata */}
-        <div className="flex items-center justify-between mt-1 px-1 text-xs text-muted-foreground">
-          <span>
-            {format(timestamp, 'HH:mm')}
-            {isStreaming && ' • Streaming'}
-            {isError && ' • Error'}
-          </span>
-          {reaction && (
-            <span className="flex items-center gap-1">
-              {reaction === 'up' ? <ThumbsUp className="h-3 w-3" /> : <ThumbsDown className="h-3 w-3" />}
-            </span>
+    <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
+      {/* Avatar */}
+      <div className={`order-1 ${isUser ? 'order-2' : ''}`}>
+        <div className={`flex items-center justify-center h-8 w-8 rounded-full 
+          ${isUser ? 'bg-blue-100' : 'bg-gray-100'}`}>
+          {isUser ? (
+            <User className="h-5 w-5 text-blue-600" />
+          ) : (
+            <Bot className="h-5 w-5 text-gray-600" />
           )}
         </div>
       </div>
       
-      {isUser && showAvatar && (
-        <div className="flex-shrink-0 mt-0.5">
-          <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-            <span className="text-xs font-medium">U</span>
-          </Avatar>
+      {/* Message content */}
+      <div className={`max-w-[80%] order-2 ${isUser ? 'order-1 text-right' : ''}`}>
+        <div className={`inline-block p-3 rounded-lg 
+          ${isUser ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-900'}`}>
+          <MessageRenderer message={message} />
         </div>
-      )}
+        
+        {/* Timestamp */}
+        <div className="text-xs text-gray-500 mt-1">
+          {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+          {message.status === 'streaming' && (
+            <span className="ml-2 inline-flex">
+              <span className="animate-pulse">·</span>
+              <span className="animate-pulse delay-150">·</span>
+              <span className="animate-pulse delay-300">·</span>
+            </span>
+          )}
+          {message.status === 'error' && (
+            <span className="ml-2 text-red-500">Error</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

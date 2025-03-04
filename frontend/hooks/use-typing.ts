@@ -1,6 +1,5 @@
 import * as React from 'react';
-
-import { useSocket } from '@/lib/socket';
+import { useSocket } from '@/lib/socket/hooks';
 
 interface UseTypingOptions {
   /**

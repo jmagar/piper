@@ -11,6 +11,12 @@ const { log, error } = createLogger('socket:main');
 // Initialize state persistence service
 let statePersistence: LangGraphStatePersistence | null = null;
 
+// Make statePersistence globally accessible for other modules to use
+// This avoids circular dependencies
+declare global {
+  var statePersistence: LangGraphStatePersistence | null;
+}
+
 /**
  * Initialize WebSocket server with Socket.IO
  * @param httpServer - HTTP server to attach Socket.IO to
@@ -31,9 +37,13 @@ export function initWebSocket(httpServer: HttpServer, prisma: PrismaClient): Ser
   log('Socket logger initialized');
   console.log('==== WebSocket Server Initialized ====');
 
-  // Initialize LangGraphStatePersistence
-  statePersistence = new LangGraphStatePersistence(prisma);
-  log('LangGraphStatePersistence initialized');
+  // Initialize LangGraphStatePersistence with Socket.IO instance for real-time notifications
+  statePersistence = new LangGraphStatePersistence(prisma, io);
+  
+  // Make statePersistence globally accessible
+  global.statePersistence = statePersistence;
+  
+  log('LangGraphStatePersistence initialized with real-time event capabilities');
 
   // Initialize the chat service
   console.log('Initializing ChatLangChainService...');
@@ -344,7 +354,7 @@ export function initWebSocket(httpServer: HttpServer, prisma: PrismaClient): Ser
           },
           
           // Handle errors in the streaming process with LangGraph-style events
-          onError: (err) => {
+          onError: (err: Error) => {
             console.error(`[SOCKET][${socket.id}][STREAM] Error processing message for ${responseId}:`, err);
             
             // Create a LangGraph-style error event
@@ -516,6 +526,172 @@ export function initWebSocket(httpServer: HttpServer, prisma: PrismaClient): Ser
     socket.on('error', (err: Error) => {
       console.error('Socket error:', err);
       // ... existing code ...
+    });
+
+    // Subscribe to thread events
+    socket.on('subscribe:thread', (threadId) => {
+      if (!threadId) return;
+      console.log(`[SOCKET][${socket.id}] Subscribing to thread ${threadId}`);
+      socket.join(`thread:${threadId}`);
+    });
+    
+    // Subscribe to conversation events
+    socket.on('subscribe:conversation', (conversationId) => {
+      if (!conversationId) return;
+      console.log(`[SOCKET][${socket.id}] Subscribing to conversation ${conversationId}`);
+      socket.join(`conversation:${conversationId}`);
+    });
+    
+    // Unsubscribe from thread events
+    socket.on('unsubscribe:thread', (threadId) => {
+      if (!threadId) return;
+      console.log(`[SOCKET][${socket.id}] Unsubscribing from thread ${threadId}`);
+      socket.leave(`thread:${threadId}`);
+    });
+    
+    // Unsubscribe from conversation events
+    socket.on('unsubscribe:conversation', (conversationId) => {
+      if (!conversationId) return;
+      console.log(`[SOCKET][${socket.id}] Unsubscribing from conversation ${conversationId}`);
+      socket.leave(`conversation:${conversationId}`);
+    });
+    
+    // Add diagnostic endpoint to check state
+    socket.on('diagnostic:check-state', async (data, callback) => {
+      try {
+        const { threadId, conversationId } = data;
+        let result: any = { success: true };
+        
+        if (threadId && statePersistence) {
+          const state = await statePersistence.getState(threadId);
+          result.threadState = state;
+        }
+        
+        if (conversationId && statePersistence) {
+          const states = await statePersistence.getConversationState(conversationId);
+          result.conversationStates = states;
+        }
+        
+        callback(result);
+      } catch (err) {
+        callback({ 
+          success: false, 
+          error: err instanceof Error ? err.message : String(err)
+        });
+      }
+    });
+    
+    // Add diagnostic endpoint to check streaming state
+    socket.on('diagnostic:check-streaming', async (data, callback) => {
+      try {
+        const { threadId, conversationId } = data;
+        let result: any = { success: true };
+        
+        // If we have a threadId, check that specific thread
+        if (threadId && statePersistence) {
+          const streamingState = await statePersistence.getStreamingState(threadId);
+          result.streamingState = streamingState;
+          result.threadId = threadId;
+          return callback(result);
+        }
+        
+        // If we have a conversationId, find all threads and check each one
+        if (conversationId && statePersistence) {
+          const states = await statePersistence.getConversationState(conversationId);
+          
+          // Check each thread for streaming state
+          if (states && states.length > 0) {
+            for (const state of states as { threadId?: string }[]) {
+              if (!state.threadId) continue;
+              
+              const streamingState = await statePersistence.getStreamingState(state.threadId);
+              if (streamingState) {
+                result.streamingState = streamingState;
+                result.threadId = state.threadId;
+                break; // Found an active streaming state
+              }
+            }
+          }
+        }
+        
+        callback(result);
+      } catch (err) {
+        callback({ 
+          success: false, 
+          error: err instanceof Error ? err.message : String(err)
+        });
+      }
+    });
+    
+    // Add diagnostic endpoint for message tracking
+    socket.on('diagnostic:message-check', async (data, callback) => {
+      try {
+        const { messageId, conversationId } = data;
+        
+        if (!messageId && !conversationId) {
+          return callback({
+            success: false,
+            error: 'Either messageId or conversationId is required'
+          });
+        }
+        
+        let result: any = { success: true };
+        
+        if (messageId) {
+          // Get a specific message by ID
+          const message = await prisma.chatMessage.findUnique({
+            where: { id: messageId },
+            include: { user: true }
+          });
+          
+          result.message = message;
+        }
+        
+        if (conversationId) {
+          // Get all messages for a conversation
+          const messages = await prisma.chatMessage.findMany({
+            where: { conversation_id: conversationId },
+            orderBy: { created_at: 'asc' },
+            include: { user: true }
+          });
+          
+          result.messages = messages;
+          
+          // Compare with LangGraph state if available
+          if (statePersistence) {
+            const states = await statePersistence.getConversationState(conversationId);
+            result.threadStates = states;
+            
+            // Count messages in thread states for comparison
+            let threadMessageCount = 0;
+            if (states && states.length > 0) {
+              for (const state of states as { messages?: any[] }[]) {
+                if (state.messages) {
+                  threadMessageCount += state.messages.length;
+                }
+              }
+            }
+            
+            result.dbMessageCount = messages.length;
+            result.threadMessageCount = threadMessageCount;
+            result.mismatch = messages.length !== threadMessageCount;
+          }
+        }
+        
+        callback(result);
+      } catch (err) {
+        callback({ 
+          success: false, 
+          error: err instanceof Error ? err.message : String(err)
+        });
+      }
+    });
+
+    // Emit connection status
+    socket.emit('connection:status', {
+      connected: true,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
     });
   });
 

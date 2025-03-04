@@ -1,4 +1,8 @@
-import type { ServerToClientEvents, ClientToServerEvents } from '../socket';
+import type { 
+  ServerToClientEvents, 
+  ClientToServerEvents, 
+  ConnectionState 
+} from '@/types/socket';
 import type { Socket as SocketIOSocket } from 'socket.io-client';
 
 /**
@@ -55,7 +59,7 @@ export interface MessageChunk {
 /**
  * Socket events related to chat (server to client)
  */
-export interface ChatServerToClientEvents extends ServerToClientEvents {
+export interface ChatServerToClientEvents {
   'message:new': (message: ExtendedChatMessage) => void;
   'message:update': (message: ExtendedChatMessage) => void;
   'message:chunk': (data: MessageChunk) => void;
@@ -81,4 +85,4 @@ export interface ChatClientToServerEvents extends ClientToServerEvents {
 /**
  * Chat socket type with chat-specific events
  */
-export type ChatSocket = SocketIOSocket<ChatServerToClientEvents, ChatClientToServerEvents>; 
+export type ChatSocket = SocketIOSocket<ChatServerToClientEvents, ChatClientToServerEvents>;

@@ -2,14 +2,26 @@
 
 import * as React from "react";
 
+interface UseIntersectionOptions {
+  threshold?: number;
+  rootMargin?: string;
+  onChange?: (isIntersecting: boolean) => void;
+}
+
 /**
  * Custom hook for detecting when an element enters the viewport
  * Useful for implementing infinite scrolling, lazy loading, etc.
  * 
- * @param rootMargin Margin around the root to adjust intersection area
+ * @param options Configuration options for the Intersection Observer
  * @returns An object containing the ref to attach to the target element and the intersection state
  */
-export function useIntersection(rootMargin = "0px") {
+export function useIntersection(options: UseIntersectionOptions = {}) {
+  const {
+    threshold = 0,
+    rootMargin = "0px",
+    onChange
+  } = options;
+
   // Create a ref to attach to the target element
   const ref = React.useRef<HTMLDivElement>(null);
   
@@ -28,10 +40,16 @@ export function useIntersection(rootMargin = "0px") {
       (entries) => {
         // Use the first entry (our element)
         if (entries[0]) {
-          setIsIntersecting(entries[0].isIntersecting);
+          const newIsIntersecting = entries[0].isIntersecting;
+          setIsIntersecting(newIsIntersecting);
+          
+          // Call onChange handler if provided
+          if (onChange) {
+            onChange(newIsIntersecting);
+          }
         }
       },
-      { rootMargin }
+      { threshold, rootMargin }
     );
     
     // Start observing the element
@@ -42,7 +60,7 @@ export function useIntersection(rootMargin = "0px") {
       observer.unobserve(element);
       observer.disconnect();
     };
-  }, [rootMargin]);
+  }, [rootMargin, threshold, onChange]);
   
   return { ref, isIntersecting };
 } 

@@ -31,6 +31,11 @@
     "allowUnusedLabels": false,
     "allowUnreachableCode": false
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", "generated/**/*"]
-} 
+  "include": [
+    "frontend/**/*.ts",
+    "frontend/**/*.tsx",
+    "backend/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", "**/dist", "**/*.js"]
+}

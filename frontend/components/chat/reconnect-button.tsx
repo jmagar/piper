@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { useSocket } from '@/lib/socket-provider';
+import { useSocket } from '@/lib/socket/hooks/use-socket';
 import { RefreshCw } from 'lucide-react';
 
 interface ReconnectButtonProps {

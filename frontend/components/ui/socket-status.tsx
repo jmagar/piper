@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSocket } from '@/lib/socket-provider';
+import { useSocket } from '@/lib/socket/hooks/use-socket';
 import { AlertCircle, CheckCircle2, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ export function SocketStatus({
       
       return () => clearTimeout(timer);
     }
+    return undefined; // Explicit return for the case when isConnected is false
   }, [isConnected]);
   
   // Status indicator classes
@@ -103,7 +104,7 @@ export function SocketStatus({
           </TooltipTrigger>
           <TooltipContent>
             <p>Socket.IO connection status: {getConnectionState()}</p>
-            {error && <p className="text-red-500">{error}</p>}
+            {error && <p className="text-red-500">{error instanceof Error ? error.message : String(error)}</p>}
           </TooltipContent>
         </Tooltip>
         
@@ -142,7 +143,7 @@ export function SocketStatus({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{error}</p>
+              <p>{error instanceof Error ? error.message : String(error)}</p>
             </TooltipContent>
           </Tooltip>
         )}

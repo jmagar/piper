@@ -55,6 +55,7 @@ coverage/
 .venv/
 __pycache__/
 *.py[cod]
+venv/
 
 # Tool directories
 .cursor/
