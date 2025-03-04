@@ -29,6 +29,9 @@ importers:
       '@prisma/client':
         specifier: ^6.4.0
         version: 6.4.0(prisma@6.4.0(typescript@5.8.2))(typescript@5.8.2)
+      '@qdrant/js-client-rest':
+        specifier: ^1.13.0
+        version: 1.13.0(typescript@5.8.2)
       axios:
         specifier: ^1.7.9
         version: 1.7.9(debug@4.4.0)
@@ -570,6 +573,10 @@ packages:
     resolution: {integrity: sha512-+0TjwR1eAUdZtvv/ir1mGX+v0tUoR3VEPB8Up0LLJC+whRW0GgBBtpbOkg/a/U4Dxa6l5a3l9AJ1aWIQVyoWJA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@fastify/busboy@2.1.1':
+    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
+    engines: {node: '>=14'}
+
   '@h1deya/langchain-mcp-tools@0.1.13':
     resolution: {integrity: sha512-PM3kFyAuAK4QCtPZMJt9/7/rMh4W0OsVfqgEYn50KRqZ9UT9wpcbbFMrtJIj3RYHy3metQEm6vqvDsZyNvPtWw==}
 
@@ -823,6 +830,16 @@ packages:
   '@prisma/get-platform@6.4.0':
     resolution: {integrity: sha512-khANH9QbCRhFWiGj3qmR0clxLTU76Cimxf4JAhjhtpsc1jdG1A9geGe0kU4WAQ1YpiKFJ10s9j2wbbE/jSP99Q==}
 
+  '@qdrant/js-client-rest@1.13.0':
+    resolution: {integrity: sha512-bewMtnXlGvhhnfXsp0sLoLXOGvnrCM15z9lNlG0Snp021OedNAnRtKkerjk5vkOcbQWUmJHXYCuxDfcT93aSkA==}
+    engines: {node: '>=18.0.0', pnpm: '>=8'}
+    peerDependencies:
+      typescript: '>=4.7'
+
+  '@qdrant/openapi-typescript-fetch@1.2.6':
+    resolution: {integrity: sha512-oQG/FejNpItrxRHoyctYvT3rwGZOnK4jr3JdppO/c78ktDvkWiPXPHNsrDf33K9sZdRb6PR7gi4noIapu5q4HA==}
+    engines: {node: '>=18.0.0', pnpm: '>=8'}
+
   '@redis/bloom@1.2.0':
     resolution: {integrity: sha512-HG2DFjYKbpNmVXsa0keLHp/3leGJz1mjh09f2RLGGLQZzSHpkmZWuwJbAvo3QcRY8p80m5+ZdXZdYOSBLlp7Cg==}
     peerDependencies:
@@ -946,6 +963,9 @@ packages:
     resolution: {integrity: sha512-U0FaE5O1BCpZSeE6gBl3c5ObhePQSfk9vDRToMmTkbhCOgW4jqvtS5LGyQ76L1fH8sM0keRp4uDTsbjiUyjk0g==}
     cpu: [x64]
     os: [win32]
+
+  '@sevinf/maybe@0.5.0':
+    resolution: {integrity: sha512-ARhyoYDnY1LES3vYI0fiG6e9esWfTNcXcO6+MPJJXcnyMV3bim4lnFt45VXouV7y82F4x3YH8nOQ6VztuvUiWg==}
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
@@ -2808,6 +2828,10 @@ packages:
   undici-types@6.20.0:
     resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
 
+  undici@5.28.5:
+    resolution: {integrity: sha512-zICwjrDrcrUE0pyyJc1I2QzBkLM8FINsgOrt6WjA+BgajVq9Nxu2PbFFXUrAggLfDXlZGZBVZYw7WNV5KiBiBA==}
+    engines: {node: '>=14.0'}
+
   universalify@0.2.0:
     resolution: {integrity: sha512-CJ1QgKmNg3CwvAv/kOFmtnEN05f0D/cn9QntgNOQlQF9dgvVTHj3t+8JPdjqawCHk7V/KA+fbUqzZ9XWhcqPUg==}
     engines: {node: '>= 4.0.0'}
@@ -3335,6 +3359,8 @@ snapshots:
       '@eslint/core': 0.11.0
       levn: 0.4.1
 
+  '@fastify/busboy@2.1.1': {}
+
   '@h1deya/langchain-mcp-tools@0.1.13(openai@4.85.3(ws@8.18.0)(zod@3.24.2))':
     dependencies:
       '@langchain/core': 0.3.40(openai@4.85.3(ws@8.18.0)(zod@3.24.2))
@@ -3638,6 +3664,15 @@ snapshots:
     dependencies:
       '@prisma/debug': 6.4.0
 
+  '@qdrant/js-client-rest@1.13.0(typescript@5.8.2)':
+    dependencies:
+      '@qdrant/openapi-typescript-fetch': 1.2.6
+      '@sevinf/maybe': 0.5.0
+      typescript: 5.8.2
+      undici: 5.28.5
+
+  '@qdrant/openapi-typescript-fetch@1.2.6': {}
+
   '@redis/bloom@1.2.0(@redis/client@1.6.0)':
     dependencies:
       '@redis/client': 1.6.0
@@ -3720,6 +3755,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.34.8':
     optional: true
+
+  '@sevinf/maybe@0.5.0': {}
 
   '@socket.io/component-emitter@3.1.2': {}
 
@@ -5758,6 +5795,10 @@ snapshots:
   undici-types@5.26.5: {}
 
   undici-types@6.20.0: {}
+
+  undici@5.28.5:
+    dependencies:
+      '@fastify/busboy': 2.1.1
 
   universalify@0.2.0: {}
 

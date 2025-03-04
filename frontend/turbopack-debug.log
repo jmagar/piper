@@ -29568,3 +29568,303 @@ ERROR: (node:663033) [DEP0060] DeprecationWarning: The `util._extend` API is dep
 
  GET /avatars/user.png [33m404[39m in 1872ms
 
+ [37m[1m○[22m[39m Compiling /chat/history ...
+
+ [32m[1m✓[22m[39m Compiled /chat/history in 1632ms (1346 modules)
+
+ GET /chat/history [32m200[39m in 1757ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 311ms (1350 modules)
+
+ GET /avatars/user.png [33m404[39m in 545ms
+
+ GET /prompts [33m404[39m in 23ms
+
+ GET /prompts [33m404[39m in 50ms
+
+ GET /chat/19c49c0d-d32c-4d56-be22-c9856cb087f2 [32m200[39m in 478ms
+
+ GET /avatars/user.png [33m404[39m in 63ms
+
+ GET /chat/19c49c0d-d32c-4d56-be22-c9856cb087f2 [32m200[39m in 158ms
+
+ GET /avatars/user.png [33m404[39m in 60ms
+
+ GET /dashboard [33m404[39m in 43ms
+
+ GET /dashboard [33m404[39m in 73ms
+
+ GET /chat/19c49c0d-d32c-4d56-be22-c9856cb087f2 [32m200[39m in 166ms
+
+ GET /avatars/user.png [33m404[39m in 37ms
+
+ GET /knowledge/documents [33m404[39m in 12ms
+
+ GET /knowledge/documents [33m404[39m in 51ms
+
+ GET /chat/19c49c0d-d32c-4d56-be22-c9856cb087f2 [32m200[39m in 199ms
+
+ GET /avatars/user.png [33m404[39m in 49ms
+
+ GET /dashboard [33m404[39m in 24ms
+
+ GET /dashboard [33m404[39m in 57ms
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1480ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 2.3s (1336 modules)
+
+ GET /chat/new [32m200[39m in 2886ms
+
+ERROR: (node:1553669) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /favicon.ico ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1927ms (1356 modules)
+
+ GET /avatars/user.png [33m404[39m in 1581ms
+
+ GET /favicon.ico [32m200[39m in 2319ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 1200ms (1406 modules)
+
+ GET /mcp/logs [32m200[39m in 1332ms
+
+ GET /avatars/user.png [33m404[39m in 74ms
+
+ GET /mcp/logs [32m200[39m in 13ms
+
+ GET /avatars/user.png [33m404[39m in 21ms
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 401ms (1402 modules)
+
+ GET /chat/starred [32m200[39m in 1100ms
+
+ GET /knowledge/documents [33m404[39m in 39ms
+
+ GET /knowledge/documents [33m404[39m in 105ms
+
+ GET /chat/starred [32m200[39m in 294ms
+
+ GET /avatars/user.png [33m404[39m in 32ms
+
+ GET /knowledge/search [33m404[39m in 8ms
+
+ GET /knowledge/search [33m404[39m in 30ms
+
+ [32m[1m✓[22m[39m Compiled in 1825ms (1416 modules)
+
+ GET /knowledge/search [33m404[39m in 1417ms
+
+ GET /knowledge/search [33m404[39m in 13ms
+
+ GET /knowledge/search [33m404[39m in 67ms
+
+ [32m[1m✓[22m[39m Compiled in 320ms (613 modules)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 698ms (1402 modules)
+
+ GET /knowledge/search [33m404[39m in 771ms
+
+ GET /knowledge/search [33m404[39m in 14ms
+
+ GET /knowledge/search [33m404[39m in 13ms
+
+ GET /knowledge/search [33m404[39m in 68ms
+
+ GET /chat/new [32m200[39m in 234ms
+
+ GET /avatars/user.png [33m404[39m in 46ms
+
+ [32m[1m✓[22m[39m Compiled in 842ms (1402 modules)
+
+ GET /chat/new [32m200[39m in 537ms
+
+ GET /chat/new [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 284ms (616 modules)
+
+ GET /chat/new [32m200[39m in 35ms
+
+ [32m[1m✓[22m[39m Compiled in 266ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 201ms (613 modules)
+
+ GET /chat/new [32m200[39m in 106ms
+
+ GET /chat/new [32m200[39m in 27ms
+
+ [32m[1m✓[22m[39m Compiled in 314ms (613 modules)
+
+ GET /chat/new [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 193ms (613 modules)
+
+ GET /chat/new [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 160ms (613 modules)
+
+ GET /chat/new [32m200[39m in 24ms
+
+ [32m[1m✓[22m[39m Compiled in 214ms (613 modules)
+
+ GET /chat/new [32m200[39m in 24ms
+
+ [32m[1m✓[22m[39m Compiled in 173ms (613 modules)
+
+ GET /chat/new [32m200[39m in 24ms
+
+ [32m[1m✓[22m[39m Compiled in 286ms (613 modules)
+
+ GET /chat/new [32m200[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 223ms (613 modules)
+
+ GET /chat/new [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 208ms (613 modules)
+
+ GET /chat/new [32m200[39m in 35ms
+
+ [32m[1m✓[22m[39m Compiled in 194ms (613 modules)
+
+ GET /chat/new [32m200[39m in 14ms
+
+ [32m[1m✓[22m[39m Compiled in 219ms (613 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 196ms (613 modules)
+
+ GET /chat/new [32m200[39m in 24ms
+
+ [32m[1m✓[22m[39m Compiled in 144ms (613 modules)
+
+ GET /chat/new [32m200[39m in 26ms
+
+ [32m[1m✓[22m[39m Compiled in 156ms (613 modules)
+
+ GET /chat/new [32m200[39m in 21ms
+
+ [32m[1m✓[22m[39m Compiled in 250ms (613 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 201ms (613 modules)
+
+ GET /chat/new [32m200[39m in 17ms
+
+ [32m[1m✓[22m[39m Compiled in 182ms (613 modules)
+
+ GET /chat/new [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 192ms (613 modules)
+
+ GET /chat/new [32m200[39m in 31ms
+
+ [32m[1m✓[22m[39m Compiled in 158ms (613 modules)
+
+ GET /chat/new [32m200[39m in 26ms
+
+ [32m[1m✓[22m[39m Compiled in 195ms (613 modules)
+
+ GET /chat/new [32m200[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 329ms (613 modules)
+
+ GET /chat/new [32m200[39m in 42ms
+
+ [32m[1m✓[22m[39m Compiled in 248ms (613 modules)
+
+ GET /chat/new [32m200[39m in 36ms
+
+ [32m[1m✓[22m[39m Compiled in 229ms (613 modules)
+
+ GET /chat/new [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 206ms (613 modules)
+
+ GET /chat/new [32m200[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 217ms (613 modules)
+
+ GET /chat/new [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 241ms (613 modules)
+
+ GET /chat/new [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 358ms (613 modules)
+
+ GET /chat/new [32m200[39m in 18ms
+
+ [32m[1m✓[22m[39m Compiled in 280ms (613 modules)
+
+ GET /chat/new [32m200[39m in 172ms
+
+ [32m[1m✓[22m[39m Compiled in 414ms (1412 modules)
+
+ GET /chat/new [32m200[39m in 285ms
+
+ GET /chat/new [32m200[39m in 10ms
+
+ [32m[1m✓[22m[39m Compiled in 135ms (613 modules)
+
+ GET /chat/new [32m200[39m in 15ms
+
+ [32m[1m✓[22m[39m Compiled in 306ms (613 modules)
+
+ GET /chat/new [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 189ms (613 modules)
+
+ GET /chat/new [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 415ms (1412 modules)
+
+ [32m[1m✓[22m[39m Compiled in 186ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 308ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 168ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 132ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 143ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 223ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 190ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 778ms (1412 modules)
+
+ [32m[1m✓[22m[39m Compiled in 208ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 290ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 282ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 361ms (613 modules)
+
+ [32m[1m✓[22m[39m Compiled in 229ms (613 modules)
+

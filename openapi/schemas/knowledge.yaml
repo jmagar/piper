@@ -1,0 +1,173 @@
+openapi: 3.0.0
+components:
+  schemas:
+    KnowledgeSearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: The search query to find relevant documents
+        collection:
+          type: string
+          description: Optional collection to search within
+        limit:
+          type: integer
+          description: Maximum number of results to return
+          default: 10
+        threshold:
+          type: number
+          description: Similarity threshold for results (0.0-1.0)
+          default: 0.7
+    
+    KnowledgeSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the document
+        score:
+          type: number
+          description: Similarity score (0.0-1.0)
+        content:
+          type: string
+          description: Document content snippet
+        metadata:
+          type: object
+          description: Document metadata
+          properties:
+            title:
+              type: string
+            source:
+              type: string
+            collection:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            tags:
+              type: array
+              items:
+                type: string
+
+    KnowledgeSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSearchResult'
+        total:
+          type: integer
+          description: Total number of matching documents
+        query:
+          type: string
+          description: The original search query
+    
+    KnowledgeCollection:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name
+        description:
+          type: string
+          description: Collection description
+        document_count:
+          type: integer
+          description: Number of documents in the collection
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    KnowledgeCollectionsResponse:
+      type: object
+      properties:
+        collections:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeCollection'
+    
+    KnowledgeDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the document
+        title:
+          type: string
+          description: Document title
+        content:
+          type: string
+          description: Document content
+        collection:
+          type: string
+          description: Collection the document belongs to
+        metadata:
+          type: object
+          description: Additional document metadata
+        bookmarked:
+          type: boolean
+          description: Whether the document is bookmarked
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    KnowledgeDocumentsRequest:
+      type: object
+      properties:
+        collection:
+          type: string
+          description: Filter by collection name
+        tag:
+          type: string
+          description: Filter by tag
+        bookmarked:
+          type: boolean
+          description: Filter for bookmarked documents only
+        query:
+          type: string
+          description: Filter by text search
+        limit:
+          type: integer
+          description: Maximum number of documents to return
+          default: 50
+        offset:
+          type: integer
+          description: Pagination offset
+          default: 0
+    
+    KnowledgeDocumentsResponse:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeDocument'
+        total:
+          type: integer
+          description: Total number of matching documents
+        collections:
+          type: array
+          items:
+            type: string
+          description: List of available collections
+        tags:
+          type: array
+          items:
+            type: string
+          description: List of all tags across returned documents 

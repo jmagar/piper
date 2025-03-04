@@ -29,6 +29,8 @@ tags:
     description: Prompt enhancement and management endpoints
   - name: Dashboard
     description: Dashboard and statistics endpoints
+  - name: Knowledge
+    description: Knowledge base endpoints
 
 components:
   responses:
@@ -1022,3 +1024,104 @@ paths:
     
   /api/mcp/config/schema:
     $ref: './schemas/mcp.yaml#/paths/~1api~1mcp~1config~1schema'
+
+  # Knowledge routes
+  /api/knowledge/search:
+    post:
+      tags:
+        - Knowledge
+      summary: Search the knowledge base
+      description: Performs semantic search on the knowledge base
+      operationId: searchKnowledge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeSearchRequest'
+      responses:
+        '200':
+          description: Successful search
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeSearchResponse'
+        '400':
+          description: Invalid request
+        '500':
+          description: Server error
+  
+  /api/knowledge/documents:
+    get:
+      tags:
+        - Knowledge
+      summary: List knowledge documents
+      description: Retrieves documents from the knowledge base with filtering options
+      operationId: listKnowledgeDocuments
+      parameters:
+        - name: collection
+          in: query
+          description: Filter by collection name
+          required: false
+          schema:
+            type: string
+        - name: tag
+          in: query
+          description: Filter by tag
+          required: false
+          schema:
+            type: string
+        - name: bookmarked
+          in: query
+          description: Filter for bookmarked documents only
+          required: false
+          schema:
+            type: boolean
+        - name: query
+          in: query
+          description: Filter by text search
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of documents to return
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          description: Pagination offset
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentsResponse'
+        '400':
+          description: Invalid request
+        '500':
+          description: Server error
+          
+  /api/knowledge/collections:
+    get:
+      tags:
+        - Knowledge
+      summary: List knowledge collections
+      description: Retrieves all collections in the knowledge base
+      operationId: listKnowledgeCollections
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeCollectionsResponse'
+        '500':
+          description: Server error

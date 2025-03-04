@@ -30,6 +30,7 @@
     "@langchain/langgraph": "^0.2.46",
     "@langchain/openai": "^0.4.4",
     "@prisma/client": "^6.4.0",
+    "@qdrant/js-client-rest": "^1.13.0",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
