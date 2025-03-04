@@ -60,7 +60,7 @@ export function ChatMessage({
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
       {/* Avatar */}
-      <div className={`order-1 ${isUser ? 'order-2' : ''}`}>
+      <div className={`${isUser ? 'order-2' : 'order-1'}`}>
         <div className={`flex items-center justify-center h-8 w-8 rounded-full 
           ${isUser ? 'bg-blue-100' : 'bg-gray-100'}`}>
           {isUser ? (
@@ -72,14 +72,14 @@ export function ChatMessage({
       </div>
       
       {/* Message content */}
-      <div className={`max-w-[80%] order-2 ${isUser ? 'order-1 text-right' : ''}`}>
+      <div className={`max-w-[80%] ${isUser ? 'order-1' : 'order-2'}`}>
         <div className={`inline-block p-3 rounded-lg 
-          ${isUser ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-900'}`}>
+          ${isUser ? 'bg-blue-50 text-blue-900 text-left' : 'bg-gray-50 text-gray-900'}`}>
           <MessageRenderer message={message} />
         </div>
         
         {/* Timestamp */}
-        <div className="text-xs text-gray-500 mt-1">
+        <div className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
           {message.status === 'streaming' && (
             <span className="ml-2 inline-flex">

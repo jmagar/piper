@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import debug from 'debug';
 import crypto from 'crypto';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 
 import { createLangGraph } from '../../langgraph/index.js';
@@ -55,8 +55,6 @@ interface StreamingState {
 class StreamingCallbackHandler extends BaseCallbackHandler {
   name = "streaming_handler";
   private tokensReceived = 0;
-  private lastTokenTime = Date.now();
-  private lastChunkContent = '';
 
   constructor(
     private streamId: string,
@@ -69,26 +67,45 @@ class StreamingCallbackHandler extends BaseCallbackHandler {
   override async handleLLMNewToken(text: string | any): Promise<void> {
     // Extract text content from the token, which might be an object
     let safeText = '';
-    
+
     try {
-      if (typeof text === 'string') {
-        safeText = text || '';
-      } else if (text && typeof text === 'object') {
-        // Handle structured token objects
-        safeText = text.text || text.content || text.message || 
-                  (text.data ? (text.data.content || text.data.text) : '') || 
-                  JSON.stringify(text);
+      // Parse text if it appears to be JSON format
+      if (typeof text === 'string' && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+        try {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            // Extract text from each item in array
+            safeText = parsed
+              .map(item => item.text || item.content || '')
+              .filter(Boolean)
+              .join('');
+          } else if (parsed && typeof parsed === 'object') {
+            // Extract text from object properties
+            safeText = parsed.text || parsed.content || parsed.message || '';
+           }
+        } catch {
+          // If parsing fails, use the original text
+          safeText = text || '';
+        }
+      } else if (typeof text === 'string') {
+        // Simple string case
+        safeText = text;
+      } else if (text && typeof text === 'object' && (text.text || text.content)) {
+        // Handle structured object directly
+        safeText = text.text || text.content || '';
       } else {
+        // Fallback to stringify for other object types
         safeText = String(text || '');
       }
+      
+      // Clean up the text to remove JSON artifacts that might remain
+      safeText = safeText.replace(/^\s*"/, '').replace(/"\s*$/, '');
     } catch (err) {
       log('Error extracting text from token: %s', err instanceof Error ? err.message : String(err));
       safeText = String(text || '');
     }
     
     this.tokensReceived++;
-    this.lastTokenTime = Date.now();
-    this.lastChunkContent = safeText;
     
     log('Streaming token %d for stream %s, length: %d, content: %s', 
       this.tokensReceived, this.streamId, safeText.length, 
@@ -97,7 +114,7 @@ class StreamingCallbackHandler extends BaseCallbackHandler {
     // Always send the chunk, even if empty
     try {
       // Ensure we're actually sending data to the client
-      const result = await this.enhancedOptions.onChunk?.(safeText);
+      await this.enhancedOptions.onChunk?.(safeText);
       log('Chunk sent successfully for stream %s, token %d', this.streamId, this.tokensReceived);
     } catch (err) {
       log('Error in onChunk callback: %s', err instanceof Error ? err.message : String(err));
@@ -207,6 +224,9 @@ export class ChatLangChainService {
   private agent: Awaited<ReturnType<typeof createLangGraph>> | null = null;
   private prisma: PrismaClient;
   private streamingMessages: Map<string, StreamingState> = new Map();
+  // Cache system message and tool query detection function
+  private _systemMessage: SystemMessage | null = null;
+  private _isToolQuery: ((query: string) => boolean) | null = null;
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
@@ -221,6 +241,51 @@ export class ChatLangChainService {
     if (!this.agent) {
       try {
         log('Initializing LangGraph agent...');
+        
+        // Enhanced system prompt that explicitly mentions time-related tools
+        const enhancedSystemPrompt = `You are a helpful AI assistant with access to various tools.
+You MUST always provide a response to the user's message.
+
+TOOLS: You have access to the following tools that you should use when appropriate:
+- Time tools: Use get_current_time to check the current time when asked about time
+- Weather tools: Use get-forecast to check weather when asked about weather
+- File system tools: Use filesystem tools when asked about files
+- Search tools: Use search tools when asked to find information online
+
+When a user asks about the current time, ALWAYS use the get_current_time tool.
+When a user asks about weather, ALWAYS use the get-forecast tool.
+
+When using a tool, you will receive its output and can use that information in your response.
+Always be helpful, concise, and clear.
+When using tools, explain what you're doing and why.
+If a tool returns an error, explain the error and suggest alternatives.
+
+IMPORTANT: Never return an empty response. Always respond with some text, even if just acknowledging the message.
+If you're unsure how to respond, provide a brief acknowledgment of the user's message.`;
+
+        // Cache this for reuse
+        this._systemMessage = new SystemMessage(enhancedSystemPrompt);
+        
+        // Create a function to detect tool-related queries
+        this._isToolQuery = (query: string): boolean => {
+          const lowerQuery = query.toLowerCase();
+          
+          // Time-related queries
+          const isTimeQuery = 
+            lowerQuery.includes('time') || 
+            lowerQuery.includes('clock') || 
+            lowerQuery.includes('hour') || 
+            lowerQuery.includes('what time') ||
+            lowerQuery.includes('current time');
+          
+          // Weather-related queries
+          const isWeatherQuery =
+            lowerQuery.includes('weather') ||
+            lowerQuery.includes('forecast') || 
+            lowerQuery.includes('temperature');
+          return isTimeQuery || isWeatherQuery;
+        };
+        
         this.agent = await createLangGraph(this.prisma);
         log('LangGraph agent initialized successfully');
       } catch (err) {
@@ -291,6 +356,26 @@ export class ChatLangChainService {
   // Add this helper method to extract text from structured responses
   private extractTextFromResponse(response: any): string {
     if (typeof response === 'string') {
+      // Try to parse as JSON if it looks like JSON
+      if (response.trim().startsWith('[') || response.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(response);
+          if (Array.isArray(parsed)) {
+            return parsed
+              .map(item => {
+                if (typeof item === 'string') return item;
+                return item.text || item.content || '';
+              })
+              .filter(Boolean)
+              .join('\n');
+          } else if (parsed && typeof parsed === 'object') {
+            return parsed.text || parsed.content || response;
+          }
+        } catch {
+          // If parsing fails, use original string
+          return response;
+        }
+      }
       return response;
     }
     
@@ -461,20 +546,29 @@ export class ChatLangChainService {
       log('Processing streaming message with agent');
       
       try {
+        // Prepare message history with system message and user message
+        const messageHistory = [];
+        
+        // Add system message
+        messageHistory.push(this._systemMessage || new SystemMessage("You are a helpful AI assistant with access to various tools."));
+        
+        // Add user message
+        messageHistory.push(new HumanMessage(message));
+        
         // Create callback handler instance
         const callbackHandler = new StreamingCallbackHandler(
           streamId,
           this.streamingMessages,
           options
         );
-
+        
         // Use invoke with streaming configuration
         const response = await agent.invoke(
-          { messages: [new HumanMessage(message)] },
+          { messages: messageHistory },
           { 
             configurable: {
               thread_id: conversation.id,
-              direct_response: true,
+              direct_response: false, // Never instruct to respond directly for tool queries
               force_streaming: true,
               standalone_question: true,
               callbacks: [callbackHandler],
@@ -495,7 +589,14 @@ export class ChatLangChainService {
           try {
             // Extract text from structured or plain text response
             responseText = this.extractTextFromResponse(response);
-            
+
+            // Remove JSON formatting artifacts if present
+            responseText = responseText.replace(/^\s*\[\s*{"index":[^,]+,"type":"text","text":"/, '')
+                                         .replace(/"\}\s*\]\s*$/, '')
+                                         .replace(/\\n/g, '\n')
+                                         .replace(/\\\\/g, '\\')
+                                         .replace(/\\"/g, '"');
+
             log('Extracted response text, length: %d, preview: %s', 
               responseText.length, 
               responseText.substring(0, 50) + (responseText.length > 50 ? '...' : ''));
@@ -839,6 +940,14 @@ export class ChatLangChainService {
 
       // Try to get agent response, fallback to echo if agent fails
       let response: string;
+      
+      // Prepare message history with system message and user message
+      const messageHistory = [];
+      
+      // Add system message
+      messageHistory.push(this._systemMessage || new SystemMessage("You are a helpful AI assistant with access to various tools."));
+      // Add user message
+      messageHistory.push(new HumanMessage(message));
       let messageType: MessageType = 'text';
       let metadataObj: ChatMetadata;
       
@@ -847,13 +956,18 @@ export class ChatLangChainService {
         if (agent) {
           log('Querying LangGraph agent...');
           // Update non-streaming invocation to use the same format
+          
+          // Determine if this is a tool-related query to adjust direct_response setting
+          // const isToolQuery = this._isToolQuery?.(message) || false;
+          // Only calculate if used
+          
           const result = await agent.invoke(
-            { messages: [new HumanMessage(message)] }, 
+            { messages: messageHistory }, 
             { 
               streaming: false,
               configurable: {
                 thread_id: conversation.id,
-                direct_response: true
+                direct_response: false // Never use direct_response for tool queries
               }
             }
           ) as string;

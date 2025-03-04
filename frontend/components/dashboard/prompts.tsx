@@ -51,6 +51,12 @@ const mockPromptTemplates: PromptTemplate[] = [
   }
 ];
 
+// Props for the PromptCards component
+export interface PromptsProps {
+  limit?: number;
+  compact?: boolean;
+}
+
 export function PromptCards() {
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -60,7 +66,7 @@ export function PromptCards() {
     }).format(date);
   };
 
-  const handleCopy = (id: string) => {
+  const handleCopy = () => {
     // In a real app, this would copy the prompt template
     toast({
       title: "Prompt copied",
@@ -72,7 +78,7 @@ export function PromptCards() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-medium">Your Prompts</h3>
-        <Link href="/prompts/create">
+        <Link href="/chat/prompts/new">
           <Button size="sm" variant="outline">
             <PlusIcon className="mr-2 h-4 w-4" />
             Create New
@@ -105,7 +111,7 @@ export function PromptCards() {
                   size="icon" 
                   variant="ghost" 
                   className="h-7 w-7" 
-                  onClick={() => handleCopy(prompt.id)}
+                  onClick={() => handleCopy()}
                 >
                   <CopyIcon className="h-3.5 w-3.5" />
                   <span className="sr-only">Copy prompt</span>
@@ -122,4 +128,7 @@ export function PromptCards() {
       </div>
     </div>
   );
-} 
+}
+
+// Export PromptCards as Prompts for backward compatibility
+export const Prompts = PromptCards; 

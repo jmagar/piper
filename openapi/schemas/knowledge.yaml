@@ -126,6 +126,15 @@ components:
         updated_at:
           type: string
           format: date-time
+        extracted_text:
+          type: string
+          description: Text extracted from the original file
+        url:
+          type: string
+          description: URL to the original source
+        original_file:
+          type: string
+          description: Path or reference to the original file
     
     KnowledgeDocumentsRequest:
       type: object
@@ -170,4 +179,61 @@ components:
           type: array
           items:
             type: string
-          description: List of all tags across returned documents 
+          description: List of all tags across returned documents
+          
+    KnowledgeDocumentCreateRequest:
+      type: object
+      required:
+        - title
+        - content
+        - collection
+      properties:
+        title:
+          type: string
+          description: Document title
+        content:
+          type: string
+          description: Document content
+        collection:
+          type: string
+          description: Collection the document belongs to
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags to categorize the document
+        metadata:
+          type: object
+          description: Additional document metadata
+          
+    KnowledgeDocumentCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the created document
+        status:
+          type: string
+          description: Status of the document creation (success, error)
+        message:
+          type: string
+          description: Message describing the result
+          
+    KnowledgeDocumentBookmarkRequest:
+      type: object
+      required:
+        - bookmarked
+      properties:
+        bookmarked:
+          type: boolean
+          description: Whether the document should be bookmarked
+          
+    KnowledgeDocumentDeleteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the delete operation (success, error)
+        message:
+          type: string
+          description: Message describing the result 

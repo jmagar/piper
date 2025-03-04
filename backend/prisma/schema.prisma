@@ -23,6 +23,14 @@ model User {
   starred_messages StarredMessage[]
   usage_stats   UserStats?
   socket_events SocketEvent[]
+  
+  // Dashboard relations
+  promptTemplates    PromptTemplate[]
+  promptUsageHistory PromptUsageHistory[]
+  documents          Document[]
+  documentAccesses   DocumentAccess[]
+  alerts             Alert[]
+  activities         Activity[]
 
   @@map("users")
 }
@@ -41,6 +49,7 @@ model Conversation {
   user_id        String?
   stats          ConversationStats?
   langgraph_states LangGraphState[]
+  promptUsage     PromptUsageHistory[]
 
   @@index([is_archived])
   @@map("conversations")
@@ -274,4 +283,115 @@ model LogEntry {
   @@index([level])
   @@index([timestamp])
   @@map("log_entries")
+}
+
+// Model for storing prompt templates
+model PromptTemplate {
+    id              String      @id @default(cuid())
+    title           String
+    description     String      @db.Text
+    content         String      @db.Text
+    category        String      // 'Documentation', 'Development', 'Productivity', etc.
+    tags            String[]
+    usageCount      Int         @default(0) @map("usage_count")
+    isPublic        Boolean     @default(false) @map("is_public")
+    isFavorited     Boolean     @default(false) @map("is_favorited")
+    createdAt       DateTime    @default(now()) @map("created_at")
+    updatedAt       DateTime    @updatedAt @map("updated_at")
+    user            User?       @relation(fields: [userId], references: [id])
+    userId          String?     @map("user_id")
+    usageHistory    PromptUsageHistory[]
+
+    @@index([userId])
+    @@index([category])
+    @@index([tags])
+    @@index([isPublic])
+    @@map("prompt_templates")
+}
+
+// Model for tracking prompt usage history
+model PromptUsageHistory {
+    id              String          @id @default(cuid())
+    prompt          PromptTemplate  @relation(fields: [promptId], references: [id])
+    promptId        String          @map("prompt_id")
+    conversation    Conversation?   @relation(fields: [conversationId], references: [id])
+    conversationId  String?         @map("conversation_id")
+    user            User?           @relation(fields: [userId], references: [id])
+    userId          String?         @map("user_id")
+    usedAt          DateTime        @default(now()) @map("used_at")
+
+    @@index([promptId])
+    @@index([userId])
+    @@index([usedAt])
+    @@map("prompt_usage_history")
+}
+
+// Model for tracking document statistics for dashboard
+model Document {
+    id              String      @id @default(cuid())
+    title           String
+    type            String      // 'PDF', 'Word', 'Text', etc.
+    path            String      @db.Text
+    size            Int         // Size in bytes
+    collections     String[]    // Document collections/categories
+    accessCount     Int         @default(0) @map("access_count")
+    addedAt         DateTime    @default(now()) @map("added_at")
+    lastAccessed    DateTime?   @map("last_accessed")
+    user            User        @relation(fields: [userId], references: [id])
+    userId          String      @map("user_id")
+    documentAccesses DocumentAccess[]
+
+    @@index([userId])
+    @@index([type])
+    @@index([collections])
+    @@map("documents")
+}
+
+// Model for tracking document access
+model DocumentAccess {
+    id              String      @id @default(cuid())
+    document        Document    @relation(fields: [documentId], references: [id])
+    documentId      String      @map("document_id")
+    user            User        @relation(fields: [userId], references: [id])
+    userId          String      @map("user_id")
+    accessedAt      DateTime    @default(now()) @map("accessed_at")
+    
+    @@index([documentId])
+    @@index([userId])
+    @@index([accessedAt])
+    @@map("document_accesses")
+}
+
+// Model for system alerts
+model Alert {
+    id              String      @id @default(cuid())
+    type            String      // 'error', 'warning', 'info', 'success'
+    title           String
+    message         String      @db.Text
+    read            Boolean     @default(false)
+    timestamp       DateTime    @default(now())
+    user            User?       @relation(fields: [userId], references: [id])
+    userId          String?     @map("user_id")
+    
+    @@index([userId])
+    @@index([type])
+    @@index([read])
+    @@index([timestamp])
+    @@map("alerts")
+}
+
+// Model for user activity log
+model Activity {
+    id              String      @id @default(cuid())
+    type            String      // 'chat', 'tool', 'document', 'login', 'system', 'search'
+    description     String      @db.Text
+    details         Json?       // Additional activity details
+    timestamp       DateTime    @default(now())
+    user            User        @relation(fields: [userId], references: [id])
+    userId          String      @map("user_id")
+    
+    @@index([userId])
+    @@index([type])
+    @@index([timestamp])
+    @@map("activities")
 } 

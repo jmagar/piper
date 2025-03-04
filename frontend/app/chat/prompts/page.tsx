@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
@@ -129,8 +129,8 @@ export default function PromptsPage() {
   const [sortBy, setSortBy] = useState("Recently Updated");
   const [showPublicOnly, setShowPublicOnly] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [promptIdToDelete, setPromptIdToDelete] = useState<string | null>(null);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -144,9 +144,9 @@ export default function PromptsPage() {
     });
   };
 
-  const handleDeletePrompt = (id: string) => {
-    setPromptToDelete(id);
-    setIsDeleteDialogOpen(true);
+  const handleDeletePrompt = (promptId: string) => {
+    setPromptIdToDelete(promptId);
+    setShowDeleteDialog(true);
   };
 
   const confirmDelete = () => {
@@ -155,8 +155,8 @@ export default function PromptsPage() {
       title: "Prompt deleted",
       description: "Prompt has been permanently deleted"
     });
-    setIsDeleteDialogOpen(false);
-    setPromptToDelete(null);
+    setShowDeleteDialog(false);
+    setPromptIdToDelete(null);
   };
 
   const filteredPrompts = MOCK_PROMPT_TEMPLATES.filter(prompt => {
@@ -479,7 +479,7 @@ export default function PromptsPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Prompt</DialogTitle>
@@ -488,7 +488,7 @@ export default function PromptsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>

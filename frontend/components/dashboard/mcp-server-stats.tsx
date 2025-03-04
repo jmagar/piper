@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Bot, Wrench, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from 'react';
 
 /**
  * Props for the McpServerStats component
@@ -38,43 +39,75 @@ interface McpTool {
  * Displays statistics about the user's interaction with MCP servers and tools
  */
 export function McpServerStats({ compact = false }: McpServerStatsProps) {
-  // Mock data - in a real implementation, these would be fetched from an API with user-specific data
-  const [servers, setServers] = React.useState<McpServer[]>([
-    {
-      id: '1',
-      name: 'OpenAI Server',
-      status: 'online',
-      lastUsed: '2024-03-01T12:30:45Z',
-      toolCount: 5,
-      usageCount: 126
-    },
-    {
-      id: '2',
-      name: 'Anthropic Claude',
-      status: 'online',
-      lastUsed: '2024-03-03T08:15:22Z',
-      toolCount: 3,
-      usageCount: 84
-    },
-    {
-      id: '3',
-      name: 'Local LLM',
-      status: 'offline',
-      lastUsed: '2024-02-28T15:45:12Z',
-      toolCount: 2,
-      usageCount: 32
-    },
-    {
-      id: '4',
-      name: 'Mistral AI',
-      status: 'online',
-      lastUsed: '2024-03-02T14:22:18Z',
-      toolCount: 2,
-      usageCount: 41
-    }
-  ]);
+  const [servers, setServers] = useState<McpServer[]>([]);
+  const [currentModel, setCurrentModel] = useState<{provider: string; model: string}>({
+    provider: '',
+    model: ''
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [tools, setTools] = React.useState<McpTool[]>([
+  useEffect(() => {
+    // This would be an API call in a real implementation
+    // For now we'll populate with data derived from the config file
+    const fetchServersAndModel = async () => {
+      setIsLoading(true);
+      try {
+        // In a real implementation, we would fetch from an API endpoint
+        // that retrieves data from the llm_mcp_config.json5 file
+        const mockServers: McpServer[] = [
+          {
+            id: '1',
+            name: 'OpenAI Server',
+            status: 'online',
+            lastUsed: new Date().toISOString(),
+            toolCount: 5,
+            usageCount: 126
+          },
+          {
+            id: '2',
+            name: 'Anthropic Claude',
+            status: 'online',
+            lastUsed: new Date().toISOString(),
+            toolCount: 3,
+            usageCount: 84
+          },
+          {
+            id: '3',
+            name: 'Local LLM',
+            status: 'offline',
+            lastUsed: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+            toolCount: 2,
+            usageCount: 32
+          },
+          {
+            id: '4',
+            name: 'Mistral AI',
+            status: 'online',
+            lastUsed: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+            toolCount: 2,
+            usageCount: 41
+          }
+        ];
+        
+        // Set model info from config (mocked here)
+        const modelInfo = {
+          provider: 'anthropic',
+          model: 'claude-3-5-sonnet-20240620'
+        };
+        
+        setServers(mockServers);
+        setCurrentModel(modelInfo);
+      } catch (error) {
+        console.error('Error fetching MCP servers:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchServersAndModel();
+  }, []);
+
+  const [tools] = useState<McpTool[]>([
     { id: '1', name: 'Web Search', serverId: '1', usageCount: 42, lastUsed: '2024-03-03T10:12:45Z' },
     { id: '2', name: 'Image Generation', serverId: '1', usageCount: 28, lastUsed: '2024-03-02T16:30:22Z' },
     { id: '3', name: 'Code Interpreter', serverId: '2', usageCount: 36, lastUsed: '2024-03-03T09:45:33Z' },
@@ -122,10 +155,30 @@ export function McpServerStats({ compact = false }: McpServerStatsProps) {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <h3 className="font-medium">Your MCP Servers</h3>
+        <div className="animate-pulse space-y-2">
+          <div className="h-6 bg-muted rounded"></div>
+          <div className="h-6 bg-muted rounded"></div>
+          <div className="h-6 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (compact) {
     return (
       <div className="space-y-2">
         <h3 className="font-medium">Your MCP Servers</h3>
+        {currentModel.model && (
+          <div className="border-b pb-2 mb-2">
+            <div className="text-xs text-muted-foreground">Current Model</div>
+            <div className="text-sm font-medium">{currentModel.model}</div>
+            <div className="text-xs">{currentModel.provider}</div>
+          </div>
+        )}
         <div className="space-y-1">
           {sortedServers.slice(0, 3).map(server => (
             <div key={server.id} className="flex items-center justify-between">
@@ -145,70 +198,37 @@ export function McpServerStats({ compact = false }: McpServerStatsProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Your MCP Servers</CardTitle>
-            <CardDescription>
-              Model Context Protocol servers you've connected to
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {sortedServers.map(server => (
-              <div key={server.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                <div>
-                  <div className="flex items-center">
-                    {getStatusIcon(server.status)}
-                    <span className="ml-2 font-medium">{server.name}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Last used: {formatDate(server.lastUsed)}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <Badge variant="outline">{server.toolCount} tools</Badge>
-                  <span className="mt-1 text-xs">{server.usageCount} uses</span>
-                </div>
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">Current LLM</h3>
+      <div className="border rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">{currentModel.model}</div>
+            <div className="text-xs text-muted-foreground capitalize">{currentModel.provider}</div>
+          </div>
+          <Badge variant="outline">Active</Badge>
+        </div>
+      </div>
+      
+      <h3 className="text-lg font-medium">Available Servers</h3>
+      <div className="space-y-3">
+        {sortedServers.map(server => (
+          <div key={server.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+            <div>
+              <div className="flex items-center">
+                {getStatusIcon(server.status)}
+                <span className="ml-2 font-medium">{server.name}</span>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Your Most Used MCP Tools</CardTitle>
-            <CardDescription>
-              Tools you've accessed through MCP servers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {sortedTools.slice(0, 5).map(tool => {
-                const server = servers.find(s => s.id === tool.serverId);
-                return (
-                  <div key={tool.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                    <div>
-                      <div className="flex items-center">
-                        <Wrench className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="font-medium">{tool.name}</span>
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        Via: {server?.name || 'Unknown server'}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-sm">{tool.usageCount} uses</span>
-                      <span className="mt-1 text-xs text-muted-foreground">
-                        Last: {formatDate(tool.lastUsed)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="mt-1 text-xs text-muted-foreground">
+                Last used: {formatDate(server.lastUsed)}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex flex-col items-end">
+              <Badge variant="outline">{server.toolCount} tools</Badge>
+              <span className="mt-1 text-xs">{server.usageCount} uses</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

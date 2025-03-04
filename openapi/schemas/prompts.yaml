@@ -1,0 +1,458 @@
+openapi: 3.0.0
+info:
+  title: Prompts API
+  version: 1.0.0
+  description: API for managing prompt templates
+
+components:
+  schemas:
+    PromptTemplate:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - content
+        - category
+        - tags
+        - usageCount
+        - isPublic
+        - isFavorited
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the prompt template
+        title:
+          type: string
+          description: Title of the prompt template
+        description:
+          type: string
+          description: Description of what the prompt template does
+        content:
+          type: string
+          description: The actual prompt template content with placeholders
+        category:
+          type: string
+          description: Category of the prompt template (e.g., Documentation, Development)
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for organizing and filtering prompt templates
+        usageCount:
+          type: integer
+          description: Number of times the prompt has been used
+        isPublic:
+          type: boolean
+          description: Whether the prompt is public or private
+        isFavorited:
+          type: boolean
+          description: Whether the prompt has been favorited by the user
+        createdAt:
+          type: string
+          format: date-time
+          description: When the prompt was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the prompt was last updated
+        userId:
+          type: string
+          description: ID of the user who created the prompt
+
+    PromptTemplateCreate:
+      type: object
+      required:
+        - title
+        - description
+        - content
+        - category
+      properties:
+        title:
+          type: string
+          description: Title of the prompt template
+        description:
+          type: string
+          description: Description of what the prompt template does
+        content:
+          type: string
+          description: The actual prompt template content with placeholders
+        category:
+          type: string
+          description: Category of the prompt template
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for organizing and filtering prompt templates
+        isPublic:
+          type: boolean
+          default: false
+          description: Whether the prompt is public or private
+
+    PromptTemplateUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the prompt template
+        description:
+          type: string
+          description: Description of what the prompt template does
+        content:
+          type: string
+          description: The actual prompt template content with placeholders
+        category:
+          type: string
+          description: Category of the prompt template
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for organizing and filtering prompt templates
+        isPublic:
+          type: boolean
+          description: Whether the prompt is public or private
+        isFavorited:
+          type: boolean
+          description: Whether the prompt has been favorited by the user
+
+    PromptUsageHistory:
+      type: object
+      required:
+        - id
+        - promptId
+        - usedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the usage record
+        promptId:
+          type: string
+          description: ID of the prompt template that was used
+        conversationId:
+          type: string
+          description: ID of the conversation where the prompt was used
+        userId:
+          type: string
+          description: ID of the user who used the prompt
+        usedAt:
+          type: string
+          format: date-time
+          description: When the prompt was used
+
+    PromptTemplateListResponse:
+      type: object
+      required:
+        - prompts
+        - count
+      properties:
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptTemplate'
+        count:
+          type: integer
+          description: Total number of prompts matching the filters
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+
+paths:
+  /api/prompts:
+    get:
+      summary: List prompt templates
+      description: Returns a list of prompt templates based on the provided filters
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+          description: Filter by user ID
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          description: Filter by tags
+        - name: isPublic
+          in: query
+          schema:
+            type: boolean
+          description: Filter by public status
+        - name: isFavorited
+          in: query
+          schema:
+            type: boolean
+          description: Filter by favorited status
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search term for title and description
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [usageCount, updatedAt, createdAt, title]
+          description: Field to sort by
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of prompts to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of prompts to skip
+      responses:
+        '200':
+          description: List of prompt templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplateListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+    post:
+      summary: Create a new prompt template
+      description: Creates a new prompt template with the provided data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptTemplateCreate'
+      responses:
+        '201':
+          description: Prompt template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/prompts/{id}:
+    get:
+      summary: Get a prompt template by ID
+      description: Returns a prompt template with the specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the prompt template
+      responses:
+        '200':
+          description: Prompt template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '404':
+          description: Prompt template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+    put:
+      summary: Update a prompt template
+      description: Updates a prompt template with the specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptTemplateUpdate'
+      responses:
+        '200':
+          description: Prompt template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Prompt template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+    delete:
+      summary: Delete a prompt template
+      description: Deletes a prompt template with the specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the prompt template
+      responses:
+        '204':
+          description: Prompt template deleted
+        '404':
+          description: Prompt template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/prompts/{id}/favorite:
+    post:
+      summary: Toggle favorite status of a prompt template
+      description: Toggles the favorite status of a prompt template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the prompt template
+      responses:
+        '200':
+          description: Favorite status toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptTemplate'
+        '404':
+          description: Prompt template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/prompts/{id}/use:
+    post:
+      summary: Use a prompt template
+      description: Records usage of a prompt template and increases its usage count
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                conversationId:
+                  type: string
+                  description: ID of the conversation where the prompt was used
+      responses:
+        '200':
+          description: Prompt template usage recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptUsageHistory'
+        '404':
+          description: Prompt template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 

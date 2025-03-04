@@ -11,7 +11,9 @@ import { PrismaClient } from '@prisma/client';
 
 import { initChatModel } from '../init-chat-model.js';
 import { loadConfig } from '../load-config.js';
-import { LangGraphStatePersistence } from '../services/langgraph/state-persistence.mjs';
+// Import not currently used, but kept for reference
+// import { LangGraphStatePersistence } from '../services/langgraph/state-persistence.mjs';
+import { CustomStateManager } from '../services/langgraph/custom-state-manager.js';
 
 const log = debug('mcp:langgraph');
 const error = debug('mcp:langgraph:error');
@@ -40,6 +42,9 @@ interface InvokeOptions {
   streamingOptions?: StreamingOptions;
   configurable?: {
     thread_id?: string;
+    message_id?: string;
+    conversation_id?: string;
+    direct_response?: boolean;
     [key: string]: unknown;
   };
 }
@@ -67,6 +72,8 @@ interface ExtendedMcpResult {
  */
 export async function createLangGraph(prismaClient?: PrismaClient) {
   // Load config and initialize model
+  // Clear any existing statePersistence to avoid potential conflicts
+  (global as any).statePersistence = null;
   const config = loadConfig(configPath);
   
   console.log('==== LangGraph Initialization ====');
@@ -224,9 +231,23 @@ export async function createLangGraph(prismaClient?: PrismaClient) {
   // Initialize Prisma client if not provided
   const prisma = prismaClient || new PrismaClient();
   
-  // Initialize state persistence with Redis and PostgreSQL
-  const statePersistence = new LangGraphStatePersistence(prisma);
-  log('Initialized LangGraph state persistence with Redis and PostgreSQL');
+  // Initialize the CustomStateManager that will handle both memory and persistence
+  const stateManager = new CustomStateManager(prisma);
+  
+  try {
+    // Expose the stateManager to the global scope for chat-langchain.service.mts to access
+    (global as any).statePersistence = stateManager;
+    log('✅ Exported state persistence to global scope for cross-service access');
+    
+    // Verify stateManager is working by testing a simple get/set operation
+    const testThreadId = 'test-thread-' + Date.now();
+    await stateManager.set({ configurable: { thread_id: testThreadId } }, { test: true });
+    const testResult = await stateManager.get({ configurable: { thread_id: testThreadId } });
+    log('✅ State persistence verified working: %s', testResult ? 'YES' : 'NO');
+  } catch (stateErr) {
+    error('⚠️ Failed to initialize or verify state persistence: %s', stateErr instanceof Error ? stateErr.message : String(stateErr));
+    console.warn('⚠️ State persistence initialization failed - tool usage may be affected');
+  }
 
   // System message for context
   const baseSystemPrompt = `You are a helpful AI assistant with access to various tools.
@@ -238,9 +259,19 @@ If a tool returns an error, explain the error and suggest alternatives.
 IMPORTANT: Never return an empty response. Always respond with some text, even if just acknowledging the message.
 If you're unsure how to respond, provide a brief acknowledgment of the user's message.`;
 
-  const directResponsePrompt = `IMPORTANT: You must respond directly to the user's query. Do not use any tools unless absolutely necessary. Provide a helpful, direct answer.`;
+  const directResponsePrompt = `IMPORTANT: For general knowledge questions, you can respond directly. 
+However, for functional requests that require external information or actions, you MUST use the appropriate tools.
 
-  // Create the agent
+ALWAYS use tools for these types of requests:
+- Time-related queries → use get_current_time tool
+- Weather information → use get-forecast tool
+- File operations → use the filesystem tools
+- Web searches → use web_search or brave_web_search tools
+- System information → use the shell tools
+DO NOT try to guess information that requires tools - use the tools instead.`;
+
+  // Create the agent with MEMORY_SAVER to handle in-memory state
+  // We'll manage persistence separately with our CustomStateManager
   const agent = createReactAgent({
     llm,
     tools,
@@ -267,18 +298,54 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
         log('Processing message for conversation %s', conversationId);
         
         // Check for existing state in Redis/PostgreSQL
-        if (options.configurable?.thread_id) {
-          const threadId = options.configurable.thread_id as string;
+        const threadId = options.configurable?.thread_id as string || `${conversationId}:${Date.now()}`;
+        if (threadId) {
           try {
-            const existingState = await statePersistence.getState(threadId);
+            const existingState = await stateManager.get({
+              configurable: {
+                thread_id: threadId,
+                conversation_id: conversationId
+              }
+            });
+            
             if (existingState) {
               log('Found existing state for thread %s in persistent storage', threadId);
-              // We could use this state to hydrate the conversation if needed
+              
+              // Try to restore conversation from state if available
+              if (existingState.messages && Array.isArray(existingState.messages)) {
+                log('Restoring conversation from persisted state');
+                
+                // Convert messages from state to LangChain format
+                const restoredMessages: BaseMessage[] = [];
+                for (const msg of existingState.messages) {
+                  if (msg.role === 'system') {
+                    restoredMessages.push(new SystemMessage(msg.content));
+                  } else if (msg.role === 'human') {
+                    restoredMessages.push(new HumanMessage(msg.content));
+                  } else if (msg.role === 'assistant') {
+                    restoredMessages.push(new AIMessage(msg.content));
+                  }
+                }
+                
+                // Create or update history with restored messages
+                if (restoredMessages.length > 0) {
+                  log('Restored %d messages from state', restoredMessages.length);
+                  conversations.set(conversationId, {
+                    messages: restoredMessages,
+                    lastUpdated: new Date()
+                  });
+                }
+              }
             }
           } catch (stateErr) {
             error('Error checking thread state: %s', stateErr instanceof Error ? stateErr.message : String(stateErr));
             // Continue with in-memory state only
           }
+        } else {
+          // Generate a new thread ID if none was provided
+          options.configurable = options.configurable || {};
+          options.configurable.thread_id = `${conversationId}:${Date.now()}`;
+          log('Created new thread ID: %s', options.configurable.thread_id);
         }
         
         // Get or create conversation history
@@ -345,25 +412,24 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             log('Streaming token: %d chars, content: "%s"', token.length, token.substring(0, 20) + (token.length > 20 ? '...' : ''));
             streamedContent += token;
             
-            // Save partial streaming state periodically (every 5 tokens)
-            // This helps with resuming streams if there's a disruption
+            // Store streaming state using our CustomStateManager
             if (options.configurable?.thread_id && streamedContent.length > 0 && 
                 streamedContent.length % 5 === 0) {
               try {
                 const threadId = options.configurable.thread_id as string;
-                await statePersistence.saveState(
-                  threadId,
+                const messageId = options.configurable.message_id as string || `msg-${Date.now()}`;
+                
+                // Save streaming state through our custom state manager
+                await stateManager.saveStreamingState(
+                  threadId, 
+                  streamedContent,
                   {
-                    messages: [...history.messages, { role: 'assistant', content: streamedContent }],
-                    lastUpdated: new Date().toISOString(),
-                    streaming: true,
-                    partialResponse: streamedContent
-                  },
-                  {
-                    conversationId: conversationId,
-                    isComplete: false // Mark as incomplete during streaming
+                    messageId,
+                    chunkCount: Math.floor(streamedContent.length / 5),
+                    conversationId
                   }
                 );
+                
                 log('Saved partial streaming state for thread %s, content length: %d', 
                    threadId, streamedContent.length);
               } catch (persistErr) {
@@ -381,24 +447,39 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             error('Current streamed content length: %d', streamedContent.length);
             error('Last few tokens (if any): %s', streamedContent.slice(-50));
             
-            // Save state on error for potential recovery
+            // Save error state for potential recovery
             if (options.configurable?.thread_id && streamedContent.length > 0) {
               try {
                 const threadId = options.configurable.thread_id as string;
-                await statePersistence.saveState(
-                  threadId,
+                
+                // Convert messages to serializable format
+                const serializableMessages = history.messages.map(msg => ({
+                  role: msg._getType(),
+                  content: msg.content
+                }));
+                
+                // Add error message
+                serializableMessages.push({
+                  role: 'ai',
+                  content: streamedContent,
+                });
+                
+                // Save state with error
+                await stateManager.set(
                   {
-                    messages: [...history.messages, { role: 'assistant', content: streamedContent }],
-                    lastUpdated: new Date().toISOString(),
-                    error: errorObj.message,
-                    streaming: false,
-                    partialResponse: streamedContent
+                    configurable: {
+                      thread_id: threadId,
+                      conversation_id: conversationId
+                    }
                   },
                   {
-                    conversationId: conversationId,
-                    isComplete: false // Error state
+                    messages: serializableMessages,
+                    lastUpdated: new Date().toISOString(),
+                    streaming: false,
+                    partialResponse: streamedContent
                   }
                 );
+                
                 log('Saved error streaming state for thread %s', threadId);
               } catch (persistErr) {
                 error('Error persisting streaming error state: %s', 
@@ -440,26 +521,49 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
               });
             }
             
-            // Persist the completed streaming state
+            // Complete streaming state using our custom state manager
             if (options.configurable?.thread_id) {
               try {
                 const threadId = options.configurable.thread_id as string;
-                await statePersistence.saveState(
+                const messageId = options.configurable.message_id as string || `msg-${Date.now()}`;
+                
+                // Complete the streaming state
+                await stateManager.completeStreamingState(
                   threadId,
+                  streamedContent,
                   {
-                    messages: history.messages.map(msg => ({
-                      role: msg._getType(),
-                      content: msg.content
-                    })),
+                    messageId,
+                    conversationId
+                  }
+                );
+                
+                // Also save the full state for future calls
+                await stateManager.set(
+                  {
+                    configurable: {
+                      thread_id: threadId,
+                      conversation_id: conversationId
+                    }
+                  },
+                  {
+                    messages: history.messages.map(msg => {
+                      const role = msg._getType();
+                      // Properly handle tool calls/results for persistence
+                      if (role === "ai" && typeof msg.content === "object" && Array.isArray(msg.content)) {
+                        // This is likely a tool call - preserve the full object structure
+                        return {
+                          role,
+                          content: msg.content
+                        };
+                      }
+                      return { role, content: msg.content };
+                    }),
                     lastUpdated: history.lastUpdated.toISOString(),
                     streaming: false,
                     completed: true
-                  },
-                  {
-                    conversationId: conversationId,
-                    isComplete: true // Completed successfully
                   }
                 );
+                
                 log('Persisted completed streaming state for thread %s', threadId);
               } catch (persistErr) {
                 error('Error persisting completed streaming state: %s', 
@@ -488,13 +592,16 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             );
           });
           
+          // Make sure the threadId is set in configurable
+          if (options.configurable) {
+            options.configurable.thread_id = options.configurable.thread_id || threadId;
+            options.configurable.conversation_id = options.configurable.conversation_id || conversationId;
+          }
+          
           const agentState: AgentState = await agent.invoke(
             { messages: history.messages },
             { 
-              configurable: { 
-                thread_id: conversationId,
-                ...options.configurable 
-              },
+              configurable: options.configurable,
               callbacks
             }
           );
@@ -510,6 +617,36 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             );
             history.messages.push(lastMessage);
             history.lastUpdated = new Date();
+            
+            // Save state for future calls - using our CustomStateManager
+            if (options.configurable?.thread_id) {
+              try {
+                await stateManager.set(
+                  {
+                    configurable: {
+                      thread_id: options.configurable.thread_id,
+                      conversation_id: conversationId
+                    }
+                  },
+                  {
+                    messages: history.messages.map(msg => {
+                      const role = msg._getType();
+                      // Special handling for tool call messages
+                      if (role === "ai" && typeof msg.content === "object" && Array.isArray(msg.content)) {
+                        return { role, content: msg.content };
+                      }
+                      return { role, content: msg.content };
+                    }),
+                    lastUpdated: history.lastUpdated.toISOString(),
+                    completed: true
+                  }
+                );
+                log('Saved completed state for thread %s', options.configurable.thread_id);
+              } catch (saveErr) {
+                error('Error saving completed state: %s', saveErr instanceof Error ? saveErr.message : String(saveErr));
+              }
+            }
+            
             return typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content);
           }
         } catch (err) {
@@ -520,36 +657,6 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
             error('Message %d: type=%s', idx, msg.constructor.name);
           });
           throw err;
-        }
-
-        // After agent invocation, persist the state if thread_id is provided
-        if (options.configurable?.thread_id) {
-          try {
-            // Get the current thread ID
-            const threadId = options.configurable.thread_id as string;
-            
-            // Save the state to Redis and PostgreSQL with appropriate flags
-            await statePersistence.saveState(
-              threadId,
-              {
-                messages: history.messages.map(msg => ({
-                  role: msg._getType(),
-                  content: msg.content
-                })),
-                lastUpdated: history.lastUpdated.toISOString(),
-                streaming: options.streaming || false,
-                completed: !options.streaming // Only mark as completed for non-streaming responses
-              },
-              {
-                conversationId: conversationId,
-                isComplete: !options.streaming // Non-streaming responses are complete immediately
-              }
-            );
-            log('Persisted state for thread %s to Redis and PostgreSQL', threadId);
-          } catch (persistErr) {
-            error('Error persisting thread state: %s', persistErr instanceof Error ? persistErr.message : String(persistErr));
-            // Non-fatal, continue with in-memory state
-          }
         }
 
         // For streaming, return the accumulated content
@@ -573,7 +680,9 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
       // Also clear persistent state if conversationId is provided
       if (conversationId) {
         try {
-          await statePersistence.deleteState(conversationId);
+          // Get all thread IDs for this conversation and delete them
+          // const threadIds = await stateManager.delete(conversationId);
+          await stateManager.delete(conversationId);
           log('Cleared persistent state for thread %s', conversationId);
         } catch (clearErr) {
           error('Error clearing persistent state: %s', clearErr instanceof Error ? clearErr.message : String(clearErr));
@@ -609,4 +718,4 @@ If you're unsure how to respond, provide a brief acknowledgment of the user's me
       }
     }
   };
-} 
+}

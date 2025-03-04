@@ -11,6 +11,7 @@ import mcpRoutes from './routes/mcp.routes.js';
 import promptRoutes from './routes/prompt.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import knowledgeRoutes from './routes/knowledge.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app: Application = express();
 
@@ -43,6 +44,8 @@ app.use('/api/prompt', promptRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/prompts', promptRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

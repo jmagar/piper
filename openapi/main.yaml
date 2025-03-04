@@ -992,28 +992,39 @@ paths:
                     type: string
 
   # Dashboard routes
-  /api/dashboard/stats:
-    get:
-      tags:
-        - Dashboard
-      summary: Get dashboard statistics
-      description: Retrieve statistics for the dashboard
-      responses:
-        '200':
-          description: Dashboard statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  userStats:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/UserStats'
-                  conversationStats:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ConversationStats'
+  /api/dashboard/summary:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1summary'
+
+  /api/dashboard/documents:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1documents'
+
+  /api/dashboard/mcp-servers:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1mcp-servers'
+
+  /api/dashboard/alerts:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1alerts'
+
+  /api/dashboard/alerts/{id}/read:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1alerts~1{id}~1read'
+
+  /api/dashboard/alerts/{id}:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1alerts~1{id}'
+
+  /api/dashboard/activity:
+    $ref: './schemas/dashboard.yaml#/paths/~1api~1dashboard~1activity'
+    
+  # Prompt template routes
+  /api/prompts:
+    $ref: './schemas/prompts.yaml#/paths/~1api~1prompts'
+    
+  /api/prompts/{id}:
+    $ref: './schemas/prompts.yaml#/paths/~1api~1prompts~1{id}'
+    
+  /api/prompts/{id}/favorite:
+    $ref: './schemas/prompts.yaml#/paths/~1api~1prompts~1{id}~1favorite'
+    
+  /api/prompts/{id}/use:
+    $ref: './schemas/prompts.yaml#/paths/~1api~1prompts~1{id}~1use'
 
   # MCP logs routes
   /api/mcp/logs:
@@ -1108,6 +1119,218 @@ paths:
           description: Invalid request
         '500':
           description: Server error
+    
+    post:
+      tags:
+        - Knowledge
+      summary: Create knowledge document
+      description: Creates a new document in the knowledge base
+      operationId: createKnowledgeDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentCreateRequest'
+      responses:
+        '201':
+          description: Document created successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentCreateResponse'
+        '400':
+          description: Invalid request
+        '500':
+          description: Server error
+          
+  /api/knowledge/documents/{id}:
+    get:
+      tags:
+        - Knowledge
+      summary: Get knowledge document
+      description: Retrieves a specific document from the knowledge base
+      operationId: getKnowledgeDocument
+      parameters:
+        - name: id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocument'
+        '404':
+          description: Document not found
+        '500':
+          description: Server error
+    
+    put:
+      tags:
+        - Knowledge
+      summary: Update knowledge document
+      description: Updates an existing document in the knowledge base
+      operationId: updateKnowledgeDocument
+      parameters:
+        - name: id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentCreateRequest'
+      responses:
+        '200':
+          description: Document updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentCreateResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Document not found
+        '500':
+          description: Server error
+    
+    delete:
+      tags:
+        - Knowledge
+      summary: Delete knowledge document
+      description: Deletes a document from the knowledge base
+      operationId: deleteKnowledgeDocument
+      parameters:
+        - name: id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentDeleteResponse'
+        '404':
+          description: Document not found
+        '500':
+          description: Server error
+  
+  /api/knowledge/documents/{id}/bookmark:
+    put:
+      tags:
+        - Knowledge
+      summary: Bookmark knowledge document
+      description: Toggles the bookmark status of a document
+      operationId: bookmarkKnowledgeDocument
+      parameters:
+        - name: id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentBookmarkRequest'
+      responses:
+        '200':
+          description: Bookmark status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  bookmarked:
+                    type: boolean
+        '404':
+          description: Document not found
+        '500':
+          description: Server error
+  
+  /api/knowledge/documents/{id}/download:
+    get:
+      tags:
+        - Knowledge
+      summary: Download original file
+      description: Downloads the original file associated with a document
+      operationId: downloadKnowledgeDocumentFile
+      parameters:
+        - name: id
+          in: path
+          description: Document ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Document or file not found
+        '500':
+          description: Server error
+  
+  /api/knowledge/upload:
+    post:
+      tags:
+        - Knowledge
+      summary: Upload and process file
+      description: Uploads a file, extracts content, and creates a document
+      operationId: uploadKnowledgeFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+                collection:
+                  type: string
+                  description: Collection to add the document to
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Tags for the document
+      responses:
+        '201':
+          description: File uploaded and processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeDocumentCreateResponse'
+        '400':
+          description: Invalid request or unsupported file type
+        '500':
+          description: Server error
           
   /api/knowledge/collections:
     get:
@@ -1123,5 +1346,43 @@ paths:
             application/json:
               schema:
                 $ref: './schemas/knowledge.yaml#/components/schemas/KnowledgeCollectionsResponse'
+        '500':
+          description: Server error
+          
+    post:
+      tags:
+        - Knowledge
+      summary: Create knowledge collection
+      description: Creates a new collection in the knowledge base
+      operationId: createKnowledgeCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Collection name
+                description:
+                  type: string
+                  description: Collection description
+      responses:
+        '201':
+          description: Collection created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  status:
+                    type: string
+        '400':
+          description: Invalid request or collection already exists
         '500':
           description: Server error

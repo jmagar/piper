@@ -23,11 +23,19 @@ interface UserAlert {
 }
 
 /**
+ * Props for the AlertsSection component
+ */
+interface AlertsSectionProps {
+  /** When true, displays a compact version of the component */
+  compact?: boolean;
+}
+
+/**
  * AlertsSection Component
  * 
  * Displays user notifications and system alerts
  */
-export function AlertsSection() {
+export function AlertsSection({ compact = false }: AlertsSectionProps) {
   // Mock data - in a real implementation, these would be fetched from an API
   const [alerts, setAlerts] = React.useState<UserAlert[]>([
     {
@@ -132,6 +140,39 @@ export function AlertsSection() {
     return (
       <div className="p-4 text-center text-muted-foreground">
         You have no notifications
+      </div>
+    );
+  }
+
+  // Compact view for small card
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Notifications</h3>
+          <span className="text-xs text-muted-foreground">
+            {unreadAlerts.length} unread
+          </span>
+        </div>
+        <div className="space-y-2">
+          {alerts.slice(0, 3).map((alert) => (
+            <div 
+              key={alert.id} 
+              className={`relative px-2 py-1 border-l-2 ${getAlertClass(alert.type)} rounded-sm ${!alert.read ? 'bg-muted/30' : ''}`}
+            >
+              <div className="flex items-center">
+                {getAlertIcon(alert.type)}
+                <span className={`ml-1 text-sm truncate ${!alert.read ? 'font-medium' : ''}`}>
+                  {alert.title}
+                </span>
+              </div>
+              <div className="flex items-center mt-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3 mr-1" />
+                {formatRelativeTime(alert.timestamp)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AppLayout } from '@/components/layout/app-layout';
 
 /**
  * MCP section layout
@@ -10,8 +11,10 @@ export default function McpLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="flex-1">{children}</main>
-    </div>
+    <AppLayout title="MCP Servers">
+      <div className="container py-4">
+        {children}
+      </div>
+    </AppLayout>
   );
 } 

@@ -1,101 +1,57 @@
 "use client";
 
-import * as React from 'react';
-import { 
-  MessageSquare, 
-  Bot, 
-  Wrench, 
-  FileUp, 
-  FileDown, 
+import { useState } from "react";
+import {
+  MessageSquare,
+  FileText,
+  Settings,
+  Bot,
   Search,
-  File,
   Clock
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-/**
- * Props for the ActivityLog component
- */
-interface ActivityLogProps {
-  /** Maximum number of activities to display */
-  limit?: number;
-  /** When true, displays a compact version of the component */
-  compact?: boolean;
-}
-
-type ActivityType = 'chat' | 'tool' | 'document' | 'login' | 'system' | 'search';
-
+// Type definition for activity item
 interface Activity {
   id: string;
-  type: ActivityType;
+  type: 'chat' | 'tool' | 'document' | 'search' | 'system' | 'login';
   description: string;
   timestamp: string;
   details?: Record<string, any>;
 }
 
+// Props for the ActivityLog component
+interface ActivityLogProps {
+  limit?: number;
+  compact?: boolean;
+}
+
+// Mock data - in a real implementation, these would be fetched from an API
+const mockActivities: Activity[] = [
+  {
+    id: '1',
+    type: 'chat',
+    description: 'Started new conversation "Project Planning"',
+    timestamp: '2024-03-03T16:45:22Z',
+    details: { chatId: '123', messageCount: 5 }
+  },
+  {
+    id: '2',
+    type: 'tool',
+    description: 'Used Web Search tool',
+    timestamp: '2024-03-03T16:30:15Z',
+    details: { toolId: '1', serverId: '1' }
+  },
+  // ... existing mock data ...
+];
+
 /**
  * ActivityLog Component
- * 
  * Displays a log of user activity
  */
-export function ActivityLog({ limit = 10, compact = false }: ActivityLogProps) {
-  // Mock data - in a real implementation, these would be fetched from an API with user-specific data
-  const [activities, setActivities] = React.useState<Activity[]>([
-    {
-      id: '1',
-      type: 'chat',
-      description: 'Started new conversation "Project Planning"',
-      timestamp: '2024-03-03T16:45:22Z',
-      details: { chatId: '123', messageCount: 5 }
-    },
-    {
-      id: '2',
-      type: 'tool',
-      description: 'Used Web Search tool',
-      timestamp: '2024-03-03T16:30:15Z',
-      details: { toolId: '1', serverId: '1' }
-    },
-    {
-      id: '3',
-      type: 'document',
-      description: 'Uploaded "Market Analysis.pdf"',
-      timestamp: '2024-03-03T15:45:33Z',
-      details: { documentId: '456', size: 1240000 }
-    },
-    {
-      id: '4',
-      type: 'search',
-      description: 'Searched for "quarterly report template"',
-      timestamp: '2024-03-03T14:22:18Z'
-    },
-    {
-      id: '5',
-      type: 'tool',
-      description: 'Used Code Interpreter tool',
-      timestamp: '2024-03-03T13:15:22Z',
-      details: { toolId: '3', serverId: '2' }
-    },
-    {
-      id: '6',
-      type: 'chat',
-      description: 'Continued conversation "API Documentation"',
-      timestamp: '2024-03-03T11:30:45Z',
-      details: { chatId: '456', messageCount: 8 }
-    },
-    {
-      id: '7',
-      type: 'document',
-      description: 'Downloaded "Financial Report.xlsx"',
-      timestamp: '2024-03-03T10:05:12Z'
-    },
-    {
-      id: '8',
-      type: 'system',
-      description: 'Updated OpenAI API key',
-      timestamp: '2024-03-02T17:30:45Z'
-    }
-  ]);
+export function ActivityLog({ limit = 5, compact = false }: ActivityLogProps) {
+  const [activities] = useState<Activity[]>(mockActivities);
 
   // Sort activities by timestamp (newest first)
   const sortedActivities = [...activities].sort((a, b) => 
@@ -123,14 +79,14 @@ export function ActivityLog({ limit = 10, compact = false }: ActivityLogProps) {
   };
 
   // Get the icon for each activity type
-  const getActivityIcon = (type: ActivityType) => {
+  const getActivityIcon = (type: 'chat' | 'tool' | 'document' | 'search' | 'system' | 'login') => {
     switch (type) {
       case 'chat':
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
       case 'tool':
-        return <Wrench className="h-4 w-4 text-amber-500" />;
+        return <Settings className="h-4 w-4 text-amber-500" />;
       case 'document':
-        return <File className="h-4 w-4 text-green-500" />;
+        return <FileText className="h-4 w-4 text-green-500" />;
       case 'login':
         return <Bot className="h-4 w-4 text-purple-500" />;
       case 'system':
@@ -143,7 +99,7 @@ export function ActivityLog({ limit = 10, compact = false }: ActivityLogProps) {
   };
 
   // Get the badge for each activity type
-  const getActivityBadge = (type: ActivityType) => {
+  const getActivityBadge = (type: 'chat' | 'tool' | 'document' | 'search' | 'system' | 'login') => {
     switch (type) {
       case 'chat':
         return <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">Chat</Badge>;

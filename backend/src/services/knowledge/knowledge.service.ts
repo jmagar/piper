@@ -358,4 +358,140 @@ export class KnowledgeService {
   }
 }
 
-export const knowledgeService = new KnowledgeService(); 
+export const knowledgeService = new KnowledgeService();
+
+/**
+ * Get document statistics from Qdrant
+ * @returns DocumentStats with counts and collection info
+ */
+export async function getDocumentStats(): Promise<{
+  totalDocuments: number;
+  recentDocuments: number;
+  collections: { name: string; count: number }[];
+  totalCollections: number;
+  recentlyAccessed?: { id: string; title: string; timestamp: string };
+  mostAccessed?: { id: string; title: string; accessCount: number };
+  topTags: { tag: string; count: number }[];
+}> {
+  try {
+    // Connect to Qdrant and get document stats
+    const client = await getQdrantClient();
+    
+    // Get collections
+    const collectionsResponse = await client.getCollections();
+    const collections = collectionsResponse.collections || [];
+    const knowledgeCollections = collections.filter((c: { name: string }) => 
+      !c.name.startsWith('_') && c.name !== 'system'
+    );
+    
+    // Initialize stats object
+    const stats = {
+      totalDocuments: 0,
+      recentDocuments: 0,
+      collections: [] as { name: string; count: number }[],
+      totalCollections: knowledgeCollections.length,
+      topTags: [] as { tag: string; count: number }[]
+    };
+    
+    // Collect stats from each collection
+    for (const collection of knowledgeCollections) {
+      try {
+        // Get collection info
+        const collectionInfo = await client.getCollection(collection.name);
+        const count = collectionInfo.points_count || 0;
+        
+        stats.collections.push({
+          name: collection.name,
+          count
+        });
+        
+        stats.totalDocuments += count;
+        
+        // Get recent documents (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const recentFilter = {
+          must: [
+            {
+              key: "created_at",
+              range: {
+                gt: sevenDaysAgo.toISOString()
+              }
+            }
+          ]
+        };
+        
+        const recentCount = await client.count(collection.name, {
+          filter: recentFilter
+        });
+        
+        stats.recentDocuments += recentCount.count;
+        
+        // Get tags
+        const tagsResponse = await client.scroll(collection.name, {
+          limit: 100,
+          with_payload: {
+            include: ["tags"]
+          }
+        });
+        
+        // Extract and count tags
+        const tagCounts: Record<string, number> = {};
+        tagsResponse.points.forEach((point: any) => {
+          const tags = point.payload?.tags as string[] || [];
+          tags.forEach(tag => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        });
+        
+        // Merge with existing tags
+        Object.entries(tagCounts).forEach(([tag, count]) => {
+          const existingTag = stats.topTags.find(t => t.tag === tag);
+          if (existingTag) {
+            existingTag.count += count;
+          } else {
+            stats.topTags.push({ tag, count });
+          }
+        });
+      } catch (error) {
+        console.error(`Error getting stats for collection ${collection.name}:`, error);
+      }
+    }
+    
+    // Sort collections by size
+    stats.collections.sort((a, b) => b.count - a.count);
+    
+    // Sort and limit top tags
+    stats.topTags.sort((a, b) => b.count - a.count);
+    stats.topTags = stats.topTags.slice(0, 10);
+    
+    return stats;
+  } catch (error) {
+    console.error('Error getting document stats:', error);
+    // Return fallback stats if there's an error
+    return {
+      totalDocuments: 0,
+      recentDocuments: 0,
+      collections: [],
+      totalCollections: 0,
+      topTags: []
+    };
+  }
+}
+
+// Helper function to get Qdrant client
+async function getQdrantClient() {
+  const { QdrantClient } = await import('@qdrant/js-client-rest');
+  
+  // Get connection details from environment or config
+  const url = process.env.QDRANT_URL || 'http://localhost:6333';
+  const apiKey = process.env.QDRANT_API_KEY;
+  
+  const clientConfig: { url: string; apiKey?: string } = { url };
+  if (apiKey) {
+    clientConfig.apiKey = apiKey;
+  }
+  
+  return new QdrantClient(clientConfig);
+} 

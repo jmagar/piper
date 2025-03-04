@@ -63,4 +63,47 @@ router.get('/documents', async (req: Request, res: Response) => {
   }
 });
 
+// Add a new endpoint for knowledge stats
+router.get('/stats', async (req, res) => {
+  try {
+    // This would be implemented to connect to Qdrant in a real app
+    // For now, we'll return mock data that matches our schema
+    const stats = {
+      totalDocuments: 23,
+      recentDocuments: 8,
+      collections: [
+        { name: 'Documentation', count: 12 },
+        { name: 'Research', count: 5 },
+        { name: 'Projects', count: 4 },
+        { name: 'General', count: 2 }
+      ],
+      totalCollections: 4,
+      recentlyAccessed: {
+        id: 'doc-123',
+        title: 'Project Requirements',
+        timestamp: new Date().toISOString()
+      },
+      mostAccessed: {
+        id: 'doc-456',
+        title: 'API Documentation',
+        accessCount: 24
+      },
+      topTags: [
+        { tag: 'api', count: 8 },
+        { tag: 'code', count: 6 },
+        { tag: 'documentation', count: 5 },
+        { tag: 'research', count: 4 },
+        { tag: 'project', count: 3 }
+      ]
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting knowledge stats:', error);
+    res.status(500).json({ 
+      error: 'Failed to get knowledge statistics' 
+    });
+  }
+});
+
 export default router; 

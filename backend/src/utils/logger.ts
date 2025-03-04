@@ -3,74 +3,27 @@
  * Provides a class-based interface for logging with namespaces
  */
 
-import debugModule from 'debug';
+import winston from 'winston';
 
-/**
- * Logger class for consistent logging with namespaces
- */
-export class Logger {
-  private _namespace: string;
-  private debugLogger: debugModule.Debugger;
-  private errorLogger: debugModule.Debugger;
+// Create logger
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json(),
+  ),
+  defaultMeta: { service: 'pooper-api' },
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+          return `[${timestamp}] ${level}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        }),
+      ),
+    }),
+  ],
+});
 
-  /**
-   * Create a new logger with the specified namespace
-   * @param namespace The namespace for this logger instance
-   */
-  constructor(namespace: string) {
-    this._namespace = namespace;
-    this.debugLogger = debugModule(namespace);
-    
-    // Configure error logger to use stderr
-    this.errorLogger = debugModule(`${namespace}:error`);
-    this.errorLogger.log = console.error.bind(console);
-    
-    // Ensure regular logs go to stdout
-    this.debugLogger.log = console.info.bind(console);
-  }
-
-  /**
-   * Get the namespace for this logger
-   */
-  get namespace(): string {
-    return this._namespace;
-  }
-
-  /**
-   * Log informational message
-   * @param message The message to log
-   * @param args Additional arguments to log
-   */
-  info(message: string, ...args: any[]): void {
-    this.debugLogger(message, ...args);
-  }
-
-  /**
-   * Log warning message
-   * @param message The message to log
-   * @param args Additional arguments to log
-   */
-  warn(message: string, ...args: any[]): void {
-    this.debugLogger(`⚠️ ${message}`, ...args);
-  }
-
-  /**
-   * Log error message
-   * @param message The message to log
-   * @param args Additional arguments to log
-   */
-  error(message: string, ...args: any[]): void {
-    this.errorLogger(message, ...args);
-  }
-
-  /**
-   * Log debug message
-   * @param message The message to log
-   * @param args Additional arguments to log
-   */
-  debug(message: string, ...args: any[]): void {
-    this.debugLogger(`🔍 ${message}`, ...args);
-  }
-}
-
-export default Logger; 
+export { logger }; 

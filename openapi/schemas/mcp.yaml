@@ -112,6 +112,36 @@ paths:
               schema:
                 $ref: '../main.yaml#/components/responses/ApiError'
 
+  /tools/list:
+    get:
+      summary: List available tools
+      description: Returns a list of available tools exposed by this MCP server
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tools:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: The name of the tool
+                        description:
+                          type: string
+                          description: Description of what the tool does
+                        parameters:
+                          type: object
+                          description: Parameters the tool accepts
+                        return_type:
+                          type: string
+                          description: The type of value returned by the tool
+
 components:
   schemas:
     LogEntry:

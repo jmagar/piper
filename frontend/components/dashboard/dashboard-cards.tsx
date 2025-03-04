@@ -1,15 +1,13 @@
 "use client";
 
-import * as React from 'react';
-import { 
-  MessageSquare, 
-  Bot, 
-  Wrench, 
-  BookOpen, 
-  AlertCircle, 
-  FileText 
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import {
+  User,
+  MessagesSquare,
+  CircleUser,
+  Clock,
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * Props for the DashboardCards component
@@ -25,14 +23,12 @@ interface DashboardCardsProps {
  * Displays a grid of cards with key metrics for the dashboard
  */
 export function DashboardCards({ className }: DashboardCardsProps) {
-  // In a real implementation, these would be fetched from an API
-  const [stats, setStats] = React.useState({
+  const [stats] = useState({
     totalMessages: 1248,
     totalChats: 36,
     mcpServers: 4,
     mcpTools: 12,
     documents: 156,
-    alerts: 2,
     prompts: 27
   });
 
@@ -43,7 +39,7 @@ export function DashboardCards({ className }: DashboardCardsProps) {
           <CardTitle className="text-sm font-medium">
             Total Messages
           </CardTitle>
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <MessagesSquare className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalMessages}</div>
@@ -58,7 +54,7 @@ export function DashboardCards({ className }: DashboardCardsProps) {
           <CardTitle className="text-sm font-medium">
             MCP Servers
           </CardTitle>
-          <Bot className="h-4 w-4 text-muted-foreground" />
+          <CircleUser className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.mcpServers}</div>
@@ -73,7 +69,7 @@ export function DashboardCards({ className }: DashboardCardsProps) {
           <CardTitle className="text-sm font-medium">
             Knowledge Base
           </CardTitle>
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.documents}</div>
@@ -88,7 +84,7 @@ export function DashboardCards({ className }: DashboardCardsProps) {
           <CardTitle className="text-sm font-medium">
             Prompts 
           </CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <User className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.prompts}</div>

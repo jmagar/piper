@@ -1,88 +1,497 @@
+openapi: 3.0.0
+info:
+  title: Dashboard API
+  version: 1.0.0
+  description: API for dashboard components and data
+
+components:
+  schemas:
+    Document:
+      type: object
+      required:
+        - id
+        - title
+        - type
+        - path
+        - size
+        - collections
+        - accessCount
+        - addedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the document
+        title:
+          type: string
+          description: Title of the document
+        type:
+          type: string
+          description: Document type (PDF, Word, Text, etc.)
+        path:
+          type: string
+          description: Path to the document
+        size:
+          type: integer
+          description: Size of the document in bytes
+        collections:
+          type: array
+          items:
+            type: string
+          description: Collections/categories the document belongs to
+        accessCount:
+          type: integer
+          description: Number of times the document has been accessed
+        addedAt:
+          type: string
+          format: date-time
+          description: When the document was added
+        lastAccessed:
+          type: string
+          format: date-time
+          description: When the document was last accessed
+        userId:
+          type: string
+          description: ID of the user who owns the document
+
+    DocumentAccess:
+      type: object
+      required:
+        - id
+        - documentId
+        - userId
+        - accessedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the access record
+        documentId:
+          type: string
+          description: ID of the document that was accessed
+        userId:
+          type: string
+          description: ID of the user who accessed the document
+        accessedAt:
+          type: string
+          format: date-time
+          description: When the document was accessed
+
+    Alert:
+      type: object
+      required:
+        - id
+        - type
+        - title
+        - message
+        - read
+        - timestamp
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the alert
+        type:
+          type: string
+          enum: [error, warning, info, success]
+          description: Type of alert
+        title:
+          type: string
+          description: Alert title
+        message:
+          type: string
+          description: Alert message content
+        read:
+          type: boolean
+          description: Whether the alert has been read
+        timestamp:
+          type: string
+          format: date-time
+          description: When the alert was created
+        userId:
+          type: string
+          description: ID of the user the alert is for
+
+    Activity:
+      type: object
+      required:
+        - id
+        - type
+        - description
+        - timestamp
+        - userId
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the activity
+        type:
+          type: string
+          enum: [chat, tool, document, login, system, search]
+          description: Type of activity
+        description:
+          type: string
+          description: Description of the activity
+        details:
+          type: object
+          description: Additional details about the activity
+        timestamp:
+          type: string
+          format: date-time
+          description: When the activity occurred
+        userId:
+          type: string
+          description: ID of the user who performed the activity
+
+    McpServerStats:
+      type: object
+      required:
+        - servers
+        - totalTools
+        - totalRequests
+        - successRate
+      properties:
+        servers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+                enum: [online, offline, error]
+              lastUsed:
+                type: string
+                format: date-time
+              toolCount:
+                type: integer
+              usageCount:
+                type: integer
+        totalTools:
+          type: integer
+          description: Total number of available tools
+        totalRequests:
+          type: integer
+          description: Total number of tool requests
+        successRate:
+          type: number
+          format: float
+          description: Success rate of tool requests
+        topTools:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              serverId:
+                type: string
+              usageCount:
+                type: integer
+              lastUsed:
+                type: string
+                format: date-time
+
+    DashboardSummary:
+      type: object
+      properties:
+        recentActivities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activity'
+        unreadAlerts:
+          type: integer
+          description: Number of unread alerts
+        documentCount:
+          type: integer
+          description: Total number of documents
+        promptCount:
+          type: integer
+          description: Total number of prompt templates
+        conversations:
+          type: object
+          properties:
+            total:
+              type: integer
+            today:
+              type: integer
+            active:
+              type: integer
+        serverStatus:
+          type: object
+          properties:
+            online:
+              type: integer
+            offline:
+              type: integer
+            error:
+              type: integer
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+
 paths:
-  /dashboard/stats:
+  /api/dashboard/summary:
     get:
-      summary: Get server stats
-      description: Returns various server statistics and metrics
-      operationId: getServerStats
-      tags:
-        - Dashboard
+      summary: Get dashboard summary
+      description: Returns a summary of key metrics for the dashboard
       responses:
         '200':
-          description: Server stats retrieved successfully
+          description: Dashboard summary
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  uptime:
-                    type: number
-                    description: Server uptime in seconds
-                  totalRequests:
-                    type: number
-                    description: Total number of requests processed
-                  activeConnections:
-                    type: number
-                    description: Current number of active connections
-                  memoryUsage:
-                    type: object
-                    properties:
-                      heapTotal:
-                        type: number
-                        description: Total size of the heap in bytes
-                      heapUsed:
-                        type: number
-                        description: Actual memory used in bytes
-                      external:
-                        type: number
-                        description: Memory used by external resources
-                      rss:
-                        type: number
-                        description: Resident Set Size in bytes
-                  systemLoad:
-                    type: array
-                    items:
-                      type: number
-                    description: System load averages for 1, 5, and 15 minutes
-                  cpuUsage:
-                    type: object
-                    properties:
-                      user:
-                        type: number
-                        description: CPU time spent in user code
-                      system:
-                        type: number
-                        description: CPU time spent in system code
-                  lastError:
-                    type: object
-                    nullable: true
-                    properties:
-                      message:
-                        type: string
-                      timestamp:
-                        type: string
-                        format: date-time
-                required:
-                  - uptime
-                  - totalRequests
-                  - activeConnections
-                  - memoryUsage
-                  - systemLoad
-                  - cpuUsage
+                $ref: '#/components/schemas/DashboardSummary'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '500':
-          description: Internal server error
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/documents:
+    get:
+      summary: Get document statistics
+      description: Returns document statistics and recent documents
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of documents to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of documents to skip
+      responses:
+        '200':
+          description: Document statistics
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
-                    type: string 
+                  documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  count:
+                    type: integer
+                    description: Total number of documents
+                  recentlyAccessed:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  typeBreakdown:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: Breakdown of documents by type
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/mcp-servers:
+    get:
+      summary: Get MCP server statistics
+      description: Returns statistics about MCP servers and tools
+      responses:
+        '200':
+          description: MCP server statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpServerStats'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/alerts:
+    get:
+      summary: Get alerts
+      description: Returns system alerts for the current user
+      parameters:
+        - name: read
+          in: query
+          schema:
+            type: boolean
+          description: Filter by read status
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [error, warning, info, success]
+          description: Filter by alert type
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of alerts to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of alerts to skip
+      responses:
+        '200':
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  count:
+                    type: integer
+                    description: Total number of alerts matching the filters
+                  unreadCount:
+                    type: integer
+                    description: Number of unread alerts
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/alerts/{id}/read:
+    post:
+      summary: Mark an alert as read
+      description: Marks an alert with the specified ID as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the alert
+      responses:
+        '200':
+          description: Alert marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          description: Alert not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/alerts/{id}:
+    delete:
+      summary: Delete an alert
+      description: Deletes an alert with the specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the alert
+      responses:
+        '204':
+          description: Alert deleted
+        '404':
+          description: Alert not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/dashboard/activity:
+    get:
+      summary: Get user activity log
+      description: Returns the activity log for the current user
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [chat, tool, document, login, system, search]
+          description: Filter by activity type
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter activities after this date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter activities before this date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of activities to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of activities to skip
+      responses:
+        '200':
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+                  count:
+                    type: integer
+                    description: Total number of activities matching the filters
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 

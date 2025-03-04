@@ -4,6 +4,8 @@ import * as React from 'react';
 import { BookOpen, FilePlus, Clock, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * Props for the DocumentStats component
@@ -11,17 +13,17 @@ import { Badge } from '@/components/ui/badge';
 interface DocumentStatsProps {
   /** When true, displays a compact version of the component */
   compact?: boolean;
+  limit?: number;
 }
 
-interface Document {
-  id: string;
-  title: string;
-  type: string;
-  addedAt: string;
-  accessCount: number;
-  lastAccessed: string;
-  size: number;
-  collections: string[];
+interface DocumentStats {
+  totalDocuments: number;
+  recentDocuments: number;
+  collections: { name: string; count: number }[];
+  totalCollections: number;
+  recentlyAccessed?: { id: string; title: string; timestamp: string };
+  mostAccessed?: { id: string; title: string; accessCount: number };
+  topTags: { tag: string; count: number }[];
 }
 
 /**
@@ -29,119 +31,87 @@ interface Document {
  * 
  * Displays statistics about the user's knowledge base documents
  */
-export function DocumentStats({ compact = false }: DocumentStatsProps) {
-  // Mock data - in a real implementation, these would be fetched from an API with user-specific data
-  const [documents, setDocuments] = React.useState<Document[]>([
-    {
-      id: '1',
-      title: 'Project Requirements.docx',
-      type: 'document',
-      addedAt: '2024-03-01T12:30:45Z',
-      accessCount: 12,
-      lastAccessed: '2024-03-03T09:15:22Z',
-      size: 1240000,
-      collections: ['Work', 'Projects']
-    },
-    {
-      id: '2',
-      title: 'Research Paper.pdf',
-      type: 'pdf',
-      addedAt: '2024-03-02T15:22:33Z',
-      accessCount: 8,
-      lastAccessed: '2024-03-03T14:12:05Z',
-      size: 2450000,
-      collections: ['Research', 'Academic']
-    },
-    {
-      id: '3',
-      title: 'Meeting Notes.md',
-      type: 'markdown',
-      addedAt: '2024-03-03T09:45:12Z',
-      accessCount: 5,
-      lastAccessed: '2024-03-03T16:30:45Z',
-      size: 45000,
-      collections: ['Work', 'Meetings']
-    },
-    {
-      id: '4',
-      title: 'Product Roadmap.xlsx',
-      type: 'spreadsheet',
-      addedAt: '2024-02-28T11:15:33Z',
-      accessCount: 10,
-      lastAccessed: '2024-03-02T10:05:18Z',
-      size: 890000,
-      collections: ['Work', 'Planning']
-    },
-    {
-      id: '5',
-      title: 'API Documentation.md',
-      type: 'markdown',
-      addedAt: '2024-03-02T08:30:15Z',
-      accessCount: 15,
-      lastAccessed: '2024-03-03T13:45:22Z',
-      size: 120000,
-      collections: ['Technical', 'Documentation']
-    }
-  ]);
+export function DocumentStats({ limit = 5, compact = false }: DocumentStatsProps) {
+  const [stats, setStats] = useState<DocumentStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Recently added documents (last 7 days)
-  const recentDocuments = documents.filter(doc => {
-    const addedDate = new Date(doc.addedAt);
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return addedDate >= sevenDaysAgo;
-  });
-
-  // Most accessed documents
-  const mostAccessedDocuments = [...documents].sort((a, b) => b.accessCount - a.accessCount);
-
-  // Get collections from documents
-  const collections = Array.from(new Set(documents.flatMap(doc => doc.collections)));
+  useEffect(() => {
+    const fetchDocumentStats = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch('/api/knowledge/stats');
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch document stats: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setStats(data);
+      } catch (err) {
+        console.error('Error fetching document stats:', err);
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDocumentStats();
+  }, []);
 
   // Format date to a more readable format
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'Unknown';
+    
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
   };
 
-  // Format file size to a more readable format
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-32 my-2" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+    );
+  }
 
-  // Get most accessed document
-  const mostAccessedDocument = React.useMemo(() => {
-    if (documents.length === 0) return null;
-    return [...documents].sort((a, b) => b.accessCount - a.accessCount)[0];
-  }, [documents]);
-
-  // Find the most recently accessed document
-  const mostRecentlyAccessed = React.useMemo(() => {
-    if (documents.length === 0) return null;
-    return [...documents].sort((a, b) => 
-      new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime()
-    )[0];
-  }, [documents]);
+  if (error || !stats) {
+    return (
+      <div className="text-sm text-muted-foreground p-2">
+        <p>Unable to load document statistics</p>
+        {error && <p className="text-xs mt-1">{error}</p>}
+      </div>
+    );
+  }
 
   if (compact) {
     return (
       <div className="space-y-2">
         <h3 className="font-medium">Your Documents</h3>
         <div className="space-y-1">
-          {recentDocuments.slice(0, 3).map(doc => (
-            <div key={doc.id} className="flex items-center justify-between">
+          {stats.collections.slice(0, 3).map(collection => (
+            <div key={collection.name} className="flex items-center justify-between">
               <div className="flex items-center">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
-                <span className="ml-2 text-sm truncate max-w-[160px]">{doc.title}</span>
+                <span className="ml-2 text-sm truncate max-w-[160px]">{collection.name}</span>
               </div>
-              <span className="text-xs text-muted-foreground">{formatDate(doc.addedAt)}</span>
+              <span className="text-xs text-muted-foreground">{collection.count} docs</span>
             </div>
           ))}
         </div>
         <div className="mt-3 text-xs text-muted-foreground">
-          {documents.length} documents in {collections.length} collections
+          {stats.totalDocuments} documents in {stats.totalCollections} collections
         </div>
       </div>
     );
@@ -158,9 +128,9 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{documents.length}</div>
+            <div className="text-2xl font-bold">{stats.totalDocuments}</div>
             <p className="text-xs text-muted-foreground">
-              In {collections.length} collections
+              In {stats.totalCollections} collections
             </p>
           </CardContent>
         </Card>
@@ -173,7 +143,7 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
             <FilePlus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recentDocuments.length}</div>
+            <div className="text-2xl font-bold">{stats.recentDocuments}</div>
             <p className="text-xs text-muted-foreground">
               Documents added in the last 7 days
             </p>
@@ -188,17 +158,17 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
             <Search className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {mostAccessedDocument ? (
+            {stats.mostAccessed ? (
               <>
-                <div className="text-2xl font-bold">
-                  {mostAccessedDocument.title.substring(0, 15)}...
+                <div className="text-2xl font-bold truncate">
+                  {stats.mostAccessed.title}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {mostAccessedDocument.accessCount} accesses
+                  {stats.mostAccessed.accessCount} accesses
                 </p>
               </>
             ) : (
-              <div className="text-sm text-muted-foreground">No documents yet</div>
+              <div className="text-sm text-muted-foreground">No data available</div>
             )}
           </CardContent>
         </Card>
@@ -211,17 +181,17 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {mostRecentlyAccessed ? (
+            {stats.recentlyAccessed ? (
               <>
                 <div className="text-2xl font-bold">
-                  {formatDate(mostRecentlyAccessed.lastAccessed)}
+                  {formatDate(stats.recentlyAccessed.timestamp)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Last document access
                 </p>
               </>
             ) : (
-              <div className="text-sm text-muted-foreground">No documents yet</div>
+              <div className="text-sm text-muted-foreground">No recent activity</div>
             )}
           </CardContent>
         </Card>
@@ -230,29 +200,23 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recently Added Documents</CardTitle>
+            <CardTitle>Collections</CardTitle>
             <CardDescription>
-              Documents you've added to your knowledge base
+              Document collections in your knowledge base
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentDocuments.map(doc => (
-                <div key={doc.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+              {stats.collections.map(collection => (
+                <div key={collection.name} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                   <div>
                     <div className="flex items-center">
                       <BookOpen className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium">{doc.title}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Added: {formatDate(doc.addedAt)}
+                      <span className="font-medium">{collection.name}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <Badge variant="outline">{doc.type}</Badge>
-                    <span className="mt-1 text-xs text-muted-foreground">
-                      {formatFileSize(doc.size)}
-                    </span>
+                    <Badge variant="outline">{collection.count} documents</Badge>
                   </div>
                 </div>
               ))}
@@ -262,30 +226,25 @@ export function DocumentStats({ compact = false }: DocumentStatsProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Most Accessed Documents</CardTitle>
+            <CardTitle>Popular Tags</CardTitle>
             <CardDescription>
-              Your frequently accessed knowledge base documents
+              Most used tags across your knowledge base
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mostAccessedDocuments.slice(0, 5).map(doc => (
-                <div key={doc.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <div className="flex items-center">
-                      <BookOpen className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium">{doc.title}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Last accessed: {formatDate(doc.lastAccessed)}
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium">{doc.accessCount}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">accesses</span>
-                  </div>
+              {stats.topTags.map(tag => (
+                <div key={tag.tag} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                  <span className="font-medium">{tag.tag}</span>
+                  <span className="text-sm text-muted-foreground">{tag.count} documents</span>
                 </div>
               ))}
+              
+              {stats.topTags.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No tags found
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -29868,3 +29868,1868 @@ ERROR: (node:1553669) [DEP0060] DeprecationWarning: The `util._extend` API is de
 
  [32m[1m✓[22m[39m Compiled in 229ms (613 modules)
 
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1850ms
+
+ERROR: (node:1818404) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 2.7s (1336 modules)
+
+ GET /chat/new [32m200[39m in 3641ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1335ms (1354 modules)
+
+ GET /avatars/user.png [33m404[39m in 1580ms
+
+ GET /chat/new [32m200[39m in 263ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 2.8s (1765 modules)
+
+ GET /chat/new [32m200[39m in 1528ms
+
+ GET /chat/new [32m200[39m in 19ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 517ms (831 modules)
+
+ GET /chat/new [32m200[39m in 39ms
+
+ [32m[1m✓[22m[39m Compiled in 259ms (831 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 344ms (831 modules)
+
+ GET /chat/new [32m200[39m in 39ms
+
+ [32m[1m✓[22m[39m Compiled in 227ms (831 modules)
+
+ GET /chat/new [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 257ms (831 modules)
+
+ GET /chat/new [32m200[39m in 79ms
+
+ [32m[1m✓[22m[39m Compiled in 143ms (831 modules)
+
+ GET /chat/new [32m200[39m in 18ms
+
+ [32m[1m✓[22m[39m Compiled in 198ms (831 modules)
+
+ GET /chat/new [32m200[39m in 13ms
+
+ [32m[1m✓[22m[39m Compiled in 189ms (831 modules)
+
+ GET /chat/new [32m200[39m in 21ms
+
+ [32m[1m✓[22m[39m Compiled in 1291ms (1685 modules)
+
+ GET /chat/new [32m200[39m in 176ms
+
+ [32m[1m✓[22m[39m Compiled in 904ms (1685 modules)
+
+ GET /chat/new [32m200[39m in 130ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 622ms (1761 modules)
+
+ [32m[1m✓[22m[39m Compiled in 312ms (832 modules)
+
+ GET /chat/new [32m200[39m in 122ms
+
+ [32m[1m✓[22m[39m Compiled in 191ms (831 modules)
+
+ GET /chat/new [32m200[39m in 31ms
+
+ [32m[1m✓[22m[39m Compiled in 252ms (831 modules)
+
+ GET /chat/new [32m200[39m in 53ms
+
+ [32m[1m✓[22m[39m Compiled in 241ms (831 modules)
+
+ GET /chat/new [32m200[39m in 44ms
+
+ [32m[1m✓[22m[39m Compiled in 260ms (831 modules)
+
+ GET /chat/new [32m200[39m in 38ms
+
+ [32m[1m✓[22m[39m Compiled in 247ms (831 modules)
+
+ GET /chat/new [32m200[39m in 26ms
+
+ [32m[1m✓[22m[39m Compiled in 235ms (831 modules)
+
+ GET /chat/new [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 189ms (831 modules)
+
+ GET /chat/new [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 205ms (831 modules)
+
+ GET /chat/new [32m200[39m in 21ms
+
+ [32m[1m✓[22m[39m Compiled in 243ms (831 modules)
+
+ GET /chat/new [32m200[39m in 41ms
+
+ [32m[1m✓[22m[39m Compiled in 256ms (831 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 273ms (831 modules)
+
+ GET /chat/new [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 261ms (831 modules)
+
+ GET /chat/new [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 153ms (831 modules)
+
+ GET /chat/new [32m200[39m in 35ms
+
+ [32m[1m✓[22m[39m Compiled in 246ms (831 modules)
+
+ GET /chat/new [32m200[39m in 27ms
+
+ [32m[1m✓[22m[39m Compiled in 245ms (831 modules)
+
+ GET /chat/new [32m200[39m in 36ms
+
+ [32m[1m✓[22m[39m Compiled in 236ms (831 modules)
+
+ GET /chat/new [32m200[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 231ms (831 modules)
+
+ GET /chat/new [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 138ms (831 modules)
+
+ GET /chat/new [32m200[39m in 27ms
+
+ [32m[1m✓[22m[39m Compiled in 1451ms (1685 modules)
+
+ GET /chat/new [32m200[39m in 195ms
+
+ [32m[1m✓[22m[39m Compiled in 304ms (1685 modules)
+
+ GET /chat/new [32m200[39m in 144ms
+
+ [32m[1m✓[22m[39m Compiled in 409ms (1685 modules)
+
+ GET /chat/new [32m200[39m in 43ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 1229ms (1761 modules)
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 518ms (832 modules)
+
+ [32m[1m✓[22m[39m Compiled in 249ms (832 modules)
+
+ GET /chat/new [32m200[39m in 197ms
+
+ GET /chat/new [32m200[39m in 17ms
+
+ [32m[1m✓[22m[39m Compiled in 378ms (832 modules)
+
+ GET /chat/new [32m200[39m in 38ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 1020ms (1761 modules)
+
+ GET /chat/new [32m200[39m in 776ms
+
+ GET /chat/new [32m200[39m in 14ms
+
+ [32m[1m✓[22m[39m Compiled in 221ms (832 modules)
+
+ GET /chat/new [32m200[39m in 30ms
+
+ [32m[1m✓[22m[39m Compiled in 418ms (832 modules)
+
+ [32m[1m✓[22m[39m Compiled in 282ms (832 modules)
+
+ GET /chat/new [32m200[39m in 262ms
+
+ GET /chat/new [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 384ms (832 modules)
+
+ GET /chat/new [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 289ms (831 modules)
+
+ GET /chat/new [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 232ms (831 modules)
+
+ GET /chat/new [32m200[39m in 45ms
+
+ [32m[1m✓[22m[39m Compiled in 222ms (831 modules)
+
+ GET /chat/new [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 243ms (831 modules)
+
+ GET /chat/new [32m200[39m in 46ms
+
+ [32m[1m✓[22m[39m Compiled in 440ms (831 modules)
+
+ GET /chat/new [32m200[39m in 39ms
+
+ [32m[1m✓[22m[39m Compiled in 300ms (831 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 285ms (831 modules)
+
+ GET /chat/new [32m200[39m in 40ms
+
+ [32m[1m✓[22m[39m Compiled in 319ms (831 modules)
+
+ GET /chat/new [32m200[39m in 36ms
+
+ [32m[1m✓[22m[39m Compiled in 396ms (831 modules)
+
+ GET /chat/new [32m200[39m in 54ms
+
+ [32m[1m✓[22m[39m Compiled in 230ms (831 modules)
+
+ GET /chat/new [32m200[39m in 28ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled /_error in 453ms (1761 modules)
+
+ [32m[1m✓[22m[39m Compiled in 280ms (832 modules)
+
+ GET /chat/new [32m200[39m in 174ms
+
+ [32m[1m✓[22m[39m Compiled in 420ms (832 modules)
+
+ GET /chat/new [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 365ms (831 modules)
+
+ GET /chat/new [32m200[39m in 31ms
+
+ [32m[1m✓[22m[39m Compiled in 267ms (831 modules)
+
+ GET /chat/new [32m200[39m in 41ms
+
+ [32m[1m✓[22m[39m Compiled in 401ms (831 modules)
+
+ GET /chat/new [32m200[39m in 50ms
+
+ [32m[1m✓[22m[39m Compiled in 379ms (831 modules)
+
+ GET /chat/new [32m200[39m in 27ms
+
+ GET /chat/new [32m200[39m in 303ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 486ms (1675 modules)
+
+ GET /avatars/user.png [33m404[39m in 640ms
+
+ [32m[1m✓[22m[39m Compiled in 260ms (831 modules)
+
+ GET /chat/new [32m200[39m in 50ms
+
+ [37m[1m○[22m[39m Compiling /dashboard ...
+
+ [32m[1m✓[22m[39m Compiled /dashboard in 1363ms (1731 modules)
+
+ GET /dashboard [32m200[39m in 1670ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 294ms (1735 modules)
+
+ GET /avatars/user.png [33m404[39m in 435ms
+
+ [32m[1m✓[22m[39m Compiled in 1283ms (1751 modules)
+
+ GET /dashboard [32m200[39m in 144ms
+
+ [32m[1m✓[22m[39m Compiled in 386ms (1751 modules)
+
+ GET /dashboard [32m200[39m in 98ms
+
+ [32m[1m✓[22m[39m Compiled in 596ms (1751 modules)
+
+ GET /dashboard [32m200[39m in 64ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 825ms (1741 modules)
+
+ GET /prompts/create [33m404[39m in 893ms
+
+ GET /prompts/create [33m404[39m in 112ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts in 1587ms (1770 modules)
+
+ GET /chat/prompts [32m200[39m in 1979ms
+
+ GET /avatars/user.png [33m404[39m in 66ms
+
+ GET /prompts/create [33m404[39m in 29ms
+
+ GET /dashboard [32m200[39m in 154ms
+
+ GET /avatars/user.png [33m404[39m in 47ms
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ [32m[1m✓[22m[39m Compiled in 2.3s (1770 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ReferenceError: useState is not defined
+    at McpServerStats (components/dashboard/dashboard-layout.tsx:352:20)
+[0m [90m 350 |[39m [36mexport[39m [36mfunction[39m [33mMcpServerStats[39m({ compact [33m=[39m [36mfalse[39m }[33m:[39m [33mMcpServerStatsProps[39m) {[0m
+[0m [90m 351 |[39m   [90m// Use data from the configuration file rather than hardcoded mock data[39m[0m
+[0m[31m[1m>[22m[39m[90m 352 |[39m   [36mconst[39m [servers] [33m=[39m useState[33m<[39m[33mMcpServer[39m[][33m>[39m([[0m
+[0m [90m     |[39m                    [31m[1m^[22m[39m[0m
+[0m [90m 353 |[39m     {[0m
+[0m [90m 354 |[39m       id[33m:[39m [32m'1'[39m[33m,[39m[0m
+[0m [90m 355 |[39m       name[33m:[39m [32m'OpenAI Server'[39m[33m,[39m[0m {
+  digest: [32m'1400540182'[39m
+}
+
+ GET /dashboard [31m500[39m in 1741ms
+
+ [32m[1m✓[22m[39m Compiled in 402ms (870 modules)
+
+ GET /dashboard [32m200[39m in 22ms
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+
+ [32m[1m✓[22m[39m Compiled in 1080ms (1778 modules)
+
+ GET /dashboard [32m200[39m in 656ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 479ms (1768 modules)
+
+ GET /avatars/user.png [33m404[39m in 690ms
+
+ [32m[1m✓[22m[39m Compiled in 599ms (1782 modules)
+
+ GET /dashboard [32m200[39m in 69ms
+
+ [32m[1m✓[22m[39m Compiled in 1516ms (1780 modules)
+
+ GET /dashboard [32m200[39m in 104ms
+
+ GET /chat/new [32m200[39m in 349ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 612ms (1770 modules)
+
+ GET /avatars/user.png [33m404[39m in 738ms
+
+ GET / [33m404[39m in 13ms
+
+ GET /dashboard [32m200[39m in 288ms
+
+ GET /avatars/user.png [33m404[39m in 26ms
+
+ GET /dashboard [32m200[39m in 84ms
+
+ GET /avatars/user.png [33m404[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 766ms (1780 modules)
+
+ GET /dashboard [32m200[39m in 93ms
+
+ [32m[1m✓[22m[39m Compiled in 191ms (875 modules)
+
+ GET /dashboard [32m200[39m in 27ms
+
+ [32m[1m✓[22m[39m Compiled in 225ms (875 modules)
+
+ GET /dashboard [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 180ms (875 modules)
+
+ GET /dashboard [32m200[39m in 16ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 1094ms (1856 modules)
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current [Error: socket hang up] { code: [32m'ECONNRESET'[39m }
+
+ERROR: [Error: socket hang up] { code: [32m'ECONNRESET'[39m }
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current [Error: socket hang up] { code: [32m'ECONNRESET'[39m }
+
+ERROR: [Error: socket hang up] { code: [32m'ECONNRESET'[39m }
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 1229ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 117ms
+
+ [32m[1m✓[22m[39m Compiled in 493ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 133ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [32m[1m✓[22m[39m Compiled in 379ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 71ms
+
+ [32m[1m✓[22m[39m Compiled in 492ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 82ms
+
+ [32m[1m✓[22m[39m Compiled in 477ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 280ms (1870 modules)
+
+ GET /dashboard [32m200[39m in 38ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 318ms (1770 modules)
+
+ GET /prompts/prompt-2 [33m404[39m in 521ms
+
+ GET /prompts/prompt-2 [33m404[39m in 112ms
+
+ GET /dashboard [32m200[39m in 253ms
+
+ GET /avatars/user.png [33m404[39m in 37ms
+
+ GET /dashboard [32m200[39m in 62ms
+
+ GET /avatars/user.png [33m404[39m in 30ms
+
+ GET /knowledge/search [33m404[39m in 38ms
+
+ GET /knowledge/search [33m404[39m in 41ms
+
+ GET /knowledge/new [33m404[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 471ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 20ms
+
+ GET /knowledge/new [33m404[39m in 47ms
+
+ [32m[1m✓[22m[39m Compiled in 211ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 11ms
+
+ [32m[1m✓[22m[39m Compiled in 1000ms (1770 modules)
+
+ GET /knowledge/new [33m404[39m in 893ms
+
+ [32m[1m✓[22m[39m Compiled in 188ms (878 modules)
+
+ [32m[1m✓[22m[39m Compiled in 136ms (878 modules)
+
+ [32m[1m✓[22m[39m Compiled in 904ms (1770 modules)
+
+ GET /knowledge/new [33m404[39m in 775ms
+
+ GET /knowledge/new [33m404[39m in 23ms
+
+ GET /knowledge/new [33m404[39m in 17ms
+
+ GET /knowledge/new [33m404[39m in 65ms
+
+ [32m[1m✓[22m[39m Compiled in 184ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 18ms
+
+ GET /knowledge/new [33m404[39m in 45ms
+
+ GET /knowledge/new [33m404[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 170ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 18ms
+
+ GET /knowledge/new [33m404[39m in 50ms
+
+ GET /knowledge/new [33m404[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 257ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 24ms
+
+ GET /knowledge/new [33m404[39m in 42ms
+
+ [32m[1m✓[22m[39m Compiled in 195ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 13ms
+
+ GET /knowledge/new [33m404[39m in 36ms
+
+ [32m[1m✓[22m[39m Compiled in 616ms (1770 modules)
+
+ GET /knowledge/new [33m404[39m in 526ms
+
+ [32m[1m✓[22m[39m Compiled in 149ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 25ms
+
+ GET /knowledge/new [33m404[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 136ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 10ms
+
+ [32m[1m✓[22m[39m Compiled in 636ms (1770 modules)
+
+ GET /knowledge/new [33m404[39m in 719ms
+
+ [32m[1m✓[22m[39m Compiled in 358ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 45ms
+
+ GET /knowledge/new [33m404[39m in 80ms
+
+ GET /knowledge/new [33m404[39m in 37ms
+
+ [32m[1m✓[22m[39m Compiled in 1422ms (1770 modules)
+
+ GET /knowledge/new [33m404[39m in 825ms
+
+ GET /knowledge/new [33m404[39m in 14ms
+
+ GET /knowledge/new [33m404[39m in 61ms
+
+ [32m[1m✓[22m[39m Compiled in 212ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 21ms
+
+ GET /knowledge/new [33m404[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 300ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 14ms
+
+ GET /knowledge/new [33m404[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 185ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 17ms
+
+ GET /knowledge/new [33m404[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 310ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 13ms
+
+ GET /knowledge/new [33m404[39m in 46ms
+
+ GET /knowledge/new [33m404[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 277ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 15ms
+
+ GET /knowledge/new [33m404[39m in 60ms
+
+ GET /knowledge/new [33m404[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 227ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 26ms
+
+ GET /knowledge/new [33m404[39m in 78ms
+
+ GET /knowledge/new [33m404[39m in 37ms
+
+ [32m[1m✓[22m[39m Compiled in 169ms (878 modules)
+
+ GET /knowledge/new [33m404[39m in 10ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/new ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/new in 1150ms (1776 modules)
+
+ERROR:  [31m[1m⨯[22m[39m [Error: The default export is not a React Component in "/knowledge/new/page"] {
+  page: [32m'/knowledge/new'[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 1406ms (1905 modules)
+
+ GET /knowledge/new [31m500[39m in 3127ms
+
+ [32m[1m✓[22m[39m Compiled in 646ms (1905 modules)
+
+ GET /knowledge/new [32m200[39m in 288ms
+
+ [32m[1m✓[22m[39m Compiled in 207ms (892 modules)
+
+ GET /knowledge/new [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 396ms (892 modules)
+
+ GET /knowledge/new [32m200[39m in 42ms
+
+ [32m[1m✓[22m[39m Compiled in 237ms (892 modules)
+
+ GET /knowledge/new [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 216ms (892 modules)
+
+ GET /knowledge/new [32m200[39m in 359ms
+
+ [32m[1m✓[22m[39m Compiled in 1090ms (1905 modules)
+
+ GET /knowledge/new [32m200[39m in 692ms
+
+ GET /knowledge/new [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 251ms (892 modules)
+
+ GET /knowledge/new [32m200[39m in 29ms
+
+ [37m[1m○[22m[39m Compiling /knowledge ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge in 6.3s (2964 modules)
+
+ GET /knowledge [32m200[39m in 640ms
+
+ GET /knowledge [32m200[39m in 6390ms
+
+ GET /knowledge [32m200[39m in 158ms
+
+ [37m[1m○[22m[39m Compiling /mcp ...
+
+ [32m[1m✓[22m[39m Compiled /mcp in 999ms (2990 modules)
+
+ GET /mcp [32m200[39m in 1185ms
+
+ GET /knowledge [32m200[39m in 243ms
+
+ [32m[1m✓[22m[39m Compiled in 867ms (2958 modules)
+
+ GET /knowledge [32m200[39m in 95ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 316ms (2948 modules)
+
+ GET /avatars/user.png [33m404[39m in 392ms
+
+ [32m[1m✓[22m[39m Compiled in 567ms (2962 modules)
+
+ GET /knowledge [32m200[39m in 46ms
+
+ GET /knowledge [32m200[39m in 433ms
+
+ [32m[1m✓[22m[39m Compiled in 2.1s (2944 modules)
+
+ [32m[1m✓[22m[39m Compiled in 1501ms (2958 modules)
+
+ [32m[1m✓[22m[39m Compiled in 206ms (1423 modules)
+
+ [32m[1m✓[22m[39m Compiled in 205ms (1423 modules)
+
+ [32m[1m✓[22m[39m Compiled in 439ms (2958 modules)
+
+ [32m[1m✓[22m[39m Compiled in 753ms (2955 modules)
+
+ GET /chat/prompts [32m200[39m in 383ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 930ms (2945 modules)
+
+ GET /avatars/user.png [33m404[39m in 1265ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/components/server-item.tsx:12:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m../animations[39m'
+  10 | import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+  11 | import { MCPServerConfig } from '../types';
+> 12 | import { listItemVariants } from '../animations';
+     | ^
+  13 |
+  14 | interface ServerItemProps {
+  15 |   serverName: string;
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/mcp-config-viewer/tabs/server-list.tsx
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ GET /mcp/config [31m500[39m in 5858ms
+
+ GET /mcp/config [31m500[39m in 16ms
+
+ GET /mcp/config [31m500[39m in 27ms
+
+ GET /mcp [31m500[39m in 17ms
+
+ GET /mcp [31m500[39m in 20ms
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/components/server-item.tsx:12:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m../animations[39m'
+  10 | import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+  11 | import { MCPServerConfig } from '../types';
+> 12 | import { listItemVariants } from '../animations';
+     | ^
+  13 |
+  14 | interface ServerItemProps {
+  15 |   serverName: string;
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./components/mcp-config-viewer/tabs/server-list.tsx
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ GET /mcp [31m500[39m in 15ms
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ GET /dashboard [31m500[39m in 10ms
+
+ERROR:  [33m[1m⚠[22m[39m ./components/mcp-config-viewer/index.tsx
+Attempted import error: 'cardVariants' is not exported from './animations' (imported as 'cardVariants').
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ GET /chat/new [31m500[39m in 1518ms
+
+ERROR:  [33m[1m⚠[22m[39m ./components/mcp-config-viewer/index.tsx
+Attempted import error: 'cardVariants' is not exported from './animations' (imported as 'cardVariants').
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ GET /chat/prompts/new [31m500[39m in 2928ms
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp-config-viewer/index.tsx
+Error: Failed to read source code from /home/jmagar/code/pooper/frontend/components/mcp-config-viewer/index.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./components/mcp-config-viewer/index.tsx
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp/config/index.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m./tabs/backup-manager[39m'
+  32 | import { ExampleQueries } from './tabs/example-queries';
+  33 | import { ServerList } from './tabs/server-list';
+> 34 | import { BackupManager } from './tabs/backup-manager';
+     | ^
+  35 |
+  36 | /**
+  37 |  * Component for viewing and editing the current MCP configuration
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1643ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts/[id] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/[id] in 4.1s (1280 modules)
+
+ERROR: Error: Route "/chat/prompts/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at PromptDetailPage (app/chat/prompts/[id]/page.tsx:54:13)
+[0m [90m 52 |[39m     setPrompt([33mMOCK_PROMPT[39m)[33m;[39m[0m
+[0m [90m 53 |[39m     setIsLoading([36mfalse[39m)[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 54 |[39m   }[33m,[39m [params[33m.[39mid])[33m;[39m[0m
+[0m [90m    |[39m             [31m[1m^[22m[39m[0m
+[0m [90m 55 |[39m[0m
+[0m [90m 56 |[39m   [36mconst[39m formatDate [33m=[39m (dateString[33m:[39m string) [33m=>[39m {[0m
+[0m [90m 57 |[39m     [36mconst[39m date [33m=[39m [36mnew[39m [33mDate[39m(dateString)[33m;[39m[0m
+
+ GET /chat/prompts/new [32m200[39m in 5066ms
+
+ [32m[1m✓[22m[39m Compiled in 332ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 216ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 161ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 242ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 351ms (541 modules)
+
+ [32m[1m✓[22m[39m Compiled in 247ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/[id] in 273ms (725 modules)
+
+ERROR: Error: Route "/chat/prompts/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at PromptDetailPage (app/chat/prompts/[id]/page.tsx:54:13)
+[0m [90m 52 |[39m     setPrompt([33mMOCK_PROMPT[39m)[33m;[39m[0m
+[0m [90m 53 |[39m     setIsLoading([36mfalse[39m)[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 54 |[39m   }[33m,[39m [params[33m.[39mid])[33m;[39m[0m
+[0m [90m    |[39m             [31m[1m^[22m[39m[0m
+[0m [90m 55 |[39m[0m
+[0m [90m 56 |[39m   [36mconst[39m formatDate [33m=[39m (dateString[33m:[39m string) [33m=>[39m {[0m
+[0m [90m 57 |[39m     [36mconst[39m date [33m=[39m [36mnew[39m [33mDate[39m(dateString)[33m;[39m[0m
+
+ GET /chat/prompts/new [32m200[39m in 571ms
+
+ [32m[1m✓[22m[39m Compiled in 278ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 179ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 214ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 171ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 195ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 181ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 205ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 355ms (541 modules)
+
+ [32m[1m✓[22m[39m Compiled in 512ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 196ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 157ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 154ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled in 320ms (555 modules)
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/[id] in 187ms (725 modules)
+
+ERROR: Error: Route "/chat/prompts/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at PromptDetailPage (app/chat/prompts/[id]/page.tsx:54:13)
+[0m [90m 52 |[39m     setPrompt([33mMOCK_PROMPT[39m)[33m;[39m[0m
+[0m [90m 53 |[39m     setIsLoading([36mfalse[39m)[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 54 |[39m   }[33m,[39m [params[33m.[39mid])[33m;[39m[0m
+[0m [90m    |[39m             [31m[1m^[22m[39m[0m
+[0m [90m 55 |[39m[0m
+[0m [90m 56 |[39m   [36mconst[39m formatDate [33m=[39m (dateString[33m:[39m string) [33m=>[39m {[0m
+[0m [90m 57 |[39m     [36mconst[39m date [33m=[39m [36mnew[39m [33mDate[39m(dateString)[33m;[39m[0m
+
+ GET /chat/prompts/new [32m200[39m in 702ms
+
+ [32m[1m✓[22m[39m Compiled in 1000ms (1280 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ [32m[1m✓[22m[39m Compiled in 173ms (549 modules)
+
+ [32m[1m✓[22m[39m Compiled in 129ms (549 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./app/chat/prompts/[id]/page.tsx
+Error:   [31mx[0m You are attempting to export "metadata" from a component marked with "use client", which is disallowed. Either remove the export, or the "use client" directive. Read more: https://nextjs.org/
+  [31m|[0m docs/app/api-reference/directives/use-client
+  [31m|[0m 
+  [31m|[0m 
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/chat/prompts/[id]/page.tsx[0m:4:1]
+ [2m1[0m | import { Metadata } from "next";
+ [2m2[0m | import { PromptDetail } from "./client";
+ [2m3[0m | 
+ [2m4[0m | export const metadata: Metadata = {
+   : [35;1m             ^^^^^^^^[0m
+ [2m5[0m |   title: "Prompt Details | Pooper",
+ [2m6[0m |   description: "View and manage your prompt templates",
+ [2m7[0m | };
+   `----
+
+Import trace for requested module:
+./app/chat/prompts/[id]/page.tsx
+
+ [32m[1m✓[22m[39m Compiled in 956ms (556 modules)
+
+ [32m[1m✓[22m[39m Compiled in 400ms (556 modules)
+
+ [37m[1m○[22m[39m Compiling /chat/prompts/[id] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/[id] in 1005ms (1271 modules)
+
+ERROR: Error: Route "/chat/prompts/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at PromptDetailPage (app/chat/prompts/[id]/page.tsx:21:26)
+[0m [90m 19 |[39m   [90m// In a real app, this would be an async fetch to an API endpoint[39m[0m
+[0m [90m 20 |[39m   [90m// For demo, we'll just use the mock data[39m[0m
+[0m[31m[1m>[22m[39m[90m 21 |[39m   [36mconst[39m promptId [33m=[39m params[33m.[39mid[33m;[39m[0m
+[0m [90m    |[39m                          [31m[1m^[22m[39m[0m
+[0m [90m 22 |[39m   [0m
+[0m [90m 23 |[39m   [90m// Simulate API fetch[39m[0m
+[0m [90m 24 |[39m   [36mconst[39m prompt [33m=[39m [33mMOCK_PROMPT[39m[33m;[39m[0m
+
+ GET /chat/prompts/new [32m200[39m in 1554ms
+
+ [32m[1m✓[22m[39m Compiled in 518ms (1285 modules)
+
+ [32m[1m✓[22m[39m Compiled in 265ms (556 modules)
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/[id] in 152ms (729 modules)
+
+ GET /chat/prompts/new [32m200[39m in 413ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts in 730ms (1308 modules)
+
+ GET /chat/prompts [32m200[39m in 968ms
+
+ GET /chat/prompts [32m200[39m in 85ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts/create ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts/create in 696ms (1327 modules)
+
+ GET /chat/prompts/create [32m200[39m in 867ms
+
+ [37m[1m○[22m[39m Compiling /knowledge ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge in 2.2s (2407 modules)
+
+ GET /knowledge [32m200[39m in 2569ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 536ms (2380 modules)
+
+ GET /chat [33m404[39m in 652ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 876ms (2469 modules)
+
+ GET /chat/new [32m200[39m in 1177ms
+
+ [32m[1m✓[22m[39m Compiled in 737ms (1921 modules)
+
+ [32m[1m✓[22m[39m Compiled in 479ms (1155 modules)
+
+ [32m[1m✓[22m[39m Compiled in 196ms (1155 modules)
+
+ [32m[1m✓[22m[39m Compiled in 258ms (1155 modules)
+
+ [32m[1m✓[22m[39m Compiled in 524ms (1155 modules)
+
+ [32m[1m✓[22m[39m Compiled in 246ms (1155 modules)
+
+ [32m[1m✓[22m[39m Compiled in 310ms (1155 modules)
+
+EXIT SIGNAL: SIGHUP
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1545ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 3.1s (1336 modules)
+
+ GET /chat/new [32m200[39m in 3717ms
+
+ERROR: (node:3097990) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 979ms (1340 modules)
+
+ GET /avatars/user.png [33m404[39m in 1318ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /mcp/logs [31m500[39m in 2995ms
+
+ GET /mcp/logs [31m500[39m in 10ms
+
+ GET /mcp/logs [31m500[39m in 16ms
+
+ GET /mcp/logs [31m500[39m in 12ms
+
