@@ -1,0 +1,111 @@
+openapi: 3.0.0
+info:
+  title: MCP Marketplace API
+  version: 1.0.0
+  description: API for browsing and installing MCP servers
+
+paths:
+  /api/mcp/marketplace:
+    get:
+      operationId: getMcpMarketplace
+      summary: Get MCP marketplace catalog
+      tags:
+        - MCP Marketplace
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: tag
+          in: query
+          schema:
+            type: string
+          description: Filter by tag
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search term for name, description, or author
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, stars, downloads, name]
+            default: newest
+          description: Sort order for results
+      responses:
+        '200':
+          description: MCP marketplace catalog
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/mcp-marketplace.yaml#/components/schemas/McpMarketplaceCatalog'
+        '500':
+          description: Server error
+          
+  /api/mcp/marketplace/{mcpId}:
+    get:
+      operationId: getMcpMarketplaceItem
+      summary: Get MCP marketplace item details
+      tags:
+        - MCP Marketplace
+      parameters:
+        - name: mcpId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MCP server ID
+      responses:
+        '200':
+          description: MCP marketplace item
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/mcp-marketplace.yaml#/components/schemas/McpMarketplaceItem'
+        '404':
+          description: MCP not found
+        '500':
+          description: Server error
+          
+  /api/mcp/marketplace/{mcpId}/download:
+    post:
+      operationId: downloadMcp
+      summary: Download and install MCP server
+      tags:
+        - MCP Marketplace
+      parameters:
+        - name: mcpId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MCP server ID
+      responses:
+        '200':
+          description: MCP download response
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/mcp-marketplace.yaml#/components/schemas/McpDownloadResponse'
+        '404':
+          description: MCP not found
+        '500':
+          description: Server error
+          
+  /api/mcp/marketplace/stats:
+    get:
+      operationId: getMcpMarketplaceStats
+      summary: Get MCP marketplace statistics
+      tags:
+        - MCP Marketplace
+      responses:
+        '200':
+          description: MCP marketplace statistics
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/mcp-marketplace.yaml#/components/schemas/McpMarketplaceStats'
+        '500':
+          description: Server error

@@ -461,4 +461,113 @@ export class McpService {
       },
     });
   }
+  /**
+   * Get MCP logs
+   * Retrieves MCP server logs based on filters
+   * @returns any MCP logs retrieved successfully
+   * @throws ApiError
+   */
+  public static getMcpLogs({
+    level,
+    server,
+    limit = 100,
+    skip,
+    since,
+  }: {
+    /**
+     * Filter logs by level
+     */
+    level?: 'debug' | 'info' | 'error',
+    /**
+     * Filter logs by server name
+     */
+    server?: string,
+    /**
+     * Maximum number of logs to return
+     */
+    limit?: number,
+    /**
+     * Number of logs to skip (pagination)
+     */
+    skip?: number,
+    /**
+     * Get logs since this timestamp (ISO format)
+     */
+    since?: string,
+  }): CancelablePromise<{
+    logs?: Array<{
+      /**
+       * ISO timestamp when the log was created
+       */
+      timestamp: string;
+      /**
+       * Debug namespace of the log
+       */
+      namespace: string;
+      /**
+       * Log level
+       */
+      level: 'info' | 'error' | 'debug';
+      /**
+       * Log message content
+       */
+      message: string;
+      /**
+       * Source of the log (Backend, Frontend, etc.)
+       */
+      server?: string;
+    }>;
+    /**
+     * Total number of logs matching the filter
+     */
+    total?: number;
+  }> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/mcp/logs',
+      query: {
+        'level': level,
+        'server': server,
+        'limit': limit,
+        'skip': skip,
+        'since': since,
+      },
+      errors: {
+        500: `Server error`,
+      },
+    });
+  }
+  /**
+   * Stream MCP logs
+   * Establishes a WebSocket connection to stream logs in real-time
+   * @returns any WebSocket connection established
+   * @throws ApiError
+   */
+  public static streamMcpLogs(): CancelablePromise<{
+    status?: 'connected';
+    message?: string;
+  }> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/mcp/logs/stream',
+      errors: {
+        500: `Server error`,
+      },
+    });
+  }
+  /**
+   * Get MCP config schema
+   * Retrieves the schema definition for MCP configuration
+   * @returns any MCP config schema retrieved successfully
+   * @throws ApiError
+   */
+  public static getMcpConfigSchema(): CancelablePromise<Record<string, any>> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/mcp/config/schema',
+      errors: {
+        500: `Server error`,
+      },
+    });
+  }
 }

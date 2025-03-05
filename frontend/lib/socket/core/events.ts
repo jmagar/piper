@@ -93,6 +93,8 @@ export interface SocketConnectionConfig {
   timeout?: number;
   reconnection?: boolean;
   showToasts?: boolean;
+  withCredentials?: boolean;
+  extraHeaders?: Record<string, string>;
 }
 
 // Chat Message Types

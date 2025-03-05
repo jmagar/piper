@@ -1,4 +1,4 @@
-import * as dotenv from 'dotenv';
+ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load environment variables
@@ -38,7 +38,9 @@ export interface Config {
   // Embedding model configuration
   useLocalEmbeddings: boolean;
   localModel: string;
+  openaiEmbeddingModel: string;
   openaiApiKey: string;
+  openRouterApiKey: string;
   
   // Linting configuration
   lintCommand: string;
@@ -117,9 +119,11 @@ export const config: Config = {
   qdrantCollection: process.env.QDRANT_COLLECTION || 'code-embeddings',
   
   // Embedding model configuration
-  useLocalEmbeddings: (process.env.USE_LOCAL_EMBEDDINGS || 'true') === 'true',
-  localModel: process.env.LOCAL_MODEL || 'Xenova/all-MiniLM-L6-v2',
+  useLocalEmbeddings: (process.env.USE_LOCAL_EMBEDDINGS || 'false') === 'true',
+  localModel: process.env.LOCAL_MODEL || 'Xenova/e5-large-v2', // Only used if useLocalEmbeddings is true
+  openaiEmbeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-3-large',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
   
   // Linting configuration
   lintCommand: process.env.LINT_COMMAND || 'pnpm lint',
@@ -143,8 +147,8 @@ export const config: Config = {
 
 // Validate config
 if (config.enableEmbeddings) {
-  if (!config.useLocalEmbeddings && !config.openaiApiKey) {
-    console.warn('Warning: OpenAI embeddings enabled but no API key provided. Falling back to local embeddings.');
+  if (!config.useLocalEmbeddings && !config.openaiApiKey && !config.openRouterApiKey) {
+    console.warn('Warning: OpenAI embeddings enabled but no API key provided (neither OpenAI nor OpenRouter). Falling back to local embeddings.');
     config.useLocalEmbeddings = true;
   }
 }

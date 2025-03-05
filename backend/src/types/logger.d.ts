@@ -11,5 +11,5 @@ declare module '*/utils/logger.js' {
     debug(message: string, ...args: any[]): void;
   }
   
-  export default Logger;
+  export const logger: any;
 } 

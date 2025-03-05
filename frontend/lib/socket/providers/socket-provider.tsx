@@ -7,16 +7,16 @@
  * Manages socket connection lifecycle and provides socket instance to components.
  */
 
-import React, { createContext, useEffect, useState, useRef, useContext, useMemo } from 'react';
+import React, { createContext, useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Socket } from 'socket.io-client';
+import type { Socket } from '../core/types';
 import {
   ConnectionState,
   SocketAuthOptions,
-  SocketConnectionConfig,
-  SocketContextValue
-} from '../core/types';
-import { createConnection, authenticateConnection } from '../core/connection';
+  SocketConnectionConfig
+} from '../core/events';
+import type { SocketContextValue } from '../core/types';
+import { createConnection } from '../core/connection';
 import { getSocketStateManager } from '../core/state';
 import { getSocketLogger } from '../utils/logger';
 import { resolveSocketUrl, resolveSocketPath } from '../utils/url-resolver';
@@ -243,11 +243,13 @@ export function SocketProvider({
           
           return () => clearTimeout(reconnectTimeout);
         } catch (err) {
-          logger.error('Error in alternative connection strategy', { error: err });
+          logger.error('Error in alternative connection strategy', { 
+            error: err instanceof Error ? err.message : String(err) 
+          });
         }
       }
     }
-  }, [connectionState, error]);
+  }, [connectionState, error, config, initialAuth]);
   
   // Listen for state changes
   useEffect(() => {
@@ -275,11 +277,11 @@ export function SocketProvider({
       // Don't disconnect here as other components might be using the socket
       // Only clean up listeners
     };
-  }, []);
+  }, [initialAuth, config]);
   
   // Add connection testing on error
   useEffect(() => {
-    if (connectionState === ConnectionState.ERROR || connectionState === ConnectionState.FAILED) {
+    if (connectionState === ConnectionState.FAILED) {
       // Attempt to diagnose the connection issue
       const socketUrl = config?.url || '';
       const socketPath = config?.path || '/socket.io';
@@ -300,26 +302,35 @@ export function SocketProvider({
               .then(results => {
                 const successfulConnection = results.find(r => r.success);
                 if (successfulConnection) {
-                  logger.info('Found working alternative connection:', successfulConnection);
+                  logger.info('Found working alternative connection:', { 
+                    connection: successfulConnection 
+                  });
                   
                   // Try to reconnect with the successful URL
                   if (socket && successfulConnection.url) {
                     // Extract base URL from the successful test
                     const baseUrl = successfulConnection.url.split('/socket.io')[0];
-                    logger.info(`Attempting to reconnect using working URL: ${baseUrl}`);
+                    logger.info(`Attempting to reconnect using working URL:`, { url: baseUrl });
                     
                     // Trigger reconnection with new URL
                     reconnect();
                   }
                 }
+              })
+              .catch(err => {
+                logger.error('Error testing connections:', { 
+                  error: err instanceof Error ? err.message : String(err) 
+                });
               });
           }
         }).catch(err => {
-          logger.error('Error during connection testing:', err);
+          logger.error('Error during connection testing:', { 
+            error: err instanceof Error ? err.message : String(err) 
+          });
         });
       }
     }
-  }, [connectionState, config?.url, config?.path]);
+  }, [connectionState, config?.url, config?.path, socket]);
   
   // Provide socket context
   return (
@@ -337,4 +348,4 @@ export function SocketProvider({
       {children}
     </SocketContext.Provider>
   );
-} 
+}

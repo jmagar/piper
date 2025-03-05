@@ -9,7 +9,7 @@
 /// <reference lib="dom" />
 /// <reference types="node" />
 
-// Node.js built-in imports
+// Node.js built-in importsi
 import { spawn, exec, ChildProcess, SpawnOptions } from 'child_process';
 import { createWriteStream } from 'fs';
 import { existsSync } from 'fs';
@@ -29,16 +29,71 @@ const execAsync = promisify(exec);
 
 const BACKEND_PORT = 4100;
 const FRONTEND_PORT = 3002;
-const DOCKER_CONTAINERS = ['pooper-redis', 'pooper-db'];
+const DOCKER_CONTAINERS = ['pooper-redis', 'pooper-db', 'pooper-qdrant'];
 const DOCKER_NETWORK = 'jakenet';
 
 let isShuttingDown = false;
 let frontendProcess: ChildProcess | null = null;
 let backendProcess: ChildProcess | null = null;
 
+// ASCII art logo for startup
+const ASCII_LOGO = `
+ ██████   ██████   ██████  ██████  ███████ ██████  
+ ██   ██ ██    ██ ██    ██ ██   ██ ██      ██   ██ 
+ ██████  ██    ██ ██    ██ ██████  █████   ██████  
+ ██      ██    ██ ██    ██ ██      ██      ██   ██ 
+ ██       ██████   ██████  ██      ███████ ██   ██ 
+                                                    
+ ███████ ███████ ██████  ██    ██ ███████ ██████  ███████ 
+ ██      ██      ██   ██ ██    ██ ██      ██   ██ ██      
+ ███████ █████   ██████  ██    ██ █████   ██████  ███████ 
+      ██ ██      ██   ██  ██  ██  ██      ██   ██      ██ 
+ ███████ ███████ ██   ██   ████   ███████ ██   ██ ███████ 
+`;
+
+// Enhanced terminal symbols
+const SYMBOLS = {
+  success: '✓',
+  error: '✗',
+  warning: '⚠',
+  info: 'ℹ',
+  loading: '⟳',
+  bullet: '•',
+  arrow: '→',
+  docker: '🐳',
+  server: '🖥️',
+  database: '🗄️',
+  frontend: '🌐',
+  backend: '⚙️'
+};
+
 // Function to create EST timestamp formatter
 function getTimestampOptions(): string {
     return 'HH:MM:ss';
+}
+
+// Format duration in a human-readable way
+function formatDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+}
+
+// Create a horizontal divider with title
+function createDivider(title?: string): string {
+    const dividerLength = 80;
+    const dividerChar = '─';
+    
+    if (!title) {
+        return chalk.gray(dividerChar.repeat(dividerLength));
+    }
+    
+    const prefix = `${dividerChar.repeat(3)} `;
+    const suffix = ` ${dividerChar.repeat(dividerLength - prefix.length - title.length - 2)}`;
+    return chalk.gray(prefix) + chalk.cyan.bold(title) + chalk.gray(suffix);
 }
 
 async function waitForServerReady(port: number, timeout = 30000): Promise<boolean> {
@@ -64,6 +119,7 @@ async function waitForServerReady(port: number, timeout = 30000): Promise<boolea
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
+    
     return false;
 }
 
@@ -122,36 +178,64 @@ async function startDockerStack(): Promise<void> {
     try {
         // Check if network exists
         if (!await checkDockerNetwork()) {
+            console.log(chalk.blue(`${SYMBOLS.bullet} Creating Docker network ${chalk.bold(DOCKER_NETWORK)}...`));
             await createDockerNetwork();
+            console.log(chalk.green(`${SYMBOLS.success} Docker network created successfully`));
+        } else {
+            console.log(chalk.green(`${SYMBOLS.success} Docker network ${chalk.bold(DOCKER_NETWORK)} already exists`));
         }
 
-        // Check if containers are running
+        // Check container status with visual indicators
+        console.log(chalk.blue(`${SYMBOLS.bullet} Checking Docker container status...`));
+        
         const containersRunning = await Promise.all(
-            DOCKER_CONTAINERS.map(async container => ({
-                name: container,
-                running: await isContainerRunning(container)
-            }))
+            DOCKER_CONTAINERS.map(async container => {
+                const running = await isContainerRunning(container);
+                console.log(
+                    running 
+                        ? chalk.green(`${SYMBOLS.success} Container ${chalk.bold(container)} is running`)
+                        : chalk.yellow(`${SYMBOLS.warning} Container ${chalk.bold(container)} is not running`)
+                );
+                return { name: container, running };
+            })
         );
 
         const allRunning = containersRunning.every(c => c.running);
+        
         if (!allRunning) {
-            console.info(chalk.blue('Starting Docker stack...'));
+            console.log(chalk.blue(`${SYMBOLS.docker} Starting Docker stack...`));
+            const startTime = Date.now();
             await execAsync('docker compose up -d');
+            console.log(chalk.green(`${SYMBOLS.success} Docker compose started in ${chalk.cyan(formatDuration(Date.now() - startTime))}`));
 
-            // Wait for containers to be healthy
-            console.info(chalk.blue('Waiting for containers to be healthy...'));
+            // Wait for containers to be healthy with enhanced progress feedback
+            console.log(chalk.blue(`${SYMBOLS.loading} Waiting for containers to be healthy...`));
+            
             const healthyResults = await Promise.all(
-                DOCKER_CONTAINERS.map(container => waitForContainerHealth(container))
+                DOCKER_CONTAINERS.map(async container => {
+                    const isHealthy = await waitForContainerHealth(container);
+                    return { container, healthy: isHealthy };
+                })
             );
 
-            if (!healthyResults.every(healthy => healthy)) {
+            // Print summary of container health status
+            console.log(chalk.cyan(`${SYMBOLS.info} Container health summary:`));
+            for (const result of healthyResults) {
+                console.log(
+                    result.healthy
+                        ? chalk.green(`   ${SYMBOLS.success} ${chalk.bold(result.container)}: Healthy`)
+                        : chalk.red(`   ${SYMBOLS.error} ${chalk.bold(result.container)}: Unhealthy`)
+                );
+            }
+
+            if (!healthyResults.every(result => result.healthy)) {
                 throw new Error('Some containers failed to become healthy');
             }
         } else {
-            console.info(chalk.green('Docker containers are already running'));
+            console.log(chalk.green(`${SYMBOLS.success} All Docker containers are already running`));
         }
     } catch (error) {
-        console.error(chalk.red('Failed to start Docker stack:'), error);
+        console.error(chalk.red(`${SYMBOLS.error} Failed to start Docker stack:`), error);
         throw error;
     }
 }
@@ -433,72 +517,99 @@ async function cleanup() {
     if (isShuttingDown) return;
     isShuttingDown = true;
 
-    console.info(chalk.yellow('\nGracefully shutting down...'));
+    console.log('\n' + createDivider('Shutdown Sequence'));
+    console.log(chalk.yellow(`${SYMBOLS.warning} Gracefully shutting down servers...`));
     
-    // Kill all Next.js processes
+    const shutdownStart = Date.now();
+    
+    // Kill all Next.js processes with status indication
+    console.log(chalk.cyan(`${SYMBOLS.bullet} Stopping Next.js processes...`));
     await killAllNextProcesses();
     
-    // Kill processes by port
+    // Kill processes by port with status indication
+    console.log(chalk.cyan(`${SYMBOLS.bullet} Stopping backend server on port ${chalk.bold(BACKEND_PORT)}...`));
     await killProcessOnPort(BACKEND_PORT);
+    
+    console.log(chalk.cyan(`${SYMBOLS.bullet} Stopping frontend server on port ${chalk.bold(FRONTEND_PORT)}...`));
     await killProcessOnPort(FRONTEND_PORT);
     
     // Gracefully terminate stored processes
     if (frontendProcess) {
+        console.log(chalk.cyan(`${SYMBOLS.frontend} Sending SIGINT to frontend process...`));
         frontendProcess.kill('SIGINT');
     }
+    
     if (backendProcess) {
+        console.log(chalk.cyan(`${SYMBOLS.backend} Sending SIGINT to backend process...`));
         backendProcess.kill('SIGINT');
     }
+    
+    const shutdownTime = Date.now() - shutdownStart;
+    console.log(chalk.green(`${SYMBOLS.success} Servers shut down successfully in ${chalk.cyan(formatDuration(shutdownTime))}`));
+    console.log(createDivider());
     
     process.exit(0);
 }
 
 async function main() {
     if (isShuttingDown) return;
+    
+    // Display ASCII logo
+    console.log(chalk.cyan(ASCII_LOGO));
+    console.log(createDivider('Development Server Startup'));
+    
+    const startTime = Date.now();
+    console.log(chalk.magenta.bold(`${SYMBOLS.info} Starting development servers at ${new Date().toLocaleTimeString()}`));
 
     try {
         // Start Docker stack first
+        console.log(createDivider('Docker Infrastructure'));
+        console.log(chalk.blue(`${SYMBOLS.docker} Initializing Docker environment...`));
         await startDockerStack();
     } catch {
-        console.error(chalk.red('Failed to start Docker stack. Exiting...'));
+        console.error(chalk.red(`${SYMBOLS.error} Failed to start Docker stack. Exiting...`));
         process.exit(1);
     }
 
-    console.info(chalk.blue('Checking for running servers...'));
+    console.log(createDivider('Process Management'));
+    console.log(chalk.blue(`${SYMBOLS.info} Checking for running servers...`));
 
     // Kill all Next.js processes first
+    console.log(chalk.cyan(`${SYMBOLS.bullet} Stopping any existing Next.js processes...`));
     await killAllNextProcesses();
 
     // Kill backend server if running
     if (await isPortInUse(BACKEND_PORT)) {
-        console.warn(chalk.yellow(`Backend server running on port ${chalk.bold(BACKEND_PORT)}, killing...`));
+        console.warn(chalk.yellow(`${SYMBOLS.warning} Backend server running on port ${chalk.bold(BACKEND_PORT)}, killing...`));
         await killProcessOnPort(BACKEND_PORT);
     }
 
     // Kill frontend server if running
     if (await isPortInUse(FRONTEND_PORT)) {
-        console.warn(chalk.yellow(`Frontend server running on port ${chalk.bold(FRONTEND_PORT)}, killing...`));
+        console.warn(chalk.yellow(`${SYMBOLS.warning} Frontend server running on port ${chalk.bold(FRONTEND_PORT)}, killing...`));
         await killProcessOnPort(FRONTEND_PORT);
     }
 
     // Wait for backend port to be free
-    console.info(chalk.blue('Waiting for backend port to be free...'));
+    console.log(chalk.blue(`${SYMBOLS.loading} Waiting for backend port to be free...`));
     const backendPortFree = await waitForPortToBeFree(BACKEND_PORT);
     if (!backendPortFree) {
-        console.error(chalk.red(`Failed to free backend port ${chalk.bold(BACKEND_PORT)}`));
+        console.error(chalk.red(`${SYMBOLS.error} Failed to free backend port ${chalk.bold(BACKEND_PORT)}`));
         process.exit(1);
     }
 
     // Wait for frontend port to be free
-    console.info(chalk.blue('Waiting for frontend port to be free...'));
+    console.log(chalk.blue(`${SYMBOLS.loading} Waiting for frontend port to be free...`));
     const frontendPortFree = await waitForPortToBeFree(FRONTEND_PORT);
     if (!frontendPortFree) {
-        console.error(chalk.red(`Failed to free frontend port ${chalk.bold(FRONTEND_PORT)}`));
+        console.error(chalk.red(`${SYMBOLS.error} Failed to free frontend port ${chalk.bold(FRONTEND_PORT)}`));
         process.exit(1);
     }
 
-    console.info(chalk.green('All ports are free, starting servers...'));
+    console.log(chalk.green(`${SYMBOLS.success} All ports are free, starting servers...`));
 
+    console.log(createDivider('Environment Configuration'));
+    
     // Get root directory
     const rootDir = process.cwd();
     const backendDir = join(rootDir, 'backend');
@@ -510,40 +621,102 @@ async function main() {
     const frontendEnvPath = join(frontendDir, '.env');
 
     if (!existsSync(rootEnvPath)) {
-        console.error(chalk.red(`Error: Root .env file not found at ${chalk.bold(rootEnvPath)}`));
-        console.error(chalk.red('Please create a .env file at the project root with all environment variables.'));
+        console.error(chalk.red(`${SYMBOLS.error} Error: Root .env file not found at ${chalk.bold(rootEnvPath)}`));
+        console.error(chalk.red(`${SYMBOLS.arrow} Please create a .env file at the project root with all environment variables.`));
         process.exit(1);
     }
 
     // Check for competing .env files and remove them if they exist
     if (existsSync(backendEnvPath)) {
-        console.warn(chalk.yellow(`Warning: Competing .env file found in backend directory.`));
-        console.warn(chalk.yellow(`Please remove ${chalk.bold(backendEnvPath)} and only use the root .env file.`));
+        console.warn(chalk.yellow(`${SYMBOLS.warning} Competing .env file found in backend directory.`));
+        console.warn(chalk.yellow(`${SYMBOLS.arrow} Please remove ${chalk.bold(backendEnvPath)} and only use the root .env file.`));
     }
 
     if (existsSync(frontendEnvPath)) {
-        console.warn(chalk.yellow(`Warning: Competing .env file found in frontend directory.`));
-        console.warn(chalk.yellow(`Please remove ${chalk.bold(frontendEnvPath)} and only use the root .env file.`));
+        console.warn(chalk.yellow(`${SYMBOLS.warning} Competing .env file found in frontend directory.`));
+        console.warn(chalk.yellow(`${SYMBOLS.arrow} Please remove ${chalk.bold(frontendEnvPath)} and only use the root .env file.`));
     }
 
-    console.info(chalk.blue('Using root .env file as single source of truth:'));
-    console.info(chalk.blue(` - Path: ${chalk.cyan(rootEnvPath)}`));
+    console.log(chalk.blue(`${SYMBOLS.info} Using root .env file as single source of truth:`));
+    console.log(chalk.blue(`   ${SYMBOLS.arrow} ${chalk.cyan(rootEnvPath)}`));
 
+    console.log(createDivider('Starting Servers'));
+    
     try {
         // Start backend server
-        console.info(chalk.blue('Starting backend server...'));
+        console.log(chalk.blue(`${SYMBOLS.backend} Starting backend server on port ${chalk.bold(BACKEND_PORT)}...`));
+        const backendStartTime = Date.now();
         await startServer('pnpm', ['run', 'dev'], backendDir, 'Backend', BACKEND_PORT);
+        console.log(chalk.green(`${SYMBOLS.success} Backend server started successfully in ${chalk.cyan(formatDuration(Date.now() - backendStartTime))}`));
 
         // Wait a bit for backend to initialize
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Start frontend server
-        console.info(chalk.blue('Starting frontend server...'));
+        console.log(chalk.blue(`${SYMBOLS.frontend} Starting frontend server on port ${chalk.bold(FRONTEND_PORT)}...`));
+        const frontendStartTime = Date.now();
         await startServer('pnpm', ['run', 'dev'], frontendDir, 'Frontend', FRONTEND_PORT);
+        console.log(chalk.green(`${SYMBOLS.success} Frontend server started successfully in ${chalk.cyan(formatDuration(Date.now() - frontendStartTime))}`));
 
-        console.info(chalk.green.bold('Both servers started successfully!'));
+        const totalTime = Date.now() - startTime;
+        
+        // Wait a bit for MCP servers to initialize
+        console.log(chalk.blue(`${SYMBOLS.loading} Waiting for MCP servers to initialize...`));
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Fetch MCP server status
+        try {
+            console.log(chalk.blue(`${SYMBOLS.info} Checking MCP server status...`));
+            
+            // Fetch servers
+            const serversResponse = await fetch(`http://localhost:${BACKEND_PORT}/api/mcp/servers`);
+            const serversData = await serversResponse.json();
+
+            // Extract servers array from the response
+            const servers = serversData.servers || [];
+            
+            // Count connected servers
+            let connectedServers = 0;
+            for (const server of servers) {
+                if (server.status === 'connected' || server.status === 'active') {
+                    connectedServers++;
+                }
+            }
+            
+            // Fetch tools separately
+            const toolsResponse = await fetch(`http://localhost:${BACKEND_PORT}/api/mcp/tools`);
+            const toolsData = await toolsResponse.json();
+            
+            // Extract tools array from the response
+            const tools = toolsData.tools || [];
+            const totalTools = tools.length;
+            
+            // Group tools by server for detailed display
+            const toolsByServer = tools.reduce((acc: Record<string, number>, tool: any) => {
+                const serverId = tool.serverId;
+                if (serverId) {
+                    acc[serverId] = (acc[serverId] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            
+            // Display MCP server and tool information
+            console.log(chalk.green(`${SYMBOLS.success} ${connectedServers} of ${servers.length} MCP servers connected`));
+            console.log(chalk.green(`${SYMBOLS.success} ${totalTools} tools available across all MCP servers`));
+            
+        } catch (error) {
+            console.warn(chalk.yellow(`${SYMBOLS.warning} Could not fetch MCP server status: ${error}`));
+        }
+        
+        console.log(createDivider('Startup Complete'));
+        console.log(chalk.green.bold(`${SYMBOLS.success} All servers started successfully in ${chalk.cyan(formatDuration(totalTime))}!`));
+        console.log(chalk.cyan(`${SYMBOLS.info} Backend URL: ${chalk.bold(`http://localhost:${BACKEND_PORT}`)}`));
+        console.log(chalk.cyan(`${SYMBOLS.info} Frontend URL: ${chalk.bold(`http://localhost:${FRONTEND_PORT}`)}`));
+        console.log(chalk.gray(`Press Ctrl+C to stop all servers`));
+        console.log(chalk.gray(`Use the API at ${chalk.bold(`http://localhost:${BACKEND_PORT}/api/mcp/servers`)} to view detailed MCP server status`));
+        console.log(createDivider());
     } catch (error) {
-        console.error(chalk.red('Error starting servers:'), error);
+        console.error(chalk.red(`${SYMBOLS.error} Error starting servers:`), error);
         await cleanup();
         process.exit(1);
     }

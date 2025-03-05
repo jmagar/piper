@@ -5,7 +5,8 @@
  * Includes structured logging and log filtering.
  */
 
-import type { Socket, LogEntry } from '../core/types';
+import type { Socket } from '../core/types';
+import type { LogEntry } from '../core/events';
 
 /**
  * Log levels
@@ -102,7 +103,7 @@ export class SocketLogger {
       const consoleMethod = this.getConsoleMethod(entry.level as LogLevel);
       const prefix = `[${entry.namespace}] [${entry.level.toUpperCase()}]`;
       
-      if (entry.metadata && Object.keys(entry.metadata).length > 0) {
+      if (entry.metadata && typeof entry.metadata === 'object' && Object.keys(entry.metadata).length > 0) {
         consoleMethod(`${prefix} ${entry.message}`, entry.metadata);
       } else {
         consoleMethod(`${prefix} ${entry.message}`);
@@ -111,11 +112,12 @@ export class SocketLogger {
     
     // Emit to server if enabled and socket is available
     if (this.options.emitToServer && this.socket) {
-      this.socket.emit('client:log', entry);
+      // Use type assertion to bypass TypeScript's type checking for custom events
+      (this.socket as any).emit('client:log', entry);
       
       // Also emit to the mcp:all:logs event for compatibility
       try {
-        this.socket.emit('mcp:all:logs', entry);
+        (this.socket as any).emit('mcp:all:logs', entry);
       } catch (err) {
         // Ignore if this event is not supported
       }
@@ -250,4 +252,4 @@ export function getSocketLogger(options?: Partial<SocketLoggerOptions>): SocketL
   }
   
   return loggerInstance;
-} 
+}

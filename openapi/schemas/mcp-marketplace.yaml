@@ -1,0 +1,157 @@
+components:
+  schemas:
+    McpMarketplaceItem:
+      type: object
+      required:
+        - mcpId
+        - githubUrl
+        - name
+        - author
+        - description
+        - category
+        - tags
+        - isRecommended
+        - githubStars
+        - downloadCount
+        - createdAt
+        - updatedAt
+      properties:
+        mcpId:
+          type: string
+          description: Unique identifier for the MCP server
+        githubUrl:
+          type: string
+          description: URL to the GitHub repository
+        name:
+          type: string
+          description: Display name of the MCP server
+        author:
+          type: string
+          description: Author or organization name
+        description:
+          type: string
+          description: Short description of the MCP server
+        codiconIcon:
+          type: string
+          description: Codicon icon identifier
+        logoUrl:
+          type: string
+          description: URL to the logo image
+        category:
+          type: string
+          description: Primary category for the MCP server
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for filtering and categorization
+        requiresApiKey:
+          type: boolean
+          description: Whether the MCP server requires an API key
+        readmeContent:
+          type: string
+          description: README content in markdown format
+        llmsInstallationContent:
+          type: string
+          description: Installation instructions in markdown format
+        isRecommended:
+          type: boolean
+          description: Whether this is an officially recommended MCP server
+        githubStars:
+          type: integer
+          description: Number of GitHub stars
+        downloadCount:
+          type: integer
+          description: Number of times this MCP has been downloaded
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        lastGithubSync:
+          type: string
+          format: date-time
+          description: Last time GitHub data was synced
+          
+    McpMarketplaceCatalog:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpMarketplaceItem'
+          description: List of marketplace items
+          
+    McpDownloadResponse:
+      type: object
+      required:
+        - mcpId
+        - githubUrl
+        - name
+        - author
+        - description
+        - readmeContent
+        - llmsInstallationContent
+      properties:
+        mcpId:
+          type: string
+          description: Unique identifier for the MCP server
+        githubUrl:
+          type: string
+          description: URL to the GitHub repository
+        name:
+          type: string
+          description: Display name of the MCP server
+        author:
+          type: string
+          description: Author or organization name
+        description:
+          type: string
+          description: Short description of the MCP server
+        readmeContent:
+          type: string
+          description: README content in markdown format
+        llmsInstallationContent:
+          type: string
+          description: Installation instructions in markdown format
+        requiresApiKey:
+          type: boolean
+          description: Whether the MCP server requires an API key
+          
+    McpMarketplaceStats:
+      type: object
+      required:
+        - totalDownloads
+        - popularCategories
+        - topMcps
+      properties:
+        totalDownloads:
+          type: integer
+          description: Total number of MCP downloads
+        popularCategories:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: integer
+          description: Most popular categories with download counts
+        topMcps:
+          type: array
+          items:
+            type: object
+            properties:
+              mcpId:
+                type: string
+              name:
+                type: string
+              downloads:
+                type: integer
+          description: Top downloaded MCPs

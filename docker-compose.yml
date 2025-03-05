@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   redis:
     container_name: pooper-redis
@@ -35,12 +33,33 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      
+  qdrant:
+    container_name: pooper-qdrant
+    restart: unless-stopped
+    image: qdrant/qdrant:latest
+    ports:
+      - "6550:6333"  # Main API
+      - "6551:6334"  # gRPC API
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-bktvginrwh7UPs9FPoZRxIORaRX5HCRl}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - jakenet
+    healthcheck:
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/6333 && echo 'Healthcheck passed'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   redis_data:
     name: pooper_redis_data
   postgres_data:
     name: pooper_postgres_data
+  qdrant_data:
+    name: pooper_qdrant_data
 
 networks:
   jakenet:

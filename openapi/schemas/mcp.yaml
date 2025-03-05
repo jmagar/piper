@@ -168,4 +168,116 @@ components:
           description: Log message content
         server:
           type: string
-          description: Source of the log (Backend, Frontend, etc.) 
+          description: Source of the log (Backend, Frontend, etc.)
+
+    McpServer:
+      type: object
+      required:
+        - id
+        - name
+        - url
+        - type
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the server
+        name:
+          type: string
+          description: Display name of the server
+        url:
+          type: string
+          description: Connection URL for the server
+        type:
+          type: string
+          description: Type of server (openai, anthropic, etc.)
+          enum: [openai, anthropic, custom, cohere, llama, azure]
+        transport:
+          type: string
+          description: Transport protocol used by the server
+          enum: [stdio, ssse, websocket, http, unknown]
+        status:
+          type: string
+          description: Current operational status of the server
+          enum: [active, inactive, maintenance, error, degraded]
+        metadata:
+          type: object
+          description: Additional structured metadata for the server
+          properties:
+            health:
+              type: object
+              description: Health status information
+              properties:
+                status:
+                  type: string
+                  description: Health status indicator
+                  enum: [healthy, degraded, unhealthy]
+                lastChecked:
+                  type: string
+                  format: date-time
+                  description: Timestamp of the last health check
+                responseTime:
+                  type: number
+                  description: Average response time in milliseconds
+            tools:
+              type: object
+              description: Information about available tools
+              properties:
+                count:
+                  type: integer
+                  description: Number of available tools
+                names:
+                  type: array
+                  items:
+                    type: string
+                  description: List of tool names
+                categories:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                  description: Tools organized by category
+            stats:
+              type: object
+              description: Usage statistics
+              properties:
+                requests:
+                  type: integer
+                  description: Total number of requests processed
+                errors:
+                  type: integer
+                  description: Number of failed requests
+                uptime:
+                  type: number
+                  description: Server uptime in seconds
+                successRate:
+                  type: number
+                  description: Percentage of successful requests
+            version:
+              type: string
+              description: Server version
+            capabilities:
+              type: array
+              items:
+                type: string
+              description: List of server capabilities
+        createdAt:
+          type: string
+          format: date-time
+          description: When the server was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the server was last updated
+
+    McpServerList:
+      type: object
+      properties:
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpServer'
+          description: List of MCP servers 

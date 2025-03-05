@@ -1,15 +1,8 @@
-import { Metadata } from "next";
-import { LogViewerClient } from "./client";
-
-export const metadata: Metadata = {
-  title: "MCP Log Viewer | Pooper",
-  description: "Monitor and filter logs from MCP servers in real-time",
-};
+import { redirect } from 'next/navigation';
 
 /**
- * MCP Log Viewer Page - Server Component
- * This is the server component that renders the client component
+ * Redirect from old /mcp/log-viewer to new /mcp/logs path
  */
-export default function LogViewerPage() {
-  return <LogViewerClient />;
-} 
+export default function LogViewerRedirectPage() {
+  redirect('/mcp/logs');
+}

@@ -24,12 +24,31 @@ declare global {
  * @returns Socket.IO server instance
  */
 export function initWebSocket(httpServer: HttpServer, prisma: PrismaClient): Server {
+  // Use the same enhanced CORS settings as in index.ts for consistency
   const io = new Server(httpServer, {
     cors: {
-      origin: '*', // Allow all origins in development
-      methods: ['GET', 'POST'],
-      credentials: false
-    }
+      origin: "*", // Explicitly use * for development
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+      allowedHeaders: [
+        "Content-Type", 
+        "Authorization", 
+        "X-Requested-With", 
+        "Accept", 
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "x-client-hostname",
+        "x-client-version"
+        // 'Access-Control-Allow-Origin' is a response header, not a request header
+      ],
+      exposedHeaders: ["Content-Length", "Date", "Access-Control-Allow-Origin"],
+      credentials: true,
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+      maxAge: 86400 // 24 hours in seconds
+    },
+    allowEIO3: true, // Allow Engine.IO 3 for backward compatibility
+    transports: ['websocket', 'polling'] // Enable both transports
   });
 
   // Initialize the socket logger to forward debug logs to clients

@@ -188,9 +188,10 @@ model McpServer {
     id          String      @id @default(cuid())
     name        String
     url         String
-    type        String      // 'primary', 'secondary', 'replica'
-    status      String      @default("active") // 'active', 'inactive', 'maintenance'
-    metadata    Json?
+    type        String      // 'openai', 'anthropic', etc.
+    transport   String?     // 'stdio', 'ssse', 'websocket', 'http'
+    status      String      @default("active") // 'active', 'inactive', 'maintenance', 'error'
+    metadata    Json?       // Structured metadata including health, tools, stats
     createdAt   DateTime    @default(now()) @map("created_at")
     updatedAt   DateTime    @updatedAt @map("updated_at")
     tools       McpTool[]   @relation("ServerTools")

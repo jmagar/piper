@@ -1,11 +1,22 @@
-0import * as fs from 'fs/promises';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { glob } from 'glob';
 import { fileTypeFromFile } from 'file-type';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { OpenAI } from 'openai';
-import { transformers } from '@xenova/transformers';
+import axios from 'axios';
+import OpenAI from 'openai';
+// Import will be done dynamically in the initializeLocalModel method
+import * as dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+// Get current file directory (ES modules equivalent of __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from project root .env file
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
 import config from './config.js';
 import logger from './utils/logger.js';
 import { treeGenerator } from './utils/tree-generator.js';
@@ -26,13 +37,12 @@ const qdrantClient = new QdrantClient({
   apiKey: config.qdrantApiKey,
 });
 
-// Initialize OpenAI client if needed
-let openaiClient: OpenAI | null = null;
-if (config.openaiApiKey) {
-  openaiClient = new OpenAI({
-    apiKey: config.openaiApiKey,
-  });
-}
+// Add OpenAI API key from environment variables
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+// Initialize OpenAI client
+const openaiClient = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 
 // Local model variables
 let localEmbeddingPipeline: any = null;
@@ -52,11 +62,16 @@ export class EmbeddingGenerator {
     
     try {
       logger.info('Initializing code embeddings generator');
-      logger.info(`Using ${config.useLocalEmbeddings ? 'local' : 'OpenAI'} embeddings`);
       
-      // Initialize local model if needed
       if (config.useLocalEmbeddings) {
+        logger.info(`Using local embeddings model: ${config.localModel}`);
         await this.initializeLocalModel();
+      } else if (openaiClient) {
+        logger.info(`Using OpenAI embeddings model: ${config.openaiEmbeddingModel}`);
+      } else if (openRouterApiKey) {
+        logger.info('Using OpenAI embeddings via OpenRouter');
+      } else {
+        throw new Error('No embedding method available - please provide OpenAI API key or enable local embeddings');
       }
       
       // Ensure Qdrant collection exists
@@ -75,17 +90,18 @@ export class EmbeddingGenerator {
    */
   private async initializeLocalModel(): Promise<void> {
     try {
-      const { pipeline } = await transformers.importModule('transformers');
+      // Use the exact import approach that works in simple-test.js
+      const { pipeline } = await import('@xenova/transformers');
       localEmbeddingPipeline = await pipeline('feature-extraction', config.localModel);
       logger.info(`Local embedding model initialized: ${config.localModel}`);
     } catch (error) {
       logger.error('Error initializing local embedding model:', error);
       
-      if (openaiClient) {
-        logger.info('Falling back to OpenAI embeddings');
+      if (openRouterApiKey) {
+        logger.info('Falling back to OpenAI embeddings via OpenRouter');
         config.useLocalEmbeddings = false;
       } else {
-        throw new Error('Failed to initialize local embedding model and no OpenAI API key provided');
+        throw new Error('Failed to initialize local embedding model and no OpenRouter API key provided');
       }
     }
   }
@@ -99,10 +115,21 @@ export class EmbeddingGenerator {
       const exists = collections.collections.some(coll => coll.name === config.qdrantCollection);
       
       if (!exists) {
-        logger.info(`Creating Qdrant collection: ${config.qdrantCollection}`);
+        // Determine vector size based on model
+        let vectorSize = 1536; // Default for older OpenAI models
+        
+        if (config.useLocalEmbeddings) {
+          vectorSize = 1024; // Size for e5-large-v2
+        } else if (config.openaiEmbeddingModel === 'text-embedding-3-large') {
+          vectorSize = 3072; // Size for text-embedding-3-large
+        } else if (config.openaiEmbeddingModel === 'text-embedding-3-small') {
+          vectorSize = 1536; // Size for text-embedding-3-small
+        }
+        
+        logger.info(`Creating Qdrant collection: ${config.qdrantCollection} with vector size ${vectorSize}`);
         await qdrantClient.createCollection(config.qdrantCollection, {
           vectors: {
-            size: config.useLocalEmbeddings ? 384 : 1536, // Size depends on the model
+            size: vectorSize,
             distance: 'Cosine',
           }
         });
@@ -180,43 +207,98 @@ export class EmbeddingGenerator {
    * Generate embedding for content
    */
   private async generateEmbedding(content: string): Promise<number[]> {
+    // Use local embeddings if enabled and available
     if (config.useLocalEmbeddings && localEmbeddingPipeline) {
       try {
         const output = await localEmbeddingPipeline(content, { pooling: 'mean', normalize: true });
         return Array.from(output.data);
       } catch (error) {
         logger.error('Error generating local embedding:', error);
+        // Try fallback options
         if (openaiClient) {
-          logger.info('Falling back to OpenAI embeddings for this file');
-          return this.generateOpenAIEmbedding(content);
+          logger.info('Falling back to direct OpenAI embeddings');
+          return this.generateDirectOpenAIEmbedding(content);
+        } else if (openRouterApiKey) {
+          logger.info('Falling back to OpenAI embeddings via OpenRouter');
+          return this.generateOpenRouterEmbedding(content);
         } else {
           throw error;
         }
       }
-    } else if (openaiClient) {
-      return this.generateOpenAIEmbedding(content);
-    } else {
+    }
+    // Use direct OpenAI if client is available
+    else if (openaiClient) {
+      return this.generateDirectOpenAIEmbedding(content);
+    } 
+    // Use OpenRouter as fallback
+    else if (openRouterApiKey) {
+      return this.generateOpenRouterEmbedding(content);
+    } 
+    // No embedding method available
+    else {
       throw new Error('No embedding method available');
     }
   }
   
   /**
-   * Generate embedding using OpenAI
+   * Generate embedding using OpenAI directly
    */
-  private async generateOpenAIEmbedding(content: string): Promise<number[]> {
+  private async generateDirectOpenAIEmbedding(content: string): Promise<number[]> {
     if (!openaiClient) {
       throw new Error('OpenAI client not initialized');
     }
     
     try {
+      logger.debug(`Generating embedding with OpenAI model: ${config.openaiEmbeddingModel}`);
       const response = await openaiClient.embeddings.create({
-        model: "text-embedding-ada-002",
+        model: config.openaiEmbeddingModel,
         input: content,
+        encoding_format: 'float'
       });
       
       return response.data[0].embedding;
     } catch (error) {
-      logger.error('Error generating OpenAI embedding:', error);
+      logger.error('Error generating direct OpenAI embedding:', error);
+      
+      // Try fallback to OpenRouter if available
+      if (openRouterApiKey) {
+        logger.info('Falling back to OpenAI embeddings via OpenRouter');
+        return this.generateOpenRouterEmbedding(content);
+      } else {
+        throw error;
+      }
+    }
+  }
+  
+  /**
+   * Generate embedding using OpenAI via OpenRouter
+   */
+  private async generateOpenRouterEmbedding(content: string): Promise<number[]> {
+    if (!openRouterApiKey) {
+      throw new Error('OpenRouter API key not provided');
+    }
+    
+    try {
+      // Use direct Axios call to OpenRouter for embeddings
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/embeddings',
+        {
+          model: "openai/text-embedding-ada-002",
+          input: content
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${openRouterApiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://pooper.app', // Replace with your actual domain
+            'X-Title': 'Pooper App'
+          }
+        }
+      );
+      
+      return response.data.data[0].embedding;
+    } catch (error) {
+      logger.error('Error generating embedding via OpenRouter:', error);
       throw error;
     }
   }
@@ -227,7 +309,7 @@ export class EmbeddingGenerator {
   async processFile(filePath: string): Promise<void> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      const lineCount = content.split('\n').length;
+      const lineCount = await this.countLines(filePath);
       const hash = crypto.createHash('md5').update(content).digest('hex');
       
       // Prepare metadata
@@ -315,7 +397,7 @@ export class EmbeddingGenerator {
         for (let i = 0; i < files.length; i += config.batchSize) {
           const batch = files.slice(i, i + config.batchSize);
           
-          const processingPromises = batch.map(async (file) => {
+          const processingPromises = batch.map(async (file: string) => {
             if (await this.shouldProcessFile(file)) {
               await this.processFile(file);
               processedCount++;

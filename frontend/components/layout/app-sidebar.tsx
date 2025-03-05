@@ -56,7 +56,7 @@ export function AppSidebar() {
             
             <SidebarItem
               title="Prompts"
-              href="/prompts"
+              href="/chat/prompts"
               icon={Sparkles}
             />
           </SidebarSection>

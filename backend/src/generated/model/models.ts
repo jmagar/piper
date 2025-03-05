@@ -1,10 +1,15 @@
 import localVarRequest from 'request';
 
+export * from './activity';
+export * from './alert';
 export * from './apiChatMessagesStarPostRequest';
 export * from './apiChatMessagesUnstarPost200Response';
 export * from './apiChatMessagesUnstarPostRequest';
 export * from './apiChatPostRequest';
-export * from './apiDashboardStatsGet200Response';
+export * from './apiDashboardActivityGet200Response';
+export * from './apiDashboardAlertsGet200Response';
+export * from './apiDashboardDocumentsGet200Response';
+export * from './apiDocumentsIdDelete200Response';
 export * from './apiError';
 export * from './apiHealthGet200Response';
 export * from './apiMcpConfigBackupBackupIdDelete200Response';
@@ -20,6 +25,10 @@ export * from './apiMcpServersPostRequest';
 export * from './apiMcpToolsNameExecutePostRequest';
 export * from './apiPromptEnhancePost200Response';
 export * from './apiPromptEnhancePostRequest';
+export * from './apiPromptsIdUsePostRequest';
+export * from './apiSystemTestOpenaiGet200Response';
+export * from './apiSystemTestQdrantGet200Response';
+export * from './bookmarkKnowledgeDocument200Response';
 export * from './chatMessage';
 export * from './chatMessageMetadata';
 export * from './chatMessageMetadataReactionsValue';
@@ -27,13 +36,55 @@ export * from './chatMessageMetadataReactionsValueUsersInner';
 export * from './chatMessageType';
 export * from './conversation';
 export * from './conversationStats';
+export * from './createKnowledgeCollection201Response';
+export * from './createKnowledgeCollectionRequest';
+export * from './dashboardSummary';
+export * from './dashboardSummaryConversations';
+export * from './dashboardSummaryServerStatus';
+export * from './document';
+export * from './document1';
+export * from './documentCreateRequest';
+export * from './documentMetadata';
+export * from './documentUpdateRequest';
+export * from './documentsResponse';
+export * from './fileExplorerNode';
+export * from './fileExplorerResponse';
 export * from './getMcpLogs200Response';
+export * from './knowledgeCollection';
+export * from './knowledgeCollectionsResponse';
+export * from './knowledgeDocument';
+export * from './knowledgeDocumentBookmarkRequest';
+export * from './knowledgeDocumentCreateRequest';
+export * from './knowledgeDocumentCreateResponse';
+export * from './knowledgeDocumentDeleteResponse';
+export * from './knowledgeDocumentsResponse';
+export * from './knowledgeSearchRequest';
+export * from './knowledgeSearchResponse';
+export * from './knowledgeSearchResult';
+export * from './knowledgeSearchResultMetadata';
 export * from './langChainOptions';
 export * from './logEntry';
+export * from './mcpServerStats';
+export * from './mcpServerStatsServersInner';
+export * from './mcpServerStatsTopToolsInner';
 export * from './messageReaction';
+export * from './modelError';
+export * from './promptTemplate';
+export * from './promptTemplateCreate';
+export * from './promptTemplateListResponse';
+export * from './promptTemplateUpdate';
+export * from './promptUsageHistory';
+export * from './searchOptions';
+export * from './searchOptionsFilter';
+export * from './searchResponse';
 export * from './starredMessage';
 export * from './streamChunk';
 export * from './streamMcpLogs200Response';
+export * from './systemStatus';
+export * from './systemStatusEnvironment';
+export * from './systemStatusServices';
+export * from './systemStatusServicesOpenai';
+export * from './systemStatusServicesQdrant';
 export * from './tool';
 export * from './toolParametersInner';
 export * from './userStats';
@@ -51,11 +102,16 @@ export interface RequestDetailedFile {
 export type RequestFile = string | Buffer | fs.ReadStream | RequestDetailedFile;
 
 
+import { Activity } from './activity';
+import { Alert } from './alert';
 import { ApiChatMessagesStarPostRequest } from './apiChatMessagesStarPostRequest';
 import { ApiChatMessagesUnstarPost200Response } from './apiChatMessagesUnstarPost200Response';
 import { ApiChatMessagesUnstarPostRequest } from './apiChatMessagesUnstarPostRequest';
 import { ApiChatPostRequest } from './apiChatPostRequest';
-import { ApiDashboardStatsGet200Response } from './apiDashboardStatsGet200Response';
+import { ApiDashboardActivityGet200Response } from './apiDashboardActivityGet200Response';
+import { ApiDashboardAlertsGet200Response } from './apiDashboardAlertsGet200Response';
+import { ApiDashboardDocumentsGet200Response } from './apiDashboardDocumentsGet200Response';
+import { ApiDocumentsIdDelete200Response } from './apiDocumentsIdDelete200Response';
 import { ApiError } from './apiError';
 import { ApiHealthGet200Response } from './apiHealthGet200Response';
 import { ApiMcpConfigBackupBackupIdDelete200Response } from './apiMcpConfigBackupBackupIdDelete200Response';
@@ -71,6 +127,10 @@ import { ApiMcpServersPostRequest } from './apiMcpServersPostRequest';
 import { ApiMcpToolsNameExecutePostRequest } from './apiMcpToolsNameExecutePostRequest';
 import { ApiPromptEnhancePost200Response } from './apiPromptEnhancePost200Response';
 import { ApiPromptEnhancePostRequest } from './apiPromptEnhancePostRequest';
+import { ApiPromptsIdUsePostRequest } from './apiPromptsIdUsePostRequest';
+import { ApiSystemTestOpenaiGet200Response } from './apiSystemTestOpenaiGet200Response';
+import { ApiSystemTestQdrantGet200Response } from './apiSystemTestQdrantGet200Response';
+import { BookmarkKnowledgeDocument200Response } from './bookmarkKnowledgeDocument200Response';
 import { ChatMessage } from './chatMessage';
 import { ChatMessageMetadata } from './chatMessageMetadata';
 import { ChatMessageMetadataReactionsValue } from './chatMessageMetadataReactionsValue';
@@ -78,13 +138,55 @@ import { ChatMessageMetadataReactionsValueUsersInner } from './chatMessageMetada
 import { ChatMessageType } from './chatMessageType';
 import { Conversation } from './conversation';
 import { ConversationStats } from './conversationStats';
+import { CreateKnowledgeCollection201Response } from './createKnowledgeCollection201Response';
+import { CreateKnowledgeCollectionRequest } from './createKnowledgeCollectionRequest';
+import { DashboardSummary } from './dashboardSummary';
+import { DashboardSummaryConversations } from './dashboardSummaryConversations';
+import { DashboardSummaryServerStatus } from './dashboardSummaryServerStatus';
+import { Document } from './document';
+import { Document1 } from './document1';
+import { DocumentCreateRequest } from './documentCreateRequest';
+import { DocumentMetadata } from './documentMetadata';
+import { DocumentUpdateRequest } from './documentUpdateRequest';
+import { DocumentsResponse } from './documentsResponse';
+import { FileExplorerNode } from './fileExplorerNode';
+import { FileExplorerResponse } from './fileExplorerResponse';
 import { GetMcpLogs200Response } from './getMcpLogs200Response';
+import { KnowledgeCollection } from './knowledgeCollection';
+import { KnowledgeCollectionsResponse } from './knowledgeCollectionsResponse';
+import { KnowledgeDocument } from './knowledgeDocument';
+import { KnowledgeDocumentBookmarkRequest } from './knowledgeDocumentBookmarkRequest';
+import { KnowledgeDocumentCreateRequest } from './knowledgeDocumentCreateRequest';
+import { KnowledgeDocumentCreateResponse } from './knowledgeDocumentCreateResponse';
+import { KnowledgeDocumentDeleteResponse } from './knowledgeDocumentDeleteResponse';
+import { KnowledgeDocumentsResponse } from './knowledgeDocumentsResponse';
+import { KnowledgeSearchRequest } from './knowledgeSearchRequest';
+import { KnowledgeSearchResponse } from './knowledgeSearchResponse';
+import { KnowledgeSearchResult } from './knowledgeSearchResult';
+import { KnowledgeSearchResultMetadata } from './knowledgeSearchResultMetadata';
 import { LangChainOptions } from './langChainOptions';
 import { LogEntry } from './logEntry';
+import { McpServerStats } from './mcpServerStats';
+import { McpServerStatsServersInner } from './mcpServerStatsServersInner';
+import { McpServerStatsTopToolsInner } from './mcpServerStatsTopToolsInner';
 import { MessageReaction } from './messageReaction';
+import { ModelError } from './modelError';
+import { PromptTemplate } from './promptTemplate';
+import { PromptTemplateCreate } from './promptTemplateCreate';
+import { PromptTemplateListResponse } from './promptTemplateListResponse';
+import { PromptTemplateUpdate } from './promptTemplateUpdate';
+import { PromptUsageHistory } from './promptUsageHistory';
+import { SearchOptions } from './searchOptions';
+import { SearchOptionsFilter } from './searchOptionsFilter';
+import { SearchResponse } from './searchResponse';
 import { StarredMessage } from './starredMessage';
 import { StreamChunk } from './streamChunk';
 import { StreamMcpLogs200Response } from './streamMcpLogs200Response';
+import { SystemStatus } from './systemStatus';
+import { SystemStatusEnvironment } from './systemStatusEnvironment';
+import { SystemStatusServices } from './systemStatusServices';
+import { SystemStatusServicesOpenai } from './systemStatusServicesOpenai';
+import { SystemStatusServicesQdrant } from './systemStatusServicesQdrant';
 import { Tool } from './tool';
 import { ToolParametersInner } from './toolParametersInner';
 import { UserStats } from './userStats';
@@ -102,24 +204,37 @@ let primitives = [
                  ];
 
 let enumsMap: {[index: string]: any} = {
+        "Activity.TypeEnum": Activity.TypeEnum,
+        "Alert.TypeEnum": Alert.TypeEnum,
         "ApiMcpConfigValidatePost200ResponseErrorsInner.SeverityEnum": ApiMcpConfigValidatePost200ResponseErrorsInner.SeverityEnum,
+        "ApiSystemTestOpenaiGet200Response.StatusEnum": ApiSystemTestOpenaiGet200Response.StatusEnum,
+        "ApiSystemTestQdrantGet200Response.StatusEnum": ApiSystemTestQdrantGet200Response.StatusEnum,
         "ChatMessage.RoleEnum": ChatMessage.RoleEnum,
         "ChatMessage.StatusEnum": ChatMessage.StatusEnum,
         "ChatMessageMetadata.StreamStatusEnum": ChatMessageMetadata.StreamStatusEnum,
         "ChatMessageType": ChatMessageType,
+        "DocumentMetadata.FileTypeEnum": DocumentMetadata.FileTypeEnum,
         "LangChainOptions.FallbackProviderEnum": LangChainOptions.FallbackProviderEnum,
         "LogEntry.LevelEnum": LogEntry.LevelEnum,
+        "McpServerStatsServersInner.StatusEnum": McpServerStatsServersInner.StatusEnum,
         "StreamChunk.TypeEnum": StreamChunk.TypeEnum,
         "StreamMcpLogs200Response.StatusEnum": StreamMcpLogs200Response.StatusEnum,
+        "SystemStatusServicesOpenai.StatusEnum": SystemStatusServicesOpenai.StatusEnum,
+        "SystemStatusServicesQdrant.StatusEnum": SystemStatusServicesQdrant.StatusEnum,
         "Tool.TypeEnum": Tool.TypeEnum,
 }
 
 let typeMap: {[index: string]: any} = {
+    "Activity": Activity,
+    "Alert": Alert,
     "ApiChatMessagesStarPostRequest": ApiChatMessagesStarPostRequest,
     "ApiChatMessagesUnstarPost200Response": ApiChatMessagesUnstarPost200Response,
     "ApiChatMessagesUnstarPostRequest": ApiChatMessagesUnstarPostRequest,
     "ApiChatPostRequest": ApiChatPostRequest,
-    "ApiDashboardStatsGet200Response": ApiDashboardStatsGet200Response,
+    "ApiDashboardActivityGet200Response": ApiDashboardActivityGet200Response,
+    "ApiDashboardAlertsGet200Response": ApiDashboardAlertsGet200Response,
+    "ApiDashboardDocumentsGet200Response": ApiDashboardDocumentsGet200Response,
+    "ApiDocumentsIdDelete200Response": ApiDocumentsIdDelete200Response,
     "ApiError": ApiError,
     "ApiHealthGet200Response": ApiHealthGet200Response,
     "ApiMcpConfigBackupBackupIdDelete200Response": ApiMcpConfigBackupBackupIdDelete200Response,
@@ -135,19 +250,65 @@ let typeMap: {[index: string]: any} = {
     "ApiMcpToolsNameExecutePostRequest": ApiMcpToolsNameExecutePostRequest,
     "ApiPromptEnhancePost200Response": ApiPromptEnhancePost200Response,
     "ApiPromptEnhancePostRequest": ApiPromptEnhancePostRequest,
+    "ApiPromptsIdUsePostRequest": ApiPromptsIdUsePostRequest,
+    "ApiSystemTestOpenaiGet200Response": ApiSystemTestOpenaiGet200Response,
+    "ApiSystemTestQdrantGet200Response": ApiSystemTestQdrantGet200Response,
+    "BookmarkKnowledgeDocument200Response": BookmarkKnowledgeDocument200Response,
     "ChatMessage": ChatMessage,
     "ChatMessageMetadata": ChatMessageMetadata,
     "ChatMessageMetadataReactionsValue": ChatMessageMetadataReactionsValue,
     "ChatMessageMetadataReactionsValueUsersInner": ChatMessageMetadataReactionsValueUsersInner,
     "Conversation": Conversation,
     "ConversationStats": ConversationStats,
+    "CreateKnowledgeCollection201Response": CreateKnowledgeCollection201Response,
+    "CreateKnowledgeCollectionRequest": CreateKnowledgeCollectionRequest,
+    "DashboardSummary": DashboardSummary,
+    "DashboardSummaryConversations": DashboardSummaryConversations,
+    "DashboardSummaryServerStatus": DashboardSummaryServerStatus,
+    "Document": Document,
+    "Document1": Document1,
+    "DocumentCreateRequest": DocumentCreateRequest,
+    "DocumentMetadata": DocumentMetadata,
+    "DocumentUpdateRequest": DocumentUpdateRequest,
+    "DocumentsResponse": DocumentsResponse,
+    "FileExplorerNode": FileExplorerNode,
+    "FileExplorerResponse": FileExplorerResponse,
     "GetMcpLogs200Response": GetMcpLogs200Response,
+    "KnowledgeCollection": KnowledgeCollection,
+    "KnowledgeCollectionsResponse": KnowledgeCollectionsResponse,
+    "KnowledgeDocument": KnowledgeDocument,
+    "KnowledgeDocumentBookmarkRequest": KnowledgeDocumentBookmarkRequest,
+    "KnowledgeDocumentCreateRequest": KnowledgeDocumentCreateRequest,
+    "KnowledgeDocumentCreateResponse": KnowledgeDocumentCreateResponse,
+    "KnowledgeDocumentDeleteResponse": KnowledgeDocumentDeleteResponse,
+    "KnowledgeDocumentsResponse": KnowledgeDocumentsResponse,
+    "KnowledgeSearchRequest": KnowledgeSearchRequest,
+    "KnowledgeSearchResponse": KnowledgeSearchResponse,
+    "KnowledgeSearchResult": KnowledgeSearchResult,
+    "KnowledgeSearchResultMetadata": KnowledgeSearchResultMetadata,
     "LangChainOptions": LangChainOptions,
     "LogEntry": LogEntry,
+    "McpServerStats": McpServerStats,
+    "McpServerStatsServersInner": McpServerStatsServersInner,
+    "McpServerStatsTopToolsInner": McpServerStatsTopToolsInner,
     "MessageReaction": MessageReaction,
+    "ModelError": ModelError,
+    "PromptTemplate": PromptTemplate,
+    "PromptTemplateCreate": PromptTemplateCreate,
+    "PromptTemplateListResponse": PromptTemplateListResponse,
+    "PromptTemplateUpdate": PromptTemplateUpdate,
+    "PromptUsageHistory": PromptUsageHistory,
+    "SearchOptions": SearchOptions,
+    "SearchOptionsFilter": SearchOptionsFilter,
+    "SearchResponse": SearchResponse,
     "StarredMessage": StarredMessage,
     "StreamChunk": StreamChunk,
     "StreamMcpLogs200Response": StreamMcpLogs200Response,
+    "SystemStatus": SystemStatus,
+    "SystemStatusEnvironment": SystemStatusEnvironment,
+    "SystemStatusServices": SystemStatusServices,
+    "SystemStatusServicesOpenai": SystemStatusServicesOpenai,
+    "SystemStatusServicesQdrant": SystemStatusServicesQdrant,
     "Tool": Tool,
     "ToolParametersInner": ToolParametersInner,
     "UserStats": UserStats,

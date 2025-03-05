@@ -2,8 +2,17 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 /**
- * Merge class names with Tailwind CSS classes
- * Combines clsx and tailwind-merge for powerful conditional class joining
+ * Combines multiple class names and merges Tailwind CSS classes
+ * 
+ * @param inputs - Class names to combine
+ * @returns Merged class names string
+ * 
+ * @example
+ * ```tsx
+ * <div className={cn('text-red-500', isActive && 'bg-blue-500', className)}>
+ *   Content
+ * </div>
+ * ```
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

@@ -67,10 +67,8 @@ export default function ClientLayout({
             withCredentials: false, 
             extraHeaders: {
               "x-client-version": "1.0.0",
-              "x-client-hostname": typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-              // Include CORS headers to help with debugging
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Request-Method": "GET,POST,OPTIONS",
+              "x-client-hostname": typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+              // Updated headers to match what's allowed in the server configuration
             }
           }}
         >

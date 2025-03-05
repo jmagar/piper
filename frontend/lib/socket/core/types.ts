@@ -5,14 +5,14 @@
  */
 
 import { Socket as IOSocket } from 'socket.io-client';
-import { ConnectionState } from './events';
 import type {
   ServerToClientEvents,
-  ClientToServerEvents
+  ClientToServerEvents,
+  ConnectionState
 } from './events';
 
-// Re-export ConnectionState so connection.ts can import it from here
-export { ConnectionState };
+// Re-export ConnectionState to avoid circular dependencies
+export type { ConnectionState };
 
 /**
  * Socket type with properly typed events
@@ -30,4 +30,4 @@ export interface SocketContextValue {
   connectionState: ConnectionState;
   reconnect: () => void;
   disconnect: () => void;
-} 
+}

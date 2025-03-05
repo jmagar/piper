@@ -68,14 +68,59 @@ router.get('/health', async (_req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * Helper function to determine transport type from URL
+ */
+function determineTransportFromUrl(url: string): string {
+  if (url.includes('ssse')) return 'ssse';
+  if (url.includes('stdio')) return 'stdio';
+  if (url.includes('ws')) return 'websocket';
+  if (url.includes('http')) return 'http';
+  return 'unknown';
+}
+
+/**
  * Server Routes
  */
 
 // GET /api/mcp/servers - List all servers
 router.get('/servers', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const servers = await prisma.mcpServer.findMany();
-    res.json({ servers });
+    const servers = await prisma.mcpServer.findMany({
+      include: {
+        tools: true
+      }
+    });
+    
+    // Add computed fields and ensure proper structure for each server
+    const enhancedServers = servers.map(server => {
+      // Create a mutable server object
+      const serverObj = { ...server };
+      
+      // Set transport if not already set
+      if (!serverObj.transport) {
+        // @ts-ignore - We're adding the transport property dynamically
+        serverObj.transport = determineTransportFromUrl(serverObj.url);
+      }
+      
+      // Ensure metadata is an object
+      let metadata = serverObj.metadata as Record<string, any> | null;
+      metadata = metadata || {};
+      
+      // Add tools information to metadata
+      if (!metadata.tools) {
+        metadata.tools = {
+          count: server.tools.length,
+          names: server.tools.map(tool => tool.name)
+        };
+      }
+      
+      return {
+        ...serverObj,
+        metadata
+      };
+    });
+    
+    res.json({ servers: enhancedServers });
   } catch (err) {
     error('Failed to list servers: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ error: 'Failed to list servers' });
@@ -87,15 +132,69 @@ router.get('/servers/:serverId', async (req: Request<{ serverId: string }>, res:
   try {
     const { serverId } = req.params;
     const server = await prisma.mcpServer.findUnique({
-      where: { id: serverId }
+      where: { id: serverId },
+      include: {
+        tools: true
+      }
     });
 
     if (!server) {
       res.status(404).json({ error: 'Server not found' });
       return;
     }
+    
+    // Create a mutable server object
+    const serverObj = { ...server };
+    
+    // Set transport if not already set
+    if (!serverObj.transport) {
+      // @ts-ignore - We're adding the transport property dynamically
+      serverObj.transport = determineTransportFromUrl(serverObj.url);
+    }
+    
+    // Ensure metadata is an object
+    let metadata = serverObj.metadata as Record<string, any> | null;
+    metadata = metadata || {};
+    
+    // Add tools information to metadata
+    if (!metadata.tools) {
+      metadata.tools = {
+        count: server.tools.length,
+        names: server.tools.map(tool => tool.name)
+      };
+    }
 
-    res.json(server);
+    // If health status is not set, perform a health check
+    if (!metadata.health || !metadata.health.lastChecked) {
+      try {
+        const healthCheckStart = Date.now();
+        const response = await fetch(`${serverObj.url}/health`, { 
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const responseTime = Date.now() - healthCheckStart;
+        
+        metadata.health = {
+          status: response.ok ? 'healthy' : 'unhealthy',
+          lastChecked: new Date().toISOString(),
+          responseTime
+        };
+      } catch (healthErr) {
+        log('Health check failed for server %s: %s', 
+          serverObj.name, healthErr instanceof Error ? healthErr.message : String(healthErr));
+        
+        metadata.health = {
+          status: 'unhealthy',
+          lastChecked: new Date().toISOString(),
+          responseTime: 0
+        };
+      }
+    }
+    
+    res.json({
+      ...serverObj,
+      metadata
+    });
   } catch (err) {
     error('Failed to get server: %s', err instanceof Error ? err.message : String(err));
     res.status(500).json({ error: 'Failed to get server details' });

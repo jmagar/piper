@@ -1,0 +1,174 @@
+/* JSON5 Editor Ultra Vibrant Bluish Dark Theme */
+.vibrant-dark-theme-editor {
+  /* Base theme */
+  background-color: #0a0e14 !important;
+  color: #e6edf3 !important;
+  border-color: #30363d !important;
+}
+
+/* Glowing effect for the editor */
+.glow-effect {
+  position: relative;
+  border: 1px solid transparent !important;
+  border-radius: 0.375rem;
+  background: linear-gradient(#0a0e14, #0a0e14) padding-box,
+              linear-gradient(90deg, #00c6ff, #0072ff, #00c6ff) border-box !important;
+  box-shadow: 0 0 15px rgba(0, 198, 255, 0.5), 
+              inset 0 0 10px rgba(0, 114, 255, 0.3) !important;
+  transition: box-shadow 0.3s ease-in-out !important;
+}
+
+.glow-effect:hover {
+  box-shadow: 0 0 25px rgba(0, 198, 255, 0.7), 
+              inset 0 0 15px rgba(0, 114, 255, 0.4) !important;
+}
+
+.vibrant-dark-theme-editor .cm-editor {
+  background-color: #0a0e14 !important;
+  color: #e6edf3 !important;
+}
+
+.vibrant-dark-theme-editor .cm-content {
+  background-color: #0a0e14 !important;
+  color: #e6edf3 !important;
+}
+
+.vibrant-dark-theme-editor .cm-line {
+  color: #e6edf3 !important;
+}
+
+.vibrant-dark-theme-editor .cm-gutters {
+  background-color: #0d1117 !important;
+  color: #8b949e !important;
+  border-right: 1px solid #30363d !important;
+}
+
+.vibrant-dark-theme-editor .cm-activeLine {
+  background-color: rgba(33, 150, 243, 0.1) !important;
+}
+
+.vibrant-dark-theme-editor .cm-activeLineGutter {
+  background-color: rgba(33, 150, 243, 0.1) !important;
+  color: #58a6ff !important;
+}
+
+.vibrant-dark-theme-editor .cm-selectionMatch {
+  background-color: rgba(33, 150, 243, 0.3) !important;
+}
+
+.vibrant-dark-theme-editor .cm-cursor {
+  border-left-color: #58a6ff !important;
+}
+
+.vibrant-dark-theme-editor .cm-fat-cursor {
+  background-color: rgba(88, 166, 255, 0.5) !important;
+}
+
+/* ULTRA vibrant syntax highlighting with neon effects */
+.vibrant-dark-theme-editor .cm-string {
+  color: #00ffea !important; /* Bright neon cyan for strings */
+  font-style: italic !important;
+  text-shadow: 0 0 10px rgba(0, 255, 234, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-number {
+  color: #00eeff !important; /* Electric blue for numbers */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(0, 238, 255, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-keyword {
+  color: #ff5722 !important; /* Deep orange for keywords */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(255, 87, 34, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-property {
+  color: #d580ff !important; /* Bright lavender for properties */
+  text-shadow: 0 0 10px rgba(213, 128, 255, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-comment {
+  color: #7986cb !important; /* Indigo for comments */
+  font-style: italic !important;
+}
+
+.vibrant-dark-theme-editor .cm-punctuation {
+  color: #1de9b6 !important; /* Teal accent for punctuation */
+  text-shadow: 0 0 10px rgba(29, 233, 182, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-operator {
+  color: #ffab40 !important; /* Amber accent for operators */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(255, 171, 64, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-null {
+  color: #00e5ff !important; /* Cyan accent for null */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-boolean {
+  color: #00e676 !important; /* Green accent for booleans */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.8) !important;
+}
+
+/* Additional JSON5 specific tokens */
+.vibrant-dark-theme-editor .cm-atom {
+  color: #76ff03 !important; /* Lime accent for atoms/constants */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(118, 255, 3, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-meta {
+  color: #ea80fc !important; /* Purple accent for meta information */
+  text-shadow: 0 0 10px rgba(234, 128, 252, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-tag {
+  color: #ff9e80 !important; /* Deep orange accent for tags */
+  text-shadow: 0 0 10px rgba(255, 158, 128, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-attribute {
+  color: #b388ff !important; /* Deep purple accent for attributes */
+  text-shadow: 0 0 10px rgba(179, 136, 255, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-bracket {
+  color: #64ffda !important; /* Teal accent for brackets */
+  font-weight: bold !important;
+  text-shadow: 0 0 10px rgba(100, 255, 218, 0.8) !important;
+}
+
+.vibrant-dark-theme-editor .cm-definition {
+  color: #bb86fc !important; /* Purple accent for definitions */
+  text-shadow: 0 0 10px rgba(187, 134, 252, 0.8) !important;
+}
+
+/* Lezer parser token styles for JSON5 */
+.vibrant-dark-theme-editor .ͼb { color: #00ffea !important; text-shadow: 0 0 10px rgba(0, 255, 234, 0.8) !important; } /* string */
+.vibrant-dark-theme-editor .ͼc { color: #00eeff !important; text-shadow: 0 0 10px rgba(0, 238, 255, 0.8) !important; } /* number */
+.vibrant-dark-theme-editor .ͼd { color: #00e676 !important; text-shadow: 0 0 10px rgba(0, 230, 118, 0.8) !important; } /* bool */
+.vibrant-dark-theme-editor .ͼe { color: #d580ff !important; text-shadow: 0 0 10px rgba(213, 128, 255, 0.8) !important; } /* propertyName */
+.vibrant-dark-theme-editor .ͼf { color: #00e5ff !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.8) !important; } /* null */
+.vibrant-dark-theme-editor .ͼg { color: #1de9b6 !important; text-shadow: 0 0 10px rgba(29, 233, 182, 0.8) !important; } /* separator */
+.vibrant-dark-theme-editor .ͼh { color: #64ffda !important; text-shadow: 0 0 10px rgba(100, 255, 218, 0.8) !important; } /* squareBracket */
+.vibrant-dark-theme-editor .ͼi { color: #64ffda !important; text-shadow: 0 0 10px rgba(100, 255, 218, 0.8) !important; } /* brace */
+.vibrant-dark-theme-editor .ͼj { color: #1de9b6 !important; text-shadow: 0 0 10px rgba(29, 233, 182, 0.8) !important; } /* punctuation */
+.vibrant-dark-theme-editor .ͼk { color: #7986cb !important; font-style: italic !important; } /* lineComment */
+.vibrant-dark-theme-editor .ͼl { color: #7986cb !important; font-style: italic !important; } /* blockComment */
+
+/* Ensure CodeMirror token styles are overridden with our vibrant colors */
+.vibrant-dark-theme-editor .ͼ1 .mtk1 { color: #e6edf3 !important; }
+.vibrant-dark-theme-editor .ͼ1 .mtk2 { color: #d580ff !important; text-shadow: 0 0 10px rgba(213, 128, 255, 0.8) !important; } /* property */
+.vibrant-dark-theme-editor .ͼ1 .mtk3 { color: #1de9b6 !important; text-shadow: 0 0 10px rgba(29, 233, 182, 0.8) !important; } /* punctuation */
+.vibrant-dark-theme-editor .ͼ1 .mtk4 { color: #00ffea !important; text-shadow: 0 0 10px rgba(0, 255, 234, 0.8) !important; } /* string */
+.vibrant-dark-theme-editor .ͼ1 .mtk5 { color: #00eeff !important; text-shadow: 0 0 10px rgba(0, 238, 255, 0.8) !important; } /* number */
+.vibrant-dark-theme-editor .ͼ1 .mtk6 { color: #ff5722 !important; text-shadow: 0 0 10px rgba(255, 87, 34, 0.8) !important; } /* keyword */
+.vibrant-dark-theme-editor .ͼ1 .mtk7 { color: #00e676 !important; text-shadow: 0 0 10px rgba(0, 230, 118, 0.8) !important; } /* boolean */
+.vibrant-dark-theme-editor .ͼ1 .mtk8 { color: #00e5ff !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.8) !important; } /* null */
+.vibrant-dark-theme-editor .ͼ1 .mtk9 { color: #ffab40 !important; text-shadow: 0 0 10px rgba(255, 171, 64, 0.8) !important; } /* operator */

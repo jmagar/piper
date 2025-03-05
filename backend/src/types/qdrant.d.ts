@@ -2,20 +2,51 @@
  * Type declarations for Qdrant client
  */
 
+import { QdrantClient as BaseQdrantClient } from '@qdrant/js-client-rest';
+
 declare module '@qdrant/js-client-rest' {
-  export class QdrantClient {
-    constructor(options: { url: string; apiKey?: string });
-    search(collectionName: string, searchParams: import('@qdrant/js-client-rest/dist/types').SearchParams): Promise<import('@qdrant/js-client-rest/dist/types').ScoredPoint[]>;
-    getCollections(): Promise<{ collections: { name: string }[] }>;
-    getCollection(name: string): Promise<{ 
-      config: { 
-        params: Record<string, any>;
-        created_at?: string;
-        updated_at?: string;
-      } 
-    }>;
-    count(collectionName: string, countParams?: { exact: boolean; filter?: import('@qdrant/js-client-rest/dist/types').Filter }): Promise<{ count: number }>;
-    scroll(collectionName: string, scrollParams: { limit: number; offset: number; with_payload: boolean; filter?: import('@qdrant/js-client-rest/dist/types').Filter }): Promise<{ points: any[] }>;
+  interface QdrantClient extends BaseQdrantClient {
+    /**
+     * Create a new collection
+     */
+    createCollection(collectionName: string, params: any): Promise<any>;
+    
+    /**
+     * Upload points to a collection
+     */
+    upsert(collectionName: string, params: {
+      points: Array<{
+        id: string | number;
+        vector?: number[];
+        payload?: any;
+      }>;
+    }): Promise<any>;
+    
+    /**
+     * Retrieve points by their ids
+     */
+    retrieve(collectionName: string, params: {
+      ids: Array<string | number>;
+      with_payload?: boolean;
+      with_vector?: boolean;
+    }): Promise<any>;
+    
+    /**
+     * Delete points by their ids
+     */
+    delete(collectionName: string, params: {
+      points: Array<string | number>;
+    }): Promise<any>;
+    
+    /**
+     * Search for points
+     */
+    search(collectionName: string, params: any): Promise<any>;
+    
+    /**
+     * Scroll through points
+     */
+    scroll(collectionName: string, params: any): Promise<any>;
   }
 }
 

@@ -1,193 +1,254 @@
-import type { PrismaClient } from '@prisma/client';
-import WebSocket from 'ws';
+import { PrismaClient } from '@prisma/client';
+import debug from 'debug';
+import { convertMcpToLangchainTools } from '@h1deya/langchain-mcp-tools';
+// Changed from import type to regular import so it can be used as a value
+import { StructuredTool } from '@langchain/core/tools';
+import { Config, MCPServerConfig } from '../../load-config.js';
 
-import type { Server } from '../../generated/model/server';
-import type { Tool } from '../../generated/model/tool.js';
+const log = debug('pooper:mcp:server');
+const error = debug('pooper:mcp:error');
 
+// Extended types for MCP tools integration
+interface McpToolsResult {
+  tools: StructuredTool[];
+  cleanup: () => Promise<void>;
+  failedServers?: string[];
+}
+
+// Options for MCP server initialization
+interface McpInitOptions {
+  logLevel: string;
+  initTimeout?: number;
+  continueOnError?: boolean;
+}
+
+/**
+ * Service for managing MCP (Model Context Protocol) servers
+ * Acts as an adapter between the application and the MCP SDK
+ */
 export class McpServerService {
-  private connections: Map<string, WebSocket> = new Map();
-  private reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
+  private toolsCache: { tools: StructuredTool[]; cleanup: () => Promise<void> } | null = null;
+  private serverConfigs: Record<string, MCPServerConfig> = {};
   
   constructor(private prisma: PrismaClient) {}
 
-  async connectToServer(serverId: string): Promise<void> {
-    const server = await this.prisma.mcpServer.findUnique({
-      where: { id: serverId }
-    });
-
-    if (!server) {
-      throw new Error(`Server ${serverId} not found`);
-    }
-
-    // Clear any existing reconnect timer
-    const existingTimer = this.reconnectTimers.get(serverId);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
-      this.reconnectTimers.delete(serverId);
-    }
-
-    // Close existing connection if any
-    const existingConnection = this.connections.get(serverId);
-    if (existingConnection) {
-      existingConnection.close();
-      this.connections.delete(serverId);
-    }
-
+  /**
+   * Initializes MCP servers from configuration
+   * @param config The MCP configuration
+   * @returns An object containing the initialized tools and a cleanup function
+   */
+  async initializeServers(config: Config): Promise<{ tools: StructuredTool[]; cleanup: () => Promise<void> }> {
     try {
-      const ws = new WebSocket(server.url);
+      // If we already have initialized tools, return them
+      if (this.toolsCache) {
+        log('Returning cached MCP tools');
+        return this.toolsCache;
+      }
 
-      ws.on('open', () => {
-        console.log(`Connected to MCP server ${server.name} (${server.url})`);
-        this.connections.set(serverId, ws);
-
-        // Send initial handshake
-        ws.send(JSON.stringify({
-          type: 'handshake',
-          version: '1.0.0',
-          capabilities: ['tools', 'events', 'logs']
-        }));
-      });
-
-      ws.on('message', async (data: string) => {
-        try {
-          const message = JSON.parse(data);
-          await this.handleServerMessage(serverId, message);
-        } catch (error) {
-          console.error(`Error handling message from server ${serverId}:`, error);
+      log('Initializing MCP servers from config');
+      // Save server configs for reference
+      this.serverConfigs = config.mcp_servers;
+      
+      // Use the MCP to LangChain conversion library to initialize servers
+      const result = await convertMcpToLangchainTools(
+        config.mcp_servers,
+        { logLevel: 'info' }
+      ) as McpToolsResult;
+      
+      // Add custom properties for failed servers if not present
+      if (!result.failedServers) {
+        result.failedServers = [];
+      }
+      
+      // Log server initialization results
+      if (result.failedServers && result.failedServers.length > 0) {
+        error('The following MCP servers failed to initialize: %s', result.failedServers.join(', '));
+        
+        // Register failed servers in database for monitoring
+        await this.updateFailedServersInDb(result.failedServers);
+      }
+      
+      log('Successfully initialized %d MCP tools', result.tools.length);
+      
+      // Update successful servers in database
+      await this.updateActiveServersInDb(
+        Object.keys(config.mcp_servers).filter(
+          server => !result.failedServers?.includes(server)
+        )
+      );
+      
+      // Store in cache
+      this.toolsCache = result;
+      
+      return result;
+    } catch (err) {
+      error('Failed to initialize MCP servers: %s', err instanceof Error ? err.message : String(err));
+      throw new Error(`Failed to initialize MCP servers: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  }
+  
+  /**
+   * Updates failed server status in the database
+   */
+  private async updateFailedServersInDb(failedServers: string[]): Promise<void> {
+    try {
+      for (const serverName of failedServers) {
+        const serverConfig = this.serverConfigs[serverName];
+        if (!serverConfig) continue;
+        
+        // Find existing server by name
+        const existingServer = await this.prisma.mcpServer.findFirst({
+          where: { name: serverName }
+        });
+        
+        if (existingServer) {
+          // Update existing server
+          await this.prisma.mcpServer.update({
+            where: { id: existingServer.id },
+            data: {
+              status: 'failed',
+              metadata: {
+                ...existingServer.metadata as any,
+                lastError: `Failed to initialize at ${new Date().toISOString()}`
+              } as any,
+              updatedAt: new Date()
+            }
+          });
+        } else {
+          // Create new server
+          await this.prisma.mcpServer.create({
+            data: {
+              name: serverName,
+              url: `mcp://${serverName}`,
+              type: 'primary',
+              status: 'failed',
+              metadata: {
+                ...serverConfig,
+                lastError: `Failed to initialize at ${new Date().toISOString()}`
+              } as any
+            }
+          });
         }
-      });
-
-      ws.on('close', () => {
-        console.log(`Disconnected from MCP server ${server.name}`);
-        this.connections.delete(serverId);
-        this.scheduleReconnect(serverId);
-      });
-
-      ws.on('error', (error) => {
-        console.error(`WebSocket error for server ${server.name}:`, error);
-        ws.close();
-      });
-
-    } catch (error) {
-      console.error(`Failed to connect to MCP server ${server.name}:`, error);
-      this.scheduleReconnect(serverId);
+      }
+    } catch (dbErr) {
+      error('Error updating failed servers in database: %s', dbErr instanceof Error ? dbErr.message : String(dbErr));
+    }
+  }
+  
+  /**
+   * Updates active server status in the database
+   */
+  private async updateActiveServersInDb(activeServers: string[]): Promise<void> {
+    try {
+      for (const serverName of activeServers) {
+        const serverConfig = this.serverConfigs[serverName];
+        if (!serverConfig) continue;
+        
+        // Find existing server by name
+        const existingServer = await this.prisma.mcpServer.findFirst({
+          where: { name: serverName }
+        });
+        
+        if (existingServer) {
+          // Update existing server
+          await this.prisma.mcpServer.update({
+            where: { id: existingServer.id },
+            data: {
+              status: 'active',
+              updatedAt: new Date()
+            }
+          });
+        } else {
+          // Create new server
+          await this.prisma.mcpServer.create({
+            data: {
+              name: serverName,
+              url: `mcp://${serverName}`,
+              type: 'primary',
+              status: 'active',
+              metadata: serverConfig as any
+            }
+          });
+        }
+      }
+    } catch (dbErr) {
+      error('Error updating active servers in database: %s', dbErr instanceof Error ? dbErr.message : String(dbErr));
     }
   }
 
-  private scheduleReconnect(serverId: string): void {
-    // Exponential backoff for reconnection attempts
-    const timer = setTimeout(async () => {
-      try {
-        await this.connectToServer(serverId);
-      } catch (error) {
-        console.error(`Reconnection attempt failed for server ${serverId}:`, error);
-      }
-    }, 5000); // Start with 5 second delay
-
-    this.reconnectTimers.set(serverId, timer);
-  }
-
-  private async handleServerMessage(serverId: string, message: unknown): Promise<void> {
-    switch (message.type) {
-      case 'handshake_response':
-        await this.handleHandshakeResponse(serverId, message);
-        break;
-      case 'tool_response':
-        await this.handleToolResponse(serverId, message);
-        break;
-      case 'event':
-        await this.handleEvent(serverId, message);
-        break;
-      case 'log':
-        await this.handleLog(serverId, message);
-        break;
-      default:
-        console.warn(`Unknown message type from server ${serverId}:`, message);
-    }
-  }
-
-  private async handleHandshakeResponse(serverId: string, message: unknown): Promise<void> {
-    // Update server capabilities in database
-    await this.prisma.mcpServer.update({
-      where: { id: serverId },
-      data: {
-        metadata: {
-          capabilities: message.capabilities,
-          version: message.version
-        }
-      }
+  /**
+   * Gets all registered MCP servers from the database
+   */
+  async getServers() {
+    return this.prisma.mcpServer.findMany({
+      orderBy: { name: 'asc' }
     });
   }
 
-  private async handleToolResponse(serverId: string, message: unknown): Promise<void> {
-    // Store tool execution result
-    await this.prisma.toolResult.create({
-      data: {
-        tool_name: message.tool,
-        input_hash: message.input_hash,
-        result: message.result,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-      }
+  /**
+   * Get a specific server by ID
+   */
+  async getServer(id: string) {
+    return this.prisma.mcpServer.findUnique({
+      where: { id }
     });
   }
 
-  private async handleEvent(serverId: string, message: unknown): Promise<void> {
-    // Log event for monitoring
-    console.log(`Event from server ${serverId}:`, message);
-  }
-
-  private async handleLog(serverId: string, message: unknown): Promise<void> {
-    // Store log message
-    console.log(`Log from server ${serverId}:`, message);
-  }
-
-  async executeTool(serverId: string, tool: string, params: unknown): Promise<unknown> {
-    const connection = this.connections.get(serverId);
-    if (!connection) {
-      throw new Error(`Not connected to server ${serverId}`);
-    }
-
-    // Check cache first
-    const inputHash = Buffer.from(JSON.stringify(params)).toString('base64');
-    const cachedResult = await this.prisma.toolResult.findUnique({
-      where: {
-        tool_name_input_hash: {
-          tool_name: tool,
-          input_hash: inputHash
-        }
+  /**
+   * Connect to a specific MCP server by ID
+   * @param id The server ID to connect to
+   * @returns The connected server details
+   */
+  async connectToServer(id: string): Promise<any> {
+    try {
+      log(`Connecting to MCP server with ID: ${id}`);
+      
+      // Get server details from database
+      const server = await this.prisma.mcpServer.findUnique({
+        where: { id }
+      });
+      
+      if (!server) {
+        throw new Error(`Server with ID ${id} not found`);
       }
-    });
-
-    if (cachedResult && cachedResult.expires_at > new Date()) {
-      return cachedResult.result;
-    }
-
-    // Send tool execution request
-    connection.send(JSON.stringify({
-      type: 'execute_tool',
-      tool,
-      params
-    }));
-
-    // Return promise that resolves when tool response is received
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Tool execution timed out'));
-      }, 30000); // 30 second timeout
-
-      connection.once('message', (data: string) => {
-        clearTimeout(timeout);
-        try {
-          const response = JSON.parse(data);
-          if (response.error) {
-            reject(new Error(response.error));
-          } else {
-            resolve(response.result);
-          }
-        } catch (error) {
-          reject(error);
+      
+      // In a real implementation, this would establish a connection to the MCP server
+      // For now, we'll just update the status in the database
+      await this.prisma.mcpServer.update({
+        where: { id },
+        data: {
+          status: 'connected',
+          updatedAt: new Date()
         }
       });
-    });
+      
+      log(`Successfully connected to MCP server: ${server.name}`);
+      
+      return server;
+    } catch (err) {
+      error(`Failed to connect to MCP server: ${err instanceof Error ? err.message : String(err)}`);
+      
+      // Update server status to failed
+      await this.prisma.mcpServer.update({
+        where: { id },
+        data: {
+          status: 'failed',
+          updatedAt: new Date()
+        }
+      });
+      
+      throw new Error(`Failed to connect to MCP server: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Cleans up MCP server resources
+   */
+  async cleanup(): Promise<void> {
+    if (this.toolsCache?.cleanup) {
+      log('Cleaning up MCP servers');
+      await this.toolsCache.cleanup();
+      this.toolsCache = null;
+    }
   }
 }

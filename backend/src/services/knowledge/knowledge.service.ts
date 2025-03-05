@@ -1,7 +1,9 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { SearchParams, Filter, ScoredPoint } from '@qdrant/js-client-rest/dist/types';
-import { Logger } from '../../utils/logger.js';
+import { Logger } from '../../utils/logger';
+import debug from 'debug';
 
+const log = debug('pooper:knowledge');
 const logger = new Logger('KnowledgeService');
 
 export interface KnowledgeSearchParams {
@@ -78,6 +80,7 @@ export class KnowledgeService {
     
     this.defaultCollection = process.env.QDRANT_COLLECTION || 'pooper-knowledge';
     
+    log(`Initialized KnowledgeService with Qdrant at ${qdrantUrl}`);
     logger.info(`Initialized KnowledgeService with Qdrant at ${qdrantUrl}`);
   }
   
@@ -86,6 +89,7 @@ export class KnowledgeService {
    */
   async search({ query, collection, limit = 10, threshold = 0.7 }: KnowledgeSearchParams): Promise<KnowledgeSearchResponse> {
     try {
+      log(`Searching for: "${query}" in collection: ${collection || this.defaultCollection}`);
       logger.info(`Searching for: "${query}" in collection: ${collection || this.defaultCollection}`);
       
       // Generate embedding for query using our embedding service
@@ -138,6 +142,7 @@ export class KnowledgeService {
         query
       };
     } catch (error) {
+      log.extend('error')('Error searching knowledge base:', error);
       logger.error('Error searching knowledge base:', error);
       throw new Error('Failed to search knowledge base');
     }
@@ -148,6 +153,7 @@ export class KnowledgeService {
    */
   async listCollections() {
     try {
+      log('Listing all collections');
       logger.info('Listing all collections');
       
       const collectionsResult = await this.client.getCollections();
@@ -165,6 +171,7 @@ export class KnowledgeService {
               updated_at: collInfo.config?.updated_at || new Date().toISOString()
             };
           } catch (error) {
+            log.extend('error')(`Error getting info for collection ${coll.name}:`, error);
             logger.error(`Error getting info for collection ${coll.name}:`, error);
             return {
               name: coll.name,
@@ -179,6 +186,7 @@ export class KnowledgeService {
       
       return { collections };
     } catch (error) {
+      log.extend('error')('Error listing collections:', error);
       logger.error('Error listing collections:', error);
       throw new Error('Failed to list collections');
     }
@@ -196,6 +204,14 @@ export class KnowledgeService {
     offset = 0
   }: KnowledgeDocumentsParams) {
     try {
+      log(`Listing documents with filters: ${JSON.stringify({
+        collection,
+        tag,
+        bookmarked,
+        query,
+        limit,
+        offset
+      })}`);
       logger.info(`Listing documents with filters: ${JSON.stringify({
         collection,
         tag,
@@ -279,6 +295,7 @@ export class KnowledgeService {
         tags
       };
     } catch (error) {
+      log.extend('error')('Error listing documents:', error);
       logger.error('Error listing documents:', error);
       throw new Error('Failed to list documents');
     }
@@ -312,6 +329,7 @@ export class KnowledgeService {
       );
       return countResult.count;
     } catch (error) {
+      log.extend('error')('Error getting filtered count:', error);
       logger.error('Error getting filtered count:', error);
       return 0;
     }
@@ -325,6 +343,7 @@ export class KnowledgeService {
       const collectionsResult = await this.client.getCollections();
       return collectionsResult.collections.map((coll: { name: string }) => coll.name);
     } catch (error) {
+      log.extend('error')('Error getting unique collections:', error);
       logger.error('Error getting unique collections:', error);
       return [];
     }
@@ -350,11 +369,12 @@ export class KnowledgeService {
   private async generateEmbedding(text: string): Promise<number[]> {
     // TODO: Replace this with your actual embedding generation method
     // This is just a placeholder that returns a random vector
+    log(`Generating embedding for text: "${text.substring(0, 50)}..."`);
     logger.info(`Generating embedding for text: "${text.substring(0, 50)}..."`);
     
     // In a real implementation, you would call your embedding service or OpenAI directly
-    // For now, we're returning a placeholder vector with 1536 dimensions (OpenAI's default)
-    return Array(1536).fill(0).map(() => Math.random() * 2 - 1);
+    // For now, we're returning a placeholder vector with 3072 dimensions for OpenAI 3 large embedding model
+    return Array(3072).fill(0).map(() => Math.random() * 2 - 1);
   }
 }
 
@@ -455,7 +475,8 @@ export async function getDocumentStats(): Promise<{
           }
         });
       } catch (error) {
-        console.error(`Error getting stats for collection ${collection.name}:`, error);
+        log.extend('error')(`Error getting stats for collection ${collection.name}:`, error);
+        logger.error(`Error getting stats for collection ${collection.name}:`, error);
       }
     }
     
@@ -468,7 +489,8 @@ export async function getDocumentStats(): Promise<{
     
     return stats;
   } catch (error) {
-    console.error('Error getting document stats:', error);
+    log.extend('error')('Error getting document stats:', error);
+    logger.error('Error getting document stats:', error);
     // Return fallback stats if there's an error
     return {
       totalDocuments: 0,

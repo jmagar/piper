@@ -4,9 +4,13 @@
  * and handle cases where they might be undefined
  */
 
-// Default values
-const DEFAULT_API_URL = 'http://localhost:4100';
-const DEFAULT_WEBSOCKET_URL = 'http://localhost:4100';
+// Default values - use current hostname for more flexible development
+const DEFAULT_API_URL = typeof window !== 'undefined' 
+  ? `${window.location.protocol}//${window.location.hostname}:4100`
+  : 'http://localhost:4100';
+const DEFAULT_WEBSOCKET_URL = typeof window !== 'undefined'
+  ? `${window.location.protocol}//${window.location.hostname}:4100`
+  : 'http://localhost:4100';
 
 /**
  * Get API URL from environment variables with fallback

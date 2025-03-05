@@ -31,6 +31,10 @@ tags:
     description: Dashboard and statistics endpoints
   - name: Knowledge
     description: Knowledge base endpoints
+  - name: Documents
+    description: Document storage and management endpoints
+  - name: System
+    description: System status and diagnostics endpoints
 
 components:
   responses:
@@ -447,10 +451,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  additionalProperties: true
+                $ref: './schemas/mcp.yaml#/components/schemas/McpServerList'
         '500':
           $ref: '#/components/responses/ApiError'
     post:
@@ -471,21 +472,33 @@ paths:
               properties:
                 name:
                   type: string
+                  description: Display name of the server
                 type:
                   type: string
+                  description: Type of server (openai, anthropic, etc.)
+                  enum: [openai, anthropic, custom, cohere, llama, azure]
                 url:
                   type: string
+                  description: Connection URL for the server
+                transport:
+                  type: string
+                  description: Transport protocol used by the server
+                  enum: [stdio, ssse, websocket, http, unknown]
+                status:
+                  type: string
+                  description: Initial operational status of the server
+                  enum: [active, inactive, maintenance]
+                  default: active
                 metadata:
                   type: object
-                  additionalProperties: true
+                  description: Additional structured metadata for the server
       responses:
         '201':
           description: MCP server created successfully
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: './schemas/mcp.yaml#/components/schemas/McpServer'
         '400':
           $ref: '#/components/responses/ApiError'
         '500':
@@ -510,8 +523,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: './schemas/mcp.yaml#/components/schemas/McpServer'
         '404':
           $ref: '#/components/responses/ApiError'
         '500':
@@ -1386,3 +1398,257 @@ paths:
           description: Invalid request or collection already exists
         '500':
           description: Server error
+
+  # Document API Routes
+  /api/documents:
+    get:
+      tags:
+        - Documents
+      summary: List documents
+      description: Retrieve a list of documents, with optional filtering
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of documents to return
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          description: Pagination offset token
+          required: false
+          schema:
+            type: string
+        - name: path
+          in: query
+          description: Filter by document path
+          required: false
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma separated)
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/DocumentsResponse'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    post:
+      tags:
+        - Documents
+      summary: Create a document
+      description: Create a new document with content and metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/documents.yaml#/components/schemas/DocumentCreateRequest'
+      responses:
+        '201':
+          description: Document created successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/documents/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Document ID
+        required: true
+        schema:
+          type: string
+    
+    get:
+      tags:
+        - Documents
+      summary: Get a document
+      description: Retrieve a document by ID
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/Document'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    put:
+      tags:
+        - Documents
+      summary: Update a document
+      description: Update an existing document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/documents.yaml#/components/schemas/DocumentUpdateRequest'
+      responses:
+        '200':
+          description: Document updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/Document'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+    
+    delete:
+      tags:
+        - Documents
+      summary: Delete a document
+      description: Delete a document by ID
+      responses:
+        '200':
+          description: Document deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/documents/search:
+    post:
+      tags:
+        - Documents
+      summary: Search documents
+      description: Search for documents using vector similarity search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/documents.yaml#/components/schemas/SearchOptions'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/documents/tree:
+    get:
+      tags:
+        - Documents
+      summary: Get document tree
+      description: Retrieve a hierarchical view of documents for file explorer
+      responses:
+        '200':
+          description: File explorer tree
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/FileExplorerResponse'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  # System API Routes
+  /api/system/status:
+    get:
+      tags:
+        - System
+      summary: System status
+      description: Check the status of all system services
+      responses:
+        '200':
+          description: System status information
+          content:
+            application/json:
+              schema:
+                $ref: './schemas/documents.yaml#/components/schemas/SystemStatus'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/system/test-qdrant:
+    get:
+      tags:
+        - System
+      summary: Test Qdrant connection
+      description: Test the connection to the Qdrant vector database
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [connected, error]
+                  message:
+                    type: string
+                  collections:
+                    type: array
+                    items:
+                      type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/system/test-openai:
+    get:
+      tags:
+        - System
+      summary: Test OpenAI connection
+      description: Test the connection to the OpenAI API
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [connected, error]
+                  message:
+                    type: string
+                  models:
+                    type: array
+                    items:
+                      type: string
+                  embeddingModel:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          $ref: '#/components/responses/ApiError'

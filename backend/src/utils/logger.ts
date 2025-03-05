@@ -4,6 +4,7 @@
  */
 
 import winston from 'winston';
+import debug from 'debug';
 
 // Create logger
 const logger = winston.createLogger({
@@ -26,4 +27,36 @@ const logger = winston.createLogger({
   ],
 });
 
-export { logger }; 
+// Logger class for namespaced logging
+export class Logger {
+  private namespace: string;
+  private debugger: debug.Debugger;
+
+  constructor(namespace: string) {
+    this.namespace = namespace;
+    this.debugger = debug(`pooper:${namespace}`);
+  }
+
+  info(message: string, ...args: any[]) {
+    this.debugger(message, ...args);
+    logger.info(`[${this.namespace}] ${message}`, ...args);
+  }
+
+  error(message: string, ...args: any[]) {
+    this.debugger.extend('error')(message, ...args);
+    logger.error(`[${this.namespace}] ${message}`, ...args);
+  }
+
+  warn(message: string, ...args: any[]) {
+    this.debugger.extend('warn')(message, ...args);
+    logger.warn(`[${this.namespace}] ${message}`, ...args);
+  }
+
+  debug(message: string, ...args: any[]) {
+    this.debugger.extend('debug')(message, ...args);
+    logger.debug(`[${this.namespace}] ${message}`, ...args);
+  }
+}
+
+// Export the winston logger instance
+export { logger };

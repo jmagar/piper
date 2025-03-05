@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-// import { MarkdownEditor } from '@/components/ui/markdown-editor'; // Will implement or use Textarea for now
+import { MarkdownEditor } from '@/components/ui/markdown-editor/markdown-editor';
 
 // Type definitions
 interface KnowledgeDocumentCreateRequest {
@@ -294,12 +294,12 @@ export function KnowledgeDocumentCreator({
               <TabsContent value="editor" className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="content">Content</Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Enter document content in markdown format..."
+                  <MarkdownEditor
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[300px]"
+                    onChange={setContent}
+                    height={400}
+                    showPreview={true}
+                    defaultView="split"
                   />
                 </div>
               </TabsContent>

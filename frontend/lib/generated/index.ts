@@ -25,7 +25,10 @@ export type { UserStats } from './models/UserStats';
 
 export { ChatService } from './services/ChatService';
 export { ConfigService } from './services/ConfigService';
-export { DashboardService } from './services/DashboardService';
+export { DefaultService } from './services/DefaultService';
+export { DocumentsService } from './services/DocumentsService';
 export { HealthService } from './services/HealthService';
+export { KnowledgeService } from './services/KnowledgeService';
 export { McpService } from './services/McpService';
 export { PromptService } from './services/PromptService';
+export { SystemService } from './services/SystemService';

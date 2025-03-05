@@ -31733,3 +31733,2608 @@ https://nextjs.org/docs/messages/module-not-found
 
  GET /mcp/logs [31m500[39m in 12ms
 
+ GET /chat/new [31m500[39m in 20ms
+
+ GET /chat/new [31m500[39m in 8ms
+
+ [32m[1m✓[22m[39m Compiled /favicon.ico in 476ms (959 modules)
+
+ GET /favicon.ico [31m500[39m in 489ms
+
+ [32m[1m✓[22m[39m Compiled in 516ms (943 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 308ms (943 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 346ms (943 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 446ms (943 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 236ms (943 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/logs/client.tsx:14:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/mcp-logs-viewer[39m'
+  12 | } from "@/components/ui/select";
+  13 | import { Info } from "lucide-react";
+> 14 | import McpLogsViewer from "@/components/mcp-logs-viewer";
+     | ^
+  15 |
+  16 | /**
+  17 |  * Client-side MCP Logs Page component
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 240ms (844 modules)
+
+ GET /chat/new [32m200[39m in 422ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1721ms (1793 modules)
+
+ GET /avatars/user.png [33m404[39m in 1946ms
+
+ GET /chat/new [32m200[39m in 79ms
+
+ [32m[1m✓[22m[39m Compiled in 449ms (849 modules)
+
+ GET /chat/new [32m200[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 260ms (944 modules)
+
+ [32m[1m✓[22m[39m Compiled in 526ms (849 modules)
+
+ GET /chat/new [32m200[39m in 152ms
+
+ [32m[1m✓[22m[39m Compiled in 1555ms (1793 modules)
+
+ GET /chat/new [32m200[39m in 118ms
+
+ GET /avatars/user.png [33m404[39m in 82ms
+
+ [32m[1m✓[22m[39m Compiled in 273ms (944 modules)
+
+ [32m[1m✓[22m[39m Compiled in 261ms (849 modules)
+
+ GET /chat/new [32m200[39m in 54ms
+
+ [32m[1m✓[22m[39m Compiled in 480ms (1793 modules)
+
+ GET /chat/new [32m200[39m in 117ms
+
+ GET /avatars/user.png [33m404[39m in 124ms
+
+ERROR:  [31m[1m⨯[22m[39m ./components/ui/tooltip.tsx
+Error:   [31mx[0m Expected ';', '}' or <eof>
+   ,-[[36;1;4m/home/jmagar/code/pooper/frontend/components/ui/tooltip.tsx[0m:1:1]
+ [2m1[0m | re"use client"
+   : [35;1m^|[0m[33;1m^^^^^^^^^^^^[0m
+   :  [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m2[0m | 
+ [2m3[0m | import * as React from "react"
+ [2m4[0m | import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+   `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/ui/tooltip.tsx
+./components/layout/app-layout.tsx
+
+ GET /chat/new [31m500[39m in 15ms
+
+ GET /chat/new [31m500[39m in 13ms
+
+ [32m[1m✓[22m[39m Compiled in 781ms (1789 modules)
+
+ GET /chat/new [32m200[39m in 345ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 421ms (1779 modules)
+
+ GET /avatars/user.png [33m404[39m in 515ms
+
+ [32m[1m✓[22m[39m Compiled in 973ms (1789 modules)
+
+ GET /chat/new [32m200[39m in 87ms
+
+ [32m[1m✓[22m[39m Compiled in 609ms (1789 modules)
+
+ GET /chat/new [32m200[39m in 92ms
+
+ [32m[1m✓[22m[39m Compiled in 322ms (846 modules)
+
+ GET /chat/new [32m200[39m in 40ms
+
+ [32m[1m✓[22m[39m Compiled in 182ms (846 modules)
+
+ GET /chat/new [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 719ms (1789 modules)
+
+ [32m[1m✓[22m[39m Compiled in 213ms (846 modules)
+
+ [32m[1m✓[22m[39m Compiled in 309ms (846 modules)
+
+ [37m[1m○[22m[39m Compiling /markdown-editor ...
+
+ [32m[1m✓[22m[39m Compiled /markdown-editor in 7.2s (2748 modules)
+
+ GET /markdown-editor [32m200[39m in 7736ms
+
+ [32m[1m✓[22m[39m Compiled in 1070ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 89ms
+
+ [32m[1m✓[22m[39m Compiled in 859ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 54ms
+
+ [32m[1m✓[22m[39m Compiled in 745ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 145ms
+
+ [32m[1m✓[22m[39m Compiled in 717ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 67ms
+
+ [32m[1m✓[22m[39m Compiled in 640ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 64ms
+
+ [32m[1m✓[22m[39m Compiled in 1559ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 44ms
+
+ [32m[1m✓[22m[39m Compiled in 1624ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 76ms
+
+ GET /markdown-editor [32m200[39m in 311ms
+
+ [32m[1m✓[22m[39m Compiled in 786ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 16ms
+
+ [32m[1m✓[22m[39m Compiled in 1856ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 1657ms
+
+ GET /markdown-editor [32m200[39m in 14ms
+
+ [32m[1m✓[22m[39m Compiled in 226ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 17ms
+
+ [32m[1m✓[22m[39m Compiled in 354ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 341ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 232ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 720ms (2762 modules)
+
+ GET /markdown-editor [32m200[39m in 178ms
+
+ [32m[1m✓[22m[39m Compiled in 298ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 299ms (1326 modules)
+
+ GET /markdown-editor [32m200[39m in 12ms
+
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+ [32m[1m✓[22m[39m Starting...
+
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1863ms
+
+ [37m[1m○[22m[39m Compiling /log-viewer ...
+
+ [32m[1m✓[22m[39m Compiled /log-viewer in 3.8s (1682 modules)
+
+ GET /log-viewer [32m200[39m in 4196ms
+
+ [32m[1m✓[22m[39m Compiled in 604ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 65ms
+
+ [32m[1m✓[22m[39m Compiled in 243ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 24ms
+
+ [32m[1m✓[22m[39m Compiled in 256ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 41ms
+
+ [32m[1m✓[22m[39m Compiled in 188ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 297ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 25ms
+
+ [32m[1m✓[22m[39m Compiled in 185ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 18ms
+
+ [32m[1m✓[22m[39m Compiled in 238ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 36ms
+
+ [32m[1m✓[22m[39m Compiled in 260ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 230ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 382ms (784 modules)
+
+ [32m[1m✓[22m[39m Compiled in 337ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 253ms
+
+ GET /log-viewer [32m200[39m in 19ms
+
+ [32m[1m✓[22m[39m Compiled in 200ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 17ms
+
+ [32m[1m✓[22m[39m Compiled in 291ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 18ms
+
+ [32m[1m✓[22m[39m Compiled in 244ms (784 modules)
+
+ GET /log-viewer [32m200[39m in 30ms
+
+ [32m[1m✓[22m[39m Compiled in 715ms (1682 modules)
+
+ [32m[1m✓[22m[39m Compiled in 180ms (784 modules)
+
+ [32m[1m✓[22m[39m Compiled in 886ms (1682 modules)
+
+ [32m[1m✓[22m[39m Compiled in 151ms (784 modules)
+
+ [32m[1m✓[22m[39m Compiled in 155ms (784 modules)
+
+ [32m[1m✓[22m[39m Compiled in 302ms (1682 modules)
+
+ [32m[1m✓[22m[39m Compiled in 602ms (1684 modules)
+
+ [32m[1m✓[22m[39m Compiled in 187ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 200ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 776ms (1684 modules)
+
+ [32m[1m✓[22m[39m Compiled in 843ms (1684 modules)
+
+ [32m[1m✓[22m[39m Compiled in 520ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 208ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 159ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 544ms (1684 modules)
+
+ [32m[1m✓[22m[39m Compiled in 258ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 300ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 165ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 173ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 257ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 138ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 183ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 164ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 343ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 493ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 259ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 291ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 126ms (785 modules)
+
+ [32m[1m✓[22m[39m Compiled in 298ms (785 modules)
+
+ [37m[1m○[22m[39m Compiling /documents ...
+
+ [32m[1m✓[22m[39m Compiled /documents in 4.2s (2600 modules)
+
+ GET /documents [32m200[39m in 4587ms
+
+ERROR: (node:3298647) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ GET /documents [32m200[39m in 87ms
+
+ [32m[1m✓[22m[39m Compiled in 726ms (1246 modules)
+
+ GET /documents [32m200[39m in 28ms
+
+ [32m[1m✓[22m[39m Compiled in 389ms (1246 modules)
+
+ GET /documents [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 1152ms (2614 modules)
+
+ GET /documents [32m200[39m in 1027ms
+
+ GET /documents [32m200[39m in 23ms
+
+ [32m[1m✓[22m[39m Compiled in 195ms (1246 modules)
+
+ GET /documents [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 993ms (2614 modules)
+
+ GET /documents [32m200[39m in 723ms
+
+ GET /documents [32m200[39m in 15ms
+
+ [32m[1m✓[22m[39m Compiled in 264ms (1246 modules)
+
+ GET /documents [32m200[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 414ms (1246 modules)
+
+ GET /documents [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 421ms (1246 modules)
+
+ GET /documents [32m200[39m in 363ms
+
+ [32m[1m✓[22m[39m Compiled in 530ms (1246 modules)
+
+ GET /documents [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 311ms (1246 modules)
+
+ GET /documents [32m200[39m in 26ms
+
+ [32m[1m✓[22m[39m Compiled in 290ms (1246 modules)
+
+ GET /documents [32m200[39m in 36ms
+
+ [37m[1m○[22m[39m Compiling /api/system/test-openai ...
+
+ [32m[1m✓[22m[39m Compiled /api/system/test-openai in 3s (2622 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /documents [31m500[39m in 7080ms
+
+ GET /api/system/test-qdrant [31m500[39m in 8617ms
+
+ GET /api/system/test-openai [31m500[39m in 8627ms
+ GET /api/system/test-qdrant [31m500[39m in 8629ms
+ GET /api/system/test-openai [31m500[39m in 8616ms
+
+ GET /documents [31m500[39m in 15ms
+
+ GET /documents [31m500[39m in 19ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /documents [31m500[39m in 896ms
+
+ [32m[1m✓[22m[39m Compiled /_error in 366ms (1498 modules)
+
+ GET /documents [31m500[39m in 19ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /documents [31m500[39m in 1800ms
+
+ GET /documents [31m500[39m in 18ms
+
+ [32m[1m✓[22m[39m Compiled in 382ms (1498 modules)
+
+ GET /documents [31m500[39m in 13ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ERROR:  [31m[1m⨯[22m[39m ./app/documents/page.tsx
+Error:   [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:32:1]
+ [2m29[0m | 
+ [2m30[0m | // Document saving action
+ [2m31[0m | async function saveDocumentAction(formData: FormData) {
+ [2m32[0m |   'use server';
+    : [35;1m  ^^^^^^^^^^^^[0m
+ [2m33[0m |   
+ [2m34[0m |   const content = formData.get('content') as string;
+ [2m35[0m |   const id = formData.get('id') as string;
+    `----
+  [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:96:1]
+ [2m93[0m | 
+ [2m94[0m | // Document loading action
+ [2m95[0m | async function loadDocumentAction(previousState: any, id: string) {
+ [2m96[0m |   'use server';
+    : [35;1m  ^^^^^^^^^^^^[0m
+ [2m97[0m |   
+ [2m98[0m |   try {
+ [2m99[0m |     const response = await fetch(`/api/documents/${id}`);
+    `----
+  [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+     ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:119:1]
+ [2m116[0m | 
+ [2m117[0m | // Document deletion action
+ [2m118[0m | async function deleteDocumentAction(previousState: any, id: string) {
+ [2m119[0m |   'use server';
+     : [35;1m  ^^^^^^^^^^^^[0m
+ [2m120[0m |   
+ [2m121[0m |   try {
+ [2m122[0m |     const response = await fetch(`/api/documents/${id}`, {
+     `----
+
+Import trace for requested module:
+./app/documents/page.tsx
+
+ GET /_next/static/webpack/e85086a989b53b08.webpack.hot-update.json [31m500[39m in 1535ms
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload due to a runtime error.
+
+ GET /documents [31m500[39m in 17ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/documents/page.tsx
+Error:   [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:32:1]
+ [2m29[0m | 
+ [2m30[0m | // Document saving action
+ [2m31[0m | async function saveDocumentAction(formData: FormData) {
+ [2m32[0m |   'use server';
+    : [35;1m  ^^^^^^^^^^^^[0m
+ [2m33[0m |   
+ [2m34[0m |   const content = formData.get('content') as string;
+ [2m35[0m |   const id = formData.get('id') as string;
+    `----
+  [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+    ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:96:1]
+ [2m93[0m | 
+ [2m94[0m | // Document loading action
+ [2m95[0m | async function loadDocumentAction(previousState: any, id: string) {
+ [2m96[0m |   'use server';
+    : [35;1m  ^^^^^^^^^^^^[0m
+ [2m97[0m |   
+ [2m98[0m |   try {
+ [2m99[0m |     const response = await fetch(`/api/documents/${id}`);
+    `----
+  [31mx[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m|[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m|[0m 
+  [31m|[0m Read more: https://nextjs.org/docs/app/api-reference/functions/server-actions#with-client-components
+  [31m|[0m 
+     ,-[[36;1;4m/home/jmagar/code/pooper/frontend/app/documents/page.tsx[0m:119:1]
+ [2m116[0m | 
+ [2m117[0m | // Document deletion action
+ [2m118[0m | async function deleteDocumentAction(previousState: any, id: string) {
+ [2m119[0m |   'use server';
+     : [35;1m  ^^^^^^^^^^^^[0m
+ [2m120[0m |   
+ [2m121[0m |   try {
+ [2m122[0m |     const response = await fetch(`/api/documents/${id}`, {
+     `----
+
+Import trace for requested module:
+./app/documents/page.tsx
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 2.5s (3042 modules)
+
+ GET /documents [32m200[39m in 548ms
+
+ [37m[1m○[22m[39m Compiling /api/system/test-openai ...
+
+ [32m[1m✓[22m[39m Compiled /api/system/test-openai in 754ms (1703 modules)
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /api/system/test-qdrant [31m500[39m in 1142ms
+
+ GET /api/system/test-openai [31m500[39m in 1146ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/api/system/test-openai/route.ts:2:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32mopenai[39m'
+  1 | import { NextResponse } from 'next/server';
+> 2 | import OpenAI from 'openai';
+    | ^
+  3 |
+  4 | /**
+  5 |  * API endpoint to test connection to OpenAI API 
+
+https://nextjs.org/docs/messages/module-not-found
+
+ GET /documents [31m500[39m in 21ms
+
+ GET /documents [31m500[39m in 17ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1818ms (3041 modules)
+
+ GET /documents [32m200[39m in 1564ms
+
+ GET /documents [32m200[39m in 427ms
+
+ [32m[1m✓[22m[39m Compiled in 837ms (1496 modules)
+
+ GET /documents [32m200[39m in 217ms
+
+ [32m[1m✓[22m[39m Compiled in 402ms (1496 modules)
+
+ GET /documents [32m200[39m in 29ms
+
+ [32m[1m✓[22m[39m Compiled in 1524ms (2263 modules)
+
+ GET /documents [32m200[39m in 987ms
+
+ GET /documents [32m200[39m in 20ms
+
+ GET /documents [32m200[39m in 14ms
+
+ [32m[1m✓[22m[39m Compiled in 532ms (1104 modules)
+
+ GET /documents [32m200[39m in 17ms
+
+ GET /documents [32m200[39m in 56ms
+
+ [32m[1m✓[22m[39m Compiled in 1281ms (2249 modules)
+
+ [32m[1m✓[22m[39m Compiled in 310ms (1159 modules)
+
+ [37m[1m○[22m[39m Compiling /mcp/log-viewer ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/log-viewer in 6.7s (3254 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 7100ms
+
+ GET /mcp/log-viewer [32m200[39m in 100ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1584ms (3258 modules)
+
+ GET /avatars/user.png [33m404[39m in 1819ms
+
+ GET / [33m404[39m in 31ms
+
+ GET / [33m404[39m in 28ms
+
+ [37m[1m○[22m[39m Compiling /favicon.ico ...
+
+ [32m[1m✓[22m[39m Compiled /favicon.ico in 918ms (1709 modules)
+
+ GET /favicon.ico [32m200[39m in 1216ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 2.5s (3360 modules)
+
+ GET /chat/new [32m200[39m in 3028ms
+
+ GET /chat/new [32m200[39m in 170ms
+
+ GET /favicon.ico [32m200[39m in 230ms
+
+ GET /avatars/user.png [33m404[39m in 48ms
+
+ [37m[1m○[22m[39m Compiling /dashboard ...
+
+ [32m[1m✓[22m[39m Compiled /dashboard in 1220ms (3408 modules)
+
+ GET /dashboard [32m200[39m in 1346ms
+
+ GET /avatars/user.png [33m404[39m in 86ms
+
+ GET /dashboard [32m200[39m in 228ms
+
+ GET /favicon.ico [32m200[39m in 211ms
+
+ GET /prompts [33m404[39m in 10ms
+
+ GET /prompts [33m404[39m in 34ms
+
+ GET /prompts [33m404[39m in 35ms
+
+ GET /favicon.ico [32m200[39m in 212ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts in 1663ms (3381 modules)
+
+ GET /chat/prompts [32m200[39m in 2103ms
+
+ GET /chat/prompts [32m200[39m in 198ms
+
+ GET /avatars/user.png [33m404[39m in 46ms
+
+ [32m[1m✓[22m[39m Compiled in 2.7s (3337 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 204ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 468ms (3327 modules)
+
+ GET /logs [33m404[39m in 591ms
+
+ GET /logs [33m404[39m in 39ms
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts in 360ms (1706 modules)
+
+ GET /chat/prompts [32m200[39m in 807ms
+
+ GET /avatars/user.png [33m404[39m in 26ms
+
+ [32m[1m✓[22m[39m Compiled in 843ms (1648 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 38ms
+
+ [32m[1m✓[22m[39m Compiled in 1344ms (3340 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 87ms
+
+ [32m[1m✓[22m[39m Compiled in 338ms (1648 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 32ms
+
+ [32m[1m✓[22m[39m Compiled in 293ms (1648 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 20ms
+
+ [32m[1m✓[22m[39m Compiled in 445ms (1645 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 34ms
+
+ [32m[1m✓[22m[39m Compiled in 1487ms (1645 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 35ms
+
+ [32m[1m✓[22m[39m Compiled in 297ms (1645 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 21ms
+
+ [32m[1m✓[22m[39m Compiled in 3.9s (2556 modules)
+
+ GET /mcp/log-viewer [32m200[39m in 188ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 2.8s (3336 modules)
+
+ GET /mcp/logs [32m200[39m in 3002ms
+
+ GET /mcp/logs [32m200[39m in 3006ms
+
+ [32m[1m✓[22m[39m Compiled in 1695ms (2947 modules)
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 347ms (1704 modules)
+
+ GET /mcp/logs [32m200[39m in 453ms
+
+ [32m[1m✓[22m[39m Compiled in 1557ms (2947 modules)
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 352ms (1704 modules)
+
+ GET /mcp/logs [32m200[39m in 440ms
+
+ [32m[1m✓[22m[39m Compiled in 1216ms (3336 modules)
+
+ GET /mcp/logs [32m200[39m in 100ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/documents ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/documents in 3.5s (2967 modules)
+
+ GET /knowledge/documents [32m200[39m in 3554ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ GET /knowledge/documents [32m200[39m in 563ms
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1679ms (2971 modules)
+
+ GET /avatars/user.png [33m404[39m in 1849ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/search ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/search in 1681ms (3420 modules)
+
+ GET /knowledge/search [32m200[39m in 1802ms
+
+ GET /knowledge/search [32m200[39m in 308ms
+
+ GET /knowledge/documents [32m200[39m in 25ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/new ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/new in 2.5s (3679 modules)
+
+ GET /knowledge/new [32m200[39m in 1306ms
+
+ GET /knowledge/new [32m200[39m in 1064ms
+
+ GET /knowledge/new [32m200[39m in 459ms
+
+ GET /knowledge/new [32m200[39m in 2622ms
+
+ GET /knowledge/new [32m200[39m in 394ms
+
+ GET /knowledge/new [32m200[39m in 422ms
+
+ GET /knowledge/search [32m200[39m in 59ms
+
+ GET /knowledge/documents [32m200[39m in 35ms
+
+ GET /knowledge/search [32m200[39m in 17ms
+
+ GET /knowledge/search [32m200[39m in 135ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 2.1s (1948 modules)
+
+ GET /mcp/logs [32m200[39m in 2158ms
+
+ GET /mcp/logs [32m200[39m in 290ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1318ms (3945 modules)
+
+ GET /avatars/user.png [33m404[39m in 1385ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 2s (1996 modules)
+
+ GET /chat/new [32m200[39m in 2401ms
+
+ GET /avatars/user.png [33m404[39m in 48ms
+
+ GET /mcp/logs [32m200[39m in 117ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/config in 3s (3350 modules)
+
+ GET /mcp/config [32m200[39m in 3151ms
+
+ GET /mcp/config [32m200[39m in 200ms
+
+ GET /chat/new [32m200[39m in 122ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1137ms (3348 modules)
+
+ GET /avatars/user.png [33m404[39m in 1254ms
+
+EXIT CODE: 0
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1920ms
+
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1657ms
+
+ERROR: Killed
+
+EXIT CODE: 137
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1804ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 8.5s (864 modules)
+
+ HEAD / [33m404[39m in 8813ms
+
+EXIT SIGNAL: SIGTERM
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1357ms
+
+EXIT SIGNAL: SIGTERM
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1504ms
+
+[?25h
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.1s
+
+[?25h
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1899ms
+
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.9s
+
+[?25h
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.9s
+
+[?25h
+
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.1s
+
+[?25h
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.2s
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 10.5s (1350 modules)
+
+ GET /chat/new [32m200[39m in 11983ms
+
+ERROR: (node:220639) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 2.1s (1354 modules)
+
+ GET /avatars/user.png [33m404[39m in 2632ms
+
+ GET /chat/new [32m200[39m in 190ms
+
+ [32m[1m✓[22m[39m Compiled in 1039ms (1350 modules)
+
+ GET /chat/new [32m200[39m in 406ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 693ms (1340 modules)
+
+ GET /avatars/user.png [33m404[39m in 1046ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/config in 969ms (1351 modules)
+
+ GET /mcp/config [32m200[39m in 1270ms
+
+ GET /avatars/user.png [33m404[39m in 192ms
+
+ [32m[1m✓[22m[39m Compiled in 919ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 177ms
+
+ GET /avatars/user.png [33m404[39m in 143ms
+
+ [32m[1m✓[22m[39m Compiled in 1132ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 148ms
+
+ GET /avatars/user.png [33m404[39m in 187ms
+
+ GET /mcp/config [32m200[39m in 507ms
+
+ GET /avatars/user.png [33m404[39m in 144ms
+
+ GET /mcp/config [32m200[39m in 161ms
+
+ GET /avatars/user.png [33m404[39m in 68ms
+
+ GET /mcp/config [32m200[39m in 187ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 41ms
+
+ [32m[1m✓[22m[39m Compiled in 2.1s (1361 modules)
+
+ GET /mcp/config [32m200[39m in 291ms
+
+ [32m[1m✓[22m[39m Compiled in 1688ms (1361 modules)
+
+ GET /mcp/config [32m200[39m in 269ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 561ms (1351 modules)
+
+ GET /avatars/user.png [33m404[39m in 733ms
+
+ [32m[1m✓[22m[39m Compiled in 981ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 301ms
+
+ GET /avatars/user.png [33m404[39m in 208ms
+
+ [32m[1m✓[22m[39m Compiled in 913ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 235ms
+
+ GET /avatars/user.png [33m404[39m in 187ms
+
+ [32m[1m✓[22m[39m Compiled in 960ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 251ms
+
+ GET /avatars/user.png [33m404[39m in 150ms
+
+ [32m[1m✓[22m[39m Compiled in 965ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 223ms
+
+ GET /avatars/user.png [33m404[39m in 129ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 3s (1351 modules)
+
+ GET /avatars/user.png [33m404[39m in 1222ms
+
+ GET /mcp/config [32m200[39m in 78ms
+
+ [32m[1m✓[22m[39m Compiled in 1252ms (1365 modules)
+
+ GET /avatars/user.png [33m404[39m in 468ms
+
+ GET /mcp/config [32m200[39m in 123ms
+
+ [32m[1m✓[22m[39m Compiled in 844ms (1365 modules)
+
+ GET /mcp/config [32m200[39m in 231ms
+
+ GET /avatars/user.png [33m404[39m in 151ms
+
+ERROR:  [33m[1m⚠[22m[39m ./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+./lib/socket/providers/socket-provider.tsx
+Attempted import error: 'ConnectionState' is not exported from '../core/types' (imported as 'ConnectionState').
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+ GET /mcp/config [32m200[39m in 214ms
+
+ERROR:  [31m[1m⨯[22m[39m ./lib/socket/providers/socket-provider.tsx
+Error:   [31mx[0m 'import', and 'export' cannot be used outside of module code
+     ,-[[36;1;4m/home/jmagar/code/pooper/frontend/lib/socket/providers/socket-provider.tsx[0m:292:1]
+ [2m289[0m |  * Manages socket connection lifecycle and provides socket instance to components.
+ [2m290[0m |  */
+ [2m291[0m | 
+ [2m292[0m | import React, { createContext, useEffect, useState, useRef, useContext, useMemo } from 'react';
+     : [35;1m^^^^^^[0m
+ [2m293[0m | import { toast } from 'sonner';
+ [2m294[0m | import { Socket } from 'socket.io-client';
+ [2m295[0m | import {
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./lib/socket/providers/socket-provider.tsx
+./app/client-layout.tsx
+
+ [32m[1m✓[22m[39m Compiled in 1825ms (1359 modules)
+
+ GET /mcp/config [32m200[39m in 352ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 717ms (1349 modules)
+
+ GET /avatars/user.png [33m404[39m in 1021ms
+
+ GET /chat/new [32m200[39m in 55ms
+
+ GET / [33m404[39m in 80ms
+
+ GET / [33m404[39m in 98ms
+
+ GET /chat/new [32m200[39m in 382ms
+
+ GET /chat/new [32m200[39m in 287ms
+
+ [32m[1m✓[22m[39m Compiled in 1106ms (593 modules)
+
+ GET /avatars/user.png [33m404[39m in 143ms
+
+ [32m[1m✓[22m[39m Compiled in 375ms (593 modules)
+
+ GET /chat/new [32m200[39m in 204ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 2.3s (1360 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 4441ms
+
+ [32m[1m✓[22m[39m Compiled in 643ms (594 modules)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 744ms (1364 modules)
+
+ GET / [33m404[39m in 1098ms
+
+ [37m[1m○[22m[39m Compiling /favicon.ico ...
+
+ [32m[1m✓[22m[39m Compiled /favicon.ico in 1046ms (797 modules)
+
+ GET /favicon.ico [32m200[39m in 1523ms
+
+ GET /installHook.js.map [33m404[39m in 339ms
+
+ [32m[1m✓[22m[39m Compiled in 2.3s (1380 modules)
+
+ GET / [33m404[39m in 2131ms
+
+ GET / [33m404[39m in 55ms
+
+ GET / [33m404[39m in 224ms
+
+ GET /installHook.js.map [33m404[39m in 70ms
+
+ GET /chat/new [32m200[39m in 389ms
+
+ GET /avatars/user.png [33m404[39m in 72ms
+
+ GET /chat/installHook.js.map [32m200[39m in 989ms
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.3s
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 10s (1348 modules)
+
+ GET /chat/new [32m200[39m in 10927ms
+
+ERROR: (node:331431) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1811ms (1352 modules)
+
+ GET /avatars/user.png [33m404[39m in 2209ms
+
+ GET /chat/new [32m200[39m in 395ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 1369ms (1353 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 3253ms
+
+ GET /chat/new [32m200[39m in 180ms
+
+ GET /avatars/user.png [33m404[39m in 75ms
+
+ GET /chat/installHook.js.map [32m200[39m in 223ms
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 3s
+
+ERROR: (node:343048) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 5.7s (454 modules)
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 5.7s (1759 modules)
+
+ GET /chat/new [32m200[39m in 6786ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 1519ms (1763 modules)
+
+ [32m[1m✓[22m[39m Compiled in 579ms (824 modules)
+
+ GET /avatars/user.png [33m404[39m in 2781ms
+
+ GET /chat/installHook.js.map [32m200[39m in 3353ms
+
+ GET /chat/new [32m200[39m in 280ms
+
+ GET /avatars/user.png [33m404[39m in 118ms
+
+ GET /chat/installHook.js.map [32m200[39m in 259ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ GET /chat/new [32m200[39m in 131ms
+
+ GET /avatars/user.png [33m404[39m in 76ms
+
+ GET /chat/installHook.js.map [32m200[39m in 178ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 6.8s (2480 modules)
+
+ GET /mcp/logs [32m200[39m in 7143ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 876ms (2484 modules)
+
+ GET /avatars/user.png [33m404[39m in 1238ms
+
+ GET /mcp/logs [32m200[39m in 401ms
+
+ GET /avatars/user.png [33m404[39m in 1887ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 2357ms
+
+ GET /mcp/logs [32m200[39m in 167ms
+
+ GET /mcp/logs [32m200[39m in 177ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 837ms
+
+ GET /avatars/user.png [33m404[39m in 844ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/search ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/documents in 7.9s (3596 modules)
+
+ GET /knowledge/search [32m200[39m in 8278ms
+
+ GET /knowledge/documents [32m200[39m in 5720ms
+
+ GET /knowledge/documents [32m200[39m in 633ms
+
+ GET /avatars/user.png [33m404[39m in 77ms
+
+ GET /mcp/logs [32m200[39m in 277ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 47ms
+
+ GET /avatars/user.png [33m404[39m in 1193ms
+
+ GET /mcp/logs [32m200[39m in 198ms
+
+ GET /avatars/user.png [33m404[39m in 1089ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 1305ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp/config/mcp-config-editor.tsx:13:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/ui/table[39m'
+  11 | import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+  12 | import { useMCPConfig } from './mcp-config-provider';
+> 13 | import {
+     | ^
+  14 |   Table,
+  15 |   TableBody,
+  16 |   TableCell,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ERROR:  [31m[1m⨯[22m[39m ./components/mcp/config/mcp-config-editor.tsx:13:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/ui/table[39m'
+  11 | import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+  12 | import { useMCPConfig } from './mcp-config-provider';
+> 13 | import {
+     | ^
+  14 |   Table,
+  15 |   TableBody,
+  16 |   TableCell,
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/mcp/config/client.tsx
+
+ GET /mcp/config [31m500[39m in 7259ms
+
+ GET /mcp/config [31m500[39m in 39ms
+
+ GET /mcp/installHook.js.map [31m500[39m in 13ms
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2s
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 7.1s (862 modules)
+
+ERROR:  [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload due to a runtime error.
+
+ GET /_next/static/webpack/5bbc11786c84e748.webpack.hot-update.json [33m404[39m in 7493ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/config in 15.4s (2032 modules)
+
+ GET /mcp/config [32m200[39m in 15405ms
+
+ GET /mcp/config [32m200[39m in 972ms
+
+ERROR: (node:454376) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ GET /avatars/user.png [33m404[39m in 46ms
+
+ GET /mcp/installHook.js.map [33m404[39m in 71ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 4s (2824 modules)
+
+ GET /mcp/logs [32m200[39m in 4182ms
+
+ [32m[1m✓[22m[39m Compiled in 1416ms (2838 modules)
+
+ GET /mcp/logs [32m200[39m in 136ms
+
+ [32m[1m✓[22m[39m Compiled in 488ms (2838 modules)
+
+ [32m[1m✓[22m[39m Compiled in 667ms (2838 modules)
+
+ [32m[1m✓[22m[39m Compiled in 1006ms (2838 modules)
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.4s
+
+[?25h
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+
+   - Network:      http://192.168.1.72:3002
+
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 2.9s
+
+ [37m[1m○[22m[39m Compiling /mcp/servers ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/servers in 5.3s (1279 modules)
+
+ GET /mcp/servers [32m200[39m in 5847ms
+
+ERROR: (node:497356) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1878ms (1283 modules)
+
+ GET /avatars/user.png [33m404[39m in 2103ms
+
+ GET /mcp/servers [32m200[39m in 241ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 2.2s (2075 modules)
+
+ GET /mcp/logs [32m200[39m in 2330ms
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/config in 2.1s (2842 modules)
+
+ GET /mcp/config [32m200[39m in 2308ms
+
+ GET /mcp/servers [32m200[39m in 85ms
+
+ [32m[1m✓[22m[39m Compiled in 1716ms (2852 modules)
+
+ GET /mcp/servers [32m200[39m in 204ms
+
+ GET /mcp/config [32m200[39m in 62ms
+
+ERROR:  [31m[1m⨯[22m[39m ./app/mcp/servers/client.tsx:34:1
+[31m[1mModule not found[22m[39m: Can't resolve '[32m@/components/ui/progress[39m'
+  32 | import { Badge } from "@/components/ui/badge";
+  33 | import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+> 34 | import { Progress } from "@/components/ui/progress";
+     | ^
+  35 | import { Separator } from "@/components/ui/separator";
+  36 | import { ScrollArea } from "@/components/ui/scroll-area";
+  37 |
+
+https://nextjs.org/docs/messages/module-not-found
+
+ [32m[1m✓[22m[39m Compiled in 1080ms (2864 modules)
+
+ GET /mcp/config [32m200[39m in 299ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 926ms (2854 modules)
+
+ GET /avatars/user.png [33m404[39m in 1426ms
+
+ GET /mcp/config [32m200[39m in 941ms
+
+ GET /avatars/user.png [33m404[39m in 59ms
+
+ [32m[1m✓[22m[39m Compiled in 1256ms (2868 modules)
+
+ GET /mcp/config [32m200[39m in 96ms
+
+ERROR: Killed
+
+EXIT SIGNAL: SIGINT
+
+> frontend@0.1.0 dev /home/jmagar/code/pooper/frontend
+> next dev -p 3002
+
+
+   [1m[38;2;173;127;168m▲ Next.js 15.2.0-canary.67[39m[22m
+
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.72:3002
+
+ [32m[1m✓[22m[39m Starting...
+
+ [32m[1m✓[22m[39m Ready in 1990ms
+
+ERROR: (node:525590) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ [37m[1m○[22m[39m Compiling /mcp/config ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/config in 6.8s (2042 modules)
+
+ GET /mcp/config [32m200[39m in 7699ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1926ms (2046 modules)
+
+ GET /avatars/user.png [33m404[39m in 2328ms
+
+ GET /mcp/config [32m200[39m in 422ms
+
+ [32m[1m✓[22m[39m Compiled in 393ms (936 modules)
+
+ GET /mcp/config [32m200[39m in 38ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/documents ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/documents in 2s (2076 modules)
+
+ GET /knowledge/documents [32m200[39m in 2129ms
+
+ GET /avatars/user.png [33m404[39m in 96ms
+
+ [37m[1m○[22m[39m Compiling /knowledge/search ...
+
+ [32m[1m✓[22m[39m Compiled /knowledge/search in 3.3s (2525 modules)
+
+ GET /knowledge/search [32m200[39m in 3508ms
+
+ GET /knowledge/search?q=mcp [32m200[39m in 22ms
+
+ [37m[1m○[22m[39m Compiling /chat/new ...
+
+ [32m[1m✓[22m[39m Compiled /chat/new in 2.5s (2613 modules)
+
+ GET /chat/new [32m200[39m in 2606ms
+
+ GET /avatars/user.png [33m404[39m in 187ms
+
+ [32m[1m✓[22m[39m Compiled in 2.1s (2627 modules)
+
+ GET /chat/new [32m200[39m in 81ms
+
+ [32m[1m✓[22m[39m Compiled in 958ms (2627 modules)
+
+ GET /chat/new [32m200[39m in 131ms
+
+ [32m[1m✓[22m[39m Compiled in 351ms (1219 modules)
+
+ GET /chat/new [32m200[39m in 22ms
+
+ [32m[1m✓[22m[39m Compiled in 1858ms (2643 modules)
+
+ GET /chat/new [32m200[39m in 111ms
+
+ [37m[1m○[22m[39m Compiling /mcp/servers ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/servers in 3.7s (2648 modules)
+
+ GET /mcp/servers [32m200[39m in 3912ms
+
+ GET /mcp/servers [32m200[39m in 76ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1101ms (2638 modules)
+
+ GET /avatars/user.png [33m404[39m in 1402ms
+
+ [32m[1m✓[22m[39m Compiled in 1444ms (2652 modules)
+
+ GET /mcp/servers [32m200[39m in 210ms
+
+ GET /avatars/user.png [33m404[39m in 249ms
+
+ [32m[1m✓[22m[39m Compiled in 1195ms (2652 modules)
+
+ GET /mcp/servers [32m200[39m in 146ms
+
+ GET /avatars/user.png [33m404[39m in 202ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 3.3s (3063 modules)
+
+ GET /mcp/servers [32m200[39m in 1768ms
+
+ GET /mcp/servers [32m200[39m in 25ms
+
+ GET /chat/new [32m200[39m in 73ms
+
+ GET /avatars/user.png [33m404[39m in 206ms
+
+ [32m[1m✓[22m[39m Compiled in 3.9s (2987 modules)
+
+ GET /chat/new [32m200[39m in 322ms
+
+ GET /mcp/config [32m200[39m in 912ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 2.6s (2984 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 4696ms
+
+ GET /mcp/config [32m200[39m in 84ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 2.3s (2977 modules)
+
+ GET /avatars/user.png [33m404[39m in 2712ms
+
+ [32m[1m✓[22m[39m Compiled in 3.2s (2987 modules)
+
+ GET /mcp/config [32m200[39m in 179ms
+
+ [32m[1m✓[22m[39m Compiled in 2.6s (3000 modules)
+
+ GET /mcp/config [32m200[39m in 188ms
+
+ [32m[1m✓[22m[39m Compiled in 1304ms (3000 modules)
+
+ GET /mcp/config [32m200[39m in 218ms
+
+ [32m[1m✓[22m[39m Compiled in 2.4s (2987 modules)
+
+ GET /mcp/config [32m200[39m in 142ms
+
+ [32m[1m✓[22m[39m Compiled in 1133ms (2987 modules)
+
+ GET /mcp/config [32m200[39m in 184ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 3.9s (3004 modules)
+
+ GET / [33m404[39m in 4210ms
+
+ GET /mcp/config [32m200[39m in 108ms
+
+ GET /chat/new [32m200[39m in 375ms
+
+ GET /avatars/user.png [33m404[39m in 92ms
+
+ [32m[1m✓[22m[39m Compiled in 1539ms (2991 modules)
+
+ GET /mcp/config [32m200[39m in 252ms
+
+ GET /chat/new [32m200[39m in 284ms
+
+ GET /chat/new [32m200[39m in 610ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 975ms (1525 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 1555ms
+
+ [32m[1m✓[22m[39m Compiled in 2.2s (3002 modules)
+
+ GET /mcp/config [32m200[39m in 176ms
+
+ GET /chat/new [32m200[39m in 66ms
+
+ [32m[1m✓[22m[39m Compiled in 2s (3002 modules)
+
+ GET /mcp/config [32m200[39m in 128ms
+
+ GET /chat/new [32m200[39m in 76ms
+
+ [32m[1m✓[22m[39m Compiled in 2.9s (3002 modules)
+
+ GET /mcp/config [32m200[39m in 143ms
+
+ GET /chat/new [32m200[39m in 84ms
+
+ [32m[1m✓[22m[39m Compiled in 1656ms (3011 modules)
+
+ GET /mcp/config [32m200[39m in 68ms
+
+ GET /chat/new [32m200[39m in 53ms
+
+ [32m[1m✓[22m[39m Compiled in 1101ms (2998 modules)
+
+ GET /mcp/config [32m200[39m in 181ms
+
+ GET /chat/new [32m200[39m in 133ms
+
+ [32m[1m✓[22m[39m Compiled in 899ms (2987 modules)
+
+ GET /mcp/config [32m200[39m in 111ms
+
+ GET /chat/new [32m200[39m in 77ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1218ms (2977 modules)
+
+ GET /avatars/user.png [33m404[39m in 1330ms
+
+ GET /avatars/user.png [33m404[39m in 1447ms
+
+ [32m[1m✓[22m[39m Compiled in 1648ms (2991 modules)
+
+ GET /mcp/config [32m200[39m in 204ms
+
+ GET /chat/new [32m200[39m in 108ms
+
+ GET /avatars/user.png [33m404[39m in 296ms
+
+ GET /avatars/user.png [33m404[39m in 129ms
+
+ [32m[1m✓[22m[39m Compiled in 945ms (3004 modules)
+
+ GET /mcp/config [32m200[39m in 75ms
+
+ GET /chat/new [32m200[39m in 33ms
+
+ GET /chat/new [32m200[39m in 420ms
+
+ GET /avatars/user.png [33m404[39m in 114ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 2.6s (1525 modules)
+
+ GET /chat/installHook.js.map [32m200[39m in 3201ms
+
+ GET /mcp/config [32m200[39m in 432ms
+
+ GET /avatars/user.png [33m404[39m in 69ms
+
+ERROR: Failed to proxy http://localhost:4100/api/chat/conversations/current Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ERROR: Error: connect ECONNREFUSED 127.0.0.1:4100
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:4100) {
+  errno: [33m-111[39m,
+  code: [32m'ECONNREFUSED'[39m,
+  syscall: [32m'connect'[39m,
+  address: [32m'127.0.0.1'[39m,
+  port: [33m4100[39m
+}
+
+ [37m[1m○[22m[39m Compiling /_error ...
+
+ [32m[1m✓[22m[39m Compiled /_error in 7s (3078 modules)
+
+ [32m[1m✓[22m[39m Compiled in 3.4s (3081 modules)
+
+ GET /mcp/config [32m200[39m in 164ms
+
+ GET /chat/new [32m200[39m in 78ms
+
+ [32m[1m✓[22m[39m Compiled in 691ms (1475 modules)
+
+ GET /mcp/config [32m200[39m in 132ms
+
+ GET /chat/new [32m200[39m in 131ms
+
+ [32m[1m✓[22m[39m Compiled in 1589ms (3077 modules)
+
+ GET /mcp/config [32m200[39m in 279ms
+
+ GET /chat/new [32m200[39m in 279ms
+
+ [32m[1m✓[22m[39m Compiled in 1982ms (2989 modules)
+
+ GET /mcp/config [32m200[39m in 180ms
+
+ GET /chat/new [32m200[39m in 45ms
+
+ [32m[1m✓[22m[39m Compiled in 1677ms (3002 modules)
+
+ GET /mcp/config [32m200[39m in 300ms
+
+ GET /chat/new [32m200[39m in 110ms
+
+ GET /mcp/servers [32m200[39m in 59ms
+
+ [37m[1m○[22m[39m Compiling /dashboard ...
+
+ [32m[1m✓[22m[39m Compiled /dashboard in 2.8s (3019 modules)
+
+ GET /dashboard [32m200[39m in 2867ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 4.1s (3023 modules)
+
+ GET /avatars/user.png [33m404[39m in 4848ms
+
+ [37m[1m○[22m[39m Compiling /mcp/logs ...
+
+ [32m[1m✓[22m[39m Compiled /mcp/logs in 8.9s (3736 modules)
+
+ GET /mcp/logs [32m200[39m in 9210ms
+
+ GET /mcp/logs [32m200[39m in 6946ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 1163ms (3740 modules)
+
+ GET /avatars/user.png [33m404[39m in 1410ms
+
+ GET /mcp/servers [32m200[39m in 66ms
+
+ GET /knowledge/search [32m200[39m in 39ms
+
+ GET /avatars/user.png [33m404[39m in 71ms
+
+ GET /knowledge/documents [32m200[39m in 29ms
+
+ [37m[1m○[22m[39m Compiling /chat/[chatId] ...
+
+ [32m[1m✓[22m[39m Compiled /chat/[chatId] in 3.2s (1877 modules)
+
+ GET /chat/starred [32m200[39m in 3603ms
+
+ [37m[1m○[22m[39m Compiling /chat/prompts ...
+
+ [32m[1m✓[22m[39m Compiled /chat/prompts in 5.5s (3766 modules)
+
+ GET /chat/prompts [32m200[39m in 5762ms
+
+ GET /avatars/user.png [33m404[39m in 167ms
+
+ GET /mcp/servers [32m200[39m in 31ms
+
+ GET /avatars/user.png [33m404[39m in 72ms
+
+ GET /mcp/servers [32m200[39m in 197ms
+
+ GET /avatars/user.png [33m404[39m in 54ms
+
+ GET /chat/new [32m200[39m in 44ms
+
+ GET /avatars/user.png [33m404[39m in 51ms
+
+ GET /mcp/servers [32m200[39m in 78ms
+
+ GET /chat/installHook.js.map [32m200[39m in 195ms
+
+ GET /chat/new [32m200[39m in 128ms
+
+ GET /avatars/user.png [33m404[39m in 89ms
+
+ [32m[1m✓[22m[39m Compiled in 3.6s (1891 modules)
+
+ GET /chat/new [32m200[39m in 76ms
+
+ GET /chat/new [32m200[39m in 90ms
+
+ [32m[1m✓[22m[39m Compiled in 4s (3199 modules)
+
+ GET /chat/new [32m200[39m in 145ms
+
+ GET /chat/new [32m200[39m in 143ms
+
+ GET /chat/new [32m200[39m in 591ms
+
+ [37m[1m○[22m[39m Compiling /_not-found ...
+
+ [32m[1m✓[22m[39m Compiled /_not-found in 3.4s (3189 modules)
+
+ GET /avatars/user.png [33m404[39m in 3667ms
+
+ [32m[1m✓[22m[39m Compiled in 3.3s (3189 modules)
+
+ GET /chat/new [32m200[39m in 173ms
+
+ GET /chat/new [32m200[39m in 190ms
+
