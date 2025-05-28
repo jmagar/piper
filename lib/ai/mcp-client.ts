@@ -89,82 +89,58 @@ export class MCPService {
     try {
       console.log(`Initializing MCP client for ${this.displayName} with transport config:`, this.config.transport);
 
-      let mcpClientTransportArg: any;
-
-      if (this.config.transport.type === 'sse') {
-        const sseConfig = this.config.transport as SseTransportConfig;
-        mcpClientTransportArg = {
-          type: 'sse', // This 'type' field is for the outer object passed to experimental_createMCPClient
-          url: sseConfig.url,
-        };
-        if (sseConfig.headers) {
-          mcpClientTransportArg.headers = sseConfig.headers;
-        }
-      } else if (this.config.transport.type === 'stdio') {
-        const stdioConfig = this.config.transport as StdioTransportConfig;
-        // Use the imported Experimental_StdioMCPTransport class
-        // The 'transport' property of clientOptions will be set directly here.
-        // mcpClientTransportArg is not needed for this branch if we assign directly to clientOptions.transport.
-      } else if (this.config.transport.type === 'custom') {
-        // The experimental_createMCPClient signature provided by the user does not show support for 'custom' transport.
-        throw new Error(`'custom' transport type for server '${this.config.label}' is not supported by experimental_createMCPClient based on the provided SDK signature. Please use 'sse' or 'stdio'.`);
-      } else {
-        const unknownTransportType = (this.config.transport as any).type;
-        console.error(`Unknown or unsupported transport type '${unknownTransportType}' for server '${this.config.label}'.`);
-        throw new Error(`Unknown or unsupported transport type: ${unknownTransportType}`);
-      }
-      
-      const clientOptions: { name?: string; transport: any } = { 
-        // transport will be set conditionally below
-        transport: undefined // Initialize transport as undefined
-      };
+      let transportForClient: Experimental_StdioMCPTransport | { type: 'sse'; url: string; headers?: Record<string, string> };
 
       // Assign transport based on type
       if (this.config.transport.type === 'sse') {
-        const sseConfig = this.config.transport; // TS should infer SseTransportConfig here
-        clientOptions.transport = {
+        const sseConfig = this.config.transport; // TS infers SseTransportConfig due to discriminated union
+        transportForClient = {
           type: 'sse',
           url: sseConfig.url,
         };
         if (sseConfig.headers) {
-          (clientOptions.transport as any).headers = sseConfig.headers;
+          // Type assertion to SseTransportConfig or access via narrowed transportForClient
+          (transportForClient as SseTransportConfig).headers = sseConfig.headers;
         }
       } else if (this.config.transport.type === 'stdio') {
-        const stdioConfig = this.config.transport; // TS should infer StdioTransportConfig here
-        clientOptions.transport = new Experimental_StdioMCPTransport({
+        const stdioConfig = this.config.transport; // TS infers StdioTransportConfig
+        transportForClient = new Experimental_StdioMCPTransport({
           command: stdioConfig.command,
           args: stdioConfig.args,
           env: stdioConfig.env,
           cwd: stdioConfig.cwd,
           stderr: stdioConfig.stderr,
         });
+      } else if (this.config.transport.type === 'custom') {
+        // Explicitly handle 'custom' as unsupported for experimental_createMCPClient
+        throw new Error(`'custom' transport type for server '${this.displayName}' is not supported by experimental_createMCPClient. Please use 'sse' or 'stdio'.`);
       } else {
-        // This 'else' handles cases where this.config.transport.type is not 'sse' or 'stdio',
-        // or if the transport object is malformed (e.g. type is missing or not 'sse'/'stdio').
-        // TypeScript has indicated that 'custom' is not an expected type here.
-        const transportType = (this.config.transport as any)?.type;
-        const transportDetails = JSON.stringify(this.config.transport);
-        console.error(`Unsupported or misconfigured transport type ('${transportType}') for server '${this.displayName}'. Expected 'sse' or 'stdio'. Details: ${transportDetails}`);
-        throw new Error(`Unsupported or misconfigured transport type ('${transportType}') for server '${this.displayName}'. Expected 'sse' or 'stdio'.`);
+        // This block handles cases where `this.config.transport.type` is not 'sse', 'stdio', or 'custom'.
+        const transport: unknown = this.config.transport;
+        let transportTypeString = 'unknown';
+        if (transport && typeof (transport as { type?: unknown }).type === 'string') {
+            transportTypeString = (transport as { type: string }).type;
+        }
+        const transportDetails = JSON.stringify(transport);
+        console.error(`Unsupported or misconfigured transport type ('${transportTypeString}') for server '${this.displayName}'. Expected 'sse' or 'stdio'. Details: ${transportDetails}`);
+        throw new Error(`Unsupported or misconfigured transport type ('${transportTypeString}') for server '${this.displayName}'. Expected 'sse' or 'stdio'.`);
       }
-
-      // Ensure transport is set before proceeding
-      if (clientOptions.transport === undefined) {
-        // This block should be logically unreachable if the preceding type checks are exhaustive.
-        // If it's reached, it means a transport type was encountered that wasn't 'sse', 'stdio', or 'custom'.
-        throw new Error(`Failed to determine and set client transport for server '${this.displayName}'. This indicates an unexpected gap in the transport handling logic, as clientOptions.transport remained undefined.`);
-      }
-
+      
+      const clientOptions: {
+        name?: string;
+        transport: Experimental_StdioMCPTransport | { type: 'sse'; url: string; headers?: Record<string, string> };
+      } = {
+        transport: transportForClient,
+      };
 
       if (this.config.name) {
         clientOptions.name = this.config.name;
       }
 
-      // Log essential parts of the configuration, avoiding complex objects like Writable streams.
       console.log(`[${this.displayName}] Calling experimental_createMCPClient with options:`, {
         name: clientOptions.name,
-        transportType: this.config.transport.type,
-        transportDetails: this.config.transport.type === 'stdio' 
+        transportType: this.config.transport?.type, 
+        transportDetails: this.config.transport?.type === 'stdio' 
           ? 'Instance of Experimental_StdioMCPTransport'
           : clientOptions.transport 
       });
@@ -266,27 +242,45 @@ async function main() {
       }
 
       if (!serverConfigEntry.transport.type) {
-        if (serverConfigEntry.command) {
-          serverConfigEntry.transport.type = 'stdio';
+        // Ensure transport is an object before assigning to its 'type' property
+        if (typeof serverConfigEntry.transport !== 'object' || serverConfigEntry.transport === null) {
+          serverConfigEntry.transport = {} as MCPTransportConfig; // Initialize if not a proper object
+        }
+        if (typeof serverConfigEntry.command === 'string') {
+          (serverConfigEntry.transport as { type?: string }).type = 'stdio';
           console.log(`[main] Inferred transport type 'stdio' for server '${serverName}'.`);
-        } else if (serverConfigEntry.url) {
-          serverConfigEntry.transport.type = 'sse';
+        } else if (typeof serverConfigEntry.url === 'string') {
+          (serverConfigEntry.transport as { type?: string }).type = 'sse';
           console.log(`[main] Inferred transport type 'sse' for server '${serverName}'.`);
         } else {
-          console.warn(`[main] Could not infer transport type for server '${serverName}'. It might be missing 'command' or 'url' at top-level.`);
+          console.warn(`[main] Could not infer transport type for server '${serverName}'. It might be missing 'command' or 'url' at top-level, or they are not strings.`);
         }
       }
 
       if (serverConfigEntry.transport.type === 'stdio') {
         const stdioTransport = serverConfigEntry.transport as StdioTransportConfig;
         // Infer from top-level if not present in transport object
-        stdioTransport.command = stdioTransport.command || serverConfigEntry.command;
-        stdioTransport.args = stdioTransport.args || serverConfigEntry.args;
-        stdioTransport.env = stdioTransport.env || serverConfigEntry.env;
-        stdioTransport.cwd = stdioTransport.cwd || serverConfigEntry.cwd; // Added cwd inference
+        if (serverConfigEntry.command !== undefined) {
+          stdioTransport.command = stdioTransport.command || serverConfigEntry.command;
+        } else if (stdioTransport.command === undefined) {
+          // If serverConfigEntry.command is undefined AND stdioTransport.command was also undefined,
+          // command is mandatory for stdio, so this indicates a config issue.
+          console.error(`[main] Critical: 'command' is undefined for stdio server '${serverName}' in both transport object and top-level config.`);
+          // Potentially throw an error here or ensure command has a default or is checked before client creation
+        }
+        // For optional properties, only assign if serverConfigEntry has them
+        if (serverConfigEntry.args !== undefined) {
+          stdioTransport.args = stdioTransport.args || serverConfigEntry.args;
+        }
+        if (serverConfigEntry.env !== undefined) {
+          stdioTransport.env = stdioTransport.env || serverConfigEntry.env;
+        }
+        if (serverConfigEntry.cwd !== undefined) {
+          stdioTransport.cwd = stdioTransport.cwd || serverConfigEntry.cwd; // Added cwd inference
+        }
 
         // If 'url' was part of an old StdioTransportConfig and present from a legacy config.json, handle/warn
-        if ((serverConfigEntry.transport as any).url) {
+        if ('url' in serverConfigEntry.transport && serverConfigEntry.transport.url !== undefined) {
           console.warn(`[main] 'url' property found in stdio transport configuration for server '${serverName}'. It is not applicable to StdioMCPTransport and will be ignored.`);
         }
       } else if (serverConfigEntry.transport.type === 'sse') {
@@ -332,8 +326,8 @@ async function main() {
         const tools = await mcpService.getTools();
         console.log(`Tools for ${serverName}:`, Object.keys(tools).join(', ') || 'No tools found');
         console.log(`Successfully tested server: ${serverName}`);
-      } catch (serverError) { // Catch for individual server processing
-        console.error(`Failed to fully test server ${serverName}. Error details:`, serverError);
+      } catch (serverError: unknown) { // Catch for individual server processing
+        console.error(`Failed to fully test server ${serverName}. Error details: ${serverError instanceof Error ? serverError.message : String(serverError)}`);
       }
     } // Closes for...of loop
   } catch (error) { // Catch for the main try block
