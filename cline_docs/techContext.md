@@ -67,3 +67,6 @@
 - Supabase (cloud database/auth)
 - Clerk (authentication service)
 - All internal application-level user authentication and session management logic.
+
+-   **`ai` SDK (version `4.3.16`)**: Used for core AI functionalities, including `experimental_createMCPClient` for MCP integration.
+    -   Its submodule `ai/mcp-stdio` provides `Experimental_StdioMCPTransport` for command-based MCP servers.

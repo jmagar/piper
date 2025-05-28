@@ -3,3 +3,4 @@ db-data/
 cline_docs/
 *.env
 .DS_Store
+!next-env.d.ts

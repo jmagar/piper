@@ -9,10 +9,10 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
+!next-env.d.ts
 # testing
 /coverage
-
+config.json
 # next.js
 /.next/
 /out/
