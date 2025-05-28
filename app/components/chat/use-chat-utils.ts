@@ -3,44 +3,33 @@ import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { Message } from "@ai-sdk/react"
 
+// Define the expected shape of the object returned by createNewChat
+interface NewChatResponse {
+  id: string
+  // Add other properties if known, otherwise keep it minimal
+}
+
 type UseChatUtilsProps = {
-  isAuthenticated: boolean
   chatId: string | null
   messages: Message[]
   input: string
   selectedModel: string
-  systemPrompt: string
-  selectedAgentId: string | null
   createNewChat: (
-    userId: string,
     title?: string,
-    model?: string,
-    isAuthenticated?: boolean,
-    systemPrompt?: string,
-    agentId?: string
-  ) => Promise<any>
-  setHasDialogAuth: (value: boolean) => void
+    model?: string
+  ) => Promise<NewChatResponse | null>
 }
 
 export function useChatUtils({
-  isAuthenticated,
   chatId,
   messages,
   input,
   selectedModel,
-  systemPrompt,
-  selectedAgentId,
   createNewChat,
-  setHasDialogAuth,
 }: UseChatUtilsProps) {
   const checkLimitsAndNotify = async (uid: string): Promise<boolean> => {
     try {
-      const rateData = await checkRateLimits(uid, isAuthenticated)
-
-      if (rateData.remaining === 0 && !isAuthenticated) {
-        setHasDialogAuth(true)
-        return false
-      }
+      const rateData = await checkRateLimits(uid, true)
 
       if (rateData.remaining === REMAINING_QUERY_ALERT_THRESHOLD) {
         toast({
@@ -67,38 +56,29 @@ export function useChatUtils({
     }
   }
 
-  const ensureChatExists = async (userId: string) => {
-    if (!isAuthenticated) {
-      const storedGuestChatId = localStorage.getItem("guestChatId")
-      if (storedGuestChatId) return storedGuestChatId
-    }
-
+  const ensureChatExists = async () => {
     if (messages.length === 0) {
       try {
         const newChat = await createNewChat(
-          userId,
           input,
-          selectedModel,
-          isAuthenticated,
-          selectedAgentId ? undefined : systemPrompt, // if agentId is set, systemPrompt is not used
-          selectedAgentId || undefined
+          selectedModel
         )
 
         if (!newChat) return null
-        if (isAuthenticated) {
-          window.history.pushState(null, "", `/c/${newChat.id}`)
-        } else {
-          localStorage.setItem("guestChatId", newChat.id)
-        }
+        window.history.pushState(null, "", `/c/${newChat.id}`)
 
         return newChat.id
-      } catch (err: any) {
+      } catch (err: unknown) {
         let errorMessage = "Something went wrong."
-        try {
-          const parsed = JSON.parse(err.message)
-          errorMessage = parsed.error || errorMessage
-        } catch {
-          errorMessage = err.message || errorMessage
+        if (err instanceof Error) {
+          try {
+            const parsed = JSON.parse(err.message)
+            errorMessage = parsed.error || err.message
+          } catch {
+            errorMessage = err.message
+          }
+        } else if (typeof err === 'string') {
+          errorMessage = err;
         }
         toast({
           title: errorMessage,

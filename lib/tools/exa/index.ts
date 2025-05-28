@@ -1,6 +1,6 @@
-import { config as crawlConfig } from "./crawl/config"
+import { exaCrawlToolConfig as crawlConfig } from "./crawl/crawlTool.definition"
 import { crawlTool } from "./crawl/tool"
-import { config as webSearchConfig } from "./webSearch/config"
+import { exaSearchToolConfig as webSearchConfig } from "./webSearch/webSearchTool.definition"
 import { webSearchTool } from "./webSearch/tool"
 
 const isAvailable = (envVars: string[]) => {

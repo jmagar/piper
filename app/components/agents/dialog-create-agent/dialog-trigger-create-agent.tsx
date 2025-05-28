@@ -1,7 +1,5 @@
 "use client"
 
-import { PopoverContentAuth } from "@/app/components/chat-input/popover-content-auth"
-import { useUser } from "@/app/providers/user-provider"
 import {
   Dialog,
   DialogContent,
@@ -10,11 +8,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { toast } from "@/components/ui/toast"
 import { fetchClient } from "@/lib/fetch"
 import { API_ROUTE_CREATE_AGENT } from "@/lib/routes"
@@ -37,12 +30,9 @@ type DialogCreateAgentTrigger = {
   trigger: React.ReactNode
 }
 
-// @todo: add drawer
 export function DialogCreateAgentTrigger({
   trigger,
 }: DialogCreateAgentTrigger) {
-  const { user } = useUser()
-  const isAuthenticated = !!user?.id
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData>({
     name: "",
@@ -200,26 +190,12 @@ Never invent answers. Use tools and return what you find.`
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          systemPrompt: formData.systemPrompt,
-          avatar_url: repository ? `https://github.com/${owner}.png` : null,
-          mcp_config: repository
-            ? {
-                server: `https://gitmcp.io/${owner}/${repo}`,
-                variables: [],
-              }
-            : null,
-          example_inputs: repository
-            ? [
-                "what does this repository do?",
-                "how to install the project?",
-                "how can I use this project?",
-                "where is the main code located?",
-              ]
-            : null,
+          system_prompt: formData.systemPrompt,
+          mcp: formData.mcp,
+          repository: formData.mcp === "git-mcp" ? formData.repository : null,
           tools: formData.tools,
-          remixable: false,
-          is_public: true,
-          max_steps: 5,
+          owner: owner,
+          repo: repo,
         }),
       })
 
@@ -228,19 +204,20 @@ Never invent answers. Use tools and return what you find.`
         throw new Error(errorData.error || "Failed to create agent")
       }
 
-      const { agent } = await apiResponse.json()
-
-      // Close the dialog and redirect
-      setOpen(false)
-      router.push(`/?agent=${agent.slug}`)
-    } catch (error: any) {
-      console.error("Agent creation error:", error)
-      toast({
-        title: "Error creating agent",
-        description:
-          error.message || "Failed to create agent. Please try again.",
-      })
-      setError({ form: "Failed to create agent. Please try again." })
+      const result = await apiResponse.json()
+      toast({ title: "Agent created successfully!", status: "success" })
+      setOpen(false) // Close dialog on success
+      router.push(`/a/${result.slug}`) // Redirect to the new agent's page
+    } catch (err: unknown) {
+      let errorMessage = "An unexpected error occurred."
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        errorMessage = err
+      }
+      // Display error toast or update error state
+      toast({ title: "Error creating agent", description: errorMessage, status: "error" })
+      // Optionally, set specific form field errors if applicable from err
     } finally {
       setIsLoading(false)
     }
@@ -261,15 +238,6 @@ Never invent answers. Use tools and return what you find.`
       isDrawer={isMobile}
     />
   )
-
-  if (!isAuthenticated) {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        <PopoverContentAuth />
-      </Popover>
-    )
-  }
 
   if (isMobile) {
     return (

@@ -1,5 +1,4 @@
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
-import { UserProfile } from "@/app/types/user"
 import { toast } from "@/components/ui/toast"
 import { Message } from "@ai-sdk/react"
 import { useCallback } from "react"
@@ -14,7 +13,6 @@ type UseChatHandlersProps = {
   selectedModel: string
   chatId: string | null
   updateChatModel: (chatId: string, model: string) => Promise<void>
-  user: UserProfile | null
 }
 
 export function useChatHandlers({
@@ -25,7 +23,6 @@ export function useChatHandlers({
   selectedModel,
   chatId,
   updateChatModel,
-  user,
 }: UseChatHandlersProps) {
   const { setDraftValue } = useChatDraft(chatId)
 
@@ -39,11 +36,9 @@ export function useChatHandlers({
 
   const handleModelChange = useCallback(
     async (model: string) => {
-      if (!user?.id) {
-        return
-      }
-
-      if (!chatId && user?.id) {
+      // If there's no active chat, just set the selected model locally.
+      // The user?.id check is redundant as admin is always 'authenticated'.
+      if (!chatId) { 
         setSelectedModel(model)
         return
       }
@@ -63,7 +58,7 @@ export function useChatHandlers({
         })
       }
     },
-    [chatId, selectedModel, setSelectedModel, updateChatModel, user?.id]
+    [chatId, selectedModel, setSelectedModel, updateChatModel]
   )
 
   const handleDelete = useCallback(

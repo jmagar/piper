@@ -9,11 +9,11 @@ type UserPreferences = {
 }
 
 const defaultPreferences: UserPreferences = {
-  layout: "fullscreen",
+  layout: "fullscreen", // Default to fullscreen, can be overridden by localStorage
 }
 
 const PREFERENCES_STORAGE_KEY = "user-preferences"
-const LAYOUT_STORAGE_KEY = "preferred-layout"
+const LAYOUT_STORAGE_KEY = "preferred-layout" // Kept for potential backward compatibility if users had this set
 
 interface UserPreferencesContextType {
   preferences: UserPreferences
@@ -26,29 +26,21 @@ const UserPreferencesContext = createContext<
 
 export function UserPreferencesProvider({
   children,
-  userId,
 }: {
   children: React.ReactNode
-  userId?: string
 }) {
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const [isInitialized, setIsInitialized] = useState(false)
-  const isAuthenticated = !!userId
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setPreferences((prev) => ({ ...prev, layout: "fullscreen" }))
-      setIsInitialized(true)
-      return
-    }
-
+    // Always try to load from localStorage since there's no auth gate
     try {
       const storedPrefs = localStorage.getItem(PREFERENCES_STORAGE_KEY)
-
       if (storedPrefs) {
         setPreferences(JSON.parse(storedPrefs))
       } else {
+        // Fallback to old layout key if new one isn't present
         const storedLayout = localStorage.getItem(
           LAYOUT_STORAGE_KEY
         ) as LayoutType
@@ -58,29 +50,30 @@ export function UserPreferencesProvider({
       }
     } catch (error) {
       console.error("Failed to load user preferences:", error)
+      // Stick with defaultPreferences if loading fails
     } finally {
       setIsInitialized(true)
     }
-  }, [isAuthenticated])
+  }, [])
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated) {
+    if (isInitialized) { // Save whenever initialized and preferences change
       try {
         localStorage.setItem(
           PREFERENCES_STORAGE_KEY,
           JSON.stringify(preferences)
         )
+        // Also update the old key for a smoother transition if needed, or remove if not necessary
         localStorage.setItem(LAYOUT_STORAGE_KEY, preferences.layout)
       } catch (error) {
         console.error("Failed to save user preferences:", error)
       }
     }
-  }, [preferences, isInitialized, isAuthenticated])
+  }, [preferences, isInitialized])
 
   const setLayout = (layout: LayoutType) => {
-    if (isAuthenticated || layout === "fullscreen") {
-      setPreferences((prev) => ({ ...prev, layout }))
-    }
+    // Always allow setting layout
+    setPreferences((prev) => ({ ...prev, layout }))
   }
 
   return (

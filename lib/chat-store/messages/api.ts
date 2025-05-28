@@ -1,78 +1,67 @@
-import { createClient } from "@/lib/supabase/client"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
+"server-only"; // Ensures this module only runs on the server
+
+import { prisma } from "@/lib/prisma"
 import type { Message as MessageAISDK } from "ai"
 import { readFromIndexedDB, writeToIndexedDB } from "../persist"
 
 export async function getMessagesFromDb(
   chatId: string
 ): Promise<MessageAISDK[]> {
-  // fallback to local cache only
-  if (!isSupabaseEnabled) {
-    const cached = await getCachedMessages(chatId)
-    return cached
-  }
+  try {
+    const messages = await prisma.message.findMany({
+      where: { chatId },
+      orderBy: { createdAt: 'asc' }
+    })
 
-  const supabase = createClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, content, role, experimental_attachments, created_at, parts")
-    .eq("chat_id", chatId)
-    .order("created_at", { ascending: true })
-
-  if (!data || error) {
+    return messages.map((message) => ({
+      id: message.id,
+      content: message.content,
+      role: message.role as MessageAISDK["role"],
+      createdAt: message.createdAt,
+      experimental_attachments: [], // Will be populated from attachments table if needed
+    }))
+  } catch (error) {
     console.error("Failed to fetch messages:", error)
     return []
   }
-
-  return data.map((message) => ({
-    ...message,
-    id: String(message.id),
-    content: message.content ?? "",
-    createdAt: new Date(message.created_at || ""),
-    parts: (message?.parts as MessageAISDK["parts"]) || undefined,
-  }))
 }
 
 async function insertMessageToDb(chatId: string, message: MessageAISDK) {
-  const supabase = createClient()
-  if (!supabase) return
-
-  await supabase.from("messages").insert({
-    chat_id: chatId,
-    role: message.role,
-    content: message.content,
-    experimental_attachments: message.experimental_attachments,
-    created_at: message.createdAt?.toISOString() || new Date().toISOString(),
-  })
+  try {
+    await prisma.message.create({
+      data: {
+        chatId,
+        role: message.role,
+        content: message.content,
+      }
+    })
+  } catch (error) {
+    console.error("Error inserting message:", error)
+  }
 }
 
 async function insertMessagesToDb(chatId: string, messages: MessageAISDK[]) {
-  const supabase = createClient()
-  if (!supabase) return
+  try {
+    const messageData = messages.map((message) => ({
+      chatId,
+      role: message.role,
+      content: message.content,
+    }))
 
-  const payload = messages.map((message) => ({
-    chat_id: chatId,
-    role: message.role,
-    content: message.content,
-    experimental_attachments: message.experimental_attachments,
-    created_at: message.createdAt?.toISOString() || new Date().toISOString(),
-  }))
-
-  await supabase.from("messages").insert(payload)
+    await prisma.message.createMany({
+      data: messageData
+    })
+  } catch (error) {
+    console.error("Error inserting messages:", error)
+  }
 }
 
 async function deleteMessagesFromDb(chatId: string) {
-  const supabase = createClient()
-  if (!supabase) return
-
-  const { error } = await supabase
-    .from("messages")
-    .delete()
-    .eq("chat_id", chatId)
-
-  if (error) {
+  try {
+    await prisma.message.deleteMany({
+      where: { chatId }
+    })
+  } catch (error) {
     console.error("Failed to clear messages from database:", error)
   }
 }

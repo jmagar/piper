@@ -1,102 +1,133 @@
 import { readFromIndexedDB, writeToIndexedDB } from "@/lib/chat-store/persist"
-import type { Chat, Chats } from "@/lib/chat-store/types"
-import { createClient } from "@/lib/supabase/client"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
-import { MODEL_DEFAULT } from "../../config"
+import type { Chat } from "@/lib/chat-store/types"
+import { prisma } from "@/lib/prisma" // Keep for other functions, will address them later if needed
 import { fetchClient } from "../../fetch"
 import {
-  API_ROUTE_CREATE_CHAT,
-  API_ROUTE_CREATE_CHAT_WITH_AGENT,
-  API_ROUTE_UPDATE_CHAT_AGENT,
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "../../routes"
 
-export async function getChatsForUserInDb(userId: string): Promise<Chats[]> {
-  const supabase = createClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase
-    .from("chats")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-
-  if (!data || error) {
-    console.error("Failed to fetch chats:", error)
+export async function getChatsForUserInDb(): Promise<Chat[]> {
+  try {
+    const response = await fetch("/api/chats/user") // Fetch from the new API route
+    if (!response.ok) {
+      console.error("Failed to fetch user chats from API:", response.statusText)
+      return []
+    }
+    const chats: Chat[] = await response.json()
+    // The API route /api/chats/user should ideally return data in the Chat[] format.
+    // If it returns raw Prisma data, mapping might still be needed here.
+    // For now, assuming API returns compatible Chat[] structure.
+    // The API includes messages, so the mapping for messages might not be needed if API returns full objects.
+    // However, the original mapping also initialized attachments: [].
+    return chats.map(chat => ({
+      ...chat, // Spread the chat data from API
+      messages: chat.messages || [], // Ensure messages is an array
+      attachments: chat.attachments || [], // Ensure attachments is an array, or initialize if not present
+    }))
+  } catch (error) {
+    console.error("Error fetching chats via API:", error)
     return []
   }
-
-  return data
 }
 
 export async function updateChatTitleInDb(id: string, title: string) {
-  const supabase = createClient()
-  if (!supabase) return
-
-  const { error } = await supabase.from("chats").update({ title }).eq("id", id)
-  if (error) throw error
+  try {
+    await prisma.chat.update({
+      where: { id },
+      data: { title }
+    })
+  } catch (error) {
+    console.error("Error updating chat title:", error)
+    throw error
+  }
 }
 
 export async function deleteChatInDb(id: string) {
-  const supabase = createClient()
-  if (!supabase) return
-
-  const { error } = await supabase.from("chats").delete().eq("id", id)
-  if (error) throw error
+  try {
+    // Delete messages first (cascade should handle this, but being explicit)
+    await prisma.message.deleteMany({
+      where: { chatId: id }
+    })
+    
+    // Delete attachments
+    await prisma.attachment.deleteMany({
+      where: { chatId: id }
+    })
+    
+    // Delete chat
+    await prisma.chat.delete({
+      where: { id }
+    })
+  } catch (error) {
+    console.error("Error deleting chat:", error)
+    throw error
+  }
 }
 
-export async function getAllUserChatsInDb(userId: string): Promise<Chats[]> {
-  const supabase = createClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase
-    .from("chats")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-
-  if (!data || error) return []
-  return data
+export async function getAllUserChatsInDb(): Promise<Chat[]> {
+  return getChatsForUserInDb()
 }
 
 export async function createChatInDb(
-  userId: string,
   title: string,
   model: string,
   systemPrompt: string
 ): Promise<string | null> {
-  const supabase = createClient()
-  if (!supabase) return null
-
-  const { data, error } = await supabase
-    .from("chats")
-    .insert({ user_id: userId, title, model, system_prompt: systemPrompt })
-    .select("id")
-    .single()
-
-  if (error || !data?.id) return null
-  return data.id
+  try {
+    const chat = await prisma.chat.create({
+      data: {
+        title,
+        model,
+        systemPrompt
+      }
+    })
+    return chat.id
+  } catch (error) {
+    console.error("Error creating chat:", error)
+    return null
+  }
 }
 
-export async function fetchAndCacheChats(userId: string): Promise<Chats[]> {
-  if (!isSupabaseEnabled) {
+export async function fetchAndCacheChats(): Promise<Chat[]> {
+  try {
+    const chats = await getChatsForUserInDb()
+    await writeToIndexedDB("chats", chats)
+    return chats
+  } catch (error) {
+    console.error("Error fetching and caching chats:", error)
     return await getCachedChats()
   }
-
-  const data = await getChatsForUserInDb(userId)
-
-  if (data.length > 0) {
-    await writeToIndexedDB("chats", data)
-  }
-
-  return data
 }
 
-export async function getCachedChats(): Promise<Chats[]> {
-  const all = await readFromIndexedDB<Chats>("chats")
-  return (all as Chats[]).sort(
-    (a, b) => +new Date(b.created_at || "") - +new Date(a.created_at || "")
-  )
+export async function getCachedChats(): Promise<Chat[]> {
+  try {
+    // Explicitly acknowledge that readFromIndexedDB might return a nested array
+    const storedValue = await readFromIndexedDB<Chat[] | Chat[][]>("chats")
+
+    if (Array.isArray(storedValue)) {
+      if (storedValue.length === 0) {
+        return [] // An empty array is a valid Chat[]
+      }
+      // Check if the first element is itself an array, indicating Chat[][]
+      if (Array.isArray(storedValue[0])) {
+        console.warn(
+          "getCachedChats: Detected a nested array (Chat[][]) in IndexedDB for 'chats'. " +
+          "This is unexpected. Returning the first sub-array if valid, or empty array."
+        )
+        // Attempt to recover by taking the first sub-array. This assumes a structure like [[chat1, chat2], ...]
+        // and that the first sub-array is the intended Chat[]. This is a workaround.
+        const firstSubArray = storedValue[0] as Chat[]
+        return Array.isArray(firstSubArray) ? firstSubArray : []
+      }
+      // If not a nested array, then it should be Chat[]
+      return storedValue as Chat[]
+    }
+    // If storedValue is not an array (e.g., null, undefined), return empty array
+    return []
+  } catch (error) {
+    console.error("Error reading cached chats:", error)
+    return []
+  }
 }
 
 export async function updateChatTitle(
@@ -105,7 +136,7 @@ export async function updateChatTitle(
 ): Promise<void> {
   await updateChatTitleInDb(id, title)
   const all = await getCachedChats()
-  const updated = (all as Chats[]).map((c) =>
+  const updated = all.map((c) =>
     c.id === id ? { ...c, title } : c
   )
   await writeToIndexedDB("chats", updated)
@@ -116,39 +147,44 @@ export async function deleteChat(id: string): Promise<void> {
   const all = await getCachedChats()
   await writeToIndexedDB(
     "chats",
-    (all as Chats[]).filter((c) => c.id !== id)
+    all.filter((c) => c.id !== id)
   )
 }
 
 export async function getChat(chatId: string): Promise<Chat | null> {
-  const all = await readFromIndexedDB<Chat>("chats")
-  return (all as Chat[]).find((c) => c.id === chatId) || null
+  const allChats = await getCachedChats()
+  return allChats.find((c) => c.id === chatId) || null
 }
 
-export async function getUserChats(userId: string): Promise<Chat[]> {
-  const data = await getAllUserChatsInDb(userId)
-  if (!data) return []
+export async function getUserChats(): Promise<Chat[]> {
+  const data = await getAllUserChatsInDb()
   await writeToIndexedDB("chats", data)
   return data
 }
 
 export async function createChat(
-  userId: string,
   title: string,
   model: string,
   systemPrompt: string
 ): Promise<string> {
-  const id = await createChatInDb(userId, title, model, systemPrompt)
+  const id = await createChatInDb(title, model, systemPrompt)
   const finalId = id ?? crypto.randomUUID()
 
-  await writeToIndexedDB("chats", {
+  const newChat: Chat = {
     id: finalId,
     title,
     model,
-    user_id: userId,
-    system_prompt: systemPrompt,
-    created_at: new Date().toISOString(),
-  })
+    systemPrompt: systemPrompt,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    messages: [],
+    attachments: [],
+    agentId: null,
+  }
+
+  const currentChats = await getCachedChats()
+  currentChats.unshift(newChat)
+  await writeToIndexedDB("chats", currentChats)
 
   return finalId
 }
@@ -170,7 +206,7 @@ export async function updateChatModel(chatId: string, model: string) {
     }
 
     const all = await getCachedChats()
-    const updated = (all as Chats[]).map((c) =>
+    const updated = all.map((c) =>
       c.id === chatId ? { ...c, model } : c
     )
     await writeToIndexedDB("chats", updated)
@@ -183,91 +219,46 @@ export async function updateChatModel(chatId: string, model: string) {
 }
 
 export async function createNewChat(
-  userId: string,
   title?: string,
-  model?: string,
-  isAuthenticated?: boolean,
-  agentId?: string
-): Promise<Chats> {
-  try {
-    // @todo: can keep only one route for create chat
-    const apiRoute = agentId
-      ? API_ROUTE_CREATE_CHAT_WITH_AGENT
-      : API_ROUTE_CREATE_CHAT
+  model?: string
+): Promise<Chat> {
+  const response = await fetchClient("/api/create-chat", {
+    method: "POST",
+    body: JSON.stringify({
+      title,
+      model,
+    }),
+  })
 
-    const payload = agentId
-      ? {
-          userId,
-          agentId,
-          title: title || `Conversation with agent`,
-          model: model || MODEL_DEFAULT,
-          isAuthenticated,
-        }
-      : {
-          userId,
-          title,
-          model: model || MODEL_DEFAULT,
-          isAuthenticated,
-        }
-
-    const res = await fetchClient(apiRoute, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-
-    const responseData = await res.json()
-
-    if (!res.ok || !responseData.chat) {
-      throw new Error(responseData.error || "Failed to create chat")
-    }
-
-    const chat: Chats = {
-      id: responseData.chat.id,
-      title: responseData.chat.title,
-      created_at: responseData.chat.created_at,
-      model: responseData.chat.model,
-      agent_id: responseData.chat.agent_id,
-      user_id: responseData.chat.user_id,
-      public: responseData.chat.public,
-    }
-
-    await writeToIndexedDB("chats", chat)
-    return chat
-  } catch (error) {
-    console.error("Error creating new chat:", error)
-    throw error
+  if (!response.ok) {
+    throw new Error("Failed to create chat")
   }
+
+  const data = await response.json()
+  const newChat = data.chat as Chat
+  const currentChats = await getCachedChats()
+  currentChats.unshift(newChat)
+  await writeToIndexedDB("chats", currentChats)
+  
+  return newChat
 }
 
 export async function updateChatAgent(
-  userId: string,
   chatId: string,
-  agentId: string | null,
-  isAuthenticated: boolean
+  agentId: string | null
 ) {
   try {
-    const res = await fetchClient(API_ROUTE_UPDATE_CHAT_AGENT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, chatId, agentId, isAuthenticated }),
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { agentId }
     })
-    const responseData = await res.json()
-
-    if (!res.ok) {
-      throw new Error(
-        responseData.error ||
-          `Failed to update chat agent: ${res.status} ${res.statusText}`
-      )
-    }
-
+    
+    // Update cache
     const all = await getCachedChats()
-    const updated = (all as Chats[]).map((c) =>
-      c.id === chatId ? { ...c, agent_id: agentId } : c
+    const updated = all.map((c) =>
+      c.id === chatId ? { ...c, agentId: agentId } : c
     )
     await writeToIndexedDB("chats", updated)
-
-    return responseData
   } catch (error) {
     console.error("Error updating chat agent:", error)
     throw error

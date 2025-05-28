@@ -10,25 +10,22 @@ export const useFileUpload = () => {
   const [files, setFiles] = useState<File[]>([])
 
   const handleFileUploads = async (
-    uid: string,
     chatId: string
   ): Promise<Attachment[] | null> => {
     if (files.length === 0) return []
 
     try {
-      await checkFileUploadLimit(uid)
-    } catch (err: any) {
-      if (err.code === "DAILY_FILE_LIMIT_REACHED") {
-        toast({ title: err.message, status: "error" })
-        return null
-      }
+      await checkFileUploadLimit()
+    } catch {
+      toast({ title: "File upload limit exceeded", status: "error" })
+      return null
     }
 
     try {
-      const processed = await processFiles(files, chatId, uid)
+      const processed = await processFiles(files, chatId)
       setFiles([])
       return processed
-    } catch (err) {
+    } catch {
       toast({ title: "Failed to process files", status: "error" })
       return null
     }
@@ -42,7 +39,7 @@ export const useFileUpload = () => {
     }))
   }
 
-  const cleanupOptimisticAttachments = (attachments?: any[]) => {
+  const cleanupOptimisticAttachments = (attachments?: Attachment[]) => {
     if (!attachments) return
     attachments.forEach((attachment) => {
       if (attachment.url?.startsWith("blob:")) {

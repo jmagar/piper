@@ -1,15 +1,17 @@
+import 'dotenv/config'; // Ensure .env variables are loaded using ES module syntax
+
 import { loadAgent } from "@/lib/agents/load-agent"
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { loadMCPToolsFromURL } from "@/lib/mcp/load-mcp-from-url"
-import { MODELS } from "@/lib/models"
+// import { MODELS } from "@/lib/models" // Removed unused import
 import { Attachment } from "@ai-sdk/ui-utils"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
-  LanguageModelV1,
   Message as MessageAISDK,
   streamText,
   ToolSet,
 } from "ai"
+import { prisma } from "@/lib/prisma"; 
 import {
   logUserMessage,
   storeAssistantMessage,
@@ -22,9 +24,7 @@ export const maxDuration = 60
 type ChatRequest = {
   messages: MessageAISDK[]
   chatId: string
-  userId: string
   model: string
-  isAuthenticated: boolean
   systemPrompt: string
   agentId?: string
 }
@@ -34,89 +34,113 @@ export async function POST(req: Request) {
     const {
       messages,
       chatId,
-      userId,
       model,
-      isAuthenticated,
       systemPrompt,
       agentId,
     } = (await req.json()) as ChatRequest
 
-    if (!messages || !chatId || !userId) {
+    if (!messages || !chatId) {
       return new Response(
         JSON.stringify({ error: "Error, missing information" }),
         { status: 400 }
       )
     }
 
-    const supabase = await validateAndTrackUsage({
-      userId,
-      model,
-      isAuthenticated,
-    })
+    // Ensure the Chat record exists for this chatId
+    const firstUserMessageContent = messages.find(m => m.role === 'user')?.content || "New Chat";
+    const defaultTitle = typeof firstUserMessageContent === 'string' 
+      ? firstUserMessageContent.substring(0, 100) 
+      : "New Chat";
+
+    await prisma.chat.upsert({
+      where: { id: chatId },
+      update: { updatedAt: new Date() }, 
+      create: {
+        id: chatId,
+        title: defaultTitle, 
+        model: model,             
+        systemPrompt: systemPrompt, 
+        agentId: agentId,         
+      },
+    });
+    console.log(`✅ Ensured chat exists or created: ${chatId} with title "${defaultTitle}"`);
+
+    // Validate request (simplified for admin-only mode)
+    await validateAndTrackUsage()
 
     const userMessage = messages[messages.length - 1]
 
-    if (supabase && userMessage?.role === "user") {
+    if (userMessage?.role === "user") {
       await logUserMessage({
-        supabase,
-        userId,
         chatId,
         content: userMessage.content,
         attachments: userMessage.experimental_attachments as Attachment[],
-        model,
-        isAuthenticated,
       })
     }
 
     let agentConfig = null
 
-    if (supabase && agentId) {
+    if (agentId) {
       agentConfig = await loadAgent(agentId)
     }
 
-    const modelConfig = MODELS.find((m) => m.id === model)
+    // Initialize OpenRouter provider
+    const openrouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY, // Reverted to use environment variable
+    });
 
-    if (!modelConfig || !modelConfig.apiSdk) {
-      throw new Error(`Model ${model} not found`)
-    }
-
-    let effectiveSystemPrompt =
+    const effectiveSystemPrompt =
       agentConfig?.systemPrompt || systemPrompt || SYSTEM_PROMPT_DEFAULT
 
     let toolsToUse = undefined
-    let effectiveMaxSteps = agentConfig?.maxSteps || 3
 
     if (agentConfig?.mcpConfig) {
-      const { tools } = await loadMCPToolsFromURL(agentConfig.mcpConfig.server)
-      toolsToUse = tools
+      const mcpConfig = agentConfig.mcpConfig as { server?: string }
+      if (mcpConfig.server) {
+        const { tools } = await loadMCPToolsFromURL(mcpConfig.server)
+        toolsToUse = tools
+      }
     } else if (agentConfig?.tools) {
       toolsToUse = agentConfig.tools
-      await trackSpecialAgentUsage(supabase, userId)
+      await trackSpecialAgentUsage()
     }
 
     let streamError: Error | null = null
 
     const result = streamText({
-      model: modelConfig.apiSdk(),
+      model: openrouter.chat(model || 'anthropic/claude-3.5-sonnet'), // Use OpenRouter; defaults to claude-3.5-sonnet if no model specified
       system: effectiveSystemPrompt,
       messages,
       tools: toolsToUse as ToolSet,
       // @todo: remove this
       // hardcoded for now
       maxSteps: 10,
-      onError: (err: any) => {
-        console.error("🛑 streamText error:", err)
+      onError: (event: { error: unknown }) => {
+        console.error("🛑 streamText error:", event.error)
         streamError = new Error(
-          err?.error ||
+          event.error instanceof Error ? event.error.message :
             "AI generation failed. Please check your model or API key."
         )
       },
 
       onFinish: async ({ response }) => {
+        // Convert ResponseMessage[] to simple message format
+        const simpleMessages = response.messages
+          .filter(msg => msg.role === 'assistant')
+          .map(msg => ({
+            role: msg.role,
+            content: typeof msg.content === 'string' 
+              ? msg.content 
+              : Array.isArray(msg.content) 
+                ? msg.content.map(part => 
+                    part.type === 'text' ? part.text : ''
+                  ).join('')
+                : ''
+          }))
+
         await storeAssistantMessage({
-          supabase,
           chatId,
-          messages: response.messages,
+          messages: simpleMessages,
         })
       },
     })
@@ -139,18 +163,13 @@ export async function POST(req: Request) {
       status: originalResponse.status,
       headers,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in /api/chat:", err)
-    // Return a structured error response if the error is a UsageLimitError.
-    if (err.code === "DAILY_LIMIT_REACHED") {
-      return new Response(
-        JSON.stringify({ error: err.message, code: err.code }),
-        { status: 403 }
-      )
-    }
-
+    
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
+    
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500 }
     )
   }

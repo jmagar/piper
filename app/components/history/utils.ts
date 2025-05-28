@@ -29,12 +29,12 @@ export function groupChatsByDate(
   const olderChats: Record<number, Chats[]> = {}
 
   chats.forEach((chat) => {
-    if (!chat.created_at) {
+    if (!chat.createdAt) {
       todayChats.push(chat)
       return
     }
 
-    const chatTimestamp = new Date(chat.created_at).getTime()
+    const chatTimestamp = new Date(chat.createdAt).getTime()
 
     if (chatTimestamp >= today) {
       todayChats.push(chat)
@@ -45,7 +45,7 @@ export function groupChatsByDate(
     } else if (chatTimestamp >= yearStart) {
       thisYearChats.push(chat)
     } else {
-      const year = new Date(chat.created_at).getFullYear()
+      const year = new Date(chat.createdAt).getFullYear()
       if (!olderChats[year]) {
         olderChats[year] = []
       }
@@ -81,12 +81,12 @@ export function groupChatsByDate(
 }
 
 // Format date in a human-readable way
-export function formatDate(dateString?: string | null): string {
-  if (!dateString) return "No date"
+export function formatDate(date?: Date | string | null): string {
+  if (!date) return "No date"
 
-  const date = new Date(dateString)
+  const dateObj = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = now.getTime() - dateObj.getTime()
   const diffMinutes = Math.floor(diffMs / (1000 * 60))
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
@@ -108,12 +108,12 @@ export function formatDate(dateString?: string | null): string {
   }
 
   // Same year: show month and day
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString("en-US", { month: "long", day: "numeric" })
+  if (dateObj.getFullYear() === now.getFullYear()) {
+    return dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric" })
   }
 
   // Different year: show month, day and year
-  return date.toLocaleDateString("en-US", {
+  return dateObj.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",

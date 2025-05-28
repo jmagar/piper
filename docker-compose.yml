@@ -1,0 +1,30 @@
+services:
+  zola-app:
+    container_name: zola-app
+    restart: unless-stopped
+    build: .
+    ports:
+      - "3021:3000"
+    env_file: .env # Load all variables from .env
+    environment:
+      # This DATABASE_URL overrides the one from .env for the Docker container
+      - DATABASE_URL=postgresql://zola:zola@zola-db:5432/zola
+    volumes:
+      - ./uploads:/uploads
+      - ./config:/config
+      - ./logs:/logs
+    command: sh -c "npx prisma migrate deploy && npm start"
+    depends_on:
+      - zola-db
+  zola-db:
+    container_name: zola-db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zola
+      POSTGRES_PASSWORD: zola
+      POSTGRES_DB: zola
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"

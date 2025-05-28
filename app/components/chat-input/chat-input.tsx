@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAgent } from "@/lib/agent-store/provider"
 import { MODELS } from "@/lib/models"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { ArrowUp, Stop, Warning } from "@phosphor-icons/react"
 import React, { useCallback, useEffect } from "react"
 import { PromptSystem } from "../suggestions/prompt-system"
@@ -19,6 +18,15 @@ import { AgentCommand } from "./agent-command"
 import { ButtonFileUpload } from "./button-file-upload"
 import { FileList } from "./file-list"
 import { SelectedAgent } from "./selected-agent"
+
+type AvailableModelData = {
+  id: string;
+  name: string;
+  description: string;
+  context_length: number | null;
+  providerId: string;
+  starred?: boolean;
+};
 
 type ChatInputProps = {
   value: string
@@ -33,6 +41,8 @@ type ChatInputProps = {
   hasSuggestions?: boolean
   onSelectModel: (model: string) => void
   selectedModel: string
+  availableModels: AvailableModelData[]
+  onStarModel: (modelId: string) => void;
   isUserAuthenticated: boolean
   stop: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
@@ -50,6 +60,8 @@ export function ChatInput({
   hasSuggestions,
   onSelectModel,
   selectedModel,
+  availableModels,
+  onStarModel,
   isUserAuthenticated,
   stop,
   status,
@@ -186,7 +198,7 @@ export function ChatInput({
           <FileList files={files} onFileRemove={onFileRemove} />
           <PromptInputTextarea
             placeholder={
-              isSupabaseEnabled ? "Ask Zola or @mention an agent" : "Ask Zola"
+              "Ask Zola or @mention an agent"
             }
             onKeyDown={handleKeyDown}
             className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
@@ -200,10 +212,11 @@ export function ChatInput({
                 model={selectedModel}
               />
               <ModelSelector
+                availableModels={availableModels}
                 selectedModelId={selectedModel}
                 setSelectedModelId={onSelectModel}
+                onStarModel={onStarModel}
                 isUserAuthenticated={isUserAuthenticated}
-                className="rounded-full"
               />
               {currentAgent && noToolSupport && (
                 <div className="flex items-center gap-1">

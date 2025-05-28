@@ -2,7 +2,7 @@
 
 import { toast } from "@/components/ui/toast"
 import { createContext, useContext, useEffect, useState } from "react"
-import { MODEL_DEFAULT, SYSTEM_PROMPT_DEFAULT } from "../../config"
+import { MODEL_DEFAULT } from "../../config"
 import type { Chats } from "../types"
 import {
   createNewChat as createNewChatFromDb,
@@ -26,21 +26,15 @@ interface ChatsContextType {
   ) => Promise<void>
   setChats: React.Dispatch<React.SetStateAction<Chats[]>>
   createNewChat: (
-    userId: string,
     title?: string,
-    model?: string,
-    isAuthenticated?: boolean,
-    systemPrompt?: string,
-    agentId?: string
+    model?: string
   ) => Promise<Chats | undefined>
   resetChats: () => Promise<void>
   getChatById: (id: string) => Chats | undefined
   updateChatModel: (id: string, model: string) => Promise<void>
   updateChatAgent: (
-    userId: string,
     chatId: string,
-    agentId: string | null,
-    isAuthenticated: boolean
+    agentId: string | null
   ) => Promise<void>
 }
 const ChatsContext = createContext<ChatsContextType | null>(null)
@@ -52,25 +46,21 @@ export function useChats() {
 }
 
 export function ChatsProvider({
-  userId,
   children,
 }: {
-  userId?: string
   children: React.ReactNode
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const [chats, setChats] = useState<Chats[]>([])
 
   useEffect(() => {
-    if (!userId) return
-
     const load = async () => {
       setIsLoading(true)
       const cached = await getCachedChats()
       setChats(cached)
 
       try {
-        const fresh = await fetchAndCacheChats(userId)
+        const fresh = await fetchAndCacheChats()
         setChats(fresh)
       } finally {
         setIsLoading(false)
@@ -78,12 +68,10 @@ export function ChatsProvider({
     }
 
     load()
-  }, [userId])
+  }, [])
 
   const refresh = async () => {
-    if (!userId) return
-
-    const fresh = await fetchAndCacheChats(userId)
+    const fresh = await fetchAndCacheChats()
     setChats(fresh)
   }
 
@@ -92,7 +80,7 @@ export function ChatsProvider({
     setChats((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)))
     try {
       await updateChatTitle(id, title)
-    } catch (e) {
+    } catch {
       setChats(prev)
       toast({ title: "Failed to update title", status: "error" })
     }
@@ -109,54 +97,33 @@ export function ChatsProvider({
     try {
       await deleteChatFromDb(id)
       if (id === currentChatId && redirect) redirect()
-    } catch (e) {
+    } catch {
       setChats(prev)
       toast({ title: "Failed to delete chat", status: "error" })
     }
   }
 
   const createNewChat = async (
-    userId: string,
     title?: string,
-    model?: string,
-    isAuthenticated?: boolean,
-    systemPrompt?: string,
-    agentId?: string
+    model?: string
   ) => {
-    if (!userId) return
     const prev = [...chats]
-
-    const optimisticId = `optimistic-${Date.now().toString()}`
-    const optimisticChat = {
-      id: optimisticId,
-      title: title || (agentId ? `Conversation with agent` : "New Chat"),
-      created_at: new Date().toISOString(),
-      model: model || MODEL_DEFAULT,
-      system_prompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-      agent_id: agentId || null,
-      user_id: userId,
-      public: true,
-    }
-    setChats((prev) => [...prev, optimisticChat])
 
     try {
       const newChat = await createNewChatFromDb(
-        userId,
         title,
-        model,
-        isAuthenticated,
-        agentId
+        model || MODEL_DEFAULT
       )
       setChats((prev) =>
         prev
-          .map((c) => (c.id === optimisticId ? newChat : c))
+          .concat(newChat)
           .sort(
             (a, b) =>
-              +new Date(b.created_at || "") - +new Date(a.created_at || "")
+              +new Date(b.createdAt || "") - +new Date(a.createdAt || "")
           )
       )
       return newChat
-    } catch (e) {
+    } catch {
       setChats(prev)
       toast({ title: "Failed to create chat", status: "error" })
     }
@@ -176,12 +143,10 @@ export function ChatsProvider({
   }
 
   const updateChatAgent = async (
-    userId: string,
     chatId: string,
-    agentId: string | null,
-    isAuthenticated: boolean
+    agentId: string | null
   ) => {
-    await updateChatAgentFromDb(userId, chatId, agentId, isAuthenticated)
+    await updateChatAgentFromDb(chatId, agentId)
   }
 
   return (

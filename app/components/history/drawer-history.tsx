@@ -216,7 +216,7 @@ export function DrawerHistory({
                   {chat.title || "Untitled Chat"}
                 </span>
                 <span className="mr-2 text-xs font-normal text-gray-500">
-                  {formatDate(chat?.created_at)}
+                  {formatDate(chat?.createdAt)}
                 </span>
               </Link>
               <div className="flex items-center">

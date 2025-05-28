@@ -51,8 +51,8 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <LayoutClient />
-        <UserProvider initialUser={userProfile}>
-          <ChatsProvider userId={userProfile?.id}>
+        <UserProvider>
+          <ChatsProvider>
             <ChatSessionProvider>
               <AgentProvider userId={userProfile?.id}>
                 <UserPreferencesProvider userId={userProfile?.id}>

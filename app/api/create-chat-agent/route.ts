@@ -1,77 +1,58 @@
-import { validateUserIdentity } from "@/lib/server/api"
-import { checkUsageByModel } from "@/lib/usage"
+import { prisma } from "@/lib/prisma"
+import { MODEL_DEFAULT } from "@/lib/config"
 
 export async function POST(request: Request) {
   try {
-    const { userId, agentId, title, model, isAuthenticated } =
-      await request.json()
+    const { agentId, title, model } = await request.json()
 
-    if (!userId || !agentId) {
+    if (!agentId) {
       return new Response(
-        JSON.stringify({ error: "Missing userId or agentId" }),
+        JSON.stringify({ error: "Missing agentId" }),
         { status: 400 }
       )
     }
 
-    const supabase = await validateUserIdentity(userId, isAuthenticated)
+    // Verify agent exists
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+      select: { id: true, name: true }
+    })
 
-    if (!supabase) {
+    if (!agent) {
       return new Response(
-        JSON.stringify({ error: "Supabase not available in this deployment." }),
-        { status: 200 }
+        JSON.stringify({ error: "Agent not found" }),
+        { status: 404 }
       )
     }
 
-    await checkUsageByModel(supabase, userId, model, isAuthenticated)
-
-    const { data: chatData, error: chatError } = await supabase
-      .from("chats")
-      .insert({
-        user_id: userId,
-        title: title || "New Chat",
-        model,
-        agent_id: agentId,
-      })
-      .select("*")
-      .single()
-
-    if (chatError || !chatData) {
-      console.error("Error creating chat with agent:", chatError)
-      return new Response(
-        JSON.stringify({
-          error: "Failed to create chat with agent",
-          details: chatError?.message,
-        }),
-        { status: 500 }
-      )
-    }
+    // Create chat with agent
+    const chat = await prisma.chat.create({
+      data: {
+        title: title || `Chat with ${agent.name}`,
+        model: model || MODEL_DEFAULT,
+        agentId,
+      },
+    })
 
     return new Response(
       JSON.stringify({
         chat: {
-          id: chatData.id,
-          title: chatData.title,
-          created_at: chatData.created_at,
-          model: chatData.model,
-          agent_id: chatData.agent_id,
+          id: chat.id,
+          title: chat.title,
+          createdAt: chat.createdAt,
+          model: chat.model,
+          agentId: chat.agentId,
         },
       }),
-      {
-        status: 200,
-      }
+      { status: 200 }
     )
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in create-chat-agent endpoint:", err)
 
-    if (err.code === "DAILY_LIMIT_REACHED") {
-      return new Response(
-        JSON.stringify({ error: err.message, code: err.code }),
-        { status: 403 }
-      )
-    }
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
 
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500 }
     )
   }

@@ -74,7 +74,26 @@ export default function Article({
         </div>
         <div className="mt-20 w-full">
           {messages.map((message) => {
-            const parts = message?.parts as MessageAISDK["parts"]
+            let parts: MessageAISDK['parts'] | undefined = undefined;
+
+            if (message.role === 'assistant' && typeof message.content === 'string') {
+              try {
+                const parsedContent = JSON.parse(message.content);
+                if (Array.isArray(parsedContent) && parsedContent.every(p => typeof p === 'object' && p !== null && 'type' in p)) {
+                  parts = parsedContent as MessageAISDK['parts']; 
+                } else {
+                  // Content is valid JSON but not an array of Parts, or not structured as expected.
+                  // Treat as plain text.
+                  parts = [{ type: 'text', text: message.content }];
+                }
+              } catch (errorScope) { 
+                console.warn(`Failed to parse message content for message ID ${message.id}:`, errorScope);
+                parts = [{ type: 'text', text: message.content }];
+              }
+            } else if (message.role === 'user' && typeof message.content === 'string') {
+              parts = [{ type: 'text', text: message.content }];
+            }
+
             const sources = getSources(parts)
 
             return (

@@ -7,7 +7,7 @@ import {
   fetchCuratedAgentsFromDb,
   fetchUserAgentsFromDb,
 } from "@/lib/agent-store/api"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import {
   createContext,
   Suspense,
@@ -54,7 +54,7 @@ export const AgentProvider = ({ children, userId }: AgentProviderProps) => {
   const { chatId } = useChatSession()
   const currentChat = chatId ? getChatById(chatId) : null
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null)
-  const currentChatAgentId = currentChat?.agent_id || null
+  const currentChatAgentId = currentChat?.agentId || null
   const [curatedAgents, setCuratedAgents] = useState<Agent[] | null>(null)
   const [userAgents, setUserAgents] = useState<Agent[] | null>(null)
 
@@ -65,7 +65,7 @@ export const AgentProvider = ({ children, userId }: AgentProviderProps) => {
 
   const fetchUserAgents = useCallback(async () => {
     if (!userId) return
-    const agents = await fetchUserAgentsFromDb(userId)
+    const agents = await fetchUserAgentsFromDb()
     if (agents) setUserAgents(agents)
   }, [userId])
 
@@ -102,7 +102,7 @@ export const AgentProvider = ({ children, userId }: AgentProviderProps) => {
     }
 
     fetchUserAgents()
-  }, [fetchUserAgents])
+  }, [fetchUserAgents, userId])
 
   return (
     <>

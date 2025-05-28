@@ -1,79 +1,97 @@
-import { saveFinalAssistantMessage } from "@/app/api/chat/db"
-import { checkSpecialAgentUsage, incrementSpecialAgentUsage } from "@/lib/api"
+// "server-only"; // Temporarily removed as it seems to cause 500 errors with Turbopack
+
+import { prisma } from "@/lib/prisma"
 import { sanitizeUserInput } from "@/lib/sanitize"
-import { validateUserIdentity } from "@/lib/server/api"
-import { checkUsageByModel, incrementUsageByModel } from "@/lib/usage"
 import type { Attachment } from "@ai-sdk/ui-utils"
 
-export async function validateAndTrackUsage({
-  userId,
-  model,
-  isAuthenticated,
-}: {
-  userId: string
-  model: string
-  isAuthenticated: boolean
-}) {
-  const supabase = await validateUserIdentity(userId, isAuthenticated)
-  if (!supabase) return null
-
-  await checkUsageByModel(supabase, userId, model, isAuthenticated)
-  return supabase
+/**
+ * Admin-only validation - no user tracking needed
+ */
+export async function validateAndTrackUsage() {
+  // In admin-only mode, we don't need to validate users or track usage
+  // Just return true to indicate validation passed
+  return true
 }
 
+/**
+ * Log user message to database using Prisma
+ */
 export async function logUserMessage({
-  supabase,
-  userId,
   chatId,
   content,
   attachments,
-  model,
-  isAuthenticated,
 }: {
-  supabase: any
-  userId: string
   chatId: string
   content: string
   attachments?: Attachment[]
-  model: string
-  isAuthenticated: boolean
 }) {
-  if (!supabase) return
+  try {
+    const message = await prisma.message.create({
+      data: {
+        chatId,
+        role: "user",
+        content: sanitizeUserInput(content),
+      }
+    })
 
-  const { error } = await supabase.from("messages").insert({
-    chat_id: chatId,
-    role: "user",
-    content: sanitizeUserInput(content),
-    experimental_attachments: attachments as any,
-    user_id: userId,
-  })
+    // Store attachments if any
+    if (attachments && attachments.length > 0) {
+      for (const attachment of attachments) {
+        await prisma.attachment.create({
+          data: {
+            chatId,
+            fileName: attachment.name || 'unknown',
+            fileType: attachment.contentType || 'unknown',
+            fileSize: 0, // Will be updated when file is actually saved
+            filePath: attachment.url || '',
+          }
+        })
+      }
+    }
 
-  if (error) {
-    console.error("Error saving user message:", error)
-  } else {
-    await incrementUsageByModel(supabase, userId, model, isAuthenticated)
+    console.log(`✅ User message logged for chat ${chatId}`)
+    return message
+  } catch (error) {
+    console.error("❌ Error saving user message:", error)
+    throw error
   }
 }
 
-export async function trackSpecialAgentUsage(supabase: any, userId: string) {
-  if (!supabase) return
-  await checkSpecialAgentUsage(supabase, userId)
-  await incrementSpecialAgentUsage(supabase, userId)
+/**
+ * Track special agent usage - simplified for admin-only mode
+ */
+export async function trackSpecialAgentUsage() {
+  // In admin-only mode, no usage tracking needed
+  console.log("ℹ️ Special agent usage tracked (admin-only mode)")
 }
 
+/**
+ * Store assistant message using Prisma
+ */
 export async function storeAssistantMessage({
-  supabase,
   chatId,
   messages,
 }: {
-  supabase: any
   chatId: string
-  messages: any
+  messages: Array<{ role: string; content: string }>
 }) {
-  if (!supabase) return
   try {
-    await saveFinalAssistantMessage(supabase, chatId, messages)
-  } catch (err) {
-    console.error("Failed to save assistant messages:", err)
+    // Extract the final assistant message from the messages array
+    const assistantMessages = messages.filter((msg: { role: string; content: string }) => msg.role === 'assistant')
+    
+    for (const message of assistantMessages) {
+      await prisma.message.create({
+        data: {
+          chatId,
+          role: "assistant",
+          content: message.content || '',
+        }
+      })
+    }
+
+    console.log(`✅ Assistant messages stored for chat ${chatId}`)
+  } catch (error) {
+    console.error("❌ Failed to save assistant messages:", error)
+    throw error
   }
 }

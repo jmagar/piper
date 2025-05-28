@@ -1,52 +1,40 @@
-import { UsageLimitError } from "@/lib/api"
-import {
-  AUTH_DAILY_MESSAGE_LIMIT,
-  DAILY_LIMIT_PRO_MODELS,
-  FREE_MODELS_IDS,
-  NON_AUTH_DAILY_MESSAGE_LIMIT,
-} from "@/lib/config"
-import { SupabaseClient } from "@supabase/supabase-js"
+import { FREE_MODELS_IDS } from "@/lib/config"
+import { prisma } from "@/lib/prisma"
 
 const isFreeModel = (modelId: string) => FREE_MODELS_IDS.includes(modelId)
 const isProModel = (modelId: string) => !isFreeModel(modelId)
 
+// Admin has unlimited usage, but we still track for analytics
+const ADMIN_DAILY_LIMIT = 999999
+const ADMIN_PRO_LIMIT = 999999
+
 /**
- * Checks the user's daily usage to see if they've reached their limit.
- * Uses the `anonymous` flag from the user record to decide which daily limit applies.
- *
- * @param supabase - Your Supabase client.
- * @param userId - The ID of the user.
- * @param trackDaily - Whether to track the daily message count (default is true)
- * @throws UsageLimitError if the daily limit is reached, or a generic Error if checking fails.
- * @returns User data including message counts and reset date
+ * Gets or creates usage record for admin user
  */
-export async function checkUsage(supabase: SupabaseClient, userId: string) {
-  const { data: userData, error: userDataError } = await supabase
-    .from("users")
-    .select(
-      "message_count, daily_message_count, daily_reset, anonymous, premium"
-    )
-    .eq("id", userId)
-    .maybeSingle()
+async function getOrCreateUsage(userId: string = "admin") {
+  let usage = await prisma.usage.findUnique({
+    where: { userId }
+  })
 
-  if (userDataError) {
-    throw new Error("Error fetchClienting user data: " + userDataError.message)
-  }
-  if (!userData) {
-    throw new Error("User record not found for id: " + userId)
+  if (!usage) {
+    usage = await prisma.usage.create({
+      data: { userId }
+    })
   }
 
-  // Decide which daily limit to use.
-  const isAnonymous = userData.anonymous
-  // (Assuming these are imported from your config)
-  const dailyLimit = isAnonymous
-    ? NON_AUTH_DAILY_MESSAGE_LIMIT
-    : AUTH_DAILY_MESSAGE_LIMIT
+  return usage
+}
 
-  // Reset the daily counter if the day has changed (using UTC).
+/**
+ * Checks the admin's daily usage (unlimited in admin-only mode, but tracked for analytics)
+ */
+export async function checkUsage(userId: string = "admin") {
+  const usage = await getOrCreateUsage(userId)
+
+  // Reset daily counter if the day has changed (using UTC)
   const now = new Date()
-  let dailyCount = userData.daily_message_count || 0
-  const lastReset = userData.daily_reset ? new Date(userData.daily_reset) : null
+  let dailyCount = usage.dailyMessageCount
+  const lastReset = usage.dailyReset
 
   const isNewDay =
     !lastReset ||
@@ -56,97 +44,48 @@ export async function checkUsage(supabase: SupabaseClient, userId: string) {
 
   if (isNewDay) {
     dailyCount = 0
-    const { error: resetError } = await supabase
-      .from("users")
-      .update({ daily_message_count: 0, daily_reset: now.toISOString() })
-      .eq("id", userId)
-
-    if (resetError) {
-      throw new Error("Failed to reset daily count: " + resetError.message)
-    }
+    await prisma.usage.update({
+      where: { userId },
+      data: { 
+        dailyMessageCount: 0, 
+        dailyReset: now 
+      }
+    })
   }
 
-  // Check if the daily limit is reached.
-  if (dailyCount >= dailyLimit) {
-    throw new UsageLimitError("Daily message limit reached.")
-  }
-
+  // Admin has unlimited usage, but we track it
   return {
-    userData,
+    usage,
     dailyCount,
-    dailyLimit,
+    dailyLimit: ADMIN_DAILY_LIMIT,
   }
 }
 
 /**
- * Increments both overall and daily message counters for a user.
- *
- * @param supabase - Your Supabase client.
- * @param userId - The ID of the user.
- * @param currentCounts - Current message counts (optional, will be fetchCliented if not provided)
- * @param trackDaily - Whether to track the daily message count (default is true)
- * @throws Error if updating fails.
+ * Increments message usage counters for admin analytics
  */
-export async function incrementUsage(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<void> {
-  let messageCount: number
-  let dailyCount: number
+export async function incrementUsage(userId: string = "admin"): Promise<void> {
+  const usage = await getOrCreateUsage(userId)
 
-  const { data: userData, error: userDataError } = await supabase
-    .from("users")
-    .select("message_count, daily_message_count")
-    .eq("id", userId)
-    .maybeSingle()
-
-  if (userDataError || !userData) {
-    throw new Error(
-      "Error fetchClienting user data: " +
-        (userDataError?.message || "User not found")
-    )
-  }
-
-  messageCount = userData.message_count || 0
-  dailyCount = userData.daily_message_count || 0
-
-  // Increment both overall and daily message counts.
-  const newOverallCount = messageCount + 1
-  const newDailyCount = dailyCount + 1
-
-  const { error: updateError, data: updateData } = await supabase
-    .from("users")
-    .update({
-      message_count: newOverallCount,
-      daily_message_count: newDailyCount,
-      last_active_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-
-  if (updateError) {
-    throw new Error("Failed to update usage data: " + updateError.message)
-  }
+  await prisma.usage.update({
+    where: { userId },
+    data: {
+      messageCount: usage.messageCount + 1,
+      dailyMessageCount: usage.dailyMessageCount + 1,
+      lastActiveAt: new Date(),
+    }
+  })
 }
 
-export async function checkProUsage(supabase: SupabaseClient, userId: string) {
-  const { data: userData, error: userDataError } = await supabase
-    .from("users")
-    .select("daily_pro_message_count, daily_pro_reset")
-    .eq("id", userId)
-    .maybeSingle()
+/**
+ * Checks pro model usage for admin (unlimited but tracked)
+ */
+export async function checkProUsage(userId: string = "admin") {
+  const usage = await getOrCreateUsage(userId)
 
-  if (userDataError) {
-    throw new Error("Error fetching user data: " + userDataError.message)
-  }
-  if (!userData) {
-    throw new Error("User not found for ID: " + userId)
-  }
-
-  let dailyProCount = userData.daily_pro_message_count || 0
+  let dailyProCount = usage.dailyProMessageCount
   const now = new Date()
-  const lastReset = userData.daily_pro_reset
-    ? new Date(userData.daily_pro_reset)
-    : null
+  const lastReset = usage.dailyProReset
 
   const isNewDay =
     !lastReset ||
@@ -156,84 +95,59 @@ export async function checkProUsage(supabase: SupabaseClient, userId: string) {
 
   if (isNewDay) {
     dailyProCount = 0
-    const { error: resetError } = await supabase
-      .from("users")
-      .update({
-        daily_pro_message_count: 0,
-        daily_pro_reset: now.toISOString(),
-      })
-      .eq("id", userId)
-
-    if (resetError) {
-      throw new Error("Failed to reset pro usage: " + resetError.message)
-    }
+    await prisma.usage.update({
+      where: { userId },
+      data: {
+        dailyProMessageCount: 0,
+        dailyProReset: now,
+      }
+    })
   }
 
-  if (dailyProCount >= DAILY_LIMIT_PRO_MODELS) {
-    throw new UsageLimitError("Daily Pro model limit reached.")
-  }
-
+  // Admin has unlimited pro usage
   return {
     dailyProCount,
-    limit: DAILY_LIMIT_PRO_MODELS,
+    limit: ADMIN_PRO_LIMIT,
   }
 }
 
-export async function incrementProUsage(
-  supabase: SupabaseClient,
-  userId: string
-) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("daily_pro_message_count")
-    .eq("id", userId)
-    .maybeSingle()
+/**
+ * Increments pro model usage for admin analytics
+ */
+export async function incrementProUsage(userId: string = "admin") {
+  const usage = await getOrCreateUsage(userId)
 
-  if (error || !data) {
-    throw new Error("Failed to fetch user usage for increment")
-  }
-
-  const count = data.daily_pro_message_count || 0
-
-  const { error: updateError } = await supabase
-    .from("users")
-    .update({
-      daily_pro_message_count: count + 1,
-      last_active_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-
-  if (updateError) {
-    throw new Error("Failed to increment pro usage: " + updateError.message)
-  }
-}
-
-export async function checkUsageByModel(
-  supabase: SupabaseClient,
-  userId: string,
-  modelId: string,
-  isAuthenticated: boolean
-) {
-  if (isProModel(modelId)) {
-    if (!isAuthenticated) {
-      throw new UsageLimitError("You must log in to use this model.")
+  await prisma.usage.update({
+    where: { userId },
+    data: {
+      dailyProMessageCount: usage.dailyProMessageCount + 1,
+      lastActiveAt: new Date(),
     }
-    return await checkProUsage(supabase, userId)
-  }
-
-  return await checkUsage(supabase, userId)
+  })
 }
 
-export async function incrementUsageByModel(
-  supabase: SupabaseClient,
-  userId: string,
-  modelId: string,
-  isAuthenticated: boolean
+/**
+ * Checks usage by model type for admin (always unlimited)
+ */
+export async function checkUsageByModel(
+  userId: string = "admin",
+  modelId: string
 ) {
   if (isProModel(modelId)) {
-    if (!isAuthenticated) return
-    return await incrementProUsage(supabase, userId)
+    return await checkProUsage(userId)
   }
+  return await checkUsage(userId)
+}
 
-  return await incrementUsage(supabase, userId)
+/**
+ * Increments usage by model type for admin analytics
+ */
+export async function incrementUsageByModel(
+  userId: string = "admin",
+  modelId: string
+) {
+  if (isProModel(modelId)) {
+    return await incrementProUsage(userId)
+  }
+  return await incrementUsage(userId)
 }

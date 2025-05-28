@@ -1,7 +1,7 @@
 "use client"
 
 import { useChatSession } from "@/app/providers/chat-session-provider"
-import { useUser } from "@/app/providers/user-provider"
+// import { useUser } from "@/app/providers/user-provider"
 import { Agent } from "@/app/types/agent"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { debounce } from "@/lib/utils"
@@ -21,7 +21,7 @@ export function useAgentCommand({
 }) {
   const searchParams = useSearchParams()
   const { chatId } = useChatSession()
-  const { user } = useUser()
+  // const { user } = useUser() // Not needed in admin-only mode
   const { updateChatAgent } = useChats()
 
   const pathname = usePathname()
@@ -56,7 +56,11 @@ export function useAgentCommand({
       if (!searchParams) return
 
       const params = new URLSearchParams(searchParams.toString())
-      agent ? params.set("agent", agent.slug) : params.delete("agent")
+      if (agent) {
+        params.set("agent", agent.slug)
+      } else {
+        params.delete("agent")
+      }
       router.push(`${pathname}?${params.toString()}`, { scroll: false })
     },
     [pathname, router, searchParams]
@@ -64,10 +68,10 @@ export function useAgentCommand({
 
   const updateChatAgentDebounced = useCallback(
     debounce((agent: Agent | null) => {
-      if (!user || !chatId) return
-      updateChatAgent(user.id, chatId, agent?.id ?? null, !user.anonymous)
+      if (!chatId) return
+      updateChatAgent(chatId, agent?.id ?? null)
     }, 500),
-    [chatId, user, updateChatAgent]
+    [chatId, updateChatAgent]
   )
 
   const handleValueChange = useCallback(
@@ -131,13 +135,11 @@ export function useAgentCommand({
   const removeSelectedAgent = useCallback(() => {
     setSelectedAgent(null)
     updateAgentInUrl(null)
-    if (user?.id && chatId) {
-      updateChatAgent(user.id, chatId, null, !user.anonymous).catch(
-        console.error
-      )
+    if (chatId) {
+      updateChatAgent(chatId, null).catch(console.error)
     }
     textareaRef.current?.focus()
-  }, [updateAgentInUrl, user, chatId, updateChatAgent])
+  }, [updateAgentInUrl, chatId, updateChatAgent])
 
   useEffect(() => setActiveAgentIndex(0), [filteredAgents.length])
 

@@ -1,6 +1,5 @@
 "use client"
 
-import { useUser } from "@/app/providers/user-provider"
 import { AgentSummary } from "@/app/types/agent"
 import type { Tables } from "@/app/types/database.types"
 import { ButtonCopy } from "@/components/common/button-copy"
@@ -13,7 +12,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -31,7 +29,6 @@ import {
 } from "@/components/ui/tooltip"
 import { fetchClient } from "@/lib/fetch"
 import { API_ROUTE_DELETE_AGENT } from "@/lib/routes"
-import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import {
   ChatCircle,
@@ -79,7 +76,6 @@ type AgentDetailProps = {
   name: string
   description: string
   example_inputs: string[]
-  creator_id?: string | null
   avatar_url?: string | null
   onAgentClick?: (agentId: string) => void
   randomAgents: AgentSummary[]
@@ -94,7 +90,6 @@ export function AgentDetail({
   name,
   description,
   example_inputs,
-  creator_id,
   avatar_url,
   onAgentClick,
   randomAgents,
@@ -107,7 +102,6 @@ export function AgentDetail({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
-  const { user } = useUser()
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(`${window.location.origin}/agents/${slug}`)
@@ -140,24 +134,6 @@ export function AgentDetail({
   }
 
   const handleDelete = async () => {
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to delete an agent.",
-        status: "error",
-      })
-      return
-    }
-
-    if (creator_id !== user.id) {
-      toast({
-        title: "Error",
-        description: "You can only delete agents that you created.",
-        status: "error",
-      })
-      return
-    }
-
     setIsDeleting(true)
     try {
       const response = await fetchClient(API_ROUTE_DELETE_AGENT, {
@@ -202,7 +178,7 @@ export function AgentDetail({
     }
   }
 
-  const canDelete = user?.id && creator_id === user.id
+  const canDelete = true
 
   return (
     <div
@@ -426,7 +402,7 @@ export function AgentDetail({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Agent</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{name}"? This action cannot be
+                Are you sure you want to delete &ldquo;{name}&rdquo;? This action cannot be
                 undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

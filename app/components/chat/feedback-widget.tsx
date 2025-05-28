@@ -7,7 +7,6 @@ import {
   MorphingPopoverContent,
   MorphingPopoverTrigger,
 } from "@/components/motion-primitives/morphing-popover"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { QuestionMark } from "@phosphor-icons/react"
 import { motion } from "motion/react"
 import { useState } from "react"
@@ -18,15 +17,9 @@ const TRANSITION_POPOVER = {
   duration: 0.3,
 }
 
-type FeedbackWidgetProps = {
-  authUserId?: string
-}
+// type FeedbackWidgetProps = {} // No props needed
 
-export function FeedbackWidget({ authUserId }: FeedbackWidgetProps) {
-  if (!isSupabaseEnabled) {
-    return null
-  }
-
+export function FeedbackWidget() { // Props removed
   const [isOpen, setIsOpen] = useState(false)
   const isMobileOrTablet = useBreakpoint(896)
 
@@ -34,7 +27,9 @@ export function FeedbackWidget({ authUserId }: FeedbackWidgetProps) {
     setIsOpen(false)
   }
 
-  if (isMobileOrTablet || !authUserId) {
+  // In admin-only mode, authUserId check is not needed to display widget.
+  // It's always the admin.
+  if (isMobileOrTablet) {
     return null
   }
 
@@ -75,7 +70,7 @@ export function FeedbackWidget({ authUserId }: FeedbackWidgetProps) {
             transformOrigin: "bottom right",
           }}
         >
-          <FeedbackForm authUserId={authUserId} onClose={closeMenu} />
+          <FeedbackForm onClose={closeMenu} /> {/* authUserId prop removed */}
         </MorphingPopoverContent>
       </MorphingPopover>
     </div>

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { prisma } from "@/lib/prisma"
 
 export async function DELETE(request: Request) {
   try {
@@ -10,73 +10,34 @@ export async function DELETE(request: Request) {
       })
     }
 
-    const supabase = await createClient()
+    // Check if the agent exists
+    const agent = await prisma.agent.findUnique({
+      where: { slug },
+      select: { id: true, name: true }
+    })
 
-    if (!supabase) {
-      return new Response(
-        JSON.stringify({ error: "Supabase not available in this deployment." }),
-        { status: 500 }
-      )
-    }
-
-    // Get the authenticated user
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !authData?.user?.id) {
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401 }
-      )
-    }
-
-    // First, check if the agent exists and the user owns it
-    const { data: agent, error: fetchError } = await supabase
-      .from("agents")
-      .select("id, creator_id, name")
-      .eq("slug", slug)
-      .single()
-
-    if (fetchError || !agent) {
+    if (!agent) {
       return new Response(JSON.stringify({ error: "Agent not found" }), {
         status: 404,
       })
     }
 
-    if (agent.creator_id !== authData.user.id) {
-      return new Response(
-        JSON.stringify({
-          error: "You can only delete agents that you created",
-        }),
-        { status: 403 }
-      )
-    }
-
     // Delete the agent
-    const { error: deleteError } = await supabase
-      .from("agents")
-      .delete()
-      .eq("slug", slug)
-      .eq("creator_id", authData.user.id) // Extra safety check
-
-    if (deleteError) {
-      console.error("Error deleting agent:", deleteError)
-      return new Response(
-        JSON.stringify({
-          error: "Failed to delete agent",
-          details: deleteError.message,
-        }),
-        { status: 500 }
-      )
-    }
+    await prisma.agent.delete({
+      where: { slug }
+    })
 
     return new Response(
       JSON.stringify({ message: "Agent deleted successfully" }),
       { status: 200 }
     )
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in delete-agent endpoint:", err)
+    
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
+    
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500 }
     )
   }

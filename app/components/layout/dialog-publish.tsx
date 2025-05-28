@@ -1,6 +1,5 @@
 "use client"
 
-import { AgentHeader } from "@/app/components/layout/header"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useChatSession } from "@/app/providers/chat-session-provider"
 import XIcon from "@/components/icons/x"
@@ -27,17 +26,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { APP_DOMAIN } from "@/lib/config"
-import { createClient } from "@/lib/supabase/client"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { Check, Copy, Globe, Spinner } from "@phosphor-icons/react"
-import type React from "react"
 import { useState } from "react"
 
 export function DialogPublish() {
-  if (!isSupabaseEnabled) {
-    return null
-  }
-
   const [openDialog, setOpenDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { chatId } = useChatSession()
@@ -52,13 +44,11 @@ export function DialogPublish() {
 
   const openPage = () => {
     setOpenDialog(false)
-
     window.open(publicLink, "_blank")
   }
 
   const shareOnX = () => {
     setOpenDialog(false)
-
     const X_TEXT = `Check out this public page I created with Zola! ${publicLink}`
     window.open(`https://x.com/intent/tweet?text=${X_TEXT}`, "_blank")
   }
@@ -66,32 +56,33 @@ export function DialogPublish() {
   const handlePublish = async () => {
     setIsLoading(true)
 
-    const supabase = createClient()
+    try {
+      // Update chat to be public using our API
+      const response = await fetch(`/api/update-chat-public`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId,
+          isPublic: true,
+        }),
+      })
 
-    if (!supabase) {
-      throw new Error("Supabase is not configured")
-    }
+      if (!response.ok) {
+        throw new Error("Failed to make chat public")
+      }
 
-    const { data, error } = await supabase
-      .from("chats")
-      .update({ public: true })
-      .eq("id", chatId)
-      .select()
-      .single()
-
-    if (error) {
-      console.error(error)
-    }
-
-    if (data) {
       setIsLoading(false)
       setOpenDialog(true)
+    } catch (error) {
+      console.error("Error making chat public:", error)
+      setIsLoading(false)
     }
   }
 
   const copyLink = () => {
     navigator.clipboard.writeText(publicLink)
-
     setCopied(true)
     setTimeout(() => {
       setCopied(false)

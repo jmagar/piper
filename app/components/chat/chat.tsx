@@ -12,7 +12,6 @@ import { useChats } from "@/lib/chat-store/chats/provider"
 import { useMessages } from "@/lib/chat-store/messages/provider"
 import {
   MESSAGE_MAX_LENGTH,
-  MODEL_DEFAULT,
   SYSTEM_PROMPT_DEFAULT,
 } from "@/lib/config"
 import { Attachment } from "@/lib/file-handling"
@@ -55,6 +54,9 @@ function SearchParamsProvider({
   return null
 }
 
+const DEFAULT_MODEL_ID = "anthropic/claude-sonnet-4";
+const FALLBACK_MODEL_ID = "anthropic/claude-3-haiku-20240307";
+
 export function Chat() {
   const { chatId } = useChatSession()
   const {
@@ -67,7 +69,6 @@ export function Chat() {
   const { messages: initialMessages, cacheAndAddMessage } = useMessages()
   const { user } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasDialogAuth, setHasDialogAuth] = useState(false)
   const {
     files,
     setFiles,
@@ -78,8 +79,10 @@ export function Chat() {
     handleFileRemove,
   } = useFileUpload()
   const [selectedModel, setSelectedModel] = useState(
-    currentChat?.model || user?.preferred_model || MODEL_DEFAULT
-  )
+    currentChat?.model || DEFAULT_MODEL_ID
+  );
+  const [availableModels, setAvailableModels] = useState<{ id: string; name: string; description: string; context_length: number | null; providerId: string; starred?: boolean }[]>([]);
+  const [starredModelIds, setStarredModelIds] = useState<string[]>([]);
   const { currentAgent } = useAgent()
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
@@ -87,22 +90,11 @@ export function Chat() {
   const [hydrated, setHydrated] = useState(false)
   const hasSentFirstMessageRef = useRef(false)
 
-  const isAuthenticated = !!user?.id
+  const isAuthenticated = true
 
   const { draftValue, clearDraft } = useChatDraft(chatId)
 
-  const {
-    messages,
-    input,
-    handleSubmit,
-    status,
-    error,
-    reload,
-    stop,
-    setMessages,
-    setInput,
-    append,
-  } = useChat({
+  const { messages, input, handleSubmit, status, error, reload, stop, setMessages, setInput, append } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
     initialInput: draftValue,
@@ -112,16 +104,27 @@ export function Chat() {
     },
   })
 
+  // Wrapper for createNewChat to match the signature expected by useChatUtils
+  const createNewChatForUtils = useCallback(
+    async (
+      title?: string,
+      model?: string
+    ): Promise<{ id: string } | null> => {
+      const newChat = await createNewChat(title, model) // Uses createNewChat from useChats
+      if (newChat && newChat.id) {
+        return { id: newChat.id }
+      }
+      return null
+    },
+    [createNewChat] // Dependency array for useCallback
+  )
+
   const { checkLimitsAndNotify, ensureChatExists } = useChatUtils({
-    isAuthenticated,
     chatId,
     messages,
     input,
     selectedModel,
-    systemPrompt,
-    selectedAgentId: currentAgent?.id || null,
-    createNewChat,
-    setHasDialogAuth,
+    createNewChat: createNewChatForUtils, // Pass the wrapper function
   })
 
   const { handleInputChange, handleModelChange, handleDelete, handleEdit } =
@@ -133,15 +136,108 @@ export function Chat() {
       selectedModel,
       chatId,
       updateChatModel,
-      user,
     })
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await fetch('/api/openrouter-models');
+        if (!response.ok) {
+          console.error('Failed to fetch models:', response.statusText);
+          setAvailableModels([]); 
+          return;
+        }
+        const models: { id: string; name: string; description: string; context_length: number | null; providerId: string; }[] = await response.json();
+        const modelsWithInitialStar = models.map(m => ({...m, starred: starredModelIds.includes(m.id) }))
+        setAvailableModels(modelsWithInitialStar);
+
+        if (modelsWithInitialStar.length > 0) {
+          const currentModelExists = modelsWithInitialStar.find(model => model.id === selectedModel);
+          if (!currentModelExists) {
+            const defaultModel = modelsWithInitialStar.find(model => model.id === DEFAULT_MODEL_ID);
+            const fallbackModel = modelsWithInitialStar.find(model => model.id === FALLBACK_MODEL_ID);
+            const firstAvailableModel = modelsWithInitialStar[0];
+
+            if (defaultModel) {
+              setSelectedModel(DEFAULT_MODEL_ID);
+            } else if (fallbackModel) {
+              setSelectedModel(FALLBACK_MODEL_ID);
+            } else if (firstAvailableModel) {
+              setSelectedModel(firstAvailableModel.id);
+            }
+          }
+        } else {
+          if (selectedModel !== DEFAULT_MODEL_ID && selectedModel !== FALLBACK_MODEL_ID) {
+             setSelectedModel(DEFAULT_MODEL_ID);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching available models:", error);
+        setAvailableModels([]);
+        const modelDefaultFullId = "anthropic/claude-3-sonnet-20240229"; 
+        if (modelDefaultFullId) setSelectedModel(modelDefaultFullId);
+      }
+    };
+    fetchModels();
+  }, [chatId, updateChatModel, hydrated, selectedModel, starredModelIds]);
+
+  useEffect(() => {
+    const storedStarredIds = localStorage.getItem('starredModelIds');
+    if (storedStarredIds) {
+      setStarredModelIds(JSON.parse(storedStarredIds));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) { 
+      localStorage.setItem('starredModelIds', JSON.stringify(starredModelIds));
+    }
+  }, [starredModelIds, hydrated]);
+
+  useEffect(() => {
+    setAvailableModels(prevModels => 
+      prevModels.map(model => ({...model, starred: starredModelIds.includes(model.id)}))
+    );
+  }, [starredModelIds]);
+
+  useEffect(() => {
+    if (availableModels.length > 0 && hydrated) { 
+      const currentModelExists = availableModels.find(model => model.id === selectedModel);
+      if (!currentModelExists) {
+        const defaultModel = availableModels.find(model => model.id === DEFAULT_MODEL_ID);
+        const fallbackModel = availableModels.find(model => model.id === FALLBACK_MODEL_ID);
+        const firstAvailableModel = availableModels[0];
+
+        if (defaultModel) {
+          setSelectedModel(DEFAULT_MODEL_ID);
+        } else if (fallbackModel) {
+          setSelectedModel(FALLBACK_MODEL_ID);
+        } else if (firstAvailableModel) {
+          setSelectedModel(firstAvailableModel.id);
+        }
+      }
+    } else if (hydrated) { 
+      if (selectedModel !== DEFAULT_MODEL_ID && selectedModel !== FALLBACK_MODEL_ID) {
+         setSelectedModel(DEFAULT_MODEL_ID);
+      }
+    }
+  }, [availableModels, selectedModel, hydrated]);
+
+  useEffect(() => {
+    if (currentChat && chatId && selectedModel && currentChat.model !== selectedModel) {
+      if (availableModels.find(m => m.id === selectedModel)) {
+        updateChatModel(chatId, selectedModel);
+        currentChat.model = selectedModel;
+      }
+    }
+  }, [selectedModel, currentChat, chatId, updateChatModel, availableModels]);
 
   // when chatId is null, set messages to an empty array
   useEffect(() => {
     if (chatId === null) {
       setMessages([])
     }
-  }, [chatId])
+  }, [chatId, setMessages])
 
   useEffect(() => {
     setHydrated(true)
@@ -167,7 +263,7 @@ export function Chat() {
   const submit = async () => {
     setIsSubmitting(true)
 
-    const uid = await getOrCreateGuestUserId(user)
+    const uid = await getOrCreateGuestUserId()
     if (!uid) return
 
     const optimisticId = `optimistic-${Date.now().toString()}`
@@ -197,7 +293,8 @@ export function Chat() {
       return
     }
 
-    const currentChatId = await ensureChatExists(uid)
+    const currentChatId = await ensureChatExists()
+
     if (!currentChatId) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
@@ -218,7 +315,7 @@ export function Chat() {
 
     let attachments: Attachment[] | null = []
     if (submittedFiles.length > 0) {
-      attachments = await handleFileUploads(uid, currentChatId)
+      attachments = await handleFileUploads(currentChatId)
       if (attachments === null) {
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
         cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
@@ -232,9 +329,7 @@ export function Chat() {
         chatId: currentChatId,
         userId: uid,
         model: selectedModel,
-        isAuthenticated,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-        ...(currentAgent?.id && { agentId: currentAgent.id }),
       },
       experimental_attachments: attachments || undefined,
     }
@@ -246,10 +341,11 @@ export function Chat() {
       cacheAndAddMessage(optimisticMessage)
       clearDraft()
       hasSentFirstMessageRef.current = true
-    } catch (error) {
+    } catch (submitError) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       toast({ title: "Failed to send message", status: "error" })
+      console.error("Error submitting message:", submitError)
     } finally {
       setIsSubmitting(false)
     }
@@ -268,7 +364,7 @@ export function Chat() {
 
       setMessages((prev) => [...prev, optimisticMessage])
 
-      const uid = await getOrCreateGuestUserId(user)
+      const uid = await getOrCreateGuestUserId()
 
       if (!uid) {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
@@ -283,7 +379,7 @@ export function Chat() {
         return
       }
 
-      const currentChatId = await ensureChatExists(uid)
+      const currentChatId = await ensureChatExists()
 
       if (!currentChatId) {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
@@ -296,7 +392,6 @@ export function Chat() {
           chatId: currentChatId,
           userId: uid,
           model: selectedModel,
-          isAuthenticated,
           systemPrompt: SYSTEM_PROMPT_DEFAULT,
         },
       }
@@ -311,11 +406,11 @@ export function Chat() {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       setIsSubmitting(false)
     },
-    [ensureChatExists, selectedModel, user?.id, append]
+    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages] 
   )
 
   const handleReload = async () => {
-    const uid = await getOrCreateGuestUserId(user)
+    const uid = await getOrCreateGuestUserId()
     if (!uid) {
       return
     }
@@ -325,7 +420,6 @@ export function Chat() {
         chatId,
         userId: uid,
         model: selectedModel,
-        isAuthenticated,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
       },
     }
@@ -333,10 +427,23 @@ export function Chat() {
     reload(options)
   }
 
+  const handleStarModel = (modelId: string) => {
+    setStarredModelIds(prevStarredIds => {
+      const newStarredIds = prevStarredIds.includes(modelId)
+        ? prevStarredIds.filter(id => id !== modelId)
+        : [...prevStarredIds, modelId];
+      return newStarredIds;
+    });
+  };
+
   // not user chatId and no messages
   if (hydrated && chatId && !isChatsLoading && !currentChat) {
     return redirect("/")
   }
+
+  const modelsWithStarredStatus = availableModels.map(model => (
+    { ...model, starred: starredModelIds.includes(model.id) }
+  ));
 
   return (
     <div
@@ -344,7 +451,8 @@ export function Chat() {
         "@container/main relative flex h-full flex-col items-center justify-end md:justify-center"
       )}
     >
-      <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} />
+      {/* <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} /> */}
+      <DialogAuth />
 
       {/* Add Suspense boundary for SearchParamsProvider */}
       <Suspense>
@@ -368,7 +476,7 @@ export function Chat() {
             }}
           >
             <h1 className="mb-6 text-3xl font-medium tracking-tight">
-              What's on your mind?
+              What&apos;s on your mind?
             </h1>
           </motion.div>
         ) : (
@@ -406,13 +514,15 @@ export function Chat() {
           hasSuggestions={!chatId && messages.length === 0}
           onSelectModel={handleModelChange}
           selectedModel={selectedModel}
+          availableModels={modelsWithStarredStatus}
+          onStarModel={handleStarModel}
           isUserAuthenticated={isAuthenticated}
           stop={stop}
           status={status}
         />
       </motion.div>
 
-      <FeedbackWidget authUserId={user?.id} />
+      <FeedbackWidget /> 
     </div>
   )
 }

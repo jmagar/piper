@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { prisma } from "@/lib/prisma"
 import { nanoid } from "nanoid"
 import slugify from "slugify"
 
@@ -18,9 +18,6 @@ export async function POST(request: Request) {
       example_inputs,
       avatar_url,
       tools = [],
-      remixable = false,
-      is_public = true,
-      max_steps = 5,
     } = await request.json()
 
     if (!name || !description || !systemPrompt) {
@@ -32,26 +29,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = await createClient()
-
-    if (!supabase) {
-      return new Response(
-        JSON.stringify({ error: "Supabase not available in this deployment." }),
-        { status: 200 }
-      )
-    }
-
-    const { data: authData, error: authError } = await supabase.auth.getUser()
-
-    if (!authData?.user?.id) {
-      return new Response(JSON.stringify({ error: "Missing userId" }), {
-        status: 400,
-      })
-    }
-
-    const { data: agent, error: supabaseError } = await supabase
-      .from("agents")
-      .insert({
+    // Create agent in local database with hardcoded admin user
+    const agent = await prisma.agent.create({
+      data: {
         slug: generateAgentSlug(name),
         name,
         description,
@@ -59,27 +39,19 @@ export async function POST(request: Request) {
         mcp_config,
         example_inputs,
         tools,
-        remixable,
-        is_public,
         system_prompt: systemPrompt,
-        max_steps,
-        creator_id: authData.user.id,
-      })
-      .select()
-      .single()
-
-    if (supabaseError) {
-      return new Response(JSON.stringify({ error: supabaseError.message }), {
-        status: 500,
-      })
-    }
+        creator_id: "admin", // Hardcoded admin user in single-user mode
+      },
+    })
 
     return new Response(JSON.stringify({ agent }), { status: 201 })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in create-agent endpoint:", err)
 
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
+
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500 }
     )
   }

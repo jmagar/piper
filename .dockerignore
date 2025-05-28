@@ -1,0 +1,5 @@
+db-data/
+.git
+cline_docs/
+*.env
+.DS_Store

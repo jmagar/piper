@@ -156,6 +156,16 @@ code {
   font-variation-settings: var(--default-mono-font-variation-settings);
 }
 
+pre code.language-bash,
+pre code.language-sh,
+pre code.language-shell {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+body {
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "ss02" 1, "ss03" 1, "ss04" 1;
+}
+
 /* sonner toast */
 [data-sonner-toaster] > li {
   width: 100%;

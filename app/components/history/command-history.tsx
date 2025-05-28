@@ -216,7 +216,7 @@ function CommandItemRow({
               "group-data-[selected=true]:opacity-100"
           )}
         >
-          {formatDate(chat?.created_at)}
+          {formatDate(chat?.createdAt)}
         </span>
 
         {/* Action buttons that appear on selection, positioned over the date */}

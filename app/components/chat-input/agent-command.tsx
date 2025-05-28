@@ -2,7 +2,6 @@
 
 import { Agent } from "@/app/types/agent"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { cn } from "@/lib/utils"
 import { Cube, Plus } from "@phosphor-icons/react"
 import { useEffect, useRef } from "react"
@@ -31,10 +30,6 @@ export function AgentCommand({
   curatedAgents,
   userAgents,
 }: AgentCommandProps) {
-  if (!isSupabaseEnabled) {
-    return null
-  }
-
   const containerRef = useRef<HTMLDivElement>(null)
   const activeItemRef = useRef<HTMLLIElement>(null)
 

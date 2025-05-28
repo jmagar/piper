@@ -2,9 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { createClient } from "@/lib/supabase/client"
-import { isSupabaseEnabled } from "@/lib/supabase/config"
-import { CaretLeft, SealCheck, Spinner } from "@phosphor-icons/react"
+import { CaretLeft, SealCheck, Spinner, Info } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState } from "react"
 
@@ -14,85 +12,73 @@ const TRANSITION_CONTENT = {
 }
 
 type FeedbackFormProps = {
-  authUserId?: string
+  // authUserId?: string // Not used in admin mode
   onClose: () => void
 }
 
-export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
-  if (!isSupabaseEnabled) {
-    return null
-  }
+export function FeedbackForm({ onClose }: FeedbackFormProps) {
+  // Since Supabase is not available in admin-only mode, 
+  // feedback submission will be disabled.
+  const isFeedbackSystemAvailable = false 
 
   const [status, setStatus] = useState<
-    "idle" | "submitting" | "success" | "error"
+    "idle" | "submitting" | "success" | "error" | "unavailable"
   >("idle")
   const [feedback, setFeedback] = useState("")
 
   useEffect(() => {
-    setStatus("idle")
-    setFeedback("")
-  }, [])
+    if (!isFeedbackSystemAvailable) {
+      setStatus("unavailable")
+    }
+    // setStatus("idle") // Original logic
+    // setFeedback("")
+  }, [isFeedbackSystemAvailable])
 
   const handleClose = () => {
     setFeedback("")
-    setStatus("idle")
+    setStatus(isFeedbackSystemAvailable ? "idle" : "unavailable")
     onClose()
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!authUserId) {
-      toast({
-        title: "Please login to submit feedback",
-        status: "error",
-      })
+    if (!isFeedbackSystemAvailable) {
+      toast({ title: "Feedback system not available in Admin Mode.", status: "info" })
       return
     }
-
-    setStatus("submitting")
-    if (!feedback.trim()) return
-
-    try {
-      const supabase = createClient()
-
-      if (!supabase) {
-        toast({
-          title: "Feedback is not supported in this deployment",
-          status: "info",
-        })
-        return
-      }
-
-      const { error } = await supabase.from("feedback").insert({
-        message: feedback,
-        user_id: authUserId,
-      })
-
-      if (error) {
-        toast({
-          title: `Error submitting feedback: ${error}`,
-          status: "error",
-        })
-        setStatus("error")
-        return
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-
-      setStatus("success")
-
-      setTimeout(() => {
+    
+    // Original Supabase logic commented out or removed
+    // if (!authUserId) { ... }
+    // setStatus("submitting")
+    // if (!feedback.trim()) return
+    // try { ... supabase calls ... } catch (error) { ... }
+    
+    // Simulate submission for UI purposes if needed, or just show unavailable message
+    console.log("Feedback submitted (admin mode - logged to console):", feedback)
+    toast({ title: "Feedback logged to console (Admin Mode)", status: "success" })
+    setStatus("success")
+    setTimeout(() => {
         handleClose()
       }, 2500)
-    } catch (error) {
-      toast({
-        title: `Error submitting feedback: ${error}`,
-        status: "error",
-      })
-      setStatus("error")
-    }
   }
 
+  if (status === "unavailable") {
+    return (
+      <div className="flex h-[200px] w-full flex-col items-center justify-center p-4 text-center">
+        <Info className="text-muted-foreground mb-2 size-8" />
+        <p className="text-foreground mb-1 text-sm font-medium">
+          Feedback System Not Available
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Feedback submission is not configured for Admin Mode.
+        </p>
+        <Button variant="ghost" size="sm" onClick={handleClose} className="mt-4">
+          Close
+        </Button>
+      </div>
+    )
+  }
+  
   return (
     <div className="h-[200px] w-full">
       <AnimatePresence mode="popLayout">
@@ -143,8 +129,9 @@ export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
             <textarea
               className="text-foreground h-full w-full resize-none rounded-md bg-transparent px-4 py-3.5 text-sm outline-hidden"
               autoFocus
+              value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              disabled={status === "submitting"}
+              disabled={status === "submitting" || !isFeedbackSystemAvailable}
             />
             <div
               key="close"
@@ -167,7 +154,7 @@ export function FeedbackForm({ authUserId, onClose }: FeedbackFormProps) {
                 size="sm"
                 aria-label="Submit feedback"
                 className="rounded-lg"
-                disabled={status === "submitting" || !feedback.trim()}
+                disabled={status === "submitting" || !feedback.trim() || !isFeedbackSystemAvailable}
               >
                 <AnimatePresence mode="popLayout">
                   {status === "submitting" ? (

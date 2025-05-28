@@ -45,9 +45,6 @@ export function UserMenu() {
       >
         <DropdownMenuItem className="flex flex-col items-start gap-0 no-underline hover:bg-transparent focus:bg-transparent">
           <span>{user?.display_name}</span>
-          <span className="text-muted-foreground max-w-full truncate">
-            {user?.email}
-          </span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <SettingsTrigger />

@@ -1,39 +1,22 @@
-import {
-  AUTH_DAILY_MESSAGE_LIMIT,
-  DAILY_LIMIT_PRO_MODELS,
-  NON_AUTH_DAILY_MESSAGE_LIMIT,
-} from "@/lib/config"
-import { validateUserIdentity } from "@/lib/server/api"
-
 export async function getMessageUsage(
-  userId: string,
-  isAuthenticated: boolean
+  // _userId: string, // Not used in admin-only mode
+  // _isAuthenticated: boolean // Not used in admin-only mode
 ) {
-  const supabase = await validateUserIdentity(userId, isAuthenticated)
-  if (!supabase) return null
-
-  const { data, error } = await supabase
-    .from("users")
-    .select("daily_message_count, daily_pro_message_count")
-    .eq("id", userId)
-    .maybeSingle()
-
-  if (error || !data) {
-    throw new Error(error?.message || "Failed to fetch message usage")
-  }
-
-  const dailyLimit = isAuthenticated
-    ? AUTH_DAILY_MESSAGE_LIMIT
-    : NON_AUTH_DAILY_MESSAGE_LIMIT
-
-  const dailyCount = data.daily_message_count || 0
-  const dailyProCount = data.daily_pro_message_count || 0
-
+  // In admin-only mode, there are no rate limits
   return {
-    dailyCount,
-    dailyProCount,
-    dailyLimit,
-    remaining: dailyLimit - dailyCount,
-    remainingPro: DAILY_LIMIT_PRO_MODELS - dailyProCount,
+    dailyCount: 0,
+    dailyProCount: 0,
+    dailyLimit: 999999, // Unlimited for admin
+    remaining: 999999,
+    remainingPro: 999999,
   }
+}
+
+export async function checkRateLimit(
+  // _userId: string,
+  // _isAuthenticated: boolean
+) {
+  // In admin-only mode, rate limits are effectively disabled or very high
+  // You can implement tracking here if needed for analytics
+  return { limit: 999999, remaining: 999999, reset: new Date() }
 }

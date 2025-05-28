@@ -1,3 +1,5 @@
+"use client"
+
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { AgentSummary } from "@/app/types/agent"
 import type { Tables } from "@/app/types/database.types"

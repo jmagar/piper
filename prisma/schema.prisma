@@ -1,0 +1,80 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  title       String
+  model       String?
+  systemPrompt String?
+  agentId     String?
+  public      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    Message[]
+  attachments Attachment[]
+  agent       Agent?   @relation(fields: [agentId], references: [id])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String
+  content   String
+  role      String
+  createdAt DateTime @default(now())
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String
+  fileName  String
+  fileType  String
+  fileSize  Int
+  filePath  String
+  createdAt DateTime @default(now())
+}
+
+model Agent {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  slug           String   @unique
+  avatar_url     String?
+  system_prompt  String?
+  tools          String[] @default([])
+  example_inputs String[] @default([])
+  mcp_config     Json?
+  creator_id     String   @default("admin") // All agents belong to the admin
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  chats          Chat[]
+}
+
+model Usage {
+  id                     String   @id @default(uuid())
+  userId                 String   @default("admin")
+  messageCount           Int      @default(0)
+  dailyMessageCount      Int      @default(0)
+  dailyProMessageCount   Int      @default(0)
+  dailyReset             DateTime?
+  dailyProReset          DateTime?
+  lastActiveAt           DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  
+  @@unique([userId])
+}
+
+model AdminSetting {
+  id            String    @id @default("default_admin_settings") // Use a fixed ID to ensure only one row
+  systemPrompt  String?
+  updatedAt     DateTime  @updatedAt
+}

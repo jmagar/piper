@@ -1,66 +1,50 @@
-import { ModelConfig } from "@/lib/models/types"
-import { PROVIDERS } from "@/lib/providers"
-import { Brain, Image } from "@phosphor-icons/react"
-import { Wrench } from "lucide-react"
+import { AvailableModelData } from "./base"
+import { getProvider, getProviderIcon } from "@/lib/providers"
 
 type SubMenuProps = {
-  hoveredModelData: ModelConfig
+  hoveredModelData: AvailableModelData
 }
 
 export function SubMenu({ hoveredModelData }: SubMenuProps) {
-  const provider = PROVIDERS.find(
-    (provider) => provider.id === hoveredModelData.providerId
-  )
+  const providerDetails = getProvider(hoveredModelData.providerId)
+  const ProviderIcon = getProviderIcon(hoveredModelData.providerId)
 
   return (
     <div className="bg-popover border-border w-[280px] rounded-md border p-3 shadow-md">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          {provider?.icon && <provider.icon className="size-5" />}
+          {ProviderIcon && <ProviderIcon className="size-5" />}
           <h3 className="font-medium">{hoveredModelData.name}</h3>
         </div>
 
         <p className="text-muted-foreground text-sm">
-          {hoveredModelData.description}
+          {hoveredModelData.description} {/* This comes from OpenRouter API via AvailableModelData */}
         </p>
 
-        <div className="flex flex-col gap-1">
-          <div className="mt-1 flex flex-wrap gap-2">
-            {hoveredModelData.vision && (
-              <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-800 dark:text-green-100">
-                <Image className="size-3" />
-                <span>Vision</span>
-              </div>
-            )}
+        {/* Sections for vision, tools, reasoning removed as these fields are not in AvailableModelData */}
+        {/* If these details become available from the API, they can be re-added here. */}
 
-            {hoveredModelData.tools && (
-              <div className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700 dark:bg-purple-800 dark:text-purple-100">
-                <Wrench className="size-3" />
-                <span>Tools</span>
-              </div>
-            )}
-
-            {hoveredModelData.reasoning && (
-              <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-800 dark:text-amber-100">
-                <Brain className="size-3" />
-                <span>Reasoning</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
+        <div className="mt-2 flex flex-col gap-2 border-t pt-2">
           <div className="flex justify-between text-sm">
             <span className="font-medium">Provider</span>
-            <span>{hoveredModelData.provider}</span>
+            <span>{providerDetails?.name || hoveredModelData.providerId}</span>
           </div>
 
           <div className="flex justify-between text-sm">
-            <span className="text-sm font-medium">Id</span>
+            <span className="text-sm font-medium">Model ID</span>
             <span className="text-muted-foreground text-xs">
-              {String(hoveredModelData.id)}
+              {hoveredModelData.id}
             </span>
           </div>
+
+          {hoveredModelData.context_length && (
+            <div className="flex justify-between text-sm">
+              <span className="text-sm font-medium">Context</span>
+              <span className="text-muted-foreground text-xs">
+                {hoveredModelData.context_length.toLocaleString()} tokens
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

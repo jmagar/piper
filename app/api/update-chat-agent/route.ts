@@ -1,48 +1,32 @@
-import { validateUserIdentity } from "@/lib/server/api"
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
   try {
-    const { userId, chatId, agentId, isAuthenticated } = await request.json()
+    const { chatId, agentId } = await request.json()
 
-    if (!userId || !chatId) {
+    if (!chatId) {
       return new Response(
-        JSON.stringify({ error: "Missing userId or chatId" }),
+        JSON.stringify({ error: "Missing chatId" }),
         { status: 400 }
       )
     }
 
-    const supabase = await validateUserIdentity(userId, isAuthenticated)
+    // Update chat with new agent (or remove agent if agentId is null)
+    const chat = await prisma.chat.update({
+      where: { id: chatId },
+      data: { agentId: agentId || null },
+    })
 
-    if (!supabase) {
-      console.log("Supabase not enabled, skipping agent update")
-      return new Response(
-        JSON.stringify({ chat: { id: chatId, agent_id: agentId } }),
-        {
-          status: 200,
-        }
-      )
-    }
-
-    const { data, error: updateError } = await supabase
-      .from("chats")
-      .update({ agent_id: agentId || null })
-      .eq("id", chatId)
-      .select()
-      .single()
-
-    if (updateError) {
-      return new Response(JSON.stringify({ error: "Failed to update chat" }), {
-        status: 500,
-      })
-    }
-
-    return new Response(JSON.stringify({ chat: data }), {
+    return new Response(JSON.stringify({ chat }), {
       status: 200,
     })
-  } catch (error) {
-    console.error("Error updating chat agent:", error)
+  } catch (err: unknown) {
+    console.error("Error in update-chat-agent endpoint:", err)
+    
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
+    
     return new Response(
-      JSON.stringify({ error: "Failed to update chat agent" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500 }
     )
   }

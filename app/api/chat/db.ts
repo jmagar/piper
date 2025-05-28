@@ -1,23 +1,22 @@
-import type { Database } from "@/app/types/database.types"
-import type { SupabaseClient } from "@supabase/supabase-js"
+import { prisma } from "@/lib/prisma"
 
 type ContentPart = {
   type: string
   text?: string
   toolCallId?: string
   toolName?: string
-  args?: any
-  result?: any
+  args?: unknown
+  result?: unknown
   toolInvocation?: {
     state: string
     step: number
     toolCallId: string
     toolName: string
-    args?: any
-    result?: any
+    args?: unknown
+    result?: unknown
   }
   reasoning?: string
-  details?: any[]
+  details?: unknown[]
 }
 
 type Message = {
@@ -29,13 +28,12 @@ type Message = {
 const DEFAULT_STEP = 0
 
 export async function saveFinalAssistantMessage(
-  supabase: SupabaseClient<Database>,
   chatId: string,
   messages: Message[]
 ) {
   const parts: ContentPart[] = []
   const toolMap = new Map<string, ContentPart>()
-  let textParts: string[] = []
+  const textParts: string[] = []
 
   for (const msg of messages) {
     if (msg.role === "assistant" && Array.isArray(msg.content)) {
@@ -96,17 +94,20 @@ export async function saveFinalAssistantMessage(
 
   const finalPlainText = textParts.join("\n\n")
 
-  const { error } = await supabase.from("messages").insert({
-    chat_id: chatId,
-    role: "assistant",
-    content: finalPlainText || "",
-    parts: parts,
-  })
-
-  if (error) {
-    console.error("Error saving final assistant message:", error)
-    throw new Error(`Failed to save assistant message: ${error.message}`)
-  } else {
+  try {
+    await prisma.message.create({
+      data: {
+        chatId: chatId,
+        role: "assistant",
+        content: finalPlainText || "",
+        // Store parts as JSON in a separate field if needed
+        // parts: parts, // Note: You may need to add this field to your Prisma schema
+      }
+    })
+    
     console.log("Assistant message saved successfully (merged).")
+  } catch (error) {
+    console.error("Error saving final assistant message:", error)
+    throw new Error(`Failed to save assistant message: ${error}`)
   }
 }
