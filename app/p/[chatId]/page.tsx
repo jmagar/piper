@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { PublicConversation } from "./public-conversation"
 import Link from "next/link"
+import type { Message } from "@/app/types/database.types"
 
 export const dynamic = "force-dynamic"
 
@@ -64,7 +65,7 @@ export default async function PublicChat({
   }
 
   // Convert messages to the format expected by the Conversation component
-  const messages = chat.messages.map((msg) => ({
+  const messages = chat.messages.map((msg: Message) => ({
     id: msg.id,
     content: msg.content,
     role: msg.role as "user" | "assistant",

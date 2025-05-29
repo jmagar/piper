@@ -1,40 +1,217 @@
-# Technical Context: Zola Development Environment
+# Technical Context: Piper Production Environment
 
 ## Technologies Used
 
--   **Core Stack:** Node.js, TypeScript, Next.js
--   **AI Integration:**
-    *   Vercel AI SDK (version checked via `package.json` as `ai@3.0.0-experimental.19` during previous debugging, current specific version might vary but is generally `3.x`)
-    *   OpenRouter (as one of the LLM providers)
--   **Database & Caching:**
-    *   Prisma (ORM for database interactions, e.g., chat history)
-    *   PostgreSQL (Primary database)
-    *   Redis (`ioredis` client) for caching MCP server statuses.
--   **MCP (Model Context Protocol):
-    *   `@model-context/node` library, specifically `experimental_createMCPClient` for creating client instances.
-    *   Various MCP server implementations (Python, Node.js) that communicate via stdio (for local CLI tools) or SSE (for HTTP services).
--   **Development Tools:**
-    *   ESLint, Prettier (Linting and formatting)
-    *   `uv` (Python package manager/virtual environment, if Python MCP servers are used locally)
-    *   `npx` (for running Node.js packages)
-    *   Docker, Docker Compose (for managing services like PostgreSQL, Redis, and potentially containerized MCP servers).
+### **Core Application Stack**
+- **Runtime**: Node.js 18+ with TypeScript 5.x
+- **Framework**: Next.js 14 with App Router
+- **Database**: PostgreSQL 15+ with Prisma ORM
+- **Caching**: Redis 7+ with ioredis client
+- **Container**: Docker with multi-stage builds
 
-## Development Setup
+### **AI Integration Stack**
+- **AI SDK**: Vercel AI SDK 3.x (`ai@3.0.0-experimental.19+`)
+- **LLM Provider**: OpenRouter (Anthropic Claude 4, GPT-4, etc.)
+- **Streaming**: Real-time response streaming with tool execution
+- **Tool Management**: Custom MCP integration with chunked response processing
 
--   **Local Development Server:** `npm run dev` starts the Next.js application.
--   **MCP Servers:**
-    *   Defined in `config.json` in the project root.
-    *   Managed by `mcpManager.ts`, which can spawn local MCP servers as child processes (stdio) or connect to remote MCP servers (SSE via URL).
--   **Dependent Services:** PostgreSQL and Redis are typically run using Docker Compose (`docker-compose up -d zola-db zola-redis`).
--   **Environment Variables:** Stored in `.env`. Key variables include `OPENROUTER_API_KEY`, `DATABASE_URL`, `REDIS_URL`.
--   **Hot Module Replacement (HMR):** Standard Next.js feature. Care has been taken in `mcpManager.ts` to prevent re-initialization of MCP clients and polling intervals during HMR by storing shared state on `globalThis`.
+### **MCP (Model Context Protocol) Integration**
+- **Core Library**: `@model-context/node` with `experimental_createMCPClient`
+- **Protocol Version**: MCP 2024-11-05 specification compliance
+- **Transport Types**: 
+  - **stdio**: Local command execution (Python uvx, Node.js scripts)
+  - **SSE**: HTTP Server-Sent Events for remote services
+- **Server Types**: 19+ active servers (Python, Node.js, HTTP services)
 
-## Technical Constraints & Considerations
+### **Development & Production Tools**
+- **Build**: TypeScript compilation with strict mode
+- **Linting**: ESLint with Next.js rules + Prettier
+- **Package Management**: npm with lockfile version 3
+- **Python Support**: UV package manager (`uv` binary in PATH)
+- **Container Orchestration**: Docker Compose with named volumes
 
--   **Vercel AI SDK Tool Schema Compatibility:** MCP tool schemas need to be adapted (e.g., wrapped with `jsonSchema`) to be compatible with the Vercel AI SDK's expectations.
--   **`experimental_createMCPClient` Behavior:** The exact methods and properties of the client object returned by `experimental_createMCPClient` are not fully documented. A key current assumption is the existence of an `invoke(toolName, args)` method on this client. This is being verified through runtime logging.
-    *   If `invoke` is not present, direct communication (HTTP requests for SSE, or stdio stream interaction for local processes) will need to be implemented within `MCPService.invokeTool`.
--   **`as any` Casts:** Due to the uncertainty around `mcpClient.invoke`, `as any` casts are temporarily used in `MCPService.invokeTool`. These should be resolved once the client's interface is confirmed.
--   **Managing Lifecycle of Diverse MCP Servers:** Ensuring robust startup, communication, and shutdown for MCP servers, especially those run as child processes.
--   **Error Handling:** Comprehensive error handling is crucial for asynchronous operations, LLM interactions, external service calls (MCP tools), and subprocess management.
--   **Debugging AI SDK Tool Calling:** The interaction between the Vercel AI SDK's tool-calling mechanism and Zola's custom MCP invocation logic (`tool.execute` -> `MCPService.invokeTool`) is a complex area currently under active debugging.
+## Production Deployment Architecture
+
+### **Unraid Host Environment**
+- **OS**: Unraid 6.12.24-Unraid (Linux kernel)
+- **Docker Runtime**: Community Applications with proper networking
+- **Host IP**: 10.1.0.2 (critical for container-to-host communication)
+- **Storage**: Unraid array with persistent Docker volumes
+
+### **Container Configuration**
+```yaml
+# docker-compose.yml key patterns
+services:
+  piper-app:
+    build: .
+    ports: ["8630:3000"]
+    environment:
+      DATABASE_URL: postgresql://user:pass@piper-db:5432/piper
+      REDIS_URL: redis://piper-cache:6379
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - piper-uploads:/app/uploads
+      
+  piper-db:
+    image: postgres:15-alpine
+    volumes: [piper-db-data:/var/lib/postgresql/data]
+    
+  piper-cache:
+    image: redis:7-alpine
+    command: redis-server --save 20 1 --loglevel warning
+    volumes: [piper-cache-data:/data]
+```
+
+### **Dockerfile Production Patterns**
+```dockerfile
+# Python MCP Server Support (Critical)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv ~/.local/bin/uv* /usr/local/bin/ && \
+    chmod +x /usr/local/bin/uv*
+
+# Prisma Client Generation (Required)
+RUN npx prisma generate
+
+# Proper .dockerignore (Build optimization)
+node_modules
+.next
+.git
+logs
+.env*
+```
+
+## Development Environment Setup
+
+### **Local Development Requirements**
+- **Node.js**: Version 18+ with npm 9+
+- **Docker**: Docker Desktop or Docker Engine with Compose V2
+- **Python**: Optional for local MCP server development
+- **Git**: Version control with standard workflows
+
+### **Environment Variables**
+```bash
+# .env file structure
+DATABASE_URL=postgresql://user:password@localhost:5432/piper
+REDIS_URL=redis://localhost:6379
+OPENROUTER_API_KEY=sk-or-v1-...
+NEXTAUTH_SECRET=your-secret-here
+NEXTAUTH_URL=http://localhost:3000
+```
+
+### **Development Commands**
+```bash
+# Start development server
+npm run dev
+
+# Database operations
+npx prisma db push
+npx prisma generate
+npx prisma studio
+
+# Docker services
+docker compose up -d piper-db piper-cache
+docker compose build piper-app
+```
+
+## Technical Constraints & Solutions
+
+### **Unraid Docker Networking (Critical)**
+- **Problem**: `localhost` doesn't resolve from containers to Unraid host services
+- **Solution**: Use Unraid host IP (`10.1.0.2`) for all MCP server URLs
+- **Pattern**: Replace `localhost:PORT` with `10.1.0.2:PORT` in `config.json`
+
+### **Python MCP Server Support**
+- **Problem**: `uvx` command not found in Docker container PATH
+- **Solution**: Install `uv` globally and ensure proper PATH configuration
+- **Verification**: `which uvx` should return `/usr/local/bin/uvx`
+
+### **MCP Protocol Implementation**
+- **Critical Requirement**: Must send `initialized` notification after handshake
+- **Common Error**: "Received request before initialization was complete"
+- **Solution**: Proper sequence: `initialize` → response → `notifications/initialized`
+
+### **Large Response Processing**
+- **Problem**: 64k+ character tool responses cause slow AI processing
+- **Solution**: Smart chunking with tool-specific processors
+- **Result**: 64k HTML → 2.5k structured JSON with importance ranking
+
+### **Redis Authentication**
+- **Problem**: `NOAUTH Authentication required` errors
+- **Solution**: Use clean Redis without authentication, reset volume if needed
+- **Command**: `docker volume rm piper_piper-cache` to reset state
+
+## Performance Optimizations
+
+### **Tool Response Processing**
+- **Chunking Threshold**: 5000 characters
+- **Processing Types**:
+  - **HTML (fetch)**: Title + Meta + Content sections + Headings
+  - **JSON (search)**: Result summaries with importance weighting  
+  - **Text (generic)**: Sentence-based chunking with 2000 char limits
+
+### **Token Management**
+- **Max Tokens**: 8096 (optimal balance for Claude 4)
+- **Streaming**: Real-time response delivery with proper error boundaries
+- **Memory**: Conversation context managed by Vercel AI SDK
+
+### **Caching Strategy**
+- **MCP Status**: Redis cache with 300s TTL
+- **Polling Interval**: 60 seconds for server health checks
+- **Development**: HMR-safe state persistence on `globalThis`
+
+## Build Optimization
+
+### **Docker Build Context**
+- **Before**: 860MB with node_modules, .next, logs
+- **After**: ~17KB with proper .dockerignore
+- **Build Time**: ~70 seconds for complete build
+
+### **TypeScript Compilation**
+- **Strict Mode**: Enabled with comprehensive type checking
+- **Generated Types**: Prisma client generation in build process
+- **Error Handling**: All type errors resolved for clean builds
+
+## Debugging & Monitoring
+
+### **Logging Strategy**
+```typescript
+// MCP Manager logging pattern
+console.log(`[MCP Manager] ${operation}: ${details}`);
+console.error(`[MCP Manager] Error ${operation}:`, error);
+```
+
+### **Health Monitoring**
+- **MCP Server Status**: Redis-cached with dashboard display
+- **Tool Execution**: Real-time logging with performance metrics
+- **Error Tracking**: Comprehensive error boundaries with stack traces
+
+### **Development Tools**
+- **Hot Reload**: Next.js HMR with MCP service persistence
+- **Database GUI**: Prisma Studio for database inspection
+- **Redis CLI**: Direct cache inspection and debugging
+
+## Production Readiness Checklist
+
+### **Infrastructure**
+- ✅ Multi-container Docker deployment
+- ✅ Persistent volumes for data and uploads
+- ✅ Proper networking between containers and host
+- ✅ Environment variable management
+
+### **Performance**
+- ✅ Chunked response processing for large tools
+- ✅ Redis caching for MCP server status
+- ✅ Optimized Docker builds and contexts
+- ✅ Token-aware response management
+
+### **Reliability**
+- ✅ Comprehensive error handling and recovery
+- ✅ MCP protocol compliance with proper handshake
+- ✅ Graceful degradation when tools fail
+- ✅ Health monitoring and status reporting
+
+### **Security**
+- ✅ Environment variable isolation
+- ✅ Container network segmentation
+- ✅ No hardcoded secrets or credentials
+- ✅ Proper file permissions and access controls

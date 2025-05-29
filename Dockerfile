@@ -3,12 +3,26 @@ FROM node:18-alpine AS base
 
 WORKDIR /app
 
+# Install Python and system dependencies for both Node.js and Python MCP servers
+RUN apk add --no-cache python3 py3-pip curl
+
+# Install uv (includes uvx) using official installer to global location
+ENV UV_INSTALL_DIR="/usr/local"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Move uv binaries to proper bin directory
+RUN mv /usr/local/uv /usr/local/bin/uv && \
+    mv /usr/local/uvx /usr/local/bin/uvx
+
 # Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Copy all files
 COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # Build the app (if needed)
 RUN npm run build
@@ -17,6 +31,8 @@ RUN npm run build
 ENV NODE_ENV=production
 ENV UPLOADS_DIR=/uploads
 ENV CONFIG_DIR=/config
+# Add uv/uvx to PATH for the node user
+ENV PATH="/usr/local/bin:$PATH"
 
 # Create uploads, config, and logs directories
 RUN mkdir -p /uploads /config /logs && chown -R node:node /uploads /config /logs

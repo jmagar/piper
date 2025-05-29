@@ -122,8 +122,7 @@ export async function POST(req: Request) {
       system: effectiveSystemPrompt,
       messages,
       tools: toolsToUse as ToolSet,
-      // @todo: remove this
-      // hardcoded for now
+      maxTokens: 8096, // Reasonable limit for response length while preserving quality
       maxSteps: 10,
       onError: (event: { error: unknown }) => {
         console.error("🛑 streamText error (raw event.error):", event.error); // Existing log

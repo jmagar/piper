@@ -1,44 +1,52 @@
 services:
-  zola-app:
-    container_name: zola-app
+  piper-app:
+    container_name: piper-app
     restart: unless-stopped
     build: .
     ports:
-      - "3021:3000"
+      - "8630:3000"
     env_file: .env # Load all variables from .env
     environment:
       # This DATABASE_URL overrides the one from .env for the Docker container
-      - DATABASE_URL=postgresql://zola:zola@zola-db:5432/zola
+      - DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper
+      # Redis URL for MCP Manager
+      - REDIS_URL=redis://piper-cache:6379
     volumes:
-      - ./uploads:/uploads
-      - ./config:/config
-      - ./logs:/logs
+      - /mnt/cache/compose/piper/uploads:/uploads
+      - /mnt/cache/compose/piper/config:/config
+      - /mnt/cache/compose/piper/logs:/logs
+      - /mnt/cache/compose/piper/config.json:/app/config.json
+      - /mnt/user/data:/data
+      - /mnt/user/code:/code
+      - /mnt/user/docs:/docs
+      - /mnt/user/compose:/compose
+      - /mnt/user/downloads:/downloads
     command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
-      - zola-db
-      - zola-redis
-  zola-db:
-    container_name: zola-db
+      - piper-db
+      - piper-cache
+  piper-db:
+    container_name: piper-db
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: zola
-      POSTGRES_PASSWORD: zola
-      POSTGRES_DB: zola
+      POSTGRES_USER: piper
+      POSTGRES_PASSWORD: piper
+      POSTGRES_DB: piper
     volumes:
-      - zola-db:/var/lib/postgresql/data
+      - piper-db:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "8631:5432"
 
-  zola-redis:
+  piper-cache:
     image: "redis:alpine"
-    container_name: zola-redis
+    container_name: piper-cache
     ports:
-      - "6379:6379"
+      - "8632:6379"
     volumes:
-      - zola-redis:/data
+      - piper-cache:/data
     restart: unless-stopped
 
 volumes:
-  zola-db:
-  zola-redis:
+  piper-db:
+  piper-cache:

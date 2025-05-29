@@ -1,6 +1,57 @@
+# Database and data directories
 db-data/
+
+# Git repository
 .git
+
+# Documentation
 cline_docs/
+
+# Environment files
 *.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Node.js dependencies and build artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript build output
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# Keep essential files
 !next-env.d.ts

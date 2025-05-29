@@ -331,7 +331,7 @@ export class MCPService {
         const dns = require('dns');
         try {
           await new Promise((resolve, reject) => {
-            dns.lookup('google.com', (err) => {
+            dns.lookup('google.com', (err: NodeJS.ErrnoException | null) => {
               if (err) {
                 console.warn(`[${this.displayName}] ⚠️ DNS resolution issue detected:`, err.message);
                 console.warn(`[${this.displayName}] This might indicate WSL2 networking problems`);
@@ -434,11 +434,33 @@ export class MCPService {
               
               if (response.id === 'init') {
                 if (response.result) {
-                  console.log(`[${this.displayName}] ✅ Initialization successful`);
-                  clearTimeout(timeout);
-                  childProcess.stdout!.off('data', responseHandler);
-                  resolve();
-                  return;
+                  console.log(`[${this.displayName}] ✅ Initialization successful, sending initialized notification`);
+                  
+                  // Send initialized notification to complete the handshake
+                  const initializedNotification = {
+                    jsonrpc: "2.0",
+                    method: "notifications/initialized",
+                    params: {}
+                  };
+                  
+                  const notificationString = JSON.stringify(initializedNotification) + '\n';
+                  console.log(`[${this.displayName}] 📤 Sending initialized notification:`, notificationString.trim());
+                  
+                  try {
+                    childProcess.stdin!.write(notificationString);
+                    console.log(`[${this.displayName}] ✅ Initialized notification sent successfully`);
+                    
+                    clearTimeout(timeout);
+                    childProcess.stdout!.off('data', responseHandler);
+                    resolve();
+                    return;
+                  } catch (writeError) {
+                    console.error(`[${this.displayName}] Error writing initialized notification:`, writeError);
+                    clearTimeout(timeout);
+                    childProcess.stdout!.off('data', responseHandler);
+                    reject(new Error(`Failed to send initialized notification: ${writeError}`));
+                    return;
+                  }
                 } else if (response.error) {
                   console.error(`[${this.displayName}] Initialization error:`, response.error);
                   clearTimeout(timeout);

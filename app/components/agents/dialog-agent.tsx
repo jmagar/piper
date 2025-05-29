@@ -87,7 +87,6 @@ export function DialogAgent({
       mcp_config={mcp_config}
       onAgentClick={onAgentClick}
       randomAgents={randomAgents}
-      creator_id={creator_id}
     />
   )
 

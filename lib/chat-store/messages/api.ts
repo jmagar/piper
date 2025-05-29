@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import type { Message as MessageAISDK } from "ai"
+import type { Message } from "@/app/types/database.types"
 import { readFromIndexedDB, writeToIndexedDB } from "../persist"
 
 export async function getMessagesFromDb(
@@ -13,7 +14,7 @@ export async function getMessagesFromDb(
       orderBy: { createdAt: 'asc' }
     })
 
-    return messages.map((message) => ({
+    return messages.map((message: Message) => ({
       id: message.id,
       content: message.content,
       role: message.role as MessageAISDK["role"],
