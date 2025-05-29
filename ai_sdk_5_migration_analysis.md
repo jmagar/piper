@@ -1,6 +1,6 @@
 # AI SDK 5 Alpha Migration Analysis (Preliminary)
 
-This document outlines the initial findings for migrating the Zola project to AI SDK 5 Alpha. The analysis is based on the AI SDK 5 Alpha announcement and a review of key codebase sections.
+This document outlines the initial findings for migrating the Piper project to AI SDK 5 Alpha. The analysis is based on the AI SDK 5 Alpha announcement and a review of key codebase sections.
 
 **Note:** This is a preliminary analysis. Priorities, complexities, and effort estimations will become more accurate as the migration progresses and more details of AI SDK 5 Alpha are understood.
 
@@ -369,7 +369,7 @@ Post-migration, it's important to remove code that is no longer needed to mainta
 
 ## 11. Conclusion and Next Steps
 
-This document provides a comprehensive analysis of the Zola codebase in preparation for migration to AI SDK 5 Alpha. Key areas including message handling (client-side caching, server-side storage and APIs), agentic features, and tool definitions have been examined in detail. With the decision to skip data migration for existing messages, the focus shifts purely to implementing the new structures and functionalities.
+This document provides a comprehensive analysis of the Piper codebase in preparation for migration to AI SDK 5 Alpha. Key areas including message handling (client-side caching, server-side storage and APIs), agentic features, and tool definitions have been examined in detail. With the decision to skip data migration for existing messages, the focus shifts purely to implementing the new structures and functionalities.
 
 **Key Findings (Revised):**
 

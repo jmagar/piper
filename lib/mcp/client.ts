@@ -257,7 +257,7 @@ export class MCPService {
 
   /**
    * Invokes a tool on the MCP server using direct MCP protocol communication.
-   * Implements the MCP protocol manually since experimental_createMCPClient doesn't provide invoke().
+   * This is only used for STDIO tools since SSE tools are handled automatically by AI SDK.
    */
   public async invokeTool(toolName: string, args: Record<string, unknown>): Promise<unknown> {
     if (this.clientInitializationStatus === 'pending') {
@@ -281,9 +281,9 @@ export class MCPService {
     try {
       console.log(`[${this.displayName}] Invoking tool '${toolName}' with args:`, args);
       
-      // Since experimental_createMCPClient doesn't provide direct tool invocation,
-      // we need to implement direct MCP protocol communication based on transport type
-      const result = await this._directMCPInvoke(toolName, args);
+    // Since experimental_createMCPClient doesn't provide direct tool invocation,
+    // we need to implement direct MCP protocol communication based on transport type
+    const result = await this._directMCPInvoke(toolName, args);
       
       console.log(`[${this.displayName}] Result for tool '${toolName}':`, result);
       return result;
@@ -303,9 +303,9 @@ export class MCPService {
     if (transportType === 'stdio') {
       return this._invokeViaStdio(toolName, args);
     } else if (transportType === 'sse') {
-      return this._invokeViaSSE(toolName, args);
+      throw new Error(`[${this.displayName}] Direct tool invocation not implemented for SSE transport type.`);
     } else {
-      throw new Error(`[${this.displayName}] Direct tool invocation not implemented for transport type: ${transportType}`);
+      throw new Error(`[${this.displayName}] Direct tool invocation not implemented for unsupported transport type: ${transportType}`);
     }
   }
 
@@ -518,7 +518,7 @@ export class MCPService {
             tools: {}
           },
           clientInfo: {
-            name: this.config.name || "zola-mcp-client",
+            name: this.config.name || "piper-mcp-client",
             version: "1.0.0"
           }
         }
@@ -707,88 +707,6 @@ export class MCPService {
       }
     });
   }
-
-  /**
-   * Invoke tool via SSE transport using HTTP requests to the MCP server
-   */
-  private async _invokeViaSSE(toolName: string, args: Record<string, unknown>): Promise<unknown> {
-    if (this.config.transport.type !== 'sse') {
-      throw new Error(`[${this.displayName}] Expected SSE transport config`);
-    }
-
-    const sseConfig = this.config.transport;
-    const requestId = Math.random().toString(36).substring(2, 15);
-    
-    // MCP protocol call_tool request
-    const mcpRequest = {
-      jsonrpc: "2.0",
-      id: requestId,
-      method: "tools/call",
-      params: {
-        name: toolName,
-        arguments: args
-      }
-    };
-
-    // For SSE transport, we need to send POST requests to the messages endpoint
-    // Try different common endpoint patterns for MCP SSE servers
-    const possibleEndpoints = [
-      sseConfig.url, // Try the base URL first
-      sseConfig.url.replace(/\/sse$/, '/messages'), // Replace /sse with /messages  
-      sseConfig.url.replace(/\/+$/, '') + '/messages', // Append /messages
-      sseConfig.url.replace(/\/+$/, '') + '/message', // Append /message (singular)
-    ];
-
-    let lastError: Error | null = null;
-
-    // Try each endpoint until we find one that works
-    for (const messagesUrl of possibleEndpoints) {
-      try {
-        console.log(`[${this.displayName}] Trying HTTP request to ${messagesUrl} for tool '${toolName}'`);
-        
-        const response = await fetch(messagesUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...sseConfig.headers
-          },
-          body: JSON.stringify(mcpRequest)
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            console.log(`[${this.displayName}] Endpoint ${messagesUrl} returned 404, trying next endpoint`);
-            lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
-            continue; // Try next endpoint
-          } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-        }
-
-        const result = await response.json();
-        
-        if (result.error) {
-          throw new Error(`MCP Error: ${result.error.message || 'Unknown error'}`);
-        }
-
-        console.log(`[${this.displayName}] Successfully used endpoint ${messagesUrl}`);
-        return result.result;
-
-      } catch (error) {
-        if (error instanceof TypeError && error.message.includes('fetch')) {
-          // Network error, don't continue trying other endpoints
-          lastError = error;
-          break;
-        }
-        lastError = error as Error;
-        // Continue to try next endpoint for other errors
-      }
-    }
-
-    // If we get here, all endpoints failed
-    console.error(`[${this.displayName}] All SSE endpoints failed for tool '${toolName}'. Last error:`, lastError);
-    throw lastError || new Error(`All SSE endpoints failed for tool '${toolName}'`);
-  }
 }
 
 /**
@@ -798,15 +716,12 @@ export class MCPService {
 export function getAppConfig(): AppConfig {
   const __filename = fileURLToPath(import.meta.url);
   const currentDir = dirname(__filename);
-  // Path relative to this file: ../../config.json to reach project root
-  // Adjusted path for compiled output in dist_test, assuming dist_test is one level below project root
-  // This will make configPath resolve to project_root/config.json when run from dist_test/
   const configPath = pathJoin(currentDir, '..', '..', 'config.json'); 
-  console.log(`Attempting to load config from: ${configPath}`); // Logging path
+  
   try {
     const rawConfig = fs.readFileSync(configPath, 'utf-8');
     const parsedConfig = JSON.parse(rawConfig);
-    console.log('Loaded configuration from config.json:', JSON.stringify(parsedConfig, null, 2)); // Log the entire parsed config
+    // Only log config details once during startup or when there are issues
     if (!parsedConfig.mcpServers) {
       console.error('config.json is missing the mcpServers property.');
       return { mcpServers: {} };
@@ -814,6 +729,6 @@ export function getAppConfig(): AppConfig {
     return parsedConfig;
   } catch (error) {
     console.error(`Failed to load or parse config.json from ${configPath}:`, error);
-    return { mcpServers: {} }; // Return a default structure on error
+    return { mcpServers: {} };
   }
 }

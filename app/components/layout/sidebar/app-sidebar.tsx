@@ -98,7 +98,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="mb-2 p-3">
         <a
-          href="https://github.com/ibelick/zola"
+          href="https://github.com/ibelick/piper"
           className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
           target="_blank"
           aria-label="Star the repo on GitHub"
@@ -108,7 +108,7 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col">
             <div className="text-sidebar-foreground text-sm font-medium">
-              Zola is open source
+              Piper is open source
             </div>
             <div className="text-sidebar-foreground/70 text-xs">
               Star the repo on GitHub!

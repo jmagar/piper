@@ -1,6 +1,6 @@
-# Zola Installation Guide (Self-Hosted Admin-Only)
+# Piper Installation Guide (Self-Hosted Admin-Only)
 
-Zola is an AI chat app with multi-model support, refactored for self-hosting as an admin-only application. This guide covers how to install and run Zola using Docker.
+Piper is an AI chat app with multi-model support, refactored for self-hosting as an admin-only application. This guide covers how to install and run Piper using Docker.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Zola is an AI chat app with multi-model support, refactored for self-hosting as 
 
 ## Environment Setup
 
-Zola is configured using environment variables. For Docker deployment, these are typically set in an `.env` file in the project root, which `docker-compose.yml` will use.
+Piper is configured using environment variables. For Docker deployment, these are typically set in an `.env` file in the project root, which `docker-compose.yml` will use.
 
 1.  Copy the [`.env.example`](.env.example:1) file to `.env`:
     ```bash
@@ -23,13 +23,13 @@ Zola is configured using environment variables. For Docker deployment, these are
 
     ```dotenv
     # Admin Authentication (for external auth provider like Authelia)
-    # These are NOT used by Zola directly for login but may be needed by your reverse proxy/auth setup.
+    # These are NOT used by Piper directly for login but may be needed by your reverse proxy/auth setup.
     ADMIN_USERNAME=admin
     ADMIN_PASSWORD=changeme
 
-    # Postgres connection (used by Zola and Prisma)
+    # Postgres connection (used by Piper and Prisma)
     # This matches the credentials in docker-compose.yml for the PostgreSQL service.
-    DATABASE_URL=postgresql://zola:zola@postgres:5432/zola
+    DATABASE_URL=postgresql://piper:piper@postgres:5432/piper
 
     # Directory for file uploads (within Docker container, mapped to host ./uploads)
     UPLOADS_DIR=/uploads
@@ -84,12 +84,12 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## Docker Deployment (Recommended)
 
-The easiest and recommended way to run Zola is using Docker Compose, which will set up the Zola application and a PostgreSQL database.
+The easiest and recommended way to run Piper is using Docker Compose, which will set up the Piper application and a PostgreSQL database.
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-repo/zola.git # Replace with actual repo URL
-    cd zola
+    git clone https://github.com/your-repo/piper.git # Replace with actual repo URL
+    cd piper
     ```
 
 2.  **Prepare the `.env` file:**
@@ -100,8 +100,8 @@ The easiest and recommended way to run Zola is using Docker Compose, which will 
     docker-compose up -d
     ```
     This command will:
-    -   Build the Zola application Docker image (if not already built).
-    -   Start the Zola application container.
+    -   Build the Piper application Docker image (if not already built).
+    -   Start the Piper application container.
     -   Start a PostgreSQL container.
     -   Apply database migrations automatically (Prisma handles this).
     -   Create local directories (`./uploads`, `./logs`, `./config`, `./db-data`) if they don't exist, for persistent storage.
@@ -110,7 +110,7 @@ The easiest and recommended way to run Zola is using Docker Compose, which will 
 
 4.  **To view logs:**
     ```bash
-    docker-compose logs -f app # For Zola app logs
+    docker-compose logs -f app # For Piper app logs
     docker-compose logs -f postgres # For PostgreSQL logs
     ```
     Upload logs will also be written to `./logs/upload.log` on your host machine.
@@ -173,7 +173,7 @@ services:
     environment:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - DATABASE_URL=postgresql://zola:zola@postgres:5432/zola
+      - DATABASE_URL=postgresql://piper:piper@postgres:5432/piper
       - UPLOADS_DIR=/uploads
       - CONFIG_DIR=/config
       - CSRF_SECRET=${CSRF_SECRET} # Ensure CSRF_SECRET is passed
@@ -195,9 +195,9 @@ services:
   postgres:
     image: postgres:14
     environment:
-      POSTGRES_USER: zola
-      POSTGRES_PASSWORD: zola
-      POSTGRES_DB: zola
+      POSTGRES_USER: piper
+      POSTGRES_PASSWORD: piper
+      POSTGRES_DB: piper
     volumes:
       - ./db-data:/var/lib/postgresql/data
     ports:
@@ -206,16 +206,16 @@ services:
 
 ## Local Development (Non-Docker)
 
-While Docker is recommended, you can run Zola locally for development:
+While Docker is recommended, you can run Piper locally for development:
 
 1.  **Clone the repository and install dependencies:**
     ```bash
-    git clone https://github.com/your-repo/zola.git # Replace
-    cd zola
+    git clone https://github.com/your-repo/piper.git # Replace
+    cd piper
     npm install
     ```
 2.  **Set up PostgreSQL:**
-    Install PostgreSQL locally or use a cloud-hosted instance. Create a database (e.g., `zola_dev`) and a user.
+    Install PostgreSQL locally or use a cloud-hosted instance. Create a database (e.g., `piper_dev`) and a user.
 3.  **Configure Environment Variables:**
     Create a `.env.local` file in the project root. Copy contents from [`.env.example`](.env.example:1) and update:
     -   `DATABASE_URL` to point to your local/remote PostgreSQL instance.

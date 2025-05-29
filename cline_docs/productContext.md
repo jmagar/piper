@@ -1,58 +1,86 @@
-# Product Context: Piper - Production-Ready AI Chat with Advanced MCP Tool Integration
+# Product Context: Piper - Your Agentic AI Coding Assistant
 
-## Why this project exists
-Piper is a production-ready AI-powered chat application that provides intelligent access to external tools and services through the Model Context Protocol (MCP). The core innovation is its ability to seamlessly integrate with 19+ different MCP servers, providing the AI with access to real-world systems including web search, file operations, Docker management, media servers, and more.
+## Vision & Mission
 
-## What problems it solves
+Piper aims to be an indispensable AI pair programmer, seamlessly integrating with a developer's workflow to enhance productivity, creativity, and code quality. It strives to understand context, automate tasks, and provide intelligent assistance through natural language interaction and powerful tool usage.
 
-### **Real-World Integration**
-- **Tool Orchestration**: Enables complex workflows by giving AI access to 128+ tools across multiple domains (search, file systems, Docker, media, notifications, etc.)
-- **Performance Optimization**: Advanced chunked response processing transforms large tool outputs (64k+ characters) into structured, digestible formats for faster AI processing
-- **Production Deployment**: Robust Docker-based deployment on Unraid with proper networking, persistence, and monitoring
+## Core Features & Capabilities
 
-### **Technical Challenges Solved**
-- **MCP Protocol Implementation**: Complete MCP 2024-11-05 protocol compliance with proper initialization handshake
-- **Mixed Environment Support**: Seamless integration of Python (uvx), Node.js (npm), and HTTP-based MCP servers
-- **Large Content Processing**: Smart content extraction and chunking for web pages, search results, and other large responses
-- **Docker Networking**: Proper container-to-host communication on Unraid systems
+### **1. Conversational AI Interface**
+- **Natural Language Understanding**: Powered by various LLMs (OpenAI, Anthropic, Google, etc.)
+- **Multi-Turn Dialog**: Maintains context for coherent conversations
+- **Streaming Responses**: Real-time feedback and answers
 
-## How it should work
+### **2. MCP Tool Integration & Execution**
+- **Comprehensive Toolset**: Connects to 19 MCP servers providing 130+ tools
+  - **SSE Tools (107)**: Media management, system administration, notifications, network control
+  - **STDIO Tools (23)**: File system operations, web fetching, code search, development tools
+- **Dual Transport Support**: Seamlessly integrates both SSE and STDIO MCP servers
+- **Dynamic Tool Discovery**: Automatically registers tools from connected MCP servers
+- **Intelligent Tool Selection**: LLM decides which tool to use based on user intent
+- **Robust Error Handling**: Graceful degradation if a tool fails
 
-### **User Experience Flow**
-1. **Natural Conversation**: User interacts through a modern, streaming chat interface
-2. **Intelligent Tool Selection**: AI autonomously determines when external tools are needed
-3. **Rapid Execution**: Tools execute quickly with results processed in seconds, not minutes
-4. **Structured Responses**: Large tool outputs are intelligently summarized and structured for clarity
+### **3. Advanced Tool Ecosystem**
+- **Media Control**: Plex, Overseerr, Tautulli, SABnzbd, qBittorrent management
+- **System Administration**: Unraid server control, Docker container management
+- **Network Management**: UniFi controller integration for network operations
+- **Content Discovery**: Prowlarr indexer management, web crawling capabilities
+- **Communication**: Gotify notifications and alerting systems
+- **Development**: GitHub integration, filesystem operations, code analysis
+- **Search & Retrieval**: Web search, content fetching, data processing
 
-### **Technical Architecture Flow**
+### **4. Agentic Workflow Automation**
+- **Multi-Step Operations**: Can chain multiple tool calls to achieve complex tasks
+- **Contextual Awareness**: Leverages chat history and (planned) memory systems
+- **Proactive Assistance**: (Future) Suggests relevant tools or actions
 
-#### **Tool Definition and Discovery**
-- `mcpManager.ts` discovers 19+ MCP servers from `config.json` and initializes `MCPService` instances
-- Each server's tools are fetched, validated, and prepared for the AI SDK with proper schema wrapping
-- **Chunked Response Processing**: Large tool responses (>5k characters) are automatically processed into structured sections
+### **5. Development Environment Integration**
+- **Dockerized Deployment**: Easy setup and consistent operation on Unraid
+- **Local File Access**: Securely interacts with the user's file system via MCP
+- **Real-time Status Monitoring**: Dashboard for MCP server health across all transports
 
-#### **Tool Execution Pipeline**
-1. **AI Decision**: Vercel AI SDK identifies tool need and generates tool call
-2. **Execution Bridge**: Tool's `execute` method routes to appropriate `MCPService` instance
-3. **MCP Communication**: `MCPService.invokeTool()` implements complete MCP protocol with proper `initialized` notification
-4. **Smart Processing**: `processLargeToolResponse()` transforms raw output into structured, digestible chunks
-5. **Result Integration**: Processed results flow back to AI for rapid response generation
+### **6. User Experience & Interface**
+- **Modern UI**: Built with Next.js, React, Tailwind CSS, shadcn/ui
+- **Command Menu**: Quick access to tools and commands (cmdk)
+- **Clear Feedback**: Visual indication of tool usage, status, and errors
+- **Performance Optimized**: Smart content processing for large tool responses
 
-#### **Advanced Performance Features**
-- **Intelligent Chunking**: HTML content → Title + Summary + Key Sections + Content Parts
-- **Search Optimization**: JSON search results → Structured result summaries with importance ranking
-- **Token Management**: 8096 token limit for balanced performance and quality
-- **Streaming Responses**: Real-time response delivery with proper error handling
+## Target Audience
 
-### **Production Capabilities**
-- **19 Active MCP Servers**: Unraid system management, Docker operations, media control, web search, file operations
-- **128+ Available Tools**: Comprehensive coverage of system administration and content retrieval
-- **Docker Deployment**: Production-ready containerization with proper networking and persistence
-- **Redis Caching**: MCP server status caching for responsive dashboard and monitoring
-- **Robust Error Handling**: Graceful degradation and detailed logging throughout the system
+- **Software Developers**: Primary users, across various domains and skill levels
+- **DevOps Engineers**: For automation and infrastructure-related tasks
+- **Media Enthusiasts**: For media server management and automation
+- **System Administrators**: For server management and monitoring
+- **Data Scientists/Analysts**: For data manipulation and analysis (future potential)
 
-## Success Metrics
-- ✅ **Tool Execution Speed**: <5 seconds for most operations (previously 90+ seconds)
-- ✅ **Response Quality**: Structured, relevant information extracted from large datasets
-- ✅ **System Reliability**: All 19 MCP servers operational with 99%+ uptime
-- ✅ **User Experience**: Natural conversation flow with intelligent tool integration
+## Key Differentiators
+
+- **Comprehensive Tool Ecosystem**: 130+ tools across both SSE and STDIO transports
+- **Agentic Capabilities**: Goes beyond simple Q&A to perform complex automation
+- **Dual Transport Integration**: Seamlessly supports both local and remote MCP servers
+- **Local-First Design**: Operates within the user's environment, enhancing security and context
+- **Production-Ready**: Optimized for Unraid deployment with enterprise-level reliability
+- **Open & Configurable**: Users can add/modify MCP servers and tools
+- **Smart Processing**: Intelligent handling of large tool responses with chunking and optimization
+
+## Technical Achievements
+
+### **Infrastructure Excellence**
+- **Docker Deployment**: Optimized containerization with 17KB build context
+- **Multi-Container Architecture**: Application, database, and cache coordination
+- **Network Optimization**: Proper Unraid host integration with container-to-host communication
+
+### **MCP Integration Innovation**
+- **Dual Transport Pattern**: Revolutionary approach supporting both SSE and STDIO
+- **Backward Compatibility**: Seamless handling of legacy and new configuration formats
+- **Tool Ecosystem**: Most comprehensive MCP tool integration available
+- **Performance**: Sub-5-second tool execution with intelligent response processing
+
+## Future Roadmap (High-Level)
+
+- **Enhanced Memory System**: Long-term persistence of user preferences and project context
+- **VS Code Extension**: Deeper integration into the IDE
+- **Collaborative Features**: Multi-user sessions, shared context
+- **Self-Healing & Learning**: Agents that can improve over time
+- **Advanced UI/UX**: More sophisticated ways to visualize agent actions and results
+- **Expanded Tool Library**: Additional MCP server integrations based on user needs

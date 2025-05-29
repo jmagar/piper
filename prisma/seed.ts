@@ -9,7 +9,7 @@ async function main() {
     data: {
       title: "Welcome Chat",
       model: "default",
-      systemPrompt: "Welcome to Zola!",
+      systemPrompt: "Welcome to Piper!",
       messages: {
         create: [
           {

@@ -1,10 +1,12 @@
 services:
   piper-app:
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
     container_name: piper-app
     restart: unless-stopped
     build: .
     ports:
-      - "8630:3000"
+      - 8630:3000
     env_file: .env # Load all variables from .env
     environment:
       # This DATABASE_URL overrides the one from .env for the Docker container
@@ -36,17 +38,16 @@ services:
     volumes:
       - piper-db:/var/lib/postgresql/data
     ports:
-      - "8631:5432"
-
+      - 8631:5432
   piper-cache:
-    image: "redis:alpine"
+    image: redis:alpine
     container_name: piper-cache
     ports:
-      - "8632:6379"
+      - 8632:6379
     volumes:
       - piper-cache:/data
     restart: unless-stopped
-
 volumes:
-  piper-db:
-  piper-cache:
+  piper-db: null
+  piper-cache: null
+networks: {}

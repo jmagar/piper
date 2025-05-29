@@ -123,7 +123,7 @@ export function AgentCommand({
                   </div>
                   {isCuratedAgent(agent.id) && (
                     <span className="bg-primary/10 text-primary absolute top-4 right-2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[9px] font-medium">
-                      Zola
+                      Piper
                     </span>
                   )}
                 </div>

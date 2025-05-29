@@ -14,7 +14,7 @@ let dbInitPromise: Promise<void> | null = null
 let stores: Record<string, any> = {}
 
 const isClient = typeof window !== "undefined"
-const DB_NAME = "zola-db"
+const DB_NAME = "piper-db"
 const DB_VERSION = 2
 
 let storesReady = false

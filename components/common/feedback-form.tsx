@@ -98,7 +98,7 @@ export function FeedbackForm({ onClose }: FeedbackFormProps) {
               Thank you for your time!
             </p>
             <p className="text-muted-foreground text-sm">
-              Your feedback makes Zola better.
+              Your feedback makes Piper better.
             </p>
           </motion.div>
         ) : (
@@ -124,7 +124,7 @@ export function FeedbackForm({ onClose }: FeedbackFormProps) {
               }}
               className="text-muted-foreground pointer-events-none absolute top-3.5 left-4 text-sm leading-[1.4] select-none"
             >
-              What would make Zola better for you?
+              What would make Piper better for you?
             </motion.span>
             <textarea
               className="text-foreground h-full w-full resize-none rounded-md bg-transparent px-4 py-3.5 text-sm outline-hidden"

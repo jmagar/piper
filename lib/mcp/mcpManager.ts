@@ -614,122 +614,166 @@ export function cleanupForHmr() {
   }
 }
 
-
 export async function getCombinedMCPToolsForAISDK(): Promise<ToolSet> {
   const combinedTools: ToolSet = {};
-  // Ensure mcpManager is initialized before getting server info, or pass appConfig
-  // For simplicity, assuming getManagedServersInfo can be called if manager is initialized.
-  // If initializeMCPManager hasn't run, this might return empty or cached old data.
-  // Consider ensuring initialization or passing appConfig to getManagedServersInfo if needed.
   const serversInfo = await getManagedServersInfo();
-  // let toolCount = 0; // No longer needed with MAX_DEBUG_TOOLS removed
-  // const MAX_DEBUG_TOOLS = 5; // Removed tool limit
 
+  // Process each connected server
   for (const server of serversInfo) {
     if (server.status === 'connected' && server.tools && server.tools.length > 0) {
-      for (const toolDef of server.tools) {
-        const toolName = toolDef.name;
-        if (toolName && !combinedTools[toolName]) { // Removed toolCount < MAX_DEBUG_TOOLS condition
-          try {
-            let params: Record<string, unknown> = { type: 'object', properties: {} }; // Default valid schema
-          if (toolDef.inputSchema && typeof toolDef.inputSchema === 'object' && toolDef.inputSchema !== null) {
-            const currentSchema = toolDef.inputSchema as Record<string, unknown>;
-            // Ensure the schema itself is at least type: object
-            if (typeof currentSchema.type !== 'string' || currentSchema.type !== 'object') {
-              // If schema type isn't 'object' or is missing, but has properties, wrap it
-              if (currentSchema.properties && typeof currentSchema.properties === 'object') {
-                console.warn(`[MCP Manager] Tool '${toolName}' inputSchema is missing 'type: "object"'. Wrapping properties.`);
-                params = { type: 'object', properties: { ...currentSchema.properties } };
-              } else {
-                // Not a usable schema, use default and log
-                console.warn(`[MCP Manager] Tool '${toolName}' has an inputSchema that is not type 'object' and lacks properties. Using default. Schema:`, JSON.stringify(currentSchema));
-                // params already defaults to { type: 'object', properties: {} }
-              }
-            } else {
-              params = { ...currentSchema }; // Copy to avoid mutating original
-            }
-
-            if (params.properties && typeof params.properties === 'object') {
-              const newProperties: Record<string, unknown> = {};
-              const propertiesObj = params.properties as Record<string, unknown>;
-              for (const propKey in propertiesObj) {
-                const propValue = propertiesObj[propKey];
-                if (typeof propValue === 'object' && propValue !== null) {
-                  const propValueObj = propValue as Record<string, unknown>;
-                  if (typeof propValueObj.type !== 'string') {
-                    console.warn(`[MCP Manager] Tool '${toolName}', parameter '${propKey}' is missing 'type'. Defaulting to 'string'.`);
-                    newProperties[propKey] = { ...propValueObj, type: 'string' };
-                  } else {
-                    newProperties[propKey] = { ...propValueObj };
-                  }
-                } else {
-                  // If propValue is not an object, it's malformed for a JSON schema property definition.
-                  console.warn(`[MCP Manager] Tool '${toolName}', parameter '${propKey}' is not a valid object schema. Defaulting to '{ type: "string" }'. Value:`, JSON.stringify(propValue));
-                  newProperties[propKey] = { type: 'string', description: `Malformed schema for ${propKey}` };
-                }
-              }
-              params.properties = newProperties;
-            } else if (params.type === 'object' && !params.properties) {
-              // If type is object but no properties, ensure it's an empty object for properties
-              params.properties = {};
-            }
-          } else if (toolDef.inputSchema && typeof toolDef.inputSchema !== 'object') { 
-            console.warn(`[MCP Manager] Tool '${toolName}' has an invalid inputSchema (not an object/null). Using default. Schema:`, typeof toolDef.inputSchema === 'string' ? toolDef.inputSchema : JSON.stringify(toolDef.inputSchema));
-            // params already defaults to { type: 'object', properties: {} }
+      
+      try {
+        // For SSE servers, use the loadMCPToolsFromURL utility to get properly formatted AI SDK tools
+        if (server.transportType === 'sse') {
+          const serverConfig = getAppConfig()?.mcpServers[server.key];
+          
+          if (!serverConfig) {
+            console.error(`[MCP Manager] ❌ No config found for SSE server '${server.label}'`);
+            continue;
           }
-          // If toolDef.inputSchema is null or undefined, params also defaults to { type: 'object', properties: {} }
-
-          combinedTools[toolName] = tool({
-            description: toolDef.description || `Executes the ${toolName} tool from the ${server.label} MCP server.`,
-            parameters: jsonSchema(params), // Wrap the JSON schema
-            ...(typeof toolDef.annotations === 'object' && toolDef.annotations !== null && { annotations: toolDef.annotations }),
-            execute: async (args: unknown) => {
-              // Cast args to Record<string, unknown> since that's what MCP tools expect
-              const mcpArgs = args as Record<string, unknown>;
-              console.log(`[MCP Manager] Executing tool '${toolName}' from server '${server.key}' with args:`, mcpArgs);
+          
+          // Create transport object if it doesn't exist (legacy config format support)
+          let transport = serverConfig.transport;
+          if (!transport && serverConfig.url) {
+            transport = {
+              type: 'sse',
+              url: serverConfig.url,
+              headers: serverConfig.headers
+            };
+          }
+          
+          if (transport?.type === 'sse') {
+            try {
+              const { loadMCPToolsFromURL } = await import('./load-mcp-from-url');
+              const { tools: mcpTools } = await loadMCPToolsFromURL(transport.url);
               
+              console.log(`[MCP Manager] ✅ Loaded ${Object.keys(mcpTools).length} SSE tools from '${server.label}'`);
+              
+              // Add tools with server prefix to avoid conflicts - AI SDK tools handle invocation automatically
+              Object.entries(mcpTools).forEach(([toolName, toolDefinition]) => {
+                const prefixedToolName = `${server.key}_${toolName}`;
+                combinedTools[prefixedToolName] = toolDefinition;
+              });
+            } catch (error) {
+              console.error(`[MCP Manager] ❌ Failed to load SSE tools from '${server.label}':`, error);
+              // Continue with other servers
+            }
+          } else {
+            console.error(`[MCP Manager] ❌ SSE server '${server.label}' has no valid transport config`);
+          }
+        } 
+        
+        // For stdio servers, keep the existing working approach
+        else if (server.transportType === 'stdio') {
+          for (const toolDef of server.tools) {
+            const toolName = `${server.key}_${toolDef.name}`;
+            if (toolDef.name && !combinedTools[toolName]) {
               try {
-                // Get the MCPService instance for this server
-                const mcpService = getManagedClient(server.key);
-                if (!mcpService) {
-                  const error = `[MCP Manager] MCPService not found for server '${server.key}'`;
-                  console.error(error);
-                  throw new Error(error);
+                let params: Record<string, unknown> = { type: 'object', properties: {} };
+                
+                if (toolDef.inputSchema && typeof toolDef.inputSchema === 'object' && toolDef.inputSchema !== null) {
+                  const currentSchema = toolDef.inputSchema as Record<string, unknown>;
+                  if (typeof currentSchema.type !== 'string' || currentSchema.type !== 'object') {
+                    if (currentSchema.properties && typeof currentSchema.properties === 'object') {
+                      console.warn(`[MCP Manager] Tool '${toolName}' inputSchema is missing 'type: "object"'. Wrapping properties.`);
+                      params = { type: 'object', properties: { ...currentSchema.properties } };
+                    } else {
+                      console.warn(`[MCP Manager] Tool '${toolName}' has an inputSchema that is not type 'object' and lacks properties. Using default.`);
+                    }
+                  } else {
+                    params = { ...currentSchema };
+                  }
+
+                  if (params.properties && typeof params.properties === 'object') {
+                    const newProperties: Record<string, unknown> = {};
+                    const propertiesObj = params.properties as Record<string, unknown>;
+                    for (const propKey in propertiesObj) {
+                      const propValue = propertiesObj[propKey];
+                      if (typeof propValue === 'object' && propValue !== null) {
+                        const propValueObj = propValue as Record<string, unknown>;
+                        if (typeof propValueObj.type !== 'string') {
+                          console.warn(`[MCP Manager] Tool '${toolName}', parameter '${propKey}' is missing 'type'. Defaulting to 'string'.`);
+                          newProperties[propKey] = { ...propValueObj, type: 'string' };
+                        } else {
+                          newProperties[propKey] = { ...propValueObj };
+                        }
+                      } else {
+                        console.warn(`[MCP Manager] Tool '${toolName}', parameter '${propKey}' is not a valid object schema. Defaulting to '{ type: "string" }'.`);
+                        newProperties[propKey] = { type: 'string', description: `Malformed schema for ${propKey}` };
+                      }
+                    }
+                    params.properties = newProperties;
+                  } else if (params.type === 'object' && !params.properties) {
+                    params.properties = {};
+                  }
                 }
-                
-                const result = await mcpService.invokeTool(toolName, mcpArgs);
-                console.log(`[MCP Manager] Tool '${toolName}' executed successfully. Result:`, result);
-                
-                // Ensure we always return a valid result - the AI SDK expects a result
-                if (result === undefined || result === null) {
-                  console.warn(`[MCP Manager] Tool '${toolName}' returned null/undefined, returning empty object`);
-                  return {};
-                }
-                
-                return processLargeToolResponse(toolName, result);
+
+                combinedTools[toolName] = tool({
+                  description: toolDef.description || `Executes the ${toolDef.name} tool from the ${server.label} MCP server.`,
+                  parameters: jsonSchema(params),
+                  ...(typeof toolDef.annotations === 'object' && toolDef.annotations !== null && { annotations: toolDef.annotations }),
+                  execute: async (args: unknown) => {
+                    const mcpArgs = args as Record<string, unknown>;
+                    console.log(`[MCP Manager] Executing stdio tool '${toolDef.name}' from server '${server.key}' with args:`, mcpArgs);
+                    
+                    try {
+                      const mcpService = getManagedClient(server.key);
+                      if (!mcpService) {
+                        const error = `[MCP Manager] MCPService not found for server '${server.key}'`;
+                        console.error(error);
+                        throw new Error(error);
+                      }
+                      
+                      const result = await mcpService.invokeTool(toolDef.name, mcpArgs);
+                      console.log(`[MCP Manager] Stdio tool '${toolDef.name}' executed successfully`);
+                      
+                      if (result === undefined || result === null) {
+                        console.warn(`[MCP Manager] Tool '${toolDef.name}' returned null/undefined, returning empty object`);
+                        return {};
+                      }
+                      
+                      return processLargeToolResponse(toolDef.name, result);
+                    } catch (error) {
+                      console.error(`[MCP Manager] Error executing stdio tool '${toolDef.name}':`, error);
+                      return {
+                        error: true,
+                        message: error instanceof Error ? error.message : String(error),
+                        toolName: toolDef.name,
+                        serverKey: server.key
+                      };
+                    }
+                  }
+                });
               } catch (error) {
-                console.error(`[MCP Manager] Error executing tool '${toolName}':`, error);
-                
-                // Instead of throwing, return an error result that the AI SDK can handle
-                return {
-                  error: true,
-                  message: error instanceof Error ? error.message : String(error),
-                  toolName: toolName,
-                  serverKey: server.key
-                };
+                console.error(`[MCP Manager] Error processing schema for stdio tool '${toolDef.name}':`, error);
               }
             }
-          });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[MCP Manager] Error processing schema for tool '${toolName}'. Skipping tool. Error: ${errorMessage}. Schema:`, JSON.stringify(toolDef.inputSchema, null, 2));
-            // Optionally, add more details from 'e' if needed
           }
         }
-          // toolCount++; // No longer needed
+        
+      } catch (error) {
+        console.error(`[MCP Manager] ❌ Error loading tools from '${server.label}':`, error);
+        // Continue with other servers even if one fails
       }
     }
   }
+  
+  const toolCount = Object.keys(combinedTools).length;
+  const sseToolCount = Object.keys(combinedTools).filter(name => 
+    ['crawl4mcp', 'mcp-unraid', 'mcp-portainer', 'mcp-gotify', 'mcp-prowlarr', 
+     'mcp-plex', 'mcp-qbittorrent', 'mcp-overseerr', 'mcp-tautulli', 
+     'mcp-sabnzbd', 'mcp-unifi'].some(server => name.startsWith(server))
+  ).length;
+  const stdioToolCount = toolCount - sseToolCount;
+  
+  console.log(`[MCP Manager] 🎉 Successfully loaded ${toolCount} total tools:`);
+  console.log(`[MCP Manager]   📡 SSE tools: ${sseToolCount}`);
+  console.log(`[MCP Manager]   💻 STDIO tools: ${stdioToolCount}`);
+  
+  if (sseToolCount === 0 && serversInfo.some(s => s.transportType === 'sse' && s.status === 'connected')) {
+    console.warn(`[MCP Manager] ⚠️ Warning: Expected SSE tools but got none. Check SSE server connections.`);
+  }
+  
   return combinedTools;
 }
 
