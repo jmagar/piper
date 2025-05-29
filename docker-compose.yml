@@ -16,6 +16,7 @@ services:
     command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
       - zola-db
+      - zola-redis
   zola-db:
     container_name: zola-db
     image: postgres:16
@@ -25,6 +26,19 @@ services:
       POSTGRES_PASSWORD: zola
       POSTGRES_DB: zola
     volumes:
-      - ./db-data:/var/lib/postgresql/data
+      - zola-db:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  zola-redis:
+    image: "redis:alpine"
+    container_name: zola-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - zola-redis:/data
+    restart: unless-stopped
+
+volumes:
+  zola-db:
+  zola-redis:

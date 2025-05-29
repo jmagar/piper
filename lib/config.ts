@@ -1,11 +1,14 @@
 import {
-  BookOpenText,
-  Brain,
-  Code,
-  Lightbulb,
-  Notepad,
-  PaintBrush,
-  Sparkle,
+  FilmStrip,
+  Ticket,
+  DownloadSimple,
+  Magnet,
+  ChartLineUp,
+  Detective,
+  Cube,
+  WifiHigh,
+  HardDrives,
+  Bell,
 } from "@phosphor-icons/react/dist/ssr"
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
@@ -24,99 +27,136 @@ export const FREE_MODELS_IDS = [
 
 export const MODEL_DEFAULT = "gpt-4.1-nano"
 
-export const APP_NAME = "Zola"
-export const APP_DOMAIN = "https://zola.chat"
+export const APP_NAME = "Piper"
+export const APP_DOMAIN = "https://piper.chat"
 export const APP_DESCRIPTION =
-  "Zola is a free, open-source AI chat app with multi-model support."
+  "Piper is a free, open-source AI chat app with multi-model support, powered by MCP."
 
 export const SUGGESTIONS = [
+
   {
-    label: "Summary",
-    highlight: "Summarize",
-    prompt: `Summarize`,
+    label: "Plex",
+    highlight: "Plex:",
+    prompt: "Plex:",
     items: [
-      "Summarize the French Revolution",
-      "Summarize the plot of Inception",
-      "Summarize World War II in 5 sentences",
-      "Summarize the benefits of meditation",
+      "Plex: List all libraries",
+      "Plex: Search for 'The Matrix' in movies",
+      "Plex: Play 'The Dark Knight' on Living Room TV",
+      "Plex: Show server info",
     ],
-    icon: Notepad,
+    icon: FilmStrip,
   },
   {
-    label: "Code",
-    highlight: "Help me",
-    prompt: `Help me`,
+    label: "Overseerr",
+    highlight: "Overseerr:",
+    prompt: "Overseerr:",
     items: [
-      "Help me write a function to reverse a string in JavaScript",
-      "Help me create a responsive navbar in HTML/CSS",
-      "Help me write a SQL query to find duplicate emails",
-      "Help me convert this Python function to JavaScript",
+      "Overseerr: Search for 'Dune Part Two' movie",
+      "Overseerr: Request movie with TMDB ID 12345",
+      "Overseerr: Show failed requests",
+      "Overseerr: Get details for movie TMDB ID 787699",
     ],
-    icon: Code,
+    icon: Ticket,
   },
   {
-    label: "Design",
-    highlight: "Design",
-    prompt: `Design`,
+    label: "SABnzbd",
+    highlight: "SABnzbd:",
+    prompt: "SABnzbd:",
     items: [
-      "Design a color palette for a tech blog",
-      "Design a UX checklist for mobile apps",
-      "Design 5 great font pairings for a landing page",
-      "Design better CTAs with useful tips",
+      "SABnzbd: Show server stats",
+      "SABnzbd: View current download queue",
+      "SABnzbd: Pause downloads",
+      "SABnzbd: Add NZB from http://example.com/file.nzb",
     ],
-    icon: PaintBrush,
+    icon: DownloadSimple,
   },
   {
-    label: "Research",
-    highlight: "Research",
-    prompt: `Research`,
+    label: "qBittorrent",
+    highlight: "qBit:",
+    prompt: "qBit:",
     items: [
-      "Research the pros and cons of remote work",
-      "Research the differences between Apple Vision Pro and Meta Quest",
-      "Research best practices for password security",
-      "Research the latest trends in renewable energy",
+      "qBit: List all downloading torrents",
+      "qBit: Add torrent from magnet:?xt=urn:btih:...",
+      "qBit: Pause torrent with hash abcdef12345",
+      "qBit: Show transfer info",
     ],
-    icon: BookOpenText,
+    icon: Magnet,
   },
   {
-    label: "Get inspired",
-    highlight: "Inspire me",
-    prompt: `Inspire me`,
+    label: "Tautulli",
+    highlight: "Tautulli:",
+    prompt: "Tautulli:",
     items: [
-      "Inspire me with a beautiful quote about creativity",
-      "Inspire me with a writing prompt about solitude",
-      "Inspire me with a poetic way to start a newsletter",
-      "Inspire me by describing a peaceful morning in nature",
+      "Tautulli: What's currently playing?",
+      "Tautulli: Show home stats for the last 7 days",
+      "Tautulli: List all users",
+      "Tautulli: Get watch history for user ID 123",
     ],
-    icon: Sparkle,
+    icon: ChartLineUp,
   },
   {
-    label: "Think deeply",
-    highlight: "Reflect on",
-    prompt: `Reflect on`,
+    label: "Prowlarr",
+    highlight: "Prowlarr:",
+    prompt: "Prowlarr:",
     items: [
-      "Reflect on why we fear uncertainty",
-      "Reflect on what makes a conversation meaningful",
-      "Reflect on the concept of time in a simple way",
-      "Reflect on what it means to live intentionally",
+      "Prowlarr: List all indexers",
+      "Prowlarr: Search for 'Ubuntu ISO' in categories 5000,5070",
+      "Prowlarr: Test indexer ID 5",
+      "Prowlarr: Show system status",
     ],
-    icon: Brain,
+    icon: Detective,
   },
   {
-    label: "Learn gently",
-    highlight: "Explain",
-    prompt: `Explain`,
+    label: "Portainer",
+    highlight: "Portainer:",
+    prompt: "Portainer:",
     items: [
-      "Explain quantum physics like I'm 10",
-      "Explain stoicism in simple terms",
-      "Explain how a neural network works",
-      "Explain the difference between AI and AGI",
+      "Portainer: List all endpoints",
+      "Portainer: List Docker containers in endpoint 1",
+      "Portainer: Get logs for container 'my-app' in endpoint 1",
+      "Portainer: List all stacks",
     ],
-    icon: Lightbulb,
+    icon: Cube,
   },
+  {
+    label: "Unifi",
+    highlight: "Unifi:",
+    prompt: "Unifi:",
+    items: [
+      "Unifi: List all hosts",
+      "Unifi: List all sites",
+      "Unifi: List all devices",
+      "Unifi: Show ISP metrics",
+    ],
+    icon: WifiHigh,
+  },
+  {
+    label: "Unraid",
+    highlight: "Unraid:",
+    prompt: "Unraid:",
+    items: [
+      "Unraid: Show system info",
+      "Unraid: Get array status",
+      "Unraid: List Docker containers",
+      "Unraid: Get details for VM 'Windows11'",
+    ],
+    icon: HardDrives,
+  },
+  {
+    label: "Gotify",
+    highlight: "Gotify:",
+    prompt: "Gotify:",
+    items: [
+      "Gotify: Send message 'Test notification' with title 'Test' using app token XXXXX",
+      "Gotify: Get recent messages",
+      "Gotify: List applications",
+      "Gotify: Check server health",
+    ],
+    icon: Bell
+  }
 ]
 
-export const SYSTEM_PROMPT_DEFAULT = `You are Zola, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don’t try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
+export const SYSTEM_PROMPT_DEFAULT = `You are Piper, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don’t try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
 
 export const MESSAGE_MAX_LENGTH = 4000
 

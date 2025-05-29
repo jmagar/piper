@@ -1,25 +1,23 @@
-# Product Context
+# Product Context: Zola - AI Chat with MCP Tool Integration
 
-## Why This Project Exists
+## Why this project exists
+Zola is an application designed to provide an AI-powered chat interface. A core feature is its ability to integrate with and utilize a suite of external tools and services managed by the Model Context Protocol (MCP). This allows the AI to perform actions, retrieve information, and interact with various systems.
 
-Zola is being refactored from a multi-user, cloud-based chat application to a minimal, admin-only, single-user application. The goal is to create a local-only version that removes all internal authentication complexity, multi-user features, cloud dependencies, and real-time subscriptions, deployable via Docker. The application itself will not handle user login or session management.
+## What problems it solves
+- Enables complex interactions and workflows by giving the AI access to real-world tools and data.
+- Provides a centralized chat interface for leveraging multiple backend services through MCP.
+- Aims to offer a robust and extensible platform for AI-driven tasks.
 
-## What Problems It Solves
-
-- Eliminates the complexity of in-application multi-user authentication and authorization.
-- Removes dependency on cloud services (Supabase, Clerk, etc.) for core functionality.
-- Provides a simple, local-only chat interface for a single admin user, with data persisted reliably on the server using PostgreSQL and Prisma.
-- Enables local file uploads without cloud storage restrictions (planned).
-- Simplifies deployment to Docker environments or bare metal.
-
-## How It Should Work
-
-- Single admin user. Authentication is intended to be handled externally (e.g., by Authelia). The application assumes it's operating in an authenticated admin context.
-- All features, including chat history and agent management, are always accessible without further in-app authentication checks.
-- All data stored locally in a PostgreSQL database, accessed securely via server-side logic using the Prisma ORM.
-- Client-side components fetch data through well-defined Next.js API Routes, ensuring no direct database access from the browser.
-- File uploads will be saved to a local filesystem directory (`UPLOADS_DIR`).
-- No user registration, password reset, or profile management *within* the application.
-- Errors and key operations (like uploads) should be logged to both terminal and persistent log files (logging system to be fully implemented).
-- Deployable via Docker Compose with minimal configuration, including environment variables for sensitive data.
-- Aims for a clean, extensible codebase for future enhancements.
+## How it should work
+- A user interacts with Zola through a chat interface.
+- When the AI determines a need to use an external tool to fulfill a user's request, it signals this intent (typically as a tool call).
+- The Zola backend, using the Vercel AI SDK, processes this tool call.
+- **Tool Definition and Execution:**
+    - `mcpManager.ts` discovers available MCP tools and prepares their definitions for the AI SDK. Each tool definition provided to the SDK now includes an `execute` method.
+    - When the AI SDK decides to use a tool, it calls this `execute` method associated with the specific tool.
+    - The `execute` method (within `mcpManager.ts`) then retrieves the appropriate `MCPService` instance for that tool's server.
+    - It calls the `invokeTool(toolName, args)` method on the `MCPService` instance.
+    - The `MCPService.invokeTool()` method (in `lib/mcp/client.ts`) is responsible for calling the underlying MCP client (obtained from `experimental_createMCPClient`). It attempts to call an `invoke(toolName, args)` method on this client.
+- The result of the tool execution is returned up the chain to the AI SDK, which then provides it to the AI model.
+- The AI model uses this information to formulate a response to the user.
+- Error handling should be robust at all stages: AI interaction, tool schema processing, tool invocation (including the assumption of `mcpClient.invoke`), and result processing.

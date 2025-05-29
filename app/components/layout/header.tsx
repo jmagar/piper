@@ -3,6 +3,17 @@
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
 import { ButtonNewChat } from "@/app/components/layout/button-new-chat"
 import { UserMenu } from "@/app/components/layout/user-menu"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Server } from 'lucide-react'
+import { McpServersDashboard } from '@/app/components/mcp-servers/mcp-servers-dashboard';
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 // import { useUser } from "@/app/providers/user-provider"
 import type { Agent } from "@/app/types/agent"
@@ -45,6 +56,25 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
           <div className="pointer-events-auto flex flex-1 items-center justify-end gap-2">
             {currentAgent && <DialogPublish />}
             <ButtonNewChat />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="MCP Servers">
+                  <Server className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-6xl">
+                <DialogHeader>
+                  <DialogTitle>MCP Servers Dashboard</DialogTitle>
+                  <DialogDescription>
+                    View status and tools of connected MCP servers. Hover over a server for more details.
+                  </DialogDescription>
+                </DialogHeader>
+                <McpServersDashboard />
+                {/* <DialogFooter>
+                  <Button type="submit">Save changes</Button>
+                </DialogFooter> */}
+              </DialogContent>
+            </Dialog>
             <AgentLink />
             {!isSidebarOpen && <HistoryTrigger hasSidebar={hasSidebar} />}
             <UserMenu />

@@ -1,72 +1,40 @@
-# Tech Context
+# Technical Context: Zola Development Environment
 
-## Core Framework & Language
+## Technologies Used
 
--   **Next.js**: `15.4.0-canary.48` (App Router)
--   **React**: `^19` (Verify from `package.json` if more specific, but `^19` aligns with Next 15)
--   **TypeScript**: `^5`
--   **Node.js**: `^20` (as per `package.json` typical Next.js setup)
-
-## Database
-
--   **PostgreSQL**: `16` (via `postgres:16` Docker image)
--   **Prisma**: `6.8.2` (ORM for PostgreSQL)
-
-## Development & Build Tools
-
--   **Webpack**: Currently used with `next dev` for development builds.
--   **Turbopack**: Available via `next dev --turbopack`, but currently causes generic runtime errors.
--   **npm**: Used for managing project dependencies and running scripts (e.g., `npm run dev`, `npm start`).
--   **ESLint/Prettier**: Assumed for code linting and formatting (standard for Next.js projects, verify specific versions from `package.json` if critical).
-
-## UI & Styling
-
--   **Tailwind CSS**: (Assumed, standard for Zola project - verify from `tailwind.config.js` or `package.json`)
--   **shadcn/ui components**: (Assumed, standard for Zola project)
-
-## Deployment & Orchestration
-
--   **Docker**: Application and database are containerized.
-    -   `Dockerfile` for building the Next.js application image.
-    -   `docker-compose.yml` for orchestrating `zola-app` and `zola-db` services.
--   **Authelia**: External service intended for handling authentication (2FA). The application itself operates assuming an admin context.
-
-## Key Libraries & APIs
-
--   **`ai` SDK / `@ai-sdk/ui-utils`**: For AI chat functionalities, message construction, and UI utilities.
--   **`@openrouter/ai-sdk-provider`**: To integrate with OpenRouter for AI model access.
--   **`server-only` package**: Used by Next.js to mark modules as server-side only.
--   **`dotenv`**: For loading environment variables from `.env` file.
--   Refer to `package.json` for a complete list of libraries.
+-   **Core Stack:** Node.js, TypeScript, Next.js
+-   **AI Integration:**
+    *   Vercel AI SDK (version checked via `package.json` as `ai@3.0.0-experimental.19` during previous debugging, current specific version might vary but is generally `3.x`)
+    *   OpenRouter (as one of the LLM providers)
+-   **Database & Caching:**
+    *   Prisma (ORM for database interactions, e.g., chat history)
+    *   PostgreSQL (Primary database)
+    *   Redis (`ioredis` client) for caching MCP server statuses.
+-   **MCP (Model Context Protocol):
+    *   `@model-context/node` library, specifically `experimental_createMCPClient` for creating client instances.
+    *   Various MCP server implementations (Python, Node.js) that communicate via stdio (for local CLI tools) or SSE (for HTTP services).
+-   **Development Tools:**
+    *   ESLint, Prettier (Linting and formatting)
+    *   `uv` (Python package manager/virtual environment, if Python MCP servers are used locally)
+    *   `npx` (for running Node.js packages)
+    *   Docker, Docker Compose (for managing services like PostgreSQL, Redis, and potentially containerized MCP servers).
 
 ## Development Setup
 
--   Clone the repository.
--   Create a `.env` file based on `.env.example` (if one exists) or populate with necessary variables:
-    - `ADMIN_USERNAME`, `ADMIN_PASSWORD` (for external auth like Authelia, not used by the app directly for sessions)
-    - `DATABASE_URL=postgresql://zola:zola@localhost:5432/zola` (for local non-Docker Prisma commands if needed, the Docker service uses an override)
-    - `UPLOADS_DIR=/uploads`
-    - `CONFIG_DIR=/config`
-    - `OPENAI_API_KEY` (if used directly)
-    - `OPENROUTER_API_KEY`
--   Run `docker compose up -d --build` to build images and start services.
-    - The `zola-app` service will run `npx prisma migrate deploy` then `npm start`.
--   Access the application at `http://localhost:3021` (as per `docker-compose.yml` port mapping).
--   View logs with `docker compose logs -f`.
+-   **Local Development Server:** `npm run dev` starts the Next.js application.
+-   **MCP Servers:**
+    *   Defined in `config.json` in the project root.
+    *   Managed by `mcpManager.ts`, which can spawn local MCP servers as child processes (stdio) or connect to remote MCP servers (SSE via URL).
+-   **Dependent Services:** PostgreSQL and Redis are typically run using Docker Compose (`docker-compose up -d zola-db zola-redis`).
+-   **Environment Variables:** Stored in `.env`. Key variables include `OPENROUTER_API_KEY`, `DATABASE_URL`, `REDIS_URL`.
+-   **Hot Module Replacement (HMR):** Standard Next.js feature. Care has been taken in `mcpManager.ts` to prevent re-initialization of MCP clients and polling intervals during HMR by storing shared state on `globalThis`.
 
-## Technical Constraints
+## Technical Constraints & Considerations
 
-- No Cloud Dependencies: Must work completely offline.
-- Single User (Admin-Only): No multi-user authentication or authorization *within the app*. The app assumes it is run by an admin.
-- Local Storage Only: All data (database, file uploads) stored on local filesystem via Docker volumes.
-- PostgreSQL Required: Database must be PostgreSQL.
-- Docker Volumes: Persistent storage via Docker volumes (e.g., `./db-data`, `./uploads`).
-- Environment Variables: Primary method for configuration.
-
-## Removed Dependencies
-- Supabase (cloud database/auth)
-- Clerk (authentication service)
-- All internal application-level user authentication and session management logic.
-
--   **`ai` SDK (version `4.3.16`)**: Used for core AI functionalities, including `experimental_createMCPClient` for MCP integration.
-    -   Its submodule `ai/mcp-stdio` provides `Experimental_StdioMCPTransport` for command-based MCP servers.
+-   **Vercel AI SDK Tool Schema Compatibility:** MCP tool schemas need to be adapted (e.g., wrapped with `jsonSchema`) to be compatible with the Vercel AI SDK's expectations.
+-   **`experimental_createMCPClient` Behavior:** The exact methods and properties of the client object returned by `experimental_createMCPClient` are not fully documented. A key current assumption is the existence of an `invoke(toolName, args)` method on this client. This is being verified through runtime logging.
+    *   If `invoke` is not present, direct communication (HTTP requests for SSE, or stdio stream interaction for local processes) will need to be implemented within `MCPService.invokeTool`.
+-   **`as any` Casts:** Due to the uncertainty around `mcpClient.invoke`, `as any` casts are temporarily used in `MCPService.invokeTool`. These should be resolved once the client's interface is confirmed.
+-   **Managing Lifecycle of Diverse MCP Servers:** Ensuring robust startup, communication, and shutdown for MCP servers, especially those run as child processes.
+-   **Error Handling:** Comprehensive error handling is crucial for asynchronous operations, LLM interactions, external service calls (MCP tools), and subprocess management.
+-   **Debugging AI SDK Tool Calling:** The interaction between the Vercel AI SDK's tool-calling mechanism and Zola's custom MCP invocation logic (`tool.execute` -> `MCPService.invokeTool`) is a complex area currently under active debugging.
