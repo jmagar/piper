@@ -67,8 +67,9 @@ export const tools = {
         ])
         .transform((input) => (Array.isArray(input) ? input : [input])),
     }),
-    async execute({ searchResults }) {
-      return await summarizeSources({ searchResults })
+    async execute({ searchResults }: { searchResults: { query: string; sources: { title: string; url: string; snippet: string }[] }[] | { query: string; sources: { title: string; url: string; snippet: string }[] } }) {
+      const resultsArray = Array.isArray(searchResults) ? searchResults : [searchResults];
+      return await summarizeSources({ searchResults: resultsArray })
     },
   }),
   generateReport: tool({

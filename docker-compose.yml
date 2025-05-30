@@ -23,7 +23,23 @@ services:
       - /mnt/user/docs:/docs
       - /mnt/user/compose:/compose
       - /mnt/user/downloads:/downloads
-    command: sh -c "npx prisma migrate deploy && npm start"
+    command: sh -c " \
+      echo 'Waiting for PostgreSQL (piper-db:5432) to be ready...' && \
+      while ! nc -z -w5 piper-db 5432; do \
+        echo 'PostgreSQL not ready yet, sleeping...' && \
+        sleep 1; \
+      done; \
+      echo 'PostgreSQL is ready.'; \
+      echo 'Waiting for Redis (piper-cache:6379) to be ready...' && \
+      while ! nc -z -w5 piper-cache 6379; do \
+        echo 'Redis not ready yet, sleeping...' && \
+        sleep 1; \
+      done; \
+      echo 'Redis is ready.'; \
+      echo 'Running Prisma migrations...' && \
+      npx prisma migrate deploy && \
+      echo 'Starting application...' && \
+      npm start"
     depends_on:
       - piper-db
       - piper-cache
@@ -39,6 +55,7 @@ services:
       - piper-db:/var/lib/postgresql/data
     ports:
       - 8631:5432
+    command: postgres -c max_connections=200
   piper-cache:
     image: redis:alpine
     container_name: piper-cache

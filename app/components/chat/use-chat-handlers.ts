@@ -1,12 +1,12 @@
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { toast } from "@/components/ui/toast"
-import { Message } from "@ai-sdk/react"
+import { UIMessage } from "@ai-sdk/react"
 import { useCallback } from "react"
 
 type UseChatHandlersProps = {
-  messages: Message[]
+  messages: UIMessage[]
   setMessages: (
-    messages: Message[] | ((messages: Message[]) => Message[])
+    messages: UIMessage[] | ((messages: UIMessage[]) => UIMessage[])
   ) => void
   setInput: (input: string) => void
   setSelectedModel: (model: string) => void

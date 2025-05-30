@@ -1,152 +1,94 @@
-# System Patterns: Piper Application Design
+# System Patterns: Piper AI Chat Application
 
-## Core Architectural Principles
+**Last Updated**: 2025-05-30T00:39:11-04:00
 
-- **Modularity**: Separation of concerns (UI, API, MCP management, services)
-- **Extensibility**: Easy to add new LLM providers and MCP tools
-- **Resilience**: Robust error handling and graceful degradation
-- **Performance**: Efficient processing, caching, and optimized builds
-- **Developer Experience**: HMR, clear logging, type safety
+This document outlines the key architectural patterns, technical decisions, and operational designs implemented in Piper.
 
-## Key System Components & Interactions
+## 1. MCP Integration Architecture
 
-### **1. Frontend (Next.js App Router)**
-- **UI Layer**: React components, `useChat` hook for interactivity
-- **API Communication**: Calls Next.js API routes for backend logic
-- **State Management**: Primarily through `useChat` and component state
+Piper's core functionality revolves around its integration with the Model Context Protocol (MCP).
 
-### **2. Backend (Next.js API Routes)**
-- **Request Handling**: Processes requests from the frontend
-- **LLM Interaction**: Uses Vercel AI SDK (`streamText`) to call LLMs
-- **Tool Orchestration**: Provides tool definitions to LLMs via `MCPManager`
-- **Response Streaming**: Streams LLM responses and tool results back to UI
+### **Service Discovery & Configuration**
+*   MCP services are defined in `config.json`.
+*   Each entry specifies the server key (name), transport type (`stdio` or `sse`), connection details (command/args for stdio, URL/headers for sse), and any associated metadata.
+*   The `MCPManager` (`lib/mcp/mcpManager.ts`) is responsible for parsing this configuration and initializing each `MCPService` instance.
 
-### **3. MCP Manager (`lib/mcp/mcpManager.ts`)**
-- **Singleton Service**: Manages all `MCPService` instances
-- **Initialization**: Discovers MCP servers from `config.json`, initializes clients
-- **Tool Aggregation**: Collects tools from all active `MCPService`s via dual approach:
-  - **SSE Tools**: Uses `loadMCPToolsFromURL` utility for AI SDK integration
-  - **STDIO Tools**: Manual tool wrapping with `execute` functions
-- **Health Monitoring**: Polls MCP servers, caches status in Redis
-- **Backward Compatibility**: Handles both legacy (`url` field) and new (`transport` object) config formats
+### **`MCPService` Class (`lib/mcp/client.ts`)**
+*   Encapsulates all logic for interacting with a single MCP server.
+*   Implements the MCP 2024-11-05 specification, including the handshake sequence (`initialize` -> `response` -> `notifications/initialized`).
+*   Handles client creation using `@model-context/node`'s `experimental_createMCPClient`.
+*   **Tool Fetching**: Retrieves tool definitions from the MCP server upon successful initialization.
+*   **Status Management**: Tracks connection status (`uninitialized`, `connected`, `error`, `no_tools_found`).
 
-### **4. MCP Service (`lib/mcp/client.ts`)**
-- **Individual Server Client**: Manages connection and communication with one MCP server
-- **Protocol Handling**: Implements MCP handshake (`tools/list`, `initialized`)
-- **Transport Layer**: Supports `stdio` and `sse`
-  - **stdio**: Spawns and communicates with local MCP server processes
-  - **sse**: Connects to remote MCP servers via Server-Sent Events
-- **Tool Execution**: Contains the logic to actually call tools for STDIO servers only
+### **Tool Invocation Patterns**
 
-### **MCP (Model Context Protocol)**
+A critical distinction exists in how tools from STDIO and SSE MCP servers are handled and invoked:
 
-Piper integrates with external tools and services via MCP servers. Communication can occur over standard I/O (stdio) or Server-Sent Events (SSE).
+**A. STDIO (Standard I/O) MCP Servers:**
+*   **Initialization**: Started as child processes by `MCPManager` based on `config.json` commands (e.g., `uvx my-mcp-server`, `npx @user/my-mcp-tool`).
+*   **Tool Representation**: Tools fetched from STDIO servers are plain JavaScript objects describing parameters and purpose.
+*   **Invocation**: The `MCPManager` (specifically in `getCombinedMCPToolsForAISDK`) wraps these tools in an `execute` function. This function manually uses `mcpServiceInstance.invokeTool(toolName, args)` which, for STDIO, directly calls `this.mcpClient.invoke(toolName, args)` on the client returned by `experimental_createMCPClient`.
+    ```typescript
+    // Simplified pattern for STDIO tool wrapping in getCombinedMCPToolsForAISDK
+    combinedTools[`${serverKey}_${toolName}`] = {
+      description: toolDefinition.description,
+      parameters: toolDefinition.parameters_schema || { type: 'object', properties: {} },
+      execute: async (args: any) => {
+        // ... (argument parsing, logging)
+        const result = await mcpService.invokeTool(toolName, parsedArgs);
+        // ... (result processing, logging)
+        return result;
+      },
+    };
+    ```
 
-#### **Dual Transport Pattern (STDIO vs SSE)**
+**B. SSE (Server-Sent Events) MCP Servers:**
+*   **Initialization**: Connected via HTTP/SSE to a URL specified in `config.json`.
+*   **Tool Representation & Invocation (THE FIX)**: Tools from SSE servers are loaded using `loadMCPToolsFromURL` (from `lib/mcp/load-mcp-from-url.ts`, which likely uses `@model-context/node` utilities internally for SSE). This function returns tools that are **already compatible with the Vercel AI SDK and handle their own invocation logic internally.**
+*   **The `getCombinedMCPToolsForAISDK` function in `MCPManager` was updated to correctly identify SSE servers (even with legacy config) and use `loadMCPToolsFromURL`.**
+    ```typescript
+    // Simplified pattern for SSE tool loading in getCombinedMCPToolsForAISDK
+    // (after ensuring 'transport' object is correctly formed for SSE)
+    if (transport.type === 'sse' && transport.url) {
+      const { loadMCPToolsFromURL } = await import('../load-mcp-from-url');
+      const { tools: mcpToolsFromSSE } = await loadMCPToolsFromURL(transport.url, transport.headers);
+      Object.entries(mcpToolsFromSSE).forEach(([toolName, sdkCompatibleTool]) => {
+        combinedTools[`${serverKey}_${toolName}`] = sdkCompatibleTool; // Directly assign SDK-compatible tool
+      });
+    }
+    ```
+*   **No Manual Invocation Needed**: Unlike STDIO tools, SSE tools obtained this way do not need an `execute` wrapper or manual calls to `mcpService.invokeTool()`. The Vercel AI SDK's `streamText` (or similar functions) automatically handles their invocation when they are provided in the `tools` option.
 
-**STDIO Tool Integration (Manual Invocation)**:
-```typescript
-// For STDIO servers - requires manual tool wrapping
-combinedTools[toolName] = tool({
-  description: toolDef.description,
-  parameters: jsonSchema(params),
-  execute: async (args: unknown) => {
-    const mcpService = getManagedClient(server.key);
-    return await mcpService.invokeTool(toolDef.name, args);
-  }
-});
-```
+### **Key Technical Decision: Fixing SSE Tool Loading**
+*   **Problem**: Legacy SSE configurations in `config.json` (with only `url`) were not being processed correctly to form a `transport` object, preventing `loadMCPToolsFromURL` from being called.
+*   **Solution**: `getCombinedMCPToolsForAISDK` was modified to detect such configurations and construct the `transport: { type: 'sse', url: '...' }` object on the fly. This enabled `loadMCPToolsFromURL` to function correctly, making all 107 SSE tools available.
 
-**SSE Tool Integration (AI SDK Automatic)**:
-```typescript
-// For SSE servers - use loadMCPToolsFromURL utility
-const { loadMCPToolsFromURL } = await import('./load-mcp-from-url');
-const { tools: mcpTools } = await loadMCPToolsFromURL(transport.url);
+## 2. Vercel AI SDK Integration
 
-// Add tools directly - AI SDK handles invocation automatically
-Object.entries(mcpTools).forEach(([toolName, toolDefinition]) => {
-  combinedTools[`${serverKey}_${toolName}`] = toolDefinition;
-});
-```
+*   Piper uses the Vercel AI SDK (version 3.x) for managing chat interactions, LLM communication, and tool usage within the AI flow.
+*   **Tool Registration**: All discovered and processed MCP tools (both STDIO-wrapped and SSE-loaded) are provided to the AI SDK's `streamText` (or equivalent) function.
+*   **Automatic Tool Invocation (for properly prepared tools)**: The SDK handles the decision of when to call a tool and manages the execution flow for tools that are structured according to its expectations (which `loadMCPToolsFromURL` provides for SSE).
 
-#### **Transport Object Creation Pattern**
-```typescript
-// Handle both legacy and new config formats
-let transport = serverConfig.transport;
-if (!transport && serverConfig.url) {
-  // Create transport object for legacy config format
-  transport = {
-    type: 'sse',
-    url: serverConfig.url,
-    headers: serverConfig.headers
-  };
-}
-```
+## 3. State Management in Development (Next.js HMR)
 
-#### **Key Differences Between Transports**
-- **STDIO**: Local processes, direct invocation via `MCPService.invokeTool()`
-- **SSE**: Remote HTTP endpoints, AI SDK handles invocation automatically
-- **Tool Format**: STDIO requires manual wrapping, SSE tools come pre-formatted from AI SDK
-- **Error Handling**: STDIO has custom error objects, SSE uses AI SDK error patterns
+*   To prevent re-initialization of all MCP services during Next.js hot module replacement (HMR):
+    *   The `MCPManager` instance and the collection of `MCPService` instances are stored on `globalThis` in development mode.
+    *   This ensures that established MCP connections and toolsets persist across code changes, significantly speeding up the development cycle.
 
-### **5. Database (PostgreSQL + Prisma)**
-- **Data Persistence**: Stores chat history, user settings, agent configurations (future)
-- **ORM**: Prisma for type-safe queries and migrations
+## 4. Performance Optimization Patterns
 
-### **6. Cache (Redis)**
-- **Purpose**: Stores MCP server health status, reducing polling load
-- **Access**: Used by `MCPManager`
+*   **Chunked Response Processing**: For tool responses exceeding a certain size (e.g., 5KB), content is automatically chunked. Tool-specific processors can further refine this (e.g., extracting key sections from HTML).
+*   **Redis Caching**: MCP server statuses are cached in Redis (default TTL 300s) to reduce polling frequency and load on MCP servers. `MCPManager` performs periodic health checks (e.g., every 60 seconds).
+*   **Optimized Docker Builds**: Multi-stage Docker builds are used to create smaller production images, improving deployment speed and resource efficiency.
 
-## Communication & Data Flow Patterns
+## 5. Security Patterns
 
-### **User Interaction → LLM Response**
-1. UI sends user message to `/api/chat`.
-2. API route calls `streamText` with message history and tools from `MCPManager`.
-3. LLM processes, may decide to call a tool.
-4. If tool call:
-   - **SSE Tools**: AI SDK handles invocation automatically via `loadMCPToolsFromURL` integration
-   - **STDIO Tools**: AI SDK calls the `execute` function → `MCPManager` routes to `MCPService` → `MCPService.invokeTool`
-   - Result is returned to LLM.
-5. LLM generates final response / next step.
-6. Response streamed back to UI.
+*   **Environment Variables**: All sensitive data (API keys, secrets) are managed via `.env` files and accessed as environment variables. No secrets are hardcoded.
+*   **Docker Networking**: In production (e.g., Unraid), Docker containers are networked appropriately. Piper application container communicates with MCP servers hosted on the Unraid machine via the host's IP address (e.g., `10.1.0.2`) rather than `localhost`.
+*   **MCP Server Isolation**: Each MCP server typically runs as an isolated process or service, limiting its potential impact in case of compromise.
 
-### **MCP Server Health Checking**
-1. `MCPManager` periodically polls each `MCPService`.
-2. `MCPService` attempts to connect/ping its server.
-3. Status (online/offline, tools available) updated in Redis cache.
-4. UI can query an API endpoint to display MCP server statuses.
+## 6. Production Deployment (Unraid Focus)
 
-### **Config Format Compatibility**
-- **Legacy Format**: `{ "url": "http://...", "disabled": false }`
-- **New Format**: `{ "transport": { "type": "sse", "url": "..." } }`
-- **Runtime Conversion**: Legacy format automatically converted to transport object
-
-## Error Handling & Resilience Patterns
-
-- **Tool Execution**: 
-  - **STDIO**: `MCPService` catches errors, returns structured error object to LLM
-  - **SSE**: AI SDK handles errors automatically through its tool invocation system
-- **MCP Connection**: Retry mechanisms, status caching
-- **Config Compatibility**: Graceful handling of both legacy and new config formats
-- **API Errors**: Standard HTTP error responses
-- **UI Feedback**: Displays errors and loading states
-
-## Development Workflow Patterns
-
-- **Hot Module Replacement (HMR)**: Next.js feature for fast refresh
-- **State Persistence for HMR**: `MCPManager` and `MCPService` instances stored on `globalThis` to survive HMR without re-initializing all connections
-- **Dockerized Dev Environment**: Consistent setup using `docker-compose`
-
-## Performance Optimization Patterns
-
-### **Tool Response Processing**
-- **Large Response Chunking**: Automatically processes responses >5KB
-- **Tool-Specific Processing**: HTML, JSON, and text optimized differently
-- **Importance Ranking**: High/Medium/Low priority content sections
-- **Smart Truncation**: Preserves key information while reducing token usage
-
-### **Tool Integration Efficiency**
-- **SSE Servers**: Leverages AI SDK optimizations and HTTP connection pooling
-- **STDIO Servers**: Direct process communication with connection reuse
-- **Status Caching**: Redis-based health monitoring reduces polling overhead
-- **Lazy Loading**: Tools loaded on-demand as servers become available
+*   **Container Orchestration**: `docker-compose.yml` defines the multi-container setup (Piper app, PostgreSQL DB, Redis cache, and potentially MCP servers themselves if containerized).
+*   **Persistent Volumes**: Named Docker volumes are used for PostgreSQL data and other persistent state, managed by Unraid.
+*   **Host IP for Services**: MCP server URLs in `config.json` for SSE services running on the Unraid host must use the host's actual IP address (e.g., `http://10.1.0.2:PORT`) for the Piper container to reach them.

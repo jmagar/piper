@@ -2,7 +2,8 @@
 
 import { useChatSession } from "@/app/providers/chat-session-provider"
 import { toast } from "@/components/ui/toast"
-import type { Message as MessageAISDK } from "ai"
+import type { UIMessage } from "ai";
+import type { PiperUIDataParts } from "./api";
 import { createContext, useContext, useEffect, useState } from "react"
 import { writeToIndexedDB } from "../persist"
 import {
@@ -13,11 +14,11 @@ import {
 } from "./api"
 
 interface MessagesContextType {
-  messages: MessageAISDK[]
-  setMessages: React.Dispatch<React.SetStateAction<MessageAISDK[]>>
+  messages: UIMessage<unknown, PiperUIDataParts>[]
+  setMessages: React.Dispatch<React.SetStateAction<UIMessage<unknown, PiperUIDataParts>[]>>
   refresh: () => Promise<void>
-  saveAllMessages: (messages: MessageAISDK[]) => Promise<void>
-  cacheAndAddMessage: (message: MessageAISDK) => Promise<void>
+  saveAllMessages: (messages: UIMessage<unknown, PiperUIDataParts>[]) => Promise<void>
+  cacheAndAddMessage: (message: UIMessage<unknown, PiperUIDataParts>) => Promise<void>
   resetMessages: () => Promise<void>
   deleteMessages: () => Promise<void>
 }
@@ -32,7 +33,7 @@ export function useMessages() {
 }
 
 export function MessagesProvider({ children }: { children: React.ReactNode }) {
-  const [messages, setMessages] = useState<MessageAISDK[]>([])
+  const [messages, setMessages] = useState<UIMessage<unknown, PiperUIDataParts>[]>([])
   const { chatId } = useChatSession()
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const fresh: MessageAISDK[] = await response.json();
+        const fresh: UIMessage<unknown, PiperUIDataParts>[] = await response.json();
         setMessages(fresh)
         cacheMessages(chatId, fresh)
       } catch (e: unknown) {
@@ -74,7 +75,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const fresh: MessageAISDK[] = await response.json();
+      const fresh: UIMessage<unknown, PiperUIDataParts>[] = await response.json();
       setMessages(fresh)
     } catch (e: unknown) {
       console.error("Failed to refresh messages:", e);
@@ -83,7 +84,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const cacheAndAddMessage = async (message: MessageAISDK) => {
+  const cacheAndAddMessage = async (message: UIMessage<unknown, PiperUIDataParts>) => {
     if (!chatId) return
 
     try {
@@ -99,12 +100,12 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const saveAllMessages = async (newMessages: MessageAISDK[]) => {
+  const saveAllMessages = async (messages: UIMessage<unknown, PiperUIDataParts>[]) => {
     if (!chatId) return
 
     try {
-      await saveMessages(chatId, newMessages)
-      setMessages(newMessages)
+      await saveMessages(chatId, messages)
+      setMessages(messages)
     } catch (e: unknown) {
       console.error("Failed to save messages to DB:", e);
       const description = e instanceof Error ? e.message : 'Unknown error';

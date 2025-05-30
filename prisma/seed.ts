@@ -13,8 +13,8 @@ async function main() {
       messages: {
         create: [
           {
-            content: "Hello, admin! This is your first chat.",
-            role: "system"
+            role: "system",
+            parts: [{ type: "text", content: "Hello, admin! This is your first chat." }, { type: "data-createdAtInfo", data: new Date() }]
           }
         ]
       }

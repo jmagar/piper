@@ -1,16 +1,10 @@
 "use client"
 
 import { Conversation } from "@/app/components/chat/conversation"
-
-type Message = {
-  id: string
-  content: string
-  role: "user" | "assistant"
-  createdAt: Date
-}
+import type { UIMessage } from "ai"
 
 type PublicConversationProps = {
-  messages: Message[]
+  messages: UIMessage[]
 }
 
 export function PublicConversation({ messages }: PublicConversationProps) {

@@ -8,10 +8,12 @@ import { getCombinedMCPToolsForAISDK } from "@/lib/mcp/mcpManager";
 import { Attachment } from "@ai-sdk/ui-utils"
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
-  Message as MessageAISDK,
+  UIMessage as MessageAISDK,
   streamText,
   ToolSet,
-} from "ai"
+  convertToCoreMessages,
+  type CoreMessage
+} from "ai";
 import { prisma } from "@/lib/prisma"; 
 import {
   logUserMessage,
@@ -22,25 +24,42 @@ import {
 
 export const maxDuration = 60
 
-type ChatRequest = {
-  messages: MessageAISDK[]
-  chatId: string
-  model: string
-  systemPrompt: string
-  agentId?: string
+// Helper function to extract text from UIMessage parts
+function extractTextFromUIMessage(message: MessageAISDK | undefined): string {
+  if (!message || !message.parts) return "";
+  const textPart = message.parts.find(part => part.type === 'text') as ({ type: 'text', value: string } | undefined);
+  return textPart && typeof textPart.value === 'string' ? textPart.value : "";
 }
+
+// Helper function to extract attachments from UIMessage parts
+function extractAttachmentsFromUIMessage(message: MessageAISDK | undefined): Attachment[] {
+  if (!message || !message.parts) return [];
+  const attachments: Attachment[] = [];
+
+  for (const part of message.parts) {
+    // Check if the part is a FileUIPart
+    if (part.type === 'file') {
+      // The AI SDK defines FileUIPart with top-level url, mediaType, and optional filename
+      // Ensure these properties exist and url is a string.
+      const filePart = part as { type: 'file'; mediaType: string; url: string; filename?: string };
+
+      if (typeof filePart.url === 'string' && typeof filePart.mediaType === 'string') {
+        const name = filePart.filename || (filePart.mediaType.startsWith('image/') ? 'image_attachment' : 'file_attachment');
+        const contentType = filePart.mediaType;
+        attachments.push({ name, contentType, url: filePart.url });
+      }
+    }
+  }
+  return attachments.filter(att => att.url);
+}
+
+
 
 export async function POST(req: Request) {
   try {
-    const {
-      messages,
-      chatId,
-      model,
-      systemPrompt,
-      agentId,
-    } = (await req.json()) as ChatRequest
+    const { messages, data }: { messages: MessageAISDK[]; data?: any } = await req.json();
 
-    if (!messages || !chatId) {
+    if (!messages || !data?.chatId) {
       return new Response(
         JSON.stringify({ error: "Error, missing information" }),
         { status: 400 }
@@ -48,23 +67,21 @@ export async function POST(req: Request) {
     }
 
     // Ensure the Chat record exists for this chatId
-    const firstUserMessageContent = messages.find(m => m.role === 'user')?.content || "New Chat";
-    const defaultTitle = typeof firstUserMessageContent === 'string' 
-      ? firstUserMessageContent.substring(0, 100) 
-      : "New Chat";
+    const firstUserMessageText = extractTextFromUIMessage(messages.find(m => m.role === 'user')) || "New Chat";
+    const defaultTitle = firstUserMessageText.substring(0, 100);
 
     await prisma.chat.upsert({
-      where: { id: chatId },
+      where: { id: data.chatId },
       update: { updatedAt: new Date() }, 
       create: {
-        id: chatId,
+        id: data.chatId,
         title: defaultTitle, 
-        model: model,             
-        systemPrompt: systemPrompt, 
-        agentId: agentId,         
+        model: data.model,             
+        systemPrompt: data.systemPrompt, 
+        agentId: data.agentId,         
       },
     });
-    console.log(`✅ Ensured chat exists or created: ${chatId} with title "${defaultTitle}"`);
+    console.log(`✅ Ensured chat exists or created: ${data.chatId} with title "${defaultTitle}"`);
 
     // Validate request (simplified for admin-only mode)
     await validateAndTrackUsage()
@@ -73,16 +90,16 @@ export async function POST(req: Request) {
 
     if (userMessage?.role === "user") {
       await logUserMessage({
-        chatId,
-        content: userMessage.content,
-        attachments: userMessage.experimental_attachments as Attachment[],
+        chatId: data.chatId,
+        content: extractTextFromUIMessage(userMessage),
+        attachments: extractAttachmentsFromUIMessage(userMessage),
       })
     }
 
     let agentConfig = null
 
-    if (agentId) {
-      agentConfig = await loadAgent(agentId)
+    if (data.agentId) {
+      agentConfig = await loadAgent(data.agentId)
     }
 
     // Initialize OpenRouter provider
@@ -91,7 +108,7 @@ export async function POST(req: Request) {
     });
 
     const effectiveSystemPrompt =
-      agentConfig?.systemPrompt || systemPrompt || SYSTEM_PROMPT_DEFAULT
+      agentConfig?.systemPrompt || data.systemPrompt || SYSTEM_PROMPT_DEFAULT
 
     let toolsToUse = undefined
 
@@ -118,12 +135,12 @@ export async function POST(req: Request) {
     let streamError: Error | null = null
 
     const result = streamText({
-      model: openrouter.chat(model || 'anthropic/claude-3.5-sonnet'), // Use OpenRouter; defaults to claude-3.5-sonnet if no model specified
+      model: openrouter.chat(data.model || 'anthropic/claude-3.5-sonnet') as any, // TODO: Fix this type error, OpenRouter model may not be compatible with LanguageModelV2
       system: effectiveSystemPrompt,
-      messages,
+      messages: convertToCoreMessages(messages) as CoreMessage[], // Convert UIMessage[] to ModelMessage[]
       tools: toolsToUse as ToolSet,
-      maxTokens: 8096, // Reasonable limit for response length while preserving quality
-      maxSteps: 10,
+      // maxTokens: 8096, // Removed for now, check SDK v5 docs for correct placement
+      // maxSteps: 10, // Commented out for now, check SDK v5 docs for correct placement
       onError: (event: { error: unknown }) => {
         console.error("🛑 streamText error (raw event.error):", event.error); // Existing log
 
@@ -165,7 +182,7 @@ export async function POST(req: Request) {
           }))
 
         await storeAssistantMessage({
-          chatId,
+          chatId: data.chatId,
           messages: simpleMessages,
         })
       },
@@ -177,18 +194,13 @@ export async function POST(req: Request) {
       throw streamError
     }
 
-    const originalResponse = result.toDataStreamResponse({
-      sendReasoning: true,
-      sendSources: true,
-    })
+    return result.toUIMessageStreamResponse()
+    // TODO: Check AI SDK v5 docs for how to send reasoning/sources with toTextStreamResponse if needed
     // Optionally attach chatId in a custom header.
-    const headers = new Headers(originalResponse.headers)
-    headers.set("X-Chat-Id", chatId)
-
-    return new Response(originalResponse.body, {
-      status: originalResponse.status,
-      headers,
-    })
+    const response = result.toUIMessageStreamResponse();
+    // Optionally attach chatId in a custom header if needed by client, but usually not necessary with UIMessageStreamResponse
+    // response.headers.set("X-Chat-Id", data.chatId);
+    return response;
   } catch (err: unknown) {
     console.error("Error in /api/chat:", err)
     

@@ -9,7 +9,9 @@ import { toast } from "@/components/ui/toast"
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
-import { useMessages } from "@/lib/chat-store/messages/provider"
+import { useMessages } from "@/lib/chat-store/messages/provider";
+import type { PiperUIDataParts } from '@/lib/chat-store/messages/api';
+import type { UIMessage, DataUIPart, UIMessagePart } from 'ai';
 import {
   MESSAGE_MAX_LENGTH,
   SYSTEM_PROMPT_DEFAULT,
@@ -17,7 +19,7 @@ import {
 import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
-import { useChat } from "@ai-sdk/react"
+import { useChat } from "@ai-sdk/react";
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
@@ -95,14 +97,29 @@ export function Chat() {
   const { draftValue, clearDraft } = useChatDraft(chatId)
 
   const { messages, input, handleSubmit, status, error, reload, stop, setMessages, setInput, append } = useChat({
-    api: API_ROUTE_CHAT,
-    initialMessages,
     initialInput: draftValue,
-    onFinish: async (message) => {
+    onFinish: async (streamedMessage) => {
       // store the assistant message in the cache
-      await cacheAndAddMessage(message)
+      // The 'streamedMessage.message' from onFinish is the UIMessage from the assistant
+      const assistantMessage = streamedMessage.message;
+      const messageWithCreatedAt: UIMessage<unknown, PiperUIDataParts> = {
+        id: assistantMessage.id,
+        role: assistantMessage.role,
+        parts: [
+          ...((assistantMessage.parts || []) as UIMessagePart<PiperUIDataParts>[]),
+          { type: 'data-createdAtInfo', data: new Date() } as DataUIPart<PiperUIDataParts>
+        ]
+      };
+      await cacheAndAddMessage(messageWithCreatedAt);
     },
   })
+
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMessages, setMessages]); // Only re-run if initialMessages or setMessages changes
 
   // Wrapper for createNewChat to match the signature expected by useChatUtils
   const createNewChatForUtils = useCallback(
@@ -270,13 +287,24 @@ export function Chat() {
     const optimisticAttachments =
       files.length > 0 ? createOptimisticAttachments(files) : []
 
+    const textPart = { type: 'text' as const, text: input };
+    const attachmentParts = optimisticAttachments.map((att: Attachment) => ({
+      type: 'file' as const,
+      name: att.name,
+      mediaType: att.contentType, // Changed from contentType to mediaType
+      url: att.url,
+      // 'content' for FileUIPart is typically ArrayBuffer or string (e.g. base64), 
+      // but optimisticAttachments.url is likely a blob URL or data URL already.
+      // For optimistic UI, URL is often enough. Actual content processing happens server-side.
+    }));
+
+    const optimisticMessageParts = [textPart, ...attachmentParts];
+
     const optimisticMessage = {
       id: optimisticId,
-      content: input,
       role: "user" as const,
+      parts: optimisticMessageParts,
       createdAt: new Date(),
-      experimental_attachments:
-        optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
     }
 
     setMessages((prev) => [...prev, optimisticMessage])
@@ -288,7 +316,7 @@ export function Chat() {
     const allowed = await checkLimitsAndNotify(uid)
     if (!allowed) {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       setIsSubmitting(false)
       return
     }
@@ -297,7 +325,7 @@ export function Chat() {
 
     if (!currentChatId) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       setIsSubmitting(false)
       return
     }
@@ -308,7 +336,7 @@ export function Chat() {
         status: "error",
       })
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       setIsSubmitting(false)
       return
     }
@@ -318,7 +346,7 @@ export function Chat() {
       attachments = await handleFileUploads(currentChatId)
       if (attachments === null) {
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments(optimisticAttachments)
         setIsSubmitting(false)
         return
       }
@@ -337,13 +365,13 @@ export function Chat() {
     try {
       handleSubmit(undefined, options)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       cacheAndAddMessage(optimisticMessage)
       clearDraft()
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       toast({ title: "Failed to send message", status: "error" })
       console.error("Error submitting message:", submitError)
     } finally {
@@ -357,7 +385,7 @@ export function Chat() {
       const optimisticId = `optimistic-${Date.now().toString()}`
       const optimisticMessage = {
         id: optimisticId,
-        content: suggestion,
+        parts: [{ type: "text" as const, text: suggestion }],
         role: "user" as const,
         createdAt: new Date(),
       }
@@ -398,8 +426,8 @@ export function Chat() {
 
       append(
         {
-          role: "user",
-          content: suggestion,
+          role: "user" as const,
+          parts: [{ type: "text" as const, text: suggestion }],
         },
         options
       )

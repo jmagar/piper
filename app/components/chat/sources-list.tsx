@@ -24,7 +24,7 @@ const getFavicon = (url: string | null) => {
 
     const domain = urlObj.hostname
     return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-  } catch (error) {
+  } catch (_error) {
     // No need to log errors for invalid URLs
     return null
   }
@@ -42,7 +42,7 @@ const addUTM = (url: string) => {
     u.searchParams.set("utm_source", "piper.chat")
     u.searchParams.set("utm_medium", "research")
     return u.toString()
-  } catch (error) {
+  } catch (_error) {
     // If URL is invalid, return the original URL without modification
     return url
   }

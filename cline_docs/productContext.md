@@ -1,86 +1,42 @@
-# Product Context: Piper - Your Agentic AI Coding Assistant
+# Product Context: Piper AI Chat Application
 
-## Vision & Mission
+**Last Updated**: 2025-05-30T00:39:11-04:00
 
-Piper aims to be an indispensable AI pair programmer, seamlessly integrating with a developer's workflow to enhance productivity, creativity, and code quality. It strives to understand context, automate tasks, and provide intelligent assistance through natural language interaction and powerful tool usage.
+## 1. Why Piper Exists
 
-## Core Features & Capabilities
+Piper is an AI-powered chat application designed to provide intelligent, conversational access to a wide array of external tools, services, and information sources. It aims to streamline complex workflows, automate tasks, and offer a unified interface for interacting with diverse systems through the power of Large Language Models (LLMs) and the Model Context Protocol (MCP).
 
-### **1. Conversational AI Interface**
-- **Natural Language Understanding**: Powered by various LLMs (OpenAI, Anthropic, Google, etc.)
-- **Multi-Turn Dialog**: Maintains context for coherent conversations
-- **Streaming Responses**: Real-time feedback and answers
+The core motivation behind Piper is to bridge the gap between human language and machine interfaces, allowing users to leverage powerful digital tools without needing to understand their specific APIs or command structures. Piper acts as an intelligent intermediary, understanding user intent and orchestrating tool usage to achieve desired outcomes.
 
-### **2. MCP Tool Integration & Execution**
-- **Comprehensive Toolset**: Connects to 19 MCP servers providing 130+ tools
-  - **SSE Tools (107)**: Media management, system administration, notifications, network control
-  - **STDIO Tools (23)**: File system operations, web fetching, code search, development tools
-- **Dual Transport Support**: Seamlessly integrates both SSE and STDIO MCP servers
-- **Dynamic Tool Discovery**: Automatically registers tools from connected MCP servers
-- **Intelligent Tool Selection**: LLM decides which tool to use based on user intent
-- **Robust Error Handling**: Graceful degradation if a tool fails
+## 2. What Problems Piper Solves
 
-### **3. Advanced Tool Ecosystem**
-- **Media Control**: Plex, Overseerr, Tautulli, SABnzbd, qBittorrent management
-- **System Administration**: Unraid server control, Docker container management
-- **Network Management**: UniFi controller integration for network operations
-- **Content Discovery**: Prowlarr indexer management, web crawling capabilities
-- **Communication**: Gotify notifications and alerting systems
-- **Development**: GitHub integration, filesystem operations, code analysis
-- **Search & Retrieval**: Web search, content fetching, data processing
+Piper addresses several key challenges:
 
-### **4. Agentic Workflow Automation**
-- **Multi-Step Operations**: Can chain multiple tool calls to achieve complex tasks
-- **Contextual Awareness**: Leverages chat history and (planned) memory systems
-- **Proactive Assistance**: (Future) Suggests relevant tools or actions
+*   **Tool Integration Complexity**: Modern digital environments involve a multitude of specialized tools and services. Piper simplifies this by integrating these tools under a single, conversational AI interface, abstracting away the need for users to learn and manage each tool individually.
+*   **Information Overload & Accessibility**: Piper provides a way to query and interact with large volumes of data from various sources (e.g., system logs, documentation, web content, personal media libraries) in a natural and efficient manner.
+*   **Workflow Automation**: Repetitive or multi-step tasks involving different services can be automated through Piper's ability to understand complex requests and chain tool invocations.
+*   **Bridging Legacy and Modern Systems**: Piper can provide a modern, AI-driven interface to systems that might otherwise be difficult to access or integrate.
+*   **Enhanced Productivity**: By making tools and information more readily accessible and actionable through conversation, Piper aims to significantly boost user productivity and efficiency.
+*   **Unified Control Plane**: For users managing multiple services (e.g., home servers, media libraries, cloud resources), Piper offers a centralized point of control and interaction.
 
-### **5. Development Environment Integration**
-- **Dockerized Deployment**: Easy setup and consistent operation on Unraid
-- **Local File Access**: Securely interacts with the user's file system via MCP
-- **Real-time Status Monitoring**: Dashboard for MCP server health across all transports
+**Previously, a significant challenge was ensuring reliable access to all configured MCP tools, especially those communicating over Server-Sent Events (SSE). This issue has now been resolved, allowing Piper to fully leverage its extensive toolset.**
 
-### **6. User Experience & Interface**
-- **Modern UI**: Built with Next.js, React, Tailwind CSS, shadcn/ui
-- **Command Menu**: Quick access to tools and commands (cmdk)
-- **Clear Feedback**: Visual indication of tool usage, status, and errors
-- **Performance Optimized**: Smart content processing for large tool responses
+## 3. How Piper Should Work (Core Functionality)
 
-## Target Audience
+Piper operates as a sophisticated chat application with the following key characteristics:
 
-- **Software Developers**: Primary users, across various domains and skill levels
-- **DevOps Engineers**: For automation and infrastructure-related tasks
-- **Media Enthusiasts**: For media server management and automation
-- **System Administrators**: For server management and monitoring
-- **Data Scientists/Analysts**: For data manipulation and analysis (future potential)
+*   **Natural Language Understanding**: Users interact with Piper by typing natural language queries or commands.
+*   **Intent Recognition & Tool Selection**: Piper's underlying LLM, guided by the MCP framework, identifies the user's intent and selects the appropriate tool(s) from its registered MCP services to fulfill the request.
+*   **MCP Integration**: Piper seamlessly communicates with a diverse ecosystem of MCP servers (currently 19+ active servers providing 128+ tools). This includes:
+    *   **STDIO-based MCP servers**: For local or command-line tools, managed via direct process communication.
+    *   **SSE-based MCP servers**: For remote or web-accessible tools, managed via HTTP Server-Sent Events. **Tool discovery and invocation for SSE servers are now fully functional.**
+*   **Tool Invocation & Response Handling**: Piper invokes the selected tools, passes necessary arguments, and receives their output. It is capable of handling various response types, including large text, structured data, and binary content (though typically summarized or processed).
+*   **Advanced Response Processing**: For large tool outputs (>5KB), Piper employs automatic chunking and tool-specific processors (e.g., for HTML, search results) to present information concisely and manage token limits effectively.
+*   **Contextual Conversations**: Piper maintains conversation context (leveraging Vercel AI SDK) to handle follow-up questions and multi-turn interactions.
+*   **Streaming Responses**: Provides real-time, streaming output to the user for a more interactive experience.
+*   **Error Handling & Resilience**: Implements robust error handling for tool invocations and MCP communication, with mechanisms for retries and graceful degradation.
+*   **Caching**: Utilizes Redis for caching MCP server status and potentially other data to improve performance and reduce redundant operations.
+*   **Secure and Configurable**: Manages sensitive information like API keys through environment variables and allows for flexible configuration of MCP servers via `config.json`.
+*   **Production-Ready Deployment**: Designed for stable operation in a production environment, containerized with Docker, and deployable on platforms like Unraid.
 
-## Key Differentiators
-
-- **Comprehensive Tool Ecosystem**: 130+ tools across both SSE and STDIO transports
-- **Agentic Capabilities**: Goes beyond simple Q&A to perform complex automation
-- **Dual Transport Integration**: Seamlessly supports both local and remote MCP servers
-- **Local-First Design**: Operates within the user's environment, enhancing security and context
-- **Production-Ready**: Optimized for Unraid deployment with enterprise-level reliability
-- **Open & Configurable**: Users can add/modify MCP servers and tools
-- **Smart Processing**: Intelligent handling of large tool responses with chunking and optimization
-
-## Technical Achievements
-
-### **Infrastructure Excellence**
-- **Docker Deployment**: Optimized containerization with 17KB build context
-- **Multi-Container Architecture**: Application, database, and cache coordination
-- **Network Optimization**: Proper Unraid host integration with container-to-host communication
-
-### **MCP Integration Innovation**
-- **Dual Transport Pattern**: Revolutionary approach supporting both SSE and STDIO
-- **Backward Compatibility**: Seamless handling of legacy and new configuration formats
-- **Tool Ecosystem**: Most comprehensive MCP tool integration available
-- **Performance**: Sub-5-second tool execution with intelligent response processing
-
-## Future Roadmap (High-Level)
-
-- **Enhanced Memory System**: Long-term persistence of user preferences and project context
-- **VS Code Extension**: Deeper integration into the IDE
-- **Collaborative Features**: Multi-user sessions, shared context
-- **Self-Healing & Learning**: Agents that can improve over time
-- **Advanced UI/UX**: More sophisticated ways to visualize agent actions and results
-- **Expanded Tool Library**: Additional MCP server integrations based on user needs
+Users should experience Piper as a knowledgeable and capable assistant that can understand their needs and efficiently use a wide range of digital tools on their behalf.

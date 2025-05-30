@@ -4,7 +4,7 @@ FROM node:18-alpine AS base
 WORKDIR /app
 
 # Install Python and system dependencies for both Node.js and Python MCP servers
-RUN apk add --no-cache python3 py3-pip curl
+RUN apk add --no-cache python3 py3-pip curl netcat-openbsd
 
 # Install uv (includes uvx) using official installer to global location
 ENV UV_INSTALL_DIR="/usr/local"
@@ -16,7 +16,7 @@ RUN mv /usr/local/uv /usr/local/bin/uv && \
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy all files
 COPY . .

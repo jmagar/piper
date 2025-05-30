@@ -1,6 +1,7 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { ModelConfig } from "../types"
+// import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { ModelConfig } from "../types";
 
+/*
 const deepseekModels: ModelConfig[] = [
   {
     id: "deepseek-r1",
@@ -60,6 +61,9 @@ const deepseekModels: ModelConfig[] = [
         apiKey: process.env.OPENROUTER_API_KEY,
       }).chat("deepseek-v3"),
   },
-]
+];
+*/
 
-export { deepseekModels }
+// export { deepseekModels }; // Also comment out the export
+const deepseekModels: ModelConfig[] = []; // Provide an empty array to satisfy imports
+export { deepseekModels };

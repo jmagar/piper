@@ -2,19 +2,19 @@
   "Climb": "V5A1",
   "moves": [
     {
-      "status": "todo",
+      "status": "complete",
       "description": "Phase 1: Pre-Migration Setup & Core Dependency Updates",
       "details": "1. Create feature branch. 2. Analyze dependencies in package.json. 3. Check/update environment variables. 4. Update all AI SDK packages in package.json to v5 Alpha (e.g., ai@5.0.0-alpha.7) and pin exact versions. 5. Verify @openrouter/ai-sdk-provider compatibility or find alternative. 6. Run npm/yarn install and resolve immediate conflicts.",
       "rest": true
     },
     {
-      "status": "todo",
+      "status": "complete",
       "description": "Phase 2.A: Database Schema (Prisma) for New Message Format",
       "details": "1. Modify `Message` model in `prisma/schema.prisma`: remove/deprecate `content: String`, add `parts: Json`. 2. Generate Prisma migration: `npx prisma migrate dev --name update_message_for_ai_sdk_v5`. 3. Apply migration to local development database. (Data migration script step is skipped as per user confirmation).",
       "rest": true
     },
     {
-      "status": "todo",
+      "status": "complete",
       "description": "Phase 2.B: Server-Side Message Handling for New Format",
       "details": "1. Update `getMessagesFromDb`, `insertMessageToDb` in `lib/chat-store/messages/api.ts` to use new `parts: Json` field and handle `UIMessage` structure. 2. Ensure `app/api/messages/[chatId]/route.ts` serves `UIMessage[]` based on updated `getMessagesFromDb`.",
       "rest": false

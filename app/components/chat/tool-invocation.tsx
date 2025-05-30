@@ -12,7 +12,7 @@ import {
   Wrench,
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 
 interface ToolInvocationProps {
   toolInvocations: ToolInvocationUIPart[]
@@ -196,8 +196,16 @@ function SingleToolView({
   )
 }
 
+interface SearchResultItem {
+  url: string;
+  title: string;
+  snippet?: string;
+  [key: string]: unknown; // Allow other properties if not strictly typed
+}
+
 // New component to handle individual tool cards
 function SingleToolCard({
+
   toolData,
   defaultOpen = false,
   className,
@@ -206,9 +214,9 @@ function SingleToolCard({
   defaultOpen?: boolean
   className?: string
 }) {
-  const [isExpanded, setIsExpanded] = useState(defaultOpen)
-  const [parsedResult, setParsedResult] = useState<any>(null)
-  const [parseError, setParseError] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(defaultOpen);
+  const [parsedResult, setParsedResult] = useState<Record<string, unknown> | string | unknown[] | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const { toolInvocation } = toolData
   const { state, toolName, toolCallId, args } = toolInvocation
@@ -216,8 +224,109 @@ function SingleToolCard({
   const isCompleted = state === "result"
   const result = isCompleted ? toolInvocation.result : undefined
 
+  // Memoize stringified result to stabilize useEffect dependency
+  const stringifiedResult = useMemo(() => {
+    if (!result) return null;
+    try {
+      return JSON.stringify(result);
+    } catch {
+      return String(result); // Fallback for non-serializable results
+    }
+  }, [result]);
+
   // Parse the result JSON if available
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let didCancel = false;
+
+    if (isCompleted && stringifiedResult) {
+      // The 'result' variable is used here directly because stringifiedResult is for dependency stability.
+      // The actual parsing logic needs the original result structure.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentResult: any = result;
+
+      // Handle array results (like search results)
+      if (Array.isArray(currentResult)) {
+        if (!didCancel) {
+          setParsedResult(currentResult);
+          setParseError(null);
+        }
+        return;
+      }
+
+      // Handle object results with content property (common in Vercel AI SDK tool results)
+      if (
+        typeof currentResult === "object" &&
+        currentResult !== null &&
+        "content" in currentResult &&
+        Array.isArray(currentResult.content)
+      ) {
+        try {
+          const textContentItem = currentResult.content.find(
+            (item: { type: string }) => item.type === "text"
+          );
+
+          if (textContentItem && typeof textContentItem.text === 'string') {
+            try {
+              // Try to parse as JSON first
+              const parsed = JSON.parse(textContentItem.text);
+              if (!didCancel) {
+                setParsedResult(parsed);
+                setParseError(null);
+              }
+            } catch {
+              // If not valid JSON, just use the text as is
+              if (!didCancel) {
+                setParsedResult(textContentItem.text);
+                setParseError(null);
+              }
+            }
+          } else {
+            // If no text content or text is not a string, treat as generic object
+            if (!didCancel) {
+              setParsedResult(currentResult);
+              setParseError(null);
+            }
+          }
+        } catch (error) {
+          if (!didCancel) {
+            setParsedResult(currentResult); // Fallback to showing the raw result object
+            setParseError("Failed to parse structured content, showing raw result.");
+          }
+          console.error("Failed to parse structured content:", error);
+        }
+      } else if (typeof currentResult === 'object' && currentResult !== null) {
+        // Handle direct object results (not fitting the 'content' structure)
+        if (!didCancel) {
+          setParsedResult(currentResult);
+          setParseError(null);
+        }
+      } else if (typeof currentResult === 'string') {
+        // Handle direct string results
+        if (!didCancel) {
+          setParsedResult(currentResult);
+          setParseError(null);
+        }
+      } else {
+        // Fallback for other types or if result is present but not parsable as expected
+        if (!didCancel) {
+          setParsedResult(currentResult); // Show the raw result
+          setParseError("Result is in an unexpected format.");
+        }
+      }
+    } else {
+      // Clear parsed result if not completed or no result
+      if (!didCancel) {
+        setParsedResult(null);
+        setParseError(null);
+      }
+    }
+
+    return () => {
+      didCancel = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCompleted, stringifiedResult]); // Dependencies: isCompleted and the memoized stringifiedResult
     let didCancel = false
 
     if (isCompleted && result) {
@@ -248,7 +357,7 @@ function SingleToolCard({
               if (!didCancel) {
                 setParsedResult(parsed)
               }
-            } catch (e) {
+            } catch {
               // If not valid JSON, just use the text as is
               if (!didCancel) {
                 setParsedResult(textContent.text)
@@ -312,7 +421,7 @@ function SingleToolCard({
       ) {
         return (
           <div className="space-y-3">
-            {parsedResult.map((item: any, index: number) => (
+            {(parsedResult as SearchResultItem[]).map((item: SearchResultItem, index: number) => (
               <div
                 key={index}
                 className="border-border border-b pb-3 last:border-0 last:pb-0"
@@ -351,16 +460,16 @@ function SingleToolCard({
     }
 
     // Handle object results
-    if (typeof parsedResult === "object" && parsedResult !== null) {
+    if (typeof parsedResult === "object" && parsedResult !== null && !Array.isArray(parsedResult)) {
       return (
         <div>
-          {parsedResult.title && (
+          {typeof parsedResult.title === 'string' && parsedResult.title && (
             <div className="mb-2 font-medium">{parsedResult.title}</div>
           )}
-          {parsedResult.html_url && (
+          {typeof parsedResult.html_url === 'string' && parsedResult.html_url && (
             <div className="mb-2">
               <a
-                href={parsedResult.html_url}
+                href={parsedResult.html_url} // This is safe because we've checked html_url is a string
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary flex items-center gap-1 hover:underline"

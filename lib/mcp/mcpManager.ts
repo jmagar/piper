@@ -283,7 +283,18 @@ const REDIS_CACHE_EXPIRY_SECONDS = 300;
 if (process.env.NODE_ENV === 'production') {
   mcpServices = new Map<string, MCPService>();
   isManagerInitialized = false;
-  redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  redisClient = new Redis(process.env.REDIS_URL || 'redis://piper-cache:6379', {
+    lazyConnect: true,
+    retryStrategy(times) {
+      // Simple retry: 100ms, 200ms, 300ms, then 500ms for subsequent
+      const delay = Math.min(times * 100, 500);
+      if (times > 10) { // Give up after ~10 tries
+        return null; // Returning null stops retrying
+      }
+      console.log(`[MCP Manager] Redis connection attempt ${times}, retrying in ${delay}ms`);
+      return delay;
+    }
+  });
   redisClient.on('error', (err) => console.error('[MCP Manager] Redis Client Error:', err));
   redisClient.on('connect', () => console.log('[MCP Manager] Redis Client Connected.'));
   console.log('[MCP Manager] Production mode: Initializing fresh state and Redis client.');
@@ -302,7 +313,17 @@ if (process.env.NODE_ENV === 'production') {
 
   if (!globalThis.__redisClientForMCP) {
     console.log('[MCP Manager] Development mode: Initializing __redisClientForMCP on globalThis.');
-    globalThis.__redisClientForMCP = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    globalThis.__redisClientForMCP = new Redis(process.env.REDIS_URL || 'redis://piper-cache:6379', {
+    lazyConnect: true,
+    retryStrategy(times) {
+      const delay = Math.min(times * 100, 500);
+      if (times > 10) {
+        return null;
+      }
+      console.log(`[MCP Manager] Redis connection attempt ${times} (Dev), retrying in ${delay}ms`);
+      return delay;
+    }
+  });
     globalThis.__redisClientForMCP.on('error', (err) => console.error('[MCP Manager] Redis Client Error (Dev):', err));
     globalThis.__redisClientForMCP.on('connect', () => console.log('[MCP Manager] Redis Client Connected (Dev).'));
   }

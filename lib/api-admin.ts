@@ -99,7 +99,7 @@ export async function addMessage(chatId: string, content: string, role: string) 
     const message = await prisma.message.create({
       data: {
         chatId,
-        content,
+        parts: [{ type: 'text' as const, text: content }],
         role
       }
     })

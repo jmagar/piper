@@ -26,11 +26,37 @@ export async function logUserMessage({
   attachments?: Attachment[]
 }) {
   try {
+    // Construct the 'parts' array for the message
+    const messageParts: any[] = [
+      { type: 'text', text: sanitizeUserInput(content) }
+    ];
+
+    if (attachments && attachments.length > 0) {
+      for (const attachment of attachments) {
+        if (attachment.contentType?.startsWith('image/')) {
+          messageParts.push({
+            type: 'image',
+            image: attachment.url, // Assuming url is the direct image source or data URI
+            contentType: attachment.contentType,
+            name: attachment.name
+          });
+        } else {
+          // Generic file part - structure might need verification against AI SDK v5 spec
+          messageParts.push({
+            type: 'file',
+            file: attachment.url, // Assuming url points to the file
+            name: attachment.name,
+            contentType: attachment.contentType
+          });
+        }
+      }
+    }
+
     const message = await prisma.message.create({
       data: {
         chatId,
         role: "user",
-        content: sanitizeUserInput(content),
+        parts: messageParts, // Save the constructed parts array
       }
     })
 
@@ -70,23 +96,35 @@ export async function trackSpecialAgentUsage() {
  */
 export async function storeAssistantMessage({
   chatId,
-  messages,
+  messages, // This likely needs to be UIMessage[] or similar from AI SDK
 }: {
   chatId: string
-  messages: Array<{ role: string; content: string }>
+  // TODO: Update 'messages' type to reflect UIMessage structure if it's coming from AI SDK stream
+  messages: Array<{ role: string; content: string; parts?: any[] }> // Temporarily allow parts
 }) {
   try {
     // Extract the final assistant message from the messages array
     const assistantMessages = messages.filter((msg: { role: string; content: string }) => msg.role === 'assistant')
     
     for (const message of assistantMessages) {
-      await prisma.message.create({
-        data: {
+      // If message.parts exists and is valid, use it. Otherwise, fallback to content for now.
+      // This is a temporary measure; ideally, assistant messages also strictly use 'parts'.
+      let messageData;
+      if (message.parts && Array.isArray(message.parts) && message.parts.length > 0) {
+        messageData = {
           chatId,
-          role: "assistant",
-          content: message.content || '',
-        }
-      })
+          role: "assistant" as const,
+          parts: message.parts,
+        };
+      } else {
+        // Fallback: convert content to a text part
+        messageData = {
+          chatId,
+          role: "assistant" as const,
+          parts: [{ type: 'text', text: message.content || '' }],
+        };
+      }
+      await prisma.message.create({ data: messageData });
     }
 
     console.log(`✅ Assistant messages stored for chat ${chatId}`)

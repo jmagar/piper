@@ -1,7 +1,7 @@
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
 import { ChatContainer } from "@/components/prompt-kit/chat-container"
 import { Loader } from "@/components/prompt-kit/loader"
-import { Message as MessageType } from "@ai-sdk/react"
+import { UIMessage as MessageType } from "@ai-sdk/react"
 import { useRef } from "react"
 import { Message } from "./message"
 
@@ -52,7 +52,7 @@ export function Conversation({
               key={message.id}
               id={message.id}
               variant={message.role}
-              attachments={message.experimental_attachments}
+              // attachments={message.experimental_attachments} // Attachments should be handled via message.parts in UIMessage
               isLast={isLast}
               onDelete={onDelete}
               onEdit={onEdit}
@@ -61,7 +61,7 @@ export function Conversation({
               parts={message.parts}
               status={status}
             >
-              {message.content}
+              {/* Content is now rendered from message.parts by the Message component itself */}
             </Message>
           )
         })}

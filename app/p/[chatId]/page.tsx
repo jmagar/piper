@@ -2,9 +2,49 @@ import { prisma } from "@/lib/prisma"
 import { APP_NAME } from "@/lib/config"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { PublicConversation } from "./public-conversation"
+import { PublicConversation } from "./public-conversation";
+import { Prisma } from "@prisma/client"; // Import Prisma for JsonValue type
+import type { UIMessage, UIMessagePart, DataUIPart } from 'ai'; // Import UIMessage and part types
+import type { PiperUIDataParts } from '@/lib/chat-store/messages/api'; // Import our custom data part definition
+
+// Helper function to extract first text content from parts
+function getFirstTextFromParts(parts: Prisma.JsonValue): string | null {
+  if (Array.isArray(parts)) {
+    for (const part of parts) {
+      if (
+        typeof part === 'object' &&
+        part !== null &&
+        'type' in part &&
+        part.type === 'text' &&
+        'text' in part &&
+        typeof part.text === 'string'
+      ) {
+        return part.text;
+      }
+    }
+  } else if (typeof parts === 'string') {
+    // Fallback if parts is just a plain string (legacy data?)
+    // Or if the entire 'parts' field was intended as a single text string.
+    try {
+      // Attempt to parse if it's a JSON string containing an array/object
+      const parsed = JSON.parse(parts);
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) {
+          if (typeof p === 'object' && p !== null && p.type === 'text' && typeof p.text === 'string') {
+            return p.text;
+          }
+        }
+      } else if (typeof parsed === 'object' && parsed !== null && parsed.type === 'text' && typeof parsed.text === 'string') {
+        return parsed.text;
+      }
+    } catch {
+      // Not a JSON string, treat as plain text
+      return parts;
+    }
+  }
+  return null;
+}
 import Link from "next/link"
-import type { Message } from "@/app/types/database.types"
 
 export const dynamic = "force-dynamic"
 
@@ -48,7 +88,7 @@ export async function generateMetadata({
 
   return {
     title: `${chat.title || "Shared Chat"} | ${APP_NAME}`,
-    description: chat.messages[0]?.content?.slice(0, 155) || "A shared conversation",
+    description: (getFirstTextFromParts(chat.messages[0]?.parts ?? null))?.slice(0, 155) || "A shared conversation",
   }
 }
 
@@ -65,12 +105,39 @@ export default async function PublicChat({
   }
 
   // Convert messages to the format expected by the Conversation component
-  const messages = chat.messages.map((msg: Message) => ({
-    id: msg.id,
-    content: msg.content,
-    role: msg.role as "user" | "assistant",
-    createdAt: msg.createdAt,
-  }))
+  const messages = chat.messages.map((msg) => {
+    // Extract existing parts from msg.parts (which is Prisma.JsonValue)
+    // and ensure they are in the UIMessagePart format.
+    // This is a simplified example; robust parsing might be needed if db parts are complex.
+    let existingParts: UIMessagePart<PiperUIDataParts>[] = [];
+    if (Array.isArray(msg.parts)) {
+      existingParts = msg.parts.map(part => part as UIMessagePart<PiperUIDataParts>); // Basic cast
+    } else if (typeof msg.parts === 'string') {
+      // Attempt to get text if parts was a string, or handle other legacy formats
+      const textContent = getFirstTextFromParts(msg.parts);
+      if (textContent) {
+        existingParts.push({ type: 'text', text: textContent });
+      }
+    }
+    // If getFirstTextFromParts was the primary way to get content, ensure it's included.
+    // The logic below prioritizes text from getFirstTextFromParts if no other text parts exist.
+    const primaryTextContent = getFirstTextFromParts(msg.parts ?? null) || "";
+    const hasTextPart = existingParts.some(p => p.type === 'text');
+
+    const finalParts: UIMessagePart<PiperUIDataParts>[] = [
+      ...existingParts,
+      // Add primary text content if no text part was found in existingParts
+      ...(!hasTextPart && primaryTextContent ? [{ type: 'text' as const, text: primaryTextContent }] : []),
+      { type: 'data-createdAtInfo', data: msg.createdAt } as DataUIPart<PiperUIDataParts>
+    ];
+
+    return {
+      id: msg.id,
+      role: msg.role as UIMessage['role'],
+      parts: finalParts,
+      // metadata: undefined, // Explicitly undefined if not used
+    } as UIMessage<unknown, PiperUIDataParts>; // Assert the final mapped message type
+  })
 
   return (
     <div className="container mx-auto max-w-4xl py-8">

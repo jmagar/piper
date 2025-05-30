@@ -5,7 +5,7 @@ import {
   MessageContent,
 } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { UIMessage as MessageAISDK } from "@ai-sdk/react"
 import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react"
 import { getSources } from "./get-sources"
 import { Reasoning } from "./reasoning"
@@ -13,7 +13,7 @@ import { SourcesList } from "./sources-list"
 import { ToolInvocation } from "./tool-invocation"
 
 type MessageAssistantProps = {
-  children: string
+  children?: string
   isLast?: boolean
   hasScrollAnchor?: boolean
   copied?: boolean
@@ -33,14 +33,27 @@ export function MessageAssistant({
   parts,
   status,
 }: MessageAssistantProps) {
-  const sources = getSources(parts)
+  const sources = getSources(parts || [])
 
   const toolInvocationParts = parts?.filter(
-    (part) => part.type === "tool-invocation"
+    (part): part is Extract<MessageAISDK["parts"][number], { type: 'tool-invocation' }> => part.type === "tool-invocation"
   )
-  const reasoningParts = parts?.find((part) => part.type === "reasoning")
+  const reasoningParts = parts?.find((part): part is Extract<MessageAISDK["parts"][number], { type: 'reasoning' }> => part.type === "reasoning")
 
-  const contentNullOrEmpty = children === null || children === ""
+  // Extract text content from parts
+  let extractedTextContent = '';
+  if (parts && parts.length > 0) {
+    const textPart = parts.find((part): part is Extract<MessageAISDK['parts'][number], { type: 'text' }> => part.type === 'text');
+    if (textPart) {
+      extractedTextContent = textPart.text;
+    }
+  }
+  // Fallback to children if parts don't provide text content, though ideally parts should be the source of truth
+  if (!extractedTextContent && children) {
+    extractedTextContent = children;
+  }
+
+  const contentNullOrEmpty = extractedTextContent === null || extractedTextContent === ""
 
   const isLastStreaming = status === "streaming" && isLast
 
@@ -52,8 +65,9 @@ export function MessageAssistant({
       )}
     >
       <div className={cn("flex min-w-full flex-col gap-2", isLast && "pb-8")}>
-        {reasoningParts && reasoningParts.reasoning && (
-          <Reasoning reasoning={reasoningParts.reasoning} />
+        {/* Assuming reasoning content is in reasoningParts.value for ReasoningUIPart */}
+        {reasoningParts && typeof reasoningParts.text === 'string' && reasoningParts.text.trim() !== '' && (
+          <Reasoning reasoning={reasoningParts.text} />
         )}
 
         {toolInvocationParts && toolInvocationParts.length > 0 && (
@@ -68,7 +82,7 @@ export function MessageAssistant({
             )}
             markdown={true}
           >
-            {children}
+            {extractedTextContent}
           </MessageContent>
         )}
 

@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client"; // Import Prisma namespace for InputJsonValue
 
 type ContentPart = {
   type: string
@@ -99,9 +100,8 @@ export async function saveFinalAssistantMessage(
       data: {
         chatId: chatId,
         role: "assistant",
-        content: finalPlainText || "",
-        // Store parts as JSON in a separate field if needed
-        // parts: parts, // Note: You may need to add this field to your Prisma schema
+        parts: (parts.length > 0 ? parts : [{ type: 'text', text: finalPlainText || "" }]) as any as Prisma.InputJsonValue, // Save the constructed parts array
+        // If parts is empty but finalPlainText exists, save finalPlainText as a text part.
       }
     })
     

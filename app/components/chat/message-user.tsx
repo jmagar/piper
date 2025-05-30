@@ -16,57 +16,83 @@ import {
 } from "@/components/prompt-kit/message"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Message as MessageType } from "@ai-sdk/react"
+import { UIMessage as MessageType } from "@ai-sdk/react"
 import { Check, Copy, Trash } from "@phosphor-icons/react"
 import { useRef, useState } from "react"
 
-const getTextFromDataUrl = (dataUrl: string) => {
-  const base64 = dataUrl.split(",")[1]
-  return base64
-}
-
 export type MessageUserProps = {
   hasScrollAnchor?: boolean
-  attachments?: MessageType["experimental_attachments"]
-  children: string
+  // attachments?: MessageType["experimental_attachments"] // Removed: attachments are in 'parts'
+  parts?: MessageType['parts']
+  children?: string // Fallback or for simpler text-only scenarios if parts aren't processed by parent
   copied: boolean
-  copyToClipboard: () => void
-  onEdit: (id: string, newText: string) => void
-  onReload: () => void
-  onDelete: (id: string) => void
+  copyToClipboardAction: () => void
+  onEditAction: (id: string, newText: string) => void
+  onReloadAction: () => void
+  onDeleteAction: (id: string) => void
   id: string
 }
 
 export function MessageUser({
   hasScrollAnchor,
-  attachments,
+  // attachments, // Removed
+  parts,
   children,
   copied,
-  copyToClipboard,
-  onEdit,
-  onReload,
-  onDelete,
+  copyToClipboardAction,
+  onEditAction,
+  onReloadAction,
+  onDeleteAction,
   id,
 }: MessageUserProps) {
-  const [editInput, setEditInput] = useState(children)
+  let extractedTextContent = '';
+
+  // Filter for text parts and extract content
+  if (parts && parts.length > 0) {
+    const textPart = parts.find((part): part is Extract<MessageType['parts'][number], { type: 'text' }> => part.type === 'text');
+    if (textPart) {
+      extractedTextContent = textPart.text;
+    }
+  } else if (children) {
+    // Fallback to children if parts are not available or don't contain text
+    extractedTextContent = children;
+  }
+
+  // Filter for image parts using a type predicate for strong typing
+  const imageParts = parts?.filter(
+    (part): part is Extract<MessageType['parts'][number], { type: 'file'; mediaType: string }> => {
+      if (part.type === 'file' && 'mediaType' in part && typeof part.mediaType === 'string') {
+        return part.mediaType.startsWith('image/');
+      }
+      return false;
+    }
+  ) || [];
+
+  // Fallback to children if parts are not available or don't contain text (already handled for extractedTextContent)
+  if (!extractedTextContent && children) {
+    // Fallback to children if parts are not available or don't contain text
+    extractedTextContent = children;
+  }
+
+  const [editInput, setEditInput] = useState(extractedTextContent)
   const [isEditing, setIsEditing] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   const handleEditCancel = () => {
     setIsEditing(false)
-    setEditInput(children)
+    setEditInput(extractedTextContent)
   }
 
   const handleSave = () => {
-    if (onEdit) {
-      onEdit(id, editInput)
+    if (onEditAction) {
+      onEditAction(id, editInput)
     }
-    onReload()
+    onReloadAction()
     setIsEditing(false)
   }
 
   const handleDelete = () => {
-    onDelete(id)
+    onDeleteAction(id)
   }
 
   return (
@@ -76,12 +102,18 @@ export function MessageUser({
         hasScrollAnchor && "min-h-scroll-anchor"
       )}
     >
-      {attachments?.map((attachment, index) => (
-        <div
-          className="flex flex-row gap-2"
-          key={`${attachment.name}-${index}`}
-        >
-          {attachment.contentType?.startsWith("image") ? (
+      {imageParts.map((imagePart, index) => { // Renamed to imagePart for clarity, already correctly typed
+        // No need for 'if (imagePart.type !== 'image')' due to Array<Extract<...>> typing
+        const imageUrl = typeof imagePart.url === 'string' ? imagePart.url : '';
+        const imageName = imagePart.filename || `image-${index}`; // Or derive from imagePart if available
+
+        return (
+          <div
+            className="flex flex-row gap-2"
+            key={`${imageName}-${index}`}
+          >
+            {imagePart.mediaType?.startsWith("image") && imageUrl ? (
+
             <MorphingDialog
               transition={{
                 type: "spring",
@@ -93,29 +125,26 @@ export function MessageUser({
               <MorphingDialogTrigger className="z-10">
                 <img
                   className="mb-1 w-40 rounded-md"
-                  key={attachment.name}
-                  src={attachment.url}
-                  alt={attachment.name}
+                  key={imageName}
+                  src={imageUrl}
+                  alt={imageName}
                 />
               </MorphingDialogTrigger>
               <MorphingDialogContainer>
                 <MorphingDialogContent className="relative rounded-lg">
                   <MorphingDialogImage
-                    src={attachment.url}
-                    alt={attachment.name || ""}
+                    src={imageUrl}
+                    alt={imageName || ""}
                     className="max-h-[90vh] max-w-[90vw] object-contain"
                   />
                 </MorphingDialogContent>
                 <MorphingDialogClose className="text-primary" />
               </MorphingDialogContainer>
             </MorphingDialog>
-          ) : attachment.contentType?.startsWith("text") ? (
-            <div className="text-primary mb-3 h-24 w-40 overflow-hidden rounded-md border p-2 text-xs">
-              {getTextFromDataUrl(attachment.url)}
-            </div>
-          ) : null}
+          ) : null} {/* Add rendering for other attachment types from parts here if needed */}
         </div>
-      ))}
+      )}
+    )}
       {isEditing ? (
         <div
           className="bg-accent relative flex min-w-[180px] flex-col gap-2 rounded-3xl px-5 py-2.5"
@@ -167,7 +196,7 @@ export function MessageUser({
             ol: ({ children }) => <>{children}</>,
           }}
         >
-          {children}
+          {extractedTextContent}
         </MessageContent>
       )}
       <MessageActions className="flex gap-0 opacity-0 transition-opacity duration-0 group-hover:opacity-100">
@@ -175,7 +204,7 @@ export function MessageUser({
           <button
             className="hover:bg-accent/60 text-muted-foreground hover:text-foreground flex size-7.5 items-center justify-center rounded-full bg-transparent transition"
             aria-label="Copy text"
-            onClick={copyToClipboard}
+            onClick={copyToClipboardAction}
             type="button"
           >
             {copied ? (

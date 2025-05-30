@@ -26,8 +26,8 @@ model Message {
   id        String   @id @default(uuid())
   chat      Chat     @relation(fields: [chatId], references: [id])
   chatId    String
-  content   String
   role      String
+  parts     Json
   createdAt DateTime @default(now())
 }
 
