@@ -2,25 +2,33 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { AlertCircle, Check, Github, X } from "lucide-react"
+import { AlertCircle, Check, ChevronDown, Github, X } from "lucide-react"
 import type React from "react"
+import { useEffect, useState } from "react"
 import { ToolsSection } from "./tools-section"
+
+// Import MCPServerOption interface from our new API endpoint
+export interface MCPServerOption {
+  key: string
+  label: string
+  transportType: string
+  status?: string
+}
 
 type AgentFormData = {
   name: string
   description: string
   systemPrompt: string
-  mcp: "none" | "git-mcp"
+  mcp: string[]  // Changed from string to string[] for multiple selection
   repository?: string
   tools: string[]
 }
@@ -54,6 +62,50 @@ export function CreateAgentForm({
   onClose,
   isDrawer = false,
 }: CreateAgentFormProps) {
+  // State for MCP server options
+  const [mcpServers, setMcpServers] = useState<MCPServerOption[]>([])
+  const [mcpLoading, setMcpLoading] = useState(true)
+  const [mcpError, setMcpError] = useState<string | null>(null)
+  const [mcpCollapsibleOpen, setMcpCollapsibleOpen] = useState(false)
+
+  // Handle MCP server selection/deselection
+  const handleMcpToggle = (serverKey: string, checked: boolean) => {
+    let newSelection: string[]
+    if (checked) {
+      newSelection = [...formData.mcp, serverKey]
+    } else {
+      newSelection = formData.mcp.filter(key => key !== serverKey)
+    }
+    // Convert array to string for compatibility with existing handleSelectChange
+    handleSelectChange(newSelection.join(','))
+  }
+
+  // Fetch MCP server options on component mount
+  useEffect(() => {
+    async function fetchMcpServers() {
+      try {
+        setMcpLoading(true)
+        setMcpError(null)
+        
+        const response = await fetch('/api/agents/mcp-options')
+        if (!response.ok) {
+          throw new Error(`Failed to fetch MCP servers: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        setMcpServers(data.servers || [])
+      } catch (err) {
+        console.error('Error fetching MCP servers:', err)
+        setMcpError(err instanceof Error ? err.message : 'Failed to load MCP servers')
+        setMcpServers([]) // Fallback to empty array
+      } finally {
+        setMcpLoading(false)
+      }
+    }
+
+    fetchMcpServers()
+  }, [])
+
   return (
     <div
       className={`space-y-0 ${isDrawer ? "p-0 pb-16" : "py-0"} overflow-y-auto`}
@@ -70,8 +122,8 @@ export function CreateAgentForm({
       <div className="px-6 py-4">
         <div className="bg-muted/50 mb-6 rounded-lg p-3">
           <p className="text-sm">
-            Agents can use a system prompt and optionally connect to GitHub
-            repos via git-mcp. More tools and MCP integrations are coming soon.
+            Agents can use a system prompt and optionally connect to multiple MCP servers. 
+            More tools and MCP integrations are available.
           </p>
         </div>
 
@@ -120,22 +172,93 @@ export function CreateAgentForm({
 
           <ToolsSection onSelectTools={handleToolsChange} />
 
-          {/* MCP Dropdown */}
+          {/* MCP Servers Collapsible */}
           <div className="space-y-2">
-            <Label htmlFor="mcp">MCP</Label>
-            <Select value={formData.mcp} onValueChange={handleSelectChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select MCP" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="git-mcp">git-mcp</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>MCP Servers</Label>
+            <Collapsible
+              open={mcpCollapsibleOpen}
+              onOpenChange={setMcpCollapsibleOpen}
+              className="space-y-2"
+            >
+              <div className="flex items-center justify-between space-x-4 px-1">
+                <h4 className="text-sm font-semibold">
+                  {formData.mcp.length === 0
+                    ? "Select MCP servers"
+                    : `${formData.mcp.length} server(s) selected`}
+                </h4>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-9 p-0">
+                    <ChevronDown className="h-4 w-4" />
+                    <span className="sr-only">Toggle MCP Servers</span>
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="space-y-3 rounded-md border p-4">
+                {/* None option */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="mcp-none"
+                    checked={formData.mcp.includes('none')}
+                    onCheckedChange={(checked) => handleMcpToggle('none', !!checked)}
+                  />
+                  <Label htmlFor="mcp-none" className="text-sm font-normal">
+                    None
+                  </Label>
+                </div>
+
+                {/* Loading state */}
+                {mcpLoading && (
+                  <div className="text-sm text-muted-foreground">
+                    Loading MCP servers...
+                  </div>
+                )}
+
+                {/* Error state */}
+                {mcpError && !mcpLoading && (
+                  <div className="text-sm text-red-500">
+                    Error: {mcpError}
+                  </div>
+                )}
+
+                {/* Dynamic server options */}
+                {!mcpLoading && !mcpError && mcpServers.length > 0 && 
+                  mcpServers.map((server) => (
+                    <div key={server.key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`mcp-${server.key}`}
+                        checked={formData.mcp.includes(server.key)}
+                        onCheckedChange={(checked) => handleMcpToggle(server.key, !!checked)}
+                      />
+                      <Label htmlFor={`mcp-${server.key}`} className="text-sm font-normal flex-1">
+                        {server.label}
+                        <span className="text-muted-foreground text-xs ml-2">
+                          ({server.transportType})
+                        </span>
+                      </Label>
+                    </div>
+                  ))
+                }
+
+                {/* No servers available */}
+                {!mcpLoading && !mcpError && mcpServers.length === 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    No MCP servers available
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+            
+            {/* Show error message below collapsible */}
+            {mcpError && (
+              <div className="mt-1 flex items-center text-sm text-red-500">
+                <AlertCircle className="mr-1 h-4 w-4" />
+                <span>Failed to load MCP servers. Using fallback options.</span>
+              </div>
+            )}
           </div>
 
           {/* Repository (only shown if git-mcp is selected) */}
-          {formData.mcp === "git-mcp" && (
+          {formData.mcp.includes("git-mcp") && (
             <div className="space-y-2">
               <Label htmlFor="repository">GitHub repository</Label>
               <div className="flex items-center">
@@ -178,7 +301,7 @@ export function CreateAgentForm({
           </div>
 
           {/* Tools (only shown if git-mcp is selected) */}
-          {formData.mcp === "git-mcp" && (
+          {formData.mcp.includes("git-mcp") && (
             <div className="overflow-hidden rounded-lg border p-2">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-medium">

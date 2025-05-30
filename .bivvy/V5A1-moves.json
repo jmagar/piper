@@ -1,0 +1,83 @@
+{
+  "Climb": "V5A1",
+  "moves": [
+    {
+      "status": "todo",
+      "description": "Phase 1: Pre-Migration Setup & Core Dependency Updates",
+      "details": "1. Create feature branch. 2. Analyze dependencies in package.json. 3. Check/update environment variables. 4. Update all AI SDK packages in package.json to v5 Alpha (e.g., ai@5.0.0-alpha.7) and pin exact versions. 5. Verify @openrouter/ai-sdk-provider compatibility or find alternative. 6. Run npm/yarn install and resolve immediate conflicts.",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 2.A: Database Schema (Prisma) for New Message Format",
+      "details": "1. Modify `Message` model in `prisma/schema.prisma`: remove/deprecate `content: String`, add `parts: Json`. 2. Generate Prisma migration: `npx prisma migrate dev --name update_message_for_ai_sdk_v5`. 3. Apply migration to local development database. (Data migration script step is skipped as per user confirmation).",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 2.B: Server-Side Message Handling for New Format",
+      "details": "1. Update `getMessagesFromDb`, `insertMessageToDb` in `lib/chat-store/messages/api.ts` to use new `parts: Json` field and handle `UIMessage` structure. 2. Ensure `app/api/messages/[chatId]/route.ts` serves `UIMessage[]` based on updated `getMessagesFromDb`.",
+      "rest": false
+    },
+    {
+      "status": "todo",
+      "description": "Phase 2.C: Client-Side Message Management (IndexedDB & State) - Part 1: Core Updates",
+      "details": "1. In `lib/chat-store/messages/provider.tsx`: update `useState` for messages to `UIMessage[]` (or align with `useChat` store). 2. Update `MessagesContextType` to `UIMessage`. 3. Update `cacheAndAddMessage` signature to `async (message: UIMessage)` and ensure `writeToIndexedDB` stores `UIMessage`. 4. Update `getCachedMessages` to expect `UIMessage` from IndexedDB (no legacy conversion needed). 5. Update `lib/chat-store/persist.ts` if any specific `UIMessage` handling is needed (idb-keyval should manage complex objects).",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 2.D: Client-Side Message Management - Part 2: UI Integration",
+      "details": "1. In `app/components/chat/chat.tsx`: Initialize `useChat` with `defaultChatStore`. Ensure `messages` from `useChat` and `initialMessages` prop are `UIMessage[]`. 2. Update message rendering logic in `chat.tsx`, `message.tsx`, `message-assistant.tsx` to handle `message.parts`. 3. Update `getSources` in `app/components/chat/get-sources.ts` for `UIMessage.parts`. 4. Update message parsing in `app/p/[chatId]/article.tsx` to use `message.parts`.",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 3.A: Core API Usage (`app/api/chat/route.ts`) - Part 1: Setup & Message Handling",
+      "details": "1. Update imports: `streamText`, `UIMessage`, `ModelMessage`, `convertToModelMessages`. 2. Handle input `messages` as `UIMessage[]`. 3. Convert to `ModelMessage[]` using `convertToModelMessages` before passing to `streamText`. 4. Use `result.toUIMessageStreamResponse()` for output streaming. 5. Update `storeAssistantMessage` logic for `onFinish` to handle new message formats and save as `UIMessage`.",
+      "rest": false
+    },
+    {
+      "status": "todo",
+      "description": "Phase 3.B: Core API Usage (`app/api/chat/route.ts`) - Part 2: Agentic Control & Tools",
+      "details": "1. Implement agentic control: `experimental_prepareStep` (or `prepareStep`), `continueUntil` (e.g., `maxSteps`), and `activeTools`. 2. Adapt tool registration: ensure `toolsToUse` is an object map passed to `streamText`. (Detailed tool definition updates in Phase 4).",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 3.C: Update `generateObject` Usage",
+      "details": "Review and update usage of `generateObject` in `lib/agents/tools/summarizeSources.ts`, `generateTitle.ts`, `generateReport.ts`, `planSearchQuery.ts`. Ensure prompt/schema compatibility.",
+      "rest": false
+    },
+    {
+      "status": "todo",
+      "description": "Phase 4: Tool System Refactoring",
+      "details": "1. In `lib/agents/tools.ts` and individual tool files: Ensure `execute` function signature is `async execute(params, { toolCallId, messages, abortSignal })` if new context is needed. 2. In `lib/agents/load-agent.ts`: Verify resolved `tools` object structure passed to chat API is an object map. 3. In `lib/mcp/mcpManager.ts`: Review `ToolSet` usage (likely deprecated for object map) and `jsonSchema` utility.",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 5: MCP Client Integration Update",
+      "details": "1. In `lib/mcp/load-mcp-from-local.ts` and `load-mcp-from-url.ts`: Test `experimental_createMCPClient` thoroughly. 2. Verify `StdioMCPTransport` import path/name (e.g., `ai/mcp-stdio`). 3. Confirm error handling and client lifecycle.",
+      "rest": false
+    },
+    {
+      "status": "todo",
+      "description": "Phase 6: Other SDK Usage & Type Updates",
+      "details": "1. `lib/models/types.ts`: Update `LanguageModelV1` to `LanguageModelV2` or equivalent. 2. Files using `@ai-sdk/react` (`use-chat-handlers.ts`, `message.tsx`, etc.): Ensure `Message` type usage aligns with `UIMessage` and `message.parts`. Review `experimental_attachments`. 3. `app/types/database.types.ts`: Review `Attachment` from `@ai-sdk/ui-utils` with `UIMessage.parts`.",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 7: Testing",
+      "details": "Perform comprehensive testing: Unit tests for utilities. Integration tests for chat API, message persistence, MCP tools. E2E tests for user flows, agent interactions, public sharing.",
+      "rest": true
+    },
+    {
+      "status": "todo",
+      "description": "Phase 8: Post-Migration Cleanup & Documentation",
+      "details": "1. Remove old AI SDK types/utilities. 2. Delete temporary migration flags/code. 3. Update logging/error handling. 4. Update `README.md` and `cline_docs/`.",
+      "rest": false
+    }
+  ]
+} 

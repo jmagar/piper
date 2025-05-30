@@ -21,7 +21,7 @@ type AgentFormData = {
   name: string
   description: string
   systemPrompt: string
-  mcp: "none" | "git-mcp"
+  mcp: string[]
   repository?: string
   tools: string[]
 }
@@ -38,7 +38,7 @@ export function DialogCreateAgentTrigger({
     name: "",
     description: "",
     systemPrompt: "",
-    mcp: "none",
+    mcp: [],
     tools: [],
   })
   const [repository, setRepository] = useState("")
@@ -83,7 +83,7 @@ Never invent answers. Use tools and return what you find.`
     }
 
     // Update system prompt if git-mcp is selected and repository format is valid
-    if (formData.mcp === "git-mcp" && validateRepository(repoValue)) {
+    if (formData.mcp.includes("git-mcp") && validateRepository(repoValue)) {
       const [owner, repo] = repoValue.split("/")
       setFormData((prev) => ({
         ...prev,
@@ -93,15 +93,17 @@ Never invent answers. Use tools and return what you find.`
   }
 
   const handleSelectChange = (value: string) => {
-    setFormData({ ...formData, mcp: value as "none" | "git-mcp" })
+    // Handle comma-separated string from the collapsible component
+    const selectedServers = value === "" ? [] : value.split(',').filter(s => s.trim() !== '')
+    setFormData({ ...formData, mcp: selectedServers })
 
     // Clear repository error if switching away from git-mcp
-    if (value !== "git-mcp" && error.repository) {
+    if (!selectedServers.includes("git-mcp") && error.repository) {
       setError({ ...error, repository: "" })
     }
 
     // If switching to git-mcp and repository is already valid, update system prompt
-    if (value === "git-mcp" && validateRepository(repository)) {
+    if (selectedServers.includes("git-mcp") && validateRepository(repository)) {
       const [owner, repo] = repository.split("/")
       setFormData((prev) => ({
         ...prev,
@@ -135,7 +137,7 @@ Never invent answers. Use tools and return what you find.`
       newErrors.systemPrompt = "System prompt is required"
     }
 
-    if (formData.mcp === "git-mcp" && !validateRepository(repository)) {
+    if (formData.mcp.includes("git-mcp") && !validateRepository(repository)) {
       newErrors.repository =
         'Please enter a valid repository in the format "owner/repo"'
     }
@@ -155,7 +157,7 @@ Never invent answers. Use tools and return what you find.`
 
     try {
       // If git-mcp is selected, validate the repository
-      if (formData.mcp === "git-mcp") {
+      if (formData.mcp.includes("git-mcp")) {
         const response = await fetch(
           `https://api.github.com/repos/${repository}`
         )
@@ -191,8 +193,8 @@ Never invent answers. Use tools and return what you find.`
           name: formData.name,
           description: formData.description,
           system_prompt: formData.systemPrompt,
-          mcp: formData.mcp,
-          repository: formData.mcp === "git-mcp" ? formData.repository : null,
+          mcp_config: formData.mcp.length === 0 ? null : formData.mcp, // Convert to mcp_config for API
+          repository: formData.mcp.includes("git-mcp") ? formData.repository : null,
           tools: formData.tools,
           owner: owner,
           repo: repo,

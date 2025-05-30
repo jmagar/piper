@@ -5,8 +5,6 @@ import { getAllTools } from "@/lib/tools"
 import { cn } from "@/lib/utils"
 import React, { useEffect, useState } from "react"
 
-const isDev = process.env.NODE_ENV === "development"
-
 type ToolsSectionProps = {
   onSelectTools: (selectedTools: string[]) => void
 }
@@ -17,8 +15,6 @@ export function ToolsSection({ onSelectTools }: ToolsSectionProps) {
   const tools = getAllTools()
 
   useEffect(() => {
-    if (!isDev) return
-
     const fetchTools = async () => {
       try {
         const response = await fetch("/api/tools-available")
@@ -29,7 +25,7 @@ export function ToolsSection({ onSelectTools }: ToolsSectionProps) {
       }
     }
     fetchTools()
-  }, [isDev])
+  }, [])
 
   const handleToolToggle = (toolId: string) => {
     const newSelection = selectedTools.includes(toolId)
@@ -38,20 +34,6 @@ export function ToolsSection({ onSelectTools }: ToolsSectionProps) {
 
     setSelectedTools(newSelection)
     onSelectTools(newSelection)
-  }
-
-  // Development mode required
-  if (!isDev) {
-    return (
-      <div className="space-y-2">
-        <div className="space-y-2">
-          <Label>Tools</Label>
-          <p className="text-muted-foreground text-sm">
-            Tools are only available in development mode.
-          </p>
-        </div>
-      </div>
-    )
   }
 
   return (

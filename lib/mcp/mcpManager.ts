@@ -95,7 +95,7 @@ function processFetchResponse(htmlContent: string): ChunkedContent {
   const metaDescription = metaDescMatch ? metaDescMatch[1] : '';
   
   // Extract main content (remove scripts, styles, nav, footer)
-  let mainContent = htmlContent
+  const mainContent = htmlContent
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<nav[\s\S]*?<\/nav>/gi, '')
@@ -180,10 +180,11 @@ function processSearchResponse(toolName: string, content: string): ChunkedConten
         importance: 'high' as const
       });
       
-      parsed.results.slice(0, 5).forEach((result: any, index: number) => {
+      parsed.results.slice(0, 5).forEach((result: unknown, index: number) => {
+        const resultObj = result as Record<string, unknown>;
         sections.push({
           title: `Result ${index + 1}`,
-          content: `${result.title || result.name || 'Result'}: ${result.description || result.snippet || result.content || ''}`.substring(0, 500),
+          content: `${resultObj.title || resultObj.name || 'Result'}: ${resultObj.description || resultObj.snippet || resultObj.content || ''}`.substring(0, 500),
           importance: index < 2 ? 'medium' as const : 'low' as const
         });
       });

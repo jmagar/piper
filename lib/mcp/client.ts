@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { Writable } from 'stream';
 import { ChildProcess, spawn } from 'child_process';
+import dns from 'dns';
 import { experimental_createMCPClient } from 'ai'; // Removed LocalMCPToolSchema, MCPToolCallMessage, MCPToolResponseMessage as they are not found/needed for current compilation. SDKMCPToolDefinition import removed as it's not found.
 import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio'; // <-- Import from here
 import { fileURLToPath } from 'url';
@@ -328,9 +329,8 @@ export class MCPService {
         console.log(`[${this.displayName}] 🌐 Tool '${toolName}' may require network access. Checking connectivity...`);
         
         // Quick DNS resolution test (doesn't add much delay but helps diagnose issues)
-        const dns = require('dns');
         try {
-          await new Promise((resolve, reject) => {
+          await new Promise((resolve) => {
             dns.lookup('google.com', (err: NodeJS.ErrnoException | null) => {
               if (err) {
                 console.warn(`[${this.displayName}] ⚠️ DNS resolution issue detected:`, err.message);
