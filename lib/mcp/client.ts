@@ -714,9 +714,7 @@ export class MCPService {
  * Assumes config.json is in the project root, two levels up from this file's directory (lib/ai/).
  */
 export function getAppConfig(): AppConfig {
-  const __filename = fileURLToPath(import.meta.url);
-  const currentDir = dirname(__filename);
-  const configPath = pathJoin(currentDir, '..', '..', 'config.json'); 
+  const configPath = pathJoin(process.env.CONFIG_DIR || '/config', 'config.json'); 
   
   try {
     const rawConfig = fs.readFileSync(configPath, 'utf-8');

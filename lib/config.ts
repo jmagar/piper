@@ -162,7 +162,7 @@ export const MESSAGE_MAX_LENGTH = 4000
 
 export const CURATED_AGENTS_SLUGS = [
   "github/ibelick/prompt-kit",
-  "github/ibelick/piper",
+  "github/jmagar/piper",
   "github/shadcn/ui",
   "tweet-vibe-checker",
   "blog-draft",

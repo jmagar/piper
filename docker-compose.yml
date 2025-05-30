@@ -14,10 +14,10 @@ services:
       # Redis URL for MCP Manager
       - REDIS_URL=redis://piper-cache:6379
     volumes:
-      - /mnt/cache/compose/piper/uploads:/uploads
-      - /mnt/cache/compose/piper/config:/config
-      - /mnt/cache/compose/piper/logs:/logs
-      - /mnt/cache/compose/piper/config.json:/app/config.json
+      - /mnt/cache/appdata/piper/uploads:/uploads
+      - /mnt/cache/appdata/piper/config:/config
+      - /mnt/cache/appdata/piper/logs:/logs
+      # - /mnt/cache/appdata/piper/config.json:/app/config.json
       - /mnt/user/data:/data
       - /mnt/user/code:/code
       - /mnt/user/docs:/docs
