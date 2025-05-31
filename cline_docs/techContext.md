@@ -28,7 +28,6 @@
             - `NODE_ENV=development` (set in `docker-compose.dev.yml`).
             - `DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper` (connects to the `piper-db` service).
             - `REDIS_URL=redis://piper-cache:6379` (connects to the `piper-cache` service).
-            - `CSRF_SECRET`: A secret string (must be set in `.env`) used for CSRF token generation and validation.
             - `NEXT_PUBLIC_APP_URL`: The base URL for the application (typically `http://localhost:3000` for development). **CRITICAL** for server-side fetch calls.
         - Volumes:
             - `.:/app`: Mounts the local project directory into the container for hot reloading.
@@ -55,19 +54,39 @@
     - `serverFetch` and `serverFetchJson` functions ensure that Server Actions and API routes can safely make internal API calls.
     - Uses `NEXT_PUBLIC_APP_URL` environment variable to construct absolute URLs.
     - **CRITICAL**: Must be used instead of regular `fetch` for any server-side code (marked with `"use server"`) that needs to call API routes.
-- **CSRF Protection** (Removed):
-    - The custom CSRF implementation has been removed as it's not needed with 2FA via Authelia.
+- **Enhanced MCP Server Dashboard (`app/components/mcp-servers/mcp-servers-dashboard.tsx`)**:
+    - **Comprehensive Management Interface**: Combines server status monitoring with full CRUD configuration management.
+    - **Dual API Integration**: Uses both `/api/mcp-servers` (status) and `/api/mcp-config` (CRUD) endpoints.
+    - **Advanced State Management**: Handles status data, configuration data, form states, modal states, and dirty tracking.
+    - **Modal-Based UI**: Add/edit operations use comprehensive modal forms with transport-specific fields.
+    - **Enhanced Server Cards**: Preserves hover functionality while adding action controls (toggle, edit, delete).
+    - **Form Validation**: Client-side validation with transport-specific requirements and user-friendly error messages.
+    - **Responsive Design**: Grid layout adapts to different screen sizes with proper mobile considerations.
 - **Client-Side State/Cache (`lib/chat-store/`):
     - Uses IndexedDB (via `idb-keyval`) for caching chats and messages to improve UX and reduce direct DB calls for reads.
     - `ChatsProvider` (`lib/chat-store/chats/provider.tsx`) manages loading and syncing chat data.
     - Server Actions (functions marked with `"use server"`) in `lib/chat-store/chats/api.ts` use the `serverFetch` utility for API calls.
 - **API Routes (`app/api/`):
     - `app/api/create-chat/route.ts`: Handles POST requests to create new chats. Interacts with Prisma to save to DB.
+    - `app/api/mcp-servers/route.ts`: Provides real-time MCP server status and health information.
+    - `app/api/mcp-config/route.ts`: Handles CRUD operations for MCP server configurations.
 - **Environment Configuration (`.env`):
     - Stores sensitive information and critical configuration like `DATABASE_URL` (though overridden in compose for service name), API keys, admin credentials.
     - **NEXT_PUBLIC_APP_URL**: Must be set to the internal Docker container URL, typically `http://localhost:3000`. This is used by server-side fetch calls.
 - **Dockerfiles (`Dockerfile`, `Dockerfile.dev`):
     - Define the build process for the `piper-app` image. `Dockerfile.dev` is optimized for development (e.g., potentially different dependencies or build steps for hot reloading).
+
+## MCP Server Management Architecture
+
+- **Configuration Storage**: MCP servers are configured via `config.json` file with support for multiple transport types.
+- **Transport Types Supported**:
+    - **STDIO**: Command-based execution with arguments, environment variables, and working directory options.
+    - **SSE/HTTP**: URL-based connections with custom headers support.
+- **Real-time Status Monitoring**: Backend service (`lib/mcp/mcpManager.ts`) polls server status and caches results in Redis.
+- **Unified Management Interface**: Single dialog combines status display with configuration management capabilities.
+- **Data Flow**:
+    - Status data flows from MCP services → Redis cache → `/api/mcp-servers` → Dashboard UI
+    - Configuration data flows between Dashboard UI ↔ `/api/mcp-config` ↔ `config.json` file
 
 ## Networking & Communication
 
@@ -76,3 +95,4 @@
 - **API Calls:** 
     - **Client-side**: Frontend components make relative API calls (e.g., `/api/create-chat`) which are resolved by the browser to the currently accessed host.
     - **Server-side**: Server components and Server Actions must use `serverFetch` from `lib/server-fetch.ts` to make API calls with absolute URLs.
+- **Security**: Relies on Authelia 2FA for authentication and authorization (CSRF protection removed as unnecessary).

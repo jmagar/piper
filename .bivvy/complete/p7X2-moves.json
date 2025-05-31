@@ -1,0 +1,55 @@
+{
+  "climb": "p7X2",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Setup enhanced dashboard component structure and imports",
+      "details": "Import required UI components, interfaces, and hooks from manager.tsx into mcp-servers-dashboard.tsx. Set up basic state management structure."
+    },
+    {
+      "status": "complete", 
+      "description": "Add CRUD state management and dual API integration",
+      "details": "Integrate both /api/mcp-config and /api/mcp-servers API calls. Add state for managing server configurations alongside status data. Implement dirty state tracking."
+    },
+    {
+      "status": "complete",
+      "description": "Add header controls and action buttons", 
+      "details": "Add 'Add New Server' button and 'Save Configuration' button to the dialog header/footer. Add toggle switches to each server card for enable/disable."
+    },
+    {
+      "status": "complete",
+      "description": "Create add server modal with full form",
+      "details": "Build the add server modal dialog with complete form handling for all transport types (stdio, sse, http). Include form validation and error handling."
+    },
+    {
+      "status": "complete", 
+      "description": "Add edit server functionality",
+      "details": "Add edit buttons to server cards and create edit modal that pre-populates with existing server configuration. Handle form submission for updates."
+    },
+    {
+      "status": "complete",
+      "description": "Implement delete server with confirmation",
+      "details": "Add delete buttons and implement confirmation dialog. Handle server removal from state and configuration."
+    },
+    {
+      "status": "complete",
+      "description": "Implement save configuration functionality", 
+      "details": "Connect save button to POST /api/mcp-config endpoint. Handle success/error states and provide user feedback via toast notifications."
+    },
+    {
+      "status": "complete",
+      "description": "Enhance server cards with action controls",
+      "details": "Update server card layout to include toggle switches, edit/delete buttons while preserving hover functionality and status indicators."
+    },
+    {
+      "status": "complete",
+      "description": "Add form validation and error handling",
+      "details": "Implement comprehensive form validation for all input fields. Add proper error states and user-friendly error messages throughout the interface."
+    },
+    {
+      "status": "complete", 
+      "description": "Final testing and responsive design verification",
+      "details": "Test all functionality end-to-end, verify responsive behavior, ensure no regressions in existing functionality, and clean up any remaining issues."
+    }
+  ]
+} 

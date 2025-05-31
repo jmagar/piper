@@ -14,33 +14,66 @@
     - **Hot Reloading**: Achieved by mounting the local source code (`.:/app`) into the `piper-app` container. The `/app/node_modules` volume is used to keep container dependencies isolated.
     - **Environment Variables**: Loaded from `.env` at the project root and can be overridden in `docker-compose.dev.yml`. `NODE_ENV=development` is set for the dev server.
 
-### 2. CSRF Protection (Custom Implementation)
-    - **Token Generation & Validation**: `lib/csrf.ts` contains functions to generate (`generateCsrfToken`) and validate (`validateCsrfToken`) CSRF tokens. This process relies on a `CSRF_SECRET` environment variable.
-    - **Cookie Issuance**: The `app/api/csrf/route.ts` API endpoint is responsible for generating a new CSRF token and setting it as an `httpOnly` cookie named `csrf_token`. This endpoint is called by `app/layout-client.tsx` on initial application load.
-    - **Middleware Enforcement**: `middleware.ts` intercepts incoming state-changing requests (e.g., POST, PUT, DELETE). It extracts the `csrf_token` from cookies and expects a matching token in the `x-csrf-token` request header.
-    - **Client-Side Handling**: `lib/fetch.ts` (`fetchClient` function) reads the `csrf_token` from `document.cookie` and includes it in the `x-csrf-token` header for outgoing API requests.
-    - **Error Response**: If validation fails, the middleware returns a 403 Forbidden response with the message "Invalid CSRF token".
+### 2. Server-Side Fetch Utility (`lib/server-fetch.ts`)
+    - **Absolute URL Handling**: Provides `serverFetch` and `serverFetchJson` functions for server-side API calls with absolute URLs.
+    - **Environment Integration**: Uses `NEXT_PUBLIC_APP_URL` environment variable to construct proper URLs for internal API calls.
+    - **Server Component Safety**: Ensures Server Actions and API routes can safely make internal API calls without URL parsing errors.
 
-### 3. API Route Handling (Next.js)
+### 3. MCP Server Management UI Pattern (Enhanced Dashboard)
+    - **Unified Interface Architecture**: The MCP Servers Dashboard Dialog (`app/components/mcp-servers/mcp-servers-dashboard.tsx`) combines status monitoring and configuration management in a single interface.
+    - **Dual API Integration Pattern**: 
+        - Uses `/api/mcp-servers` for real-time server status and health information
+        - Uses `/api/mcp-config` for CRUD operations on server configurations
+        - Merges data from both APIs to provide unified server objects with both status and configuration data
+    - **State Management Pattern**:
+        - Maintains separate state for status data (`servers`) and configuration data (`configServers`)
+        - Uses dirty state tracking (`isDirty`) to enable/disable save operations
+        - Implements optimistic updates for immediate UI feedback
+    - **Modal-Based CRUD Pattern**:
+        - Add/Edit operations use modal dialogs with comprehensive form handling
+        - Transport-specific form fields (stdio vs sse/http) with conditional rendering
+        - Form validation with immediate feedback and error prevention
+        - Confirmation dialogs for destructive operations (delete)
+    - **Enhanced Server Cards**:
+        - Preserves original hover functionality for tool listings
+        - Adds action controls (toggle switches, edit/delete buttons) without disrupting status display
+        - Responsive grid layout that adapts to screen sizes
+    - **Error Handling & User Feedback**:
+        - Toast notifications for all operations (success/error)
+        - Comprehensive client-side validation with specific error messages
+        - Graceful error boundaries and fallback states
+
+### 4. CSRF Protection (Removed)
+    - **Removal Rationale**: Custom CSRF implementation was removed as it's not needed with 2FA via Authelia.
+    - **Security Pattern**: Relies on Authelia 2FA for state-changing operation protection.
+
+### 5. API Route Handling (Next.js)
     - **Backend Logic**: API routes under `app/api/` (e.g., `app/api/create-chat/route.ts`) handle specific backend operations.
     - **Database Operations**: These routes use the Prisma client (`lib/prisma.ts`) to interact with the database (e.g., creating a new chat entry).
     - **Request Handling**: Standard Next.js `Request` and `NextResponse` objects are used.
 
-### 4. Database Schema Management (Prisma)
+### 6. Database Schema Management (Prisma)
     - **Schema Definition**: `prisma/schema.prisma` is the source of truth for database table structures.
     - **Synchronization**: `npx prisma db push` is used in the development startup command to apply schema changes to the database and generate the Prisma client. This is preferred over migrations for rapid development iterations where destructive changes are acceptable.
 
-### 5. Client-Side Data Fetching & State
-    - **API Calls**: Frontend components use the custom `fetchClient` (from `lib/fetch.ts`) to make requests to backend API routes.
+### 7. Client-Side Data Fetching & State
+    - **API Calls**: Frontend components use standard `fetch` for API calls to backend routes.
     - **Error Handling**: UI components (e.g., `ChatWindow`) handle responses from API calls, including displaying error messages like "Failed to create chat" based on the success or failure of these calls.
     - **Local Caching (IndexedDB)**: `lib/chat-store/persist.ts` suggests the use of `idb-keyval` for client-side caching of chat data, reducing direct database queries for read operations.
 
-### 6. Configuration Management (`.env`)
-    - **Centralized Secrets/Config**: The `.env` file at the project root is the primary source for environment-specific variables like database connection strings (though `DATABASE_URL` is typically overridden in Docker Compose to use service names), API keys, and the critical `CSRF_SECRET`.
+### 8. Configuration Management (`.env`)
+    - **Centralized Secrets/Config**: The `.env` file at the project root is the primary source for environment-specific variables like database connection strings (though `DATABASE_URL` is typically overridden in Docker Compose to use service names), API keys, and application URLs.
+    - **MCP Server Configuration**: MCP servers are configured via `config.json` file with support for both STDIO and SSE/HTTP transport types.
 
-### 7. Docker Image Build (`Dockerfile.dev`)
+### 9. Docker Image Build (`Dockerfile.dev`)
     - **Development Focus**: `Dockerfile.dev` is tailored for the development environment, likely prioritizing build speed and enabling hot reloading features.
     - **Base Image**: Uses a Node.js base image (e.g., `node:20-alpine`).
     - **Dependency Installation**: `npm install` (or `npm ci`) is used to install project dependencies.
     - **Working Directory**: Sets `/app` as the working directory.
     - **User**: Runs as root (`user: "0:0"`) in `docker-compose.dev.yml` to mitigate volume permission issues on the host.
+
+### 10. Component Enhancement Pattern (Bivvy Climb System)
+    - **Structured Enhancement Process**: Uses the Bivvy climb system for major feature development with comprehensive PRDs and task breakdowns.
+    - **Move-by-Move Implementation**: Large features are broken into manageable "moves" that can be completed incrementally.
+    - **PRD-Driven Development**: Detailed Product Requirements Documents guide implementation and ensure all requirements are met.
+    - **Continuous Integration**: Each move builds upon previous work while maintaining existing functionality.
