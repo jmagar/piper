@@ -1,152 +1,46 @@
-# System Patterns: Piper Application Design
+# System Patterns: Piper Application
 
-## Core Architectural Principles
+## Core Architecture: Next.js + Docker + Prisma
 
-- **Modularity**: Separation of concerns (UI, API, MCP management, services)
-- **Extensibility**: Easy to add new LLM providers and MCP tools
-- **Resilience**: Robust error handling and graceful degradation
-- **Performance**: Efficient processing, caching, and optimized builds
-- **Developer Experience**: HMR, clear logging, type safety
+- **Application Framework**: Next.js is used for both the frontend (React components, App Router) and the backend (API Routes).
+- **Containerization**: Docker and Docker Compose are central to the development and deployment strategy. `docker-compose.dev.yml` (orchestrated by `dev.sh`) defines the development environment, including the application (`piper-app`), database (`piper-db`), and cache (`piper-cache`).
+- **Database Interaction**: Prisma serves as the ORM for interacting with the PostgreSQL database. Schema is defined in `prisma/schema.prisma` and synchronized using `npx prisma db push`.
 
-## Key System Components & Interactions
+## Key System Patterns & Technical Decisions:
 
-### **1. Frontend (Next.js App Router)**
-- **UI Layer**: React components, `useChat` hook for interactivity
-- **API Communication**: Calls Next.js API routes for backend logic
-- **State Management**: Primarily through `useChat` and component state
+### 1. Development Environment Setup (`docker-compose.dev.yml`)
+    - **Service Orchestration**: `dev.sh` script manages `docker-compose.dev.yml` for starting/stopping services.
+    - **`piper-app` Service Startup**: The command `sh -c "npx prisma db push && npm run dev"` is critical. It ensures the database schema is up-to-date and the Prisma client is generated *before* the Next.js development server starts. This resolved earlier issues with missing tables or outdated client.
+    - **Hot Reloading**: Achieved by mounting the local source code (`.:/app`) into the `piper-app` container. The `/app/node_modules` volume is used to keep container dependencies isolated.
+    - **Environment Variables**: Loaded from `.env` at the project root and can be overridden in `docker-compose.dev.yml`. `NODE_ENV=development` is set for the dev server.
 
-### **2. Backend (Next.js API Routes)**
-- **Request Handling**: Processes requests from the frontend
-- **LLM Interaction**: Uses Vercel AI SDK (`streamText`) to call LLMs
-- **Tool Orchestration**: Provides tool definitions to LLMs via `MCPManager`
-- **Response Streaming**: Streams LLM responses and tool results back to UI
+### 2. CSRF Protection (Custom Implementation)
+    - **Token Generation & Validation**: `lib/csrf.ts` contains functions to generate (`generateCsrfToken`) and validate (`validateCsrfToken`) CSRF tokens. This process relies on a `CSRF_SECRET` environment variable.
+    - **Cookie Issuance**: The `app/api/csrf/route.ts` API endpoint is responsible for generating a new CSRF token and setting it as an `httpOnly` cookie named `csrf_token`. This endpoint is called by `app/layout-client.tsx` on initial application load.
+    - **Middleware Enforcement**: `middleware.ts` intercepts incoming state-changing requests (e.g., POST, PUT, DELETE). It extracts the `csrf_token` from cookies and expects a matching token in the `x-csrf-token` request header.
+    - **Client-Side Handling**: `lib/fetch.ts` (`fetchClient` function) reads the `csrf_token` from `document.cookie` and includes it in the `x-csrf-token` header for outgoing API requests.
+    - **Error Response**: If validation fails, the middleware returns a 403 Forbidden response with the message "Invalid CSRF token".
 
-### **3. MCP Manager (`lib/mcp/mcpManager.ts`)**
-- **Singleton Service**: Manages all `MCPService` instances
-- **Initialization**: Discovers MCP servers from `config.json`, initializes clients
-- **Tool Aggregation**: Collects tools from all active `MCPService`s via dual approach:
-  - **SSE Tools**: Uses `loadMCPToolsFromURL` utility for AI SDK integration
-  - **STDIO Tools**: Manual tool wrapping with `execute` functions
-- **Health Monitoring**: Polls MCP servers, caches status in Redis
-- **Backward Compatibility**: Handles both legacy (`url` field) and new (`transport` object) config formats
+### 3. API Route Handling (Next.js)
+    - **Backend Logic**: API routes under `app/api/` (e.g., `app/api/create-chat/route.ts`) handle specific backend operations.
+    - **Database Operations**: These routes use the Prisma client (`lib/prisma.ts`) to interact with the database (e.g., creating a new chat entry).
+    - **Request Handling**: Standard Next.js `Request` and `NextResponse` objects are used.
 
-### **4. MCP Service (`lib/mcp/client.ts`)**
-- **Individual Server Client**: Manages connection and communication with one MCP server
-- **Protocol Handling**: Implements MCP handshake (`tools/list`, `initialized`)
-- **Transport Layer**: Supports `stdio` and `sse`
-  - **stdio**: Spawns and communicates with local MCP server processes
-  - **sse**: Connects to remote MCP servers via Server-Sent Events
-- **Tool Execution**: Contains the logic to actually call tools for STDIO servers only
+### 4. Database Schema Management (Prisma)
+    - **Schema Definition**: `prisma/schema.prisma` is the source of truth for database table structures.
+    - **Synchronization**: `npx prisma db push` is used in the development startup command to apply schema changes to the database and generate the Prisma client. This is preferred over migrations for rapid development iterations where destructive changes are acceptable.
 
-### **MCP (Model Context Protocol)**
+### 5. Client-Side Data Fetching & State
+    - **API Calls**: Frontend components use the custom `fetchClient` (from `lib/fetch.ts`) to make requests to backend API routes.
+    - **Error Handling**: UI components (e.g., `ChatWindow`) handle responses from API calls, including displaying error messages like "Failed to create chat" based on the success or failure of these calls.
+    - **Local Caching (IndexedDB)**: `lib/chat-store/persist.ts` suggests the use of `idb-keyval` for client-side caching of chat data, reducing direct database queries for read operations.
 
-Piper integrates with external tools and services via MCP servers. Communication can occur over standard I/O (stdio) or Server-Sent Events (SSE).
+### 6. Configuration Management (`.env`)
+    - **Centralized Secrets/Config**: The `.env` file at the project root is the primary source for environment-specific variables like database connection strings (though `DATABASE_URL` is typically overridden in Docker Compose to use service names), API keys, and the critical `CSRF_SECRET`.
 
-#### **Dual Transport Pattern (STDIO vs SSE)**
-
-**STDIO Tool Integration (Manual Invocation)**:
-```typescript
-// For STDIO servers - requires manual tool wrapping
-combinedTools[toolName] = tool({
-  description: toolDef.description,
-  parameters: jsonSchema(params),
-  execute: async (args: unknown) => {
-    const mcpService = getManagedClient(server.key);
-    return await mcpService.invokeTool(toolDef.name, args);
-  }
-});
-```
-
-**SSE Tool Integration (AI SDK Automatic)**:
-```typescript
-// For SSE servers - use loadMCPToolsFromURL utility
-const { loadMCPToolsFromURL } = await import('./load-mcp-from-url');
-const { tools: mcpTools } = await loadMCPToolsFromURL(transport.url);
-
-// Add tools directly - AI SDK handles invocation automatically
-Object.entries(mcpTools).forEach(([toolName, toolDefinition]) => {
-  combinedTools[`${serverKey}_${toolName}`] = toolDefinition;
-});
-```
-
-#### **Transport Object Creation Pattern**
-```typescript
-// Handle both legacy and new config formats
-let transport = serverConfig.transport;
-if (!transport && serverConfig.url) {
-  // Create transport object for legacy config format
-  transport = {
-    type: 'sse',
-    url: serverConfig.url,
-    headers: serverConfig.headers
-  };
-}
-```
-
-#### **Key Differences Between Transports**
-- **STDIO**: Local processes, direct invocation via `MCPService.invokeTool()`
-- **SSE**: Remote HTTP endpoints, AI SDK handles invocation automatically
-- **Tool Format**: STDIO requires manual wrapping, SSE tools come pre-formatted from AI SDK
-- **Error Handling**: STDIO has custom error objects, SSE uses AI SDK error patterns
-
-### **5. Database (PostgreSQL + Prisma)**
-- **Data Persistence**: Stores chat history, user settings, agent configurations (future)
-- **ORM**: Prisma for type-safe queries and migrations
-
-### **6. Cache (Redis)**
-- **Purpose**: Stores MCP server health status, reducing polling load
-- **Access**: Used by `MCPManager`
-
-## Communication & Data Flow Patterns
-
-### **User Interaction → LLM Response**
-1. UI sends user message to `/api/chat`.
-2. API route calls `streamText` with message history and tools from `MCPManager`.
-3. LLM processes, may decide to call a tool.
-4. If tool call:
-   - **SSE Tools**: AI SDK handles invocation automatically via `loadMCPToolsFromURL` integration
-   - **STDIO Tools**: AI SDK calls the `execute` function → `MCPManager` routes to `MCPService` → `MCPService.invokeTool`
-   - Result is returned to LLM.
-5. LLM generates final response / next step.
-6. Response streamed back to UI.
-
-### **MCP Server Health Checking**
-1. `MCPManager` periodically polls each `MCPService`.
-2. `MCPService` attempts to connect/ping its server.
-3. Status (online/offline, tools available) updated in Redis cache.
-4. UI can query an API endpoint to display MCP server statuses.
-
-### **Config Format Compatibility**
-- **Legacy Format**: `{ "url": "http://...", "disabled": false }`
-- **New Format**: `{ "transport": { "type": "sse", "url": "..." } }`
-- **Runtime Conversion**: Legacy format automatically converted to transport object
-
-## Error Handling & Resilience Patterns
-
-- **Tool Execution**: 
-  - **STDIO**: `MCPService` catches errors, returns structured error object to LLM
-  - **SSE**: AI SDK handles errors automatically through its tool invocation system
-- **MCP Connection**: Retry mechanisms, status caching
-- **Config Compatibility**: Graceful handling of both legacy and new config formats
-- **API Errors**: Standard HTTP error responses
-- **UI Feedback**: Displays errors and loading states
-
-## Development Workflow Patterns
-
-- **Hot Module Replacement (HMR)**: Next.js feature for fast refresh
-- **State Persistence for HMR**: `MCPManager` and `MCPService` instances stored on `globalThis` to survive HMR without re-initializing all connections
-- **Dockerized Dev Environment**: Consistent setup using `docker-compose`
-
-## Performance Optimization Patterns
-
-### **Tool Response Processing**
-- **Large Response Chunking**: Automatically processes responses >5KB
-- **Tool-Specific Processing**: HTML, JSON, and text optimized differently
-- **Importance Ranking**: High/Medium/Low priority content sections
-- **Smart Truncation**: Preserves key information while reducing token usage
-
-### **Tool Integration Efficiency**
-- **SSE Servers**: Leverages AI SDK optimizations and HTTP connection pooling
-- **STDIO Servers**: Direct process communication with connection reuse
-- **Status Caching**: Redis-based health monitoring reduces polling overhead
-- **Lazy Loading**: Tools loaded on-demand as servers become available
+### 7. Docker Image Build (`Dockerfile.dev`)
+    - **Development Focus**: `Dockerfile.dev` is tailored for the development environment, likely prioritizing build speed and enabling hot reloading features.
+    - **Base Image**: Uses a Node.js base image (e.g., `node:20-alpine`).
+    - **Dependency Installation**: `npm install` (or `npm ci`) is used to install project dependencies.
+    - **Working Directory**: Sets `/app` as the working directory.
+    - **User**: Runs as root (`user: "0:0"`) in `docker-compose.dev.yml` to mitigate volume permission issues on the host.

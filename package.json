@@ -9,7 +9,7 @@
   "scripts": {
     "build": "next build",
     "start": "next start",
-    "dev": "next dev",
+    "dev": "mkdir -p .next && next dev",
     "lint": "next lint"
   },
   "prisma": {

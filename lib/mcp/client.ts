@@ -1,11 +1,12 @@
+import 'server-only';
 import * as fs from 'fs';
 import { Writable } from 'stream';
 import { ChildProcess, spawn } from 'child_process';
 import dns from 'dns';
 import { experimental_createMCPClient } from 'ai'; // Removed LocalMCPToolSchema, MCPToolCallMessage, MCPToolResponseMessage as they are not found/needed for current compilation. SDKMCPToolDefinition import removed as it's not found.
 import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio'; // <-- Import from here
-import { fileURLToPath } from 'url';
-import { dirname, join as pathJoin } from 'path';
+
+import { join as pathJoin } from 'path';
 
 // Define a local representation of what we expect from the SDK's tool definition
 // This helps in type-safe access within fetchToolsAndStatus

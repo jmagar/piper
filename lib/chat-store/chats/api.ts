@@ -1,14 +1,18 @@
+"use server";
 import { readFromIndexedDB, writeToIndexedDB } from "@/lib/chat-store/persist"
 import type { Chat } from "@/lib/chat-store/types"
 import { prisma } from "@/lib/prisma" // Keep for other functions, will address them later if needed
 import { fetchClient } from "../../fetch"
+import { serverFetch, serverFetchJson } from "../../server-fetch"
 import {
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "../../routes"
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 export async function getChatsForUserInDb(): Promise<Chat[]> {
   try {
-    const response = await fetch("/api/chats/user") // Fetch from the new API route
+    const response = await fetch(`${APP_URL}/api/chats/user`) // Fetch from the new API route
     if (!response.ok) {
       console.error("Failed to fetch user chats from API:", response.statusText)
       return []
@@ -72,7 +76,7 @@ export async function createChatInDb(
   title: string,
   model: string,
   systemPrompt: string
-): Promise<string | null> {
+): Promise<string> { // Returns string or throws
   try {
     const chat = await prisma.chat.create({
       data: {
@@ -80,11 +84,11 @@ export async function createChatInDb(
         model,
         systemPrompt
       }
-    })
-    return chat.id
+    });
+    return chat.id;
   } catch (error) {
-    console.error("Error creating chat:", error)
-    return null
+    console.error("Error creating chat in DB:", error);
+    throw new Error(`Failed to create chat in database: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -191,7 +195,7 @@ export async function createChat(
 
 export async function updateChatModel(chatId: string, model: string) {
   try {
-    const res = await fetchClient(API_ROUTE_UPDATE_CHAT_MODEL, {
+    const res = await serverFetch(API_ROUTE_UPDATE_CHAT_MODEL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId, model }),
@@ -222,8 +226,11 @@ export async function createNewChat(
   title?: string,
   model?: string
 ): Promise<Chat> {
-  const response = await fetchClient("/api/create-chat", {
+  const response = await serverFetch("/api/create-chat", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       title,
       model,

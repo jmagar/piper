@@ -1,0 +1,58 @@
+# version: '3.8' # Obsolete, removing
+
+services:
+  piper-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    user: "0:0" # Explicitly run as root
+    command: sh -c "npx prisma db push && npm run dev"
+    ports:
+      - "8630:3000" # Expose port 3000 on host port 8630
+    env_file:
+      - .env # Load environment variables from .env file
+    environment:
+      # Add or override any environment variables here if needed
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper
+      - REDIS_URL=redis://piper-cache:6379
+      # CHOKIDAR_USEPOLLING=true # Uncomment if hot reloading is unreliable
+    volumes:
+      # Mounts for hot reloading application code
+      - .:/app # Mount current directory to /app in container
+      - /app/node_modules # Isolate container's node_modules from host's
+      # Persistent volumes for data (same as your production-like compose)
+      - /mnt/cache/appdata/piper/uploads:/uploads
+      - /mnt/cache/appdata/piper/config:/config
+      - /mnt/cache/appdata/piper/logs:/logs
+      # Other mounts you had, ensure these paths exist on your host or are appropriate for dev
+      - /mnt/user/data:/data
+      # - /mnt/user/code:/code # Removed as per request
+      - /mnt/user/docs:/docs
+      # - /mnt/user/compose:/compose # Removed as per request
+      - /mnt/user/downloads:/downloads
+    depends_on:
+      - piper-db
+      - piper-cache
+    restart: unless-stopped # Or 'no' for development if you prefer manual restarts
+
+  piper-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: piper
+      POSTGRES_USER: piper
+      POSTGRES_PASSWORD: piper # Consider using a secret or .env for password
+    volumes:
+      - piper_db_data:/var/lib/postgresql/data
+    ports:
+      - "8631:5432" # Expose DB port to host, consistent with main docker-compose.yml
+    restart: unless-stopped
+
+  piper-cache:
+    image: redis:7-alpine
+    ports:
+      - "8632:6379" # Expose Redis port to host, consistent with main docker-compose.yml
+    restart: unless-stopped
+
+volumes:
+  piper_db_data: # Defines the named volume for PostgreSQL data persistence

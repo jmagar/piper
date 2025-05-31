@@ -1,133 +1,78 @@
-# Tech Context: Piper Application Stack
+# Technical Context: Piper Application
 
 ## Core Technologies
 
-### **Next.js 15 (App Router)**
-- **Framework**: React-based full-stack framework
-- **Routing**: App Router for server components and API routes
-- **Deployment**: Dockerized for production on Unraid
+- **Framework:** Next.js (React framework for server-side rendering and static site generation)
+- **Language:** TypeScript
+- **Backend:** Next.js API Routes (Node.js runtime environment)
+- **Database:** PostgreSQL
+- **ORM:** Prisma (for database access and schema management)
+- **Caching:** Redis (service `piper-cache`, used by MCP manager and potentially other features)
+- **Containerization:** Docker, Docker Compose
+- **Package Manager:** npm
 
-### **TypeScript**
-- **Language**: Superset of JavaScript for type safety
-- **Compilation**: Strict mode enabled, part of Docker build process
-- **Benefits**: Improved code quality, early error detection, better maintainability
+## Development Environment (`dev.sh` & `docker-compose.dev.yml`)
 
-### **Prisma ORM**
-- **Database**: PostgreSQL
-- **Interaction**: Type-safe database access, schema migrations
-- **Tooling**: Prisma Studio for database inspection
+- **Orchestration:** The `dev.sh` script is used to manage the development lifecycle (down, up, build).
+- **Compose File:** `docker-compose.dev.yml` is the primary configuration for the development environment.
+- **Services:**
+    - `piper-app`: The Next.js application.
+        - Builds from `Dockerfile.dev`.
+        - Runs as root (`user: "0:0"`) to avoid permission issues with mounted volumes.
+        - Startup Command: `sh -c "npx prisma db push && npm run dev"`. This ensures:
+            1. `npx prisma db push`: Synchronizes the Prisma schema with the PostgreSQL database (creates tables, applies changes).
+            2. `npm run dev`: Starts the Next.js development server with hot reloading.
+        - Ports: Maps port 3000 (container) to 8630 (host).
+        - Environment Variables:
+            - Loaded from `.env` file at the root of the project.
+            - `NODE_ENV=development` (set in `docker-compose.dev.yml`).
+            - `DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper` (connects to the `piper-db` service).
+            - `REDIS_URL=redis://piper-cache:6379` (connects to the `piper-cache` service).
+            - `CSRF_SECRET`: A secret string (must be set in `.env`) used for CSRF token generation and validation.
+            - `NEXT_PUBLIC_APP_URL`: The base URL for the application (typically `http://localhost:3000` for development). **CRITICAL** for server-side fetch calls.
+        - Volumes:
+            - `.:/app`: Mounts the local project directory into the container for hot reloading.
+            - `/app/node_modules`: A named volume to keep container `node_modules` separate from host.
+            - Persistent data mounts for uploads, config, logs (e.g., `/mnt/cache/appdata/piper/...`).
+    - `piper-db`: PostgreSQL database service.
+        - Image: `postgres:15-alpine` (or `postgres:16` in `docker-compose.yml`).
+        - Environment: Defines `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+        - Volumes: `piper_db_data` for persistent database storage.
+        - Ports: Maps port 5432 (container) to 8631 (host).
+    - `piper-cache`: Redis caching service.
+        - Image: `redis:alpine`.
+        - Volumes: `piper_cache` for persistent cache data.
+        - Ports: Maps port 6379 (container) to 8632 (host).
 
-### **Redis**
-- **Purpose**: Caching MCP server status, potentially session management
-- **Client**: `ioredis`
-- **Benefits**: Reduced latency for status checks, improved resilience
+## Key Libraries, Patterns, and Files
 
-### **Vercel AI SDK**
+- **Prisma (`lib/prisma.ts`, `prisma/schema.prisma`):**
+    - Handles all database interactions.
+    - `schema.prisma` defines the database schema.
+    - Prisma Client is generated based on the schema.
+- **Server-Side Fetch Utility (`lib/server-fetch.ts`)**:
+    - Provides utilities for making server-side fetch calls with absolute URLs.
+    - `serverFetch` and `serverFetchJson` functions ensure that Server Actions and API routes can safely make internal API calls.
+    - Uses `NEXT_PUBLIC_APP_URL` environment variable to construct absolute URLs.
+    - **CRITICAL**: Must be used instead of regular `fetch` for any server-side code (marked with `"use server"`) that needs to call API routes.
+- **CSRF Protection** (Removed):
+    - The custom CSRF implementation has been removed as it's not needed with 2FA via Authelia.
+- **Client-Side State/Cache (`lib/chat-store/`):
+    - Uses IndexedDB (via `idb-keyval`) for caching chats and messages to improve UX and reduce direct DB calls for reads.
+    - `ChatsProvider` (`lib/chat-store/chats/provider.tsx`) manages loading and syncing chat data.
+    - Server Actions (functions marked with `"use server"`) in `lib/chat-store/chats/api.ts` use the `serverFetch` utility for API calls.
+- **API Routes (`app/api/`):
+    - `app/api/create-chat/route.ts`: Handles POST requests to create new chats. Interacts with Prisma to save to DB.
+- **Environment Configuration (`.env`):
+    - Stores sensitive information and critical configuration like `DATABASE_URL` (though overridden in compose for service name), API keys, admin credentials.
+    - **NEXT_PUBLIC_APP_URL**: Must be set to the internal Docker container URL, typically `http://localhost:3000`. This is used by server-side fetch calls.
+- **Dockerfiles (`Dockerfile`, `Dockerfile.dev`):
+    - Define the build process for the `piper-app` image. `Dockerfile.dev` is optimized for development (e.g., potentially different dependencies or build steps for hot reloading).
 
-Piper leverages the Vercel AI SDK for core language model interactions, including `streamText` for generating responses and managing tool calls.
+## Networking & Communication
 
-#### MCP Integration via `@model-context/node` (`ai` package)
-- **Version**: `ai@4.3.16`
-- **Client Creation**: Uses `experimental_createMCPClient` for connecting to MCP servers
-- **Dual Integration Pattern**: 
-  - **SSE Transport**: Uses `loadMCPToolsFromURL` utility for automatic AI SDK tool integration
-  - **STDIO Transport**: Manual tool wrapping with `execute` functions for direct invocation
-- **Tool Loading**: 130+ tools across 19 MCP servers (107 SSE + 23 STDIO)
-- **Config Compatibility**: Supports both legacy (`url` field) and new (`transport` object) formats
-
-### **Docker & Docker Compose**
-- **Containerization**: Ensures consistent environments
-- **Orchestration**: Manages multi-container application (app, db, cache)
-- **Build Process**: Optimized Dockerfile with multi-stage builds
-
-## Key Libraries & Frameworks
-
-### **Frontend (React & UI)**
-- **`@ai-sdk/react`**: `useChat` hook for chat interface
-- **`shadcn/ui`**: UI components (Radix UI + Tailwind CSS)
-- **`cmdk`**: Command menu for tool selection
-- **`@phosphor-icons/react`**: Icon library
-- **`tailwindcss`**: Utility-first CSS framework
-
-### **Backend & API**
-- **`@ai-sdk/*` providers**: OpenAI, Anthropic, Google, Mistral, XAI, OpenRouter
-- **`@model-context/node`**: For MCP client implementation
-- **`zod`**: Schema validation for tool parameters and API requests
-
-### **Development & Tooling**
-- **`eslint`, `prettier`**: Code linting and formatting
-- **`prisma` CLI**: Database migrations and client generation
-- **`ts-node`**: Running TypeScript scripts (e.g., seeding)
-- **`uv` / `uvx`**: Python environment and package management for Python MCP servers
-
-## Architectural Decisions
-
-### **MCP Manager (`lib/mcp/mcpManager.ts`)**
-- **Centralized Control**: Manages all MCP service instances
-- **Dual Integration Strategy**: 
-  - **SSE Tools**: Uses `loadMCPToolsFromURL` for automatic AI SDK integration
-  - **STDIO Tools**: Manual wrapping with `execute` functions
-- **Health Monitoring**: Periodically checks server status and caches it in Redis
-- **Transport Object Creation**: Handles legacy config format by creating transport objects at runtime
-- **Backward Compatibility**: Seamless support for both old and new configuration formats
-
-### **MCP Service (`lib/mcp/client.ts`)**
-- **Protocol Implementation**: Handles MCP handshake and communication
-- **Transport Support**: Supports stdio and SSE transports with different invocation patterns
-- **Error Handling**: Robust error management for tool execution (primarily STDIO)
-- **State Management**: Persists client state across HMR in development
-
-### **SSE Tool Integration Pattern**
-```typescript
-// Transport object creation for legacy configs
-let transport = serverConfig.transport;
-if (!transport && serverConfig.url) {
-  transport = {
-    type: 'sse',
-    url: serverConfig.url,
-    headers: serverConfig.headers
-  };
-}
-
-// AI SDK tool loading
-const { loadMCPToolsFromURL } = await import('./load-mcp-from-url');
-const { tools: mcpTools } = await loadMCPToolsFromURL(transport.url);
-
-// Direct tool registration (AI SDK handles invocation)
-Object.entries(mcpTools).forEach(([toolName, toolDefinition]) => {
-  combinedTools[`${serverKey}_${toolName}`] = toolDefinition;
-});
-```
-
-### **State Management (Development)**
-- **`globalThis`**: Used to persist MCP Manager and services during Next.js hot reloading
-- **Rationale**: Avoids re-initializing all MCP connections on every code change
-
-## Performance Considerations
-
-- **Chunked Responses**: Processing large tool outputs efficiently (>5KB automatic chunking)
-- **Caching**: Redis for MCP server status to reduce polling overhead
-- **Optimized Docker Builds**: Smaller image sizes, faster deployment (17KB context vs 860MB)
-- **Efficient Database Queries**: Leveraging Prisma's capabilities
-- **Tool Integration Efficiency**: AI SDK optimizations for SSE, direct process communication for STDIO
-
-## Security Aspects
-
-- **Environment Variables**: `.env` file for managing secrets
-- **Docker Networking**: Isolated networks for backend services (Unraid host IP: 10.1.0.2)
-- **No Hardcoded Secrets**: API keys and sensitive data managed via env vars
-- **MCP Isolation**: Each MCP server runs in isolation with defined capabilities
-
-## Production Deployment Patterns
-
-### **Unraid Host Integration**
-- **Network Configuration**: Container-to-host communication via `10.1.0.2`
-- **MCP Server URLs**: All SSE servers accessible via host IP (not localhost)
-- **Docker Compose**: Multi-container orchestration with persistent volumes
-
-### **Tool Ecosystem Coverage**
-- **Media Management**: Plex, Overseerr, Tautulli, SABnzbd, qBittorrent (via SSE)
-- **System Administration**: Unraid, Portainer, UniFi controller (via SSE)
-- **Development Tools**: GitHub, filesystem operations, code search (via STDIO)
-- **Communication**: Gotify notifications and alerting (via SSE)
-- **Content Discovery**: Prowlarr indexer management, web crawling (via SSE)
+- **Internal Docker Network:** Services (`piper-app`, `piper-db`, `piper-cache`) communicate using their service names (e.g., `piper-db:5432`).
+- **External Access:** The `piper-app` is accessible on the host machine at `http://localhost:8630`.
+- **API Calls:** 
+    - **Client-side**: Frontend components make relative API calls (e.g., `/api/create-chat`) which are resolved by the browser to the currently accessed host.
+    - **Server-side**: Server components and Server Actions must use `serverFetch` from `lib/server-fetch.ts` to make API calls with absolute URLs.

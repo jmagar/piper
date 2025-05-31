@@ -23,7 +23,7 @@ services:
       - /mnt/user/docs:/docs
       - /mnt/user/compose:/compose
       - /mnt/user/downloads:/downloads
-    command: sh -c "npx prisma migrate deploy && npm start"
+    command: sh -c "npx prisma db push && npm run dev"
     depends_on:
       - piper-db
       - piper-cache

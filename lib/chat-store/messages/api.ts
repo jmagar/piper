@@ -1,124 +1,73 @@
-"server-only"; // Ensures this module only runs on the server
+import type { Message as MessageAISDK } from "ai";
+import { readFromIndexedDB, writeToIndexedDB } from "../persist";
+import {
+  getMessagesFromDb as getMessagesFromDbAction, // Alias to avoid name clash
+  insertMessageToDb,
+  insertMessagesToDb,
+  deleteMessagesFromDb,
+} from "./actions";
 
-import { prisma } from "@/lib/prisma"
-import type { Message as MessageAISDK } from "ai"
-import type { Message } from "@/app/types/database.types"
-import { readFromIndexedDB, writeToIndexedDB } from "../persist"
+type ChatMessageEntry = {
+  id: string;
+  messages: MessageAISDK[];
+};
 
 export async function getMessagesFromDb(
   chatId: string
 ): Promise<MessageAISDK[]> {
+  // This function now primarily serves as a wrapper if needed,
+  // or could be removed if provider calls action directly.
+  // For now, it calls the server action.
   try {
-    const messages = await prisma.message.findMany({
-      where: { chatId },
-      orderBy: { createdAt: 'asc' }
-    })
-
-    return messages.map((message: Message) => ({
-      id: message.id,
-      content: message.content,
-      role: message.role as MessageAISDK["role"],
-      createdAt: message.createdAt,
-      experimental_attachments: [], // Will be populated from attachments table if needed
-    }))
+    return await getMessagesFromDbAction(chatId);
   } catch (error) {
-    console.error("Failed to fetch messages:", error)
-    return []
+    console.error("Failed to fetch messages via api.ts wrapper:", error);
+    return [];
   }
-}
-
-async function insertMessageToDb(chatId: string, message: MessageAISDK) {
-  try {
-    await prisma.message.create({
-      data: {
-        chatId,
-        role: message.role,
-        content: message.content,
-      }
-    })
-  } catch (error) {
-    console.error("Error inserting message:", error)
-  }
-}
-
-async function insertMessagesToDb(chatId: string, messages: MessageAISDK[]) {
-  try {
-    const messageData = messages.map((message) => ({
-      chatId,
-      role: message.role,
-      content: message.content,
-    }))
-
-    await prisma.message.createMany({
-      data: messageData
-    })
-  } catch (error) {
-    console.error("Error inserting messages:", error)
-  }
-}
-
-async function deleteMessagesFromDb(chatId: string) {
-  try {
-    await prisma.message.deleteMany({
-      where: { chatId }
-    })
-  } catch (error) {
-    console.error("Failed to clear messages from database:", error)
-  }
-}
-
-type ChatMessageEntry = {
-  id: string
-  messages: MessageAISDK[]
 }
 
 export async function getCachedMessages(
   chatId: string
 ): Promise<MessageAISDK[]> {
-  const entry = await readFromIndexedDB<ChatMessageEntry>("messages", chatId)
+  const entry = await readFromIndexedDB<ChatMessageEntry>("messages", chatId);
 
-  if (!entry || Array.isArray(entry)) return []
+  if (!entry || Array.isArray(entry)) return [];
 
   return (entry.messages || []).sort(
     (a, b) => +new Date(a.createdAt || 0) - +new Date(b.createdAt || 0)
-  )
+  );
 }
 
 export async function cacheMessages(
   chatId: string,
   messages: MessageAISDK[]
 ): Promise<void> {
-  await writeToIndexedDB("messages", { id: chatId, messages })
+  await writeToIndexedDB("messages", { id: chatId, messages });
 }
 
 export async function addMessage(
   chatId: string,
   message: MessageAISDK
 ): Promise<void> {
-  await insertMessageToDb(chatId, message)
-  const current = await getCachedMessages(chatId)
-
-  console.log("current", current)
-
-  const updated = [...current, message]
-  console.log("updated", updated)
-
-  await writeToIndexedDB("messages", { id: chatId, messages: updated })
+  await insertMessageToDb(chatId, message); // Call Server Action
+  const current = await getCachedMessages(chatId);
+  const updated = [...current, message];
+  await writeToIndexedDB("messages", { id: chatId, messages: updated });
 }
 
 export async function setMessages(
   chatId: string,
   messages: MessageAISDK[]
 ): Promise<void> {
-  await insertMessagesToDb(chatId, messages)
-  await writeToIndexedDB("messages", { id: chatId, messages })
+  await insertMessagesToDb(chatId, messages); // Call Server Action
+  await writeToIndexedDB("messages", { id: chatId, messages });
 }
 
 export async function clearMessagesCache(chatId: string): Promise<void> {
-  await writeToIndexedDB("messages", { id: chatId, messages: [] })
+  await writeToIndexedDB("messages", { id: chatId, messages: [] });
 }
 
 export async function clearMessagesForChat(chatId: string): Promise<void> {
-  await deleteMessagesFromDb(chatId)
-  await clearMessagesCache(chatId)
+  await deleteMessagesFromDb(chatId); // Call Server Action
+  await clearMessagesCache(chatId);
 }

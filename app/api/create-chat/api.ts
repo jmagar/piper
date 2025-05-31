@@ -1,5 +1,6 @@
 import type { Chat } from "@/app/types/database.types"
 import { prisma } from "@/lib/prisma"
+import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 
 type CreateChatInput = {
   title?: string
@@ -15,6 +16,7 @@ export async function createChatInDb({
       data: {
         title: title || "New Chat",
         model,
+        systemPrompt: SYSTEM_PROMPT_DEFAULT,
       },
     })
 

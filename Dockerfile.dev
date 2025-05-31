@@ -1,0 +1,68 @@
+# Use an official Node.js runtime as a parent image
+FROM node:22-alpine AS development
+
+# Install system dependencies that might be needed
+RUN apk add --no-cache git openssh-client python3 py3-pip curl
+
+# Install uv (includes uvx) using official installer to global location
+ENV UV_INSTALL_DIR="/usr/local"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Move uv binaries to proper bin directory
+RUN mv /usr/local/uv /usr/local/bin/uv && \
+    mv /usr/local/uvx /usr/local/bin/uvx
+
+# Create app directory and other necessary directories for mounted volumes, then set permissions
+# These are created as root first, then ownership changed to node.
+# Create app directory and other necessary directories for mounted volumes.
+# Change ownership to node for /app so that files copied into it are owned by node.
+# Other directories (/config, etc.) will be owned by root in the image, which is fine as they are volume mounts.
+RUN mkdir -p /app /config /uploads /logs /data /code /docs /compose /downloads \
+    && chown -R node:node /app
+# Not chowning /config, etc. to node here, as root will manage them or host mounts define perms.
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Switch to node user for npm install and copying app files to ensure they are owned by node in the image layers
+USER node
+
+# Copy package.json and package-lock.json as node user
+COPY --chown=node:node package*.json ./
+
+# Install project dependencies as node user
+RUN npm ci
+
+# Copy the rest of the application's code into the container as node user
+# This ensures files copied are owned by node, which helps with permissions for .next etc.
+COPY --chown=node:node . .
+
+# Generate Prisma client as part of the build, as the node user
+# This should happen after all code and node_modules are in place.
+RUN npx prisma generate
+
+# Set environment variables
+# These can be overridden in docker-compose.dev.yml or .env file
+ENV NODE_ENV=development
+ENV CONFIG_DIR=/config
+# For Next.js, ensure the port is consistently 3000 unless changed
+ENV PORT=3000
+
+# Create necessary directories for mounted volumes and set permissions
+# Ensure the node user (default for node images) can write to these
+# The node user's UID/GID is typically 1000 on Alpine node images
+# The directories /config, /uploads etc. are now created and chown'd above, before USER node.
+# We will handle /app and /app/.next separately or rely on user context
+
+# USER node is set above for build steps.
+# We will let the CMD run as root (by not specifying USER node at the end of the Dockerfile)
+# so it can create .next in the mounted volume.
+# Remove explicit .next creation here, next dev (run by root via CMD) will handle it.
+
+# Expose the port the app runs on
+EXPOSE 3000
+
+# The CMD will run as root because USER node is not the last user directive.
+# This allows 'npm run dev' (and thus 'next dev') to create .next in the mounted /app volume.
+# CMD ["sh", "-c", "npx prisma generate && npm run dev"] # We moved prisma generate to a RUN step
+CMD ["npm", "run", "dev"]
