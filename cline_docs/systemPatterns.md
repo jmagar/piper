@@ -1,79 +1,102 @@
 # System Patterns: Piper Application
 
-## Core Architecture: Next.js + Docker + Prisma
+## Core Architecture: Next.js + Docker + Prisma + Winston
 
-- **Application Framework**: Next.js is used for both the frontend (React components, App Router) and the backend (API Routes).
-- **Containerization**: Docker and Docker Compose are central to the development and deployment strategy. `docker-compose.dev.yml` (orchestrated by `dev.sh`) defines the development environment, including the application (`piper-app`), database (`piper-db`), and cache (`piper-cache`).
-- **Database Interaction**: Prisma serves as the ORM for interacting with the PostgreSQL database. Schema is defined in `prisma/schema.prisma` and synchronized using `npx prisma db push`.
+- **Application Framework**: Next.js for frontend (React, App Router) and backend (API Routes).
+- **Containerization**: Docker and Docker Compose (`docker-compose.dev.yml`, `dev.sh`).
+- **Database Interaction**: Prisma ORM with PostgreSQL.
+- **Logging Framework**: Winston for comprehensive, structured JSON logging.
 
 ## Key System Patterns & Technical Decisions:
 
 ### 1. Development Environment Setup (`docker-compose.dev.yml`)
-    - **Service Orchestration**: `dev.sh` script manages `docker-compose.dev.yml` for starting/stopping services.
-    - **`piper-app` Service Startup**: The command `sh -c "npx prisma db push && npm run dev"` is critical. It ensures the database schema is up-to-date and the Prisma client is generated *before* the Next.js development server starts. This resolved earlier issues with missing tables or outdated client.
-    - **Hot Reloading**: Achieved by mounting the local source code (`.:/app`) into the `piper-app` container. The `/app/node_modules` volume is used to keep container dependencies isolated.
-    - **Environment Variables**: Loaded from `.env` at the project root and can be overridden in `docker-compose.dev.yml`. `NODE_ENV=development` is set for the dev server.
+    - Service orchestration via `dev.sh`.
+    - `piper-app` startup: `sh -c "npx prisma db push && npm run dev"` (DB sync before dev server).
+    - Hot reloading: Local source mounted (`.:/app`), isolated `node_modules`.
+    - Environment variables: From `.env`, overridden in compose file.
 
 ### 2. Server-Side Fetch Utility (`lib/server-fetch.ts`)
-    - **Absolute URL Handling**: Provides `serverFetch` and `serverFetchJson` functions for server-side API calls with absolute URLs.
-    - **Environment Integration**: Uses `NEXT_PUBLIC_APP_URL` environment variable to construct proper URLs for internal API calls.
-    - **Server Component Safety**: Ensures Server Actions and API routes can safely make internal API calls without URL parsing errors.
+    - `serverFetch`, `serverFetchJson` for absolute URL internal API calls.
+    - Uses `NEXT_PUBLIC_APP_URL`.
 
 ### 3. MCP Server Management UI Pattern (Enhanced Dashboard)
-    - **Unified Interface Architecture**: The MCP Servers Dashboard Dialog (`app/components/mcp-servers/mcp-servers-dashboard.tsx`) combines status monitoring and configuration management in a single interface.
-    - **Dual API Integration Pattern**: 
-        - Uses `/api/mcp-servers` for real-time server status and health information
-        - Uses `/api/mcp-config` for CRUD operations on server configurations
-        - Merges data from both APIs to provide unified server objects with both status and configuration data
-    - **State Management Pattern**:
-        - Maintains separate state for status data (`servers`) and configuration data (`configServers`)
-        - Uses dirty state tracking (`isDirty`) to enable/disable save operations
-        - Implements optimistic updates for immediate UI feedback
-    - **Modal-Based CRUD Pattern**:
-        - Add/Edit operations use modal dialogs with comprehensive form handling
-        - Transport-specific form fields (stdio vs sse/http) with conditional rendering
-        - Form validation with immediate feedback and error prevention
-        - Confirmation dialogs for destructive operations (delete)
-    - **Enhanced Server Cards**:
-        - Preserves original hover functionality for tool listings
-        - Adds action controls (toggle switches, edit/delete buttons) without disrupting status display
-        - Responsive grid layout that adapts to screen sizes
-    - **Error Handling & User Feedback**:
-        - Toast notifications for all operations (success/error)
-        - Comprehensive client-side validation with specific error messages
-        - Graceful error boundaries and fallback states
+    - Unified interface: `app/components/mcp-servers/mcp-servers-dashboard.tsx`.
+    - Dual API integration: `/api/mcp-servers` (status), `/api/mcp-config` (CRUD).
+    - State management: Dirty tracking, optimistic updates.
+    - Modal-based CRUD: Comprehensive forms, transport-specific fields, validation.
 
 ### 4. CSRF Protection (Removed)
-    - **Removal Rationale**: Custom CSRF implementation was removed as it's not needed with 2FA via Authelia.
-    - **Security Pattern**: Relies on Authelia 2FA for state-changing operation protection.
+    - Rationale: Not needed due to Authelia 2FA.
+    - Security reliance: Authelia 2FA for state-changing operations.
 
 ### 5. API Route Handling (Next.js)
-    - **Backend Logic**: API routes under `app/api/` (e.g., `app/api/create-chat/route.ts`) handle specific backend operations.
-    - **Database Operations**: These routes use the Prisma client (`lib/prisma.ts`) to interact with the database (e.g., creating a new chat entry).
-    - **Request Handling**: Standard Next.js `Request` and `NextResponse` objects are used.
+    - Backend logic in `app/api/`.
+    - Prisma client (`lib/prisma.ts`) for DB operations.
 
 ### 6. Database Schema Management (Prisma)
-    - **Schema Definition**: `prisma/schema.prisma` is the source of truth for database table structures.
-    - **Synchronization**: `npx prisma db push` is used in the development startup command to apply schema changes to the database and generate the Prisma client. This is preferred over migrations for rapid development iterations where destructive changes are acceptable.
+    - `prisma/schema.prisma` as source of truth.
+    - `npx prisma db push` for dev schema sync.
 
 ### 7. Client-Side Data Fetching & State
-    - **API Calls**: Frontend components use standard `fetch` for API calls to backend routes.
-    - **Error Handling**: UI components (e.g., `ChatWindow`) handle responses from API calls, including displaying error messages like "Failed to create chat" based on the success or failure of these calls.
-    - **Local Caching (IndexedDB)**: `lib/chat-store/persist.ts` suggests the use of `idb-keyval` for client-side caching of chat data, reducing direct database queries for read operations.
+    - Standard `fetch` for API calls.
+    - UI error handling for API responses.
+    - IndexedDB caching (`lib/chat-store/persist.ts`) via `idb-keyval`.
 
-### 8. Configuration Management (`.env`)
-    - **Centralized Secrets/Config**: The `.env` file at the project root is the primary source for environment-specific variables like database connection strings (though `DATABASE_URL` is typically overridden in Docker Compose to use service names), API keys, and application URLs.
-    - **MCP Server Configuration**: MCP servers are configured via `config.json` file with support for both STDIO and SSE/HTTP transport types.
+### 8. Configuration Management (`.env`, `config.json`)
+    - `.env`: Secrets, DB connections, `NEXT_PUBLIC_APP_URL`.
+    - `config.json`: MCP server configurations (STDIO, SSE/HTTP).
 
 ### 9. Docker Image Build (`Dockerfile.dev`)
-    - **Development Focus**: `Dockerfile.dev` is tailored for the development environment, likely prioritizing build speed and enabling hot reloading features.
-    - **Base Image**: Uses a Node.js base image (e.g., `node:20-alpine`).
-    - **Dependency Installation**: `npm install` (or `npm ci`) is used to install project dependencies.
-    - **Working Directory**: Sets `/app` as the working directory.
-    - **User**: Runs as root (`user: "0:0"`) in `docker-compose.dev.yml` to mitigate volume permission issues on the host.
+    - Node.js base image, `npm install`, `/app` working directory.
+    - Runs as root in dev for volume permissions.
 
 ### 10. Component Enhancement Pattern (Bivvy Climb System)
-    - **Structured Enhancement Process**: Uses the Bivvy climb system for major feature development with comprehensive PRDs and task breakdowns.
-    - **Move-by-Move Implementation**: Large features are broken into manageable "moves" that can be completed incrementally.
-    - **PRD-Driven Development**: Detailed Product Requirements Documents guide implementation and ensure all requirements are met.
-    - **Continuous Integration**: Each move builds upon previous work while maintaining existing functionality.
+    - Structured development for major features (PRDs, task breakdowns).
+
+### 11. Comprehensive Logging System (`lib/logger/`, `middleware/`)
+    - **Centralized Winston Logger (`lib/logger/index.ts`)**:
+        - Structured JSON logging format.
+        - Multiple transports: Daily rotating files for app, error, MCP, AI SDK, HTTP.
+        - Console transport for development with colorization.
+        - Source-specific logger instances (e.g., `appLogger.mcp`, `appLogger.aiSdk`).
+    - **Correlation ID Tracking (`lib/logger/correlation.ts`, `middleware/correlation.ts`)**:
+        - `AsyncLocalStorage` for context propagation across async operations.
+        - Middleware injects/extracts correlation IDs (e.g., `x-correlation-id`).
+    - **Request/Response Logging (`middleware/logging.ts`)**:
+        - Logs incoming requests and outgoing responses.
+        - Includes timing, status codes, sanitized headers/body.
+    - **Global Error Handling (`middleware/error-handler.ts`, `lib/logger/error-handler.ts`)**:
+        - Centralized middleware (`nextErrorHandler`, `expressErrorHandlingMiddleware`).
+        - Custom `AppError` class for standardized error objects.
+        - Advanced error classification based on patterns (name, message, code).
+        - User-friendly message generation.
+        - Retry logic helpers (`shouldRetry`, `getRetryDelay`).
+        - Handles unhandled promise rejections and uncaught exceptions.
+    - **Specialized Loggers (`lib/logger/mcp-logger.ts`, `lib/logger/ai-sdk-logger.ts`)**:
+        - `mcpLogger`: Logs JSON-RPC messages, server lifecycle events, tool execution (start/end, performance).
+        - `aiSdkLogger`: Logs AI provider operations, model calls, streaming events, token usage, and costs.
+    - **Log Security (`lib/logger/security.ts`)**:
+        - PII detection using regex patterns (email, phone, SSN, credit card, API keys, JWTs).
+        - Data masking for sensitive fields and PII in log messages and metadata (`[REDACTED]`).
+        - Access control stubs for log viewer (role-based).
+        - Audit logging for log access attempts.
+    - **Log Rotation & Management (`lib/logger/rotation-config.ts`)**:
+        - Winston DailyRotateFile for automated log rotation (`YYYY-MM-DD` pattern).
+        - Configurable `maxSize`, `maxFiles`, compression.
+        - Environment-specific rotation configurations (dev, prod, test).
+        - Scheduled cleanup of old log files.
+    - **Log Viewer & API (`app/components/log-viewer/`, `app/api/logs/`)**:
+        - React component for viewing, filtering, and searching logs.
+        - API endpoints for querying logs, exporting (JSON, CSV), and health checks.
+    - **Middleware Integration (`middleware.ts`)**:
+        - Orchestrates correlation, request logging, and error handling middleware for all matched requests.
+        - Ensures correlation context is available throughout the request lifecycle.
+
+### 12. Application Structure (Key Directories)
+    - `app/`: Next.js App Router (pages, layouts, API routes).
+    - `components/`: Shared React components (UI, common, motion, prompt-kit).
+    - `lib/`: Core application logic (Prisma, MCP client, loggers, stores, utilities).
+    - `middleware/`: Next.js middleware implementations.
+    - `cline_docs/`: AI agent memory bank.
+    - `docs/`: Project documentation (e.g., `logging-system.md`).
+    - `logs/`: Runtime log file storage.

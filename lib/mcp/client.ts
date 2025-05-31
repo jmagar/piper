@@ -2,11 +2,35 @@ import 'server-only';
 import * as fs from 'fs';
 import { Writable } from 'stream';
 import { ChildProcess, spawn } from 'child_process';
-import dns from 'dns';
-import { experimental_createMCPClient } from 'ai'; // Removed LocalMCPToolSchema, MCPToolCallMessage, MCPToolResponseMessage as they are not found/needed for current compilation. SDKMCPToolDefinition import removed as it's not found.
-import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio'; // <-- Import from here
+// import dns from 'dns'; // Unused
+import { experimental_createMCPClient } from 'ai';
+import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio'; // Re-added
 
 import { join as pathJoin } from 'path';
+
+// Import our logging system
+import { McpOperation } from '@/lib/logger/types';
+import { 
+  mcpLogger, 
+  JsonRpcMessageType, 
+  McpTransportType, 
+  // JsonRpcMessage, // Unused
+} from '@/lib/logger/mcp-logger';
+// import { McpLogEntry } from '@/lib/logger/types'; // Unused
+// import { correlationMiddleware } from '@/middleware/correlation'; // Unused
+import { generateCorrelationId } from '@/lib/logger/correlation';
+// Using simple console logging instead of complex logger system
+const appLogger = {
+  mcp: {
+    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[MCP INFO] ${message}`, metadata),
+    error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error(`[MCP ERROR] ${message}`, err, metadata);
+    },
+    debug: (message: string, metadata?: Record<string, unknown> | string | number) => console.log(`[MCP DEBUG] ${message}`, metadata),
+    warn: (message: string, metadata?: Record<string, unknown> | string | unknown) => console.warn(`[MCP WARN] ${message}`, metadata),
+  }
+};
 
 // Define a local representation of what we expect from the SDK's tool definition
 // This helps in type-safe access within fetchToolsAndStatus
@@ -86,6 +110,10 @@ export interface AppConfig {
   mcpServers: Record<string, ServerConfigEntry>; 
 }
 
+// More specific server config types based on transport
+export type StdioServerConfig = ServerConfigEntry & { transport: StdioTransportConfig };
+export type SSEServerConfig = ServerConfigEntry & { transport: SseTransportConfig };
+
 /**
  * MCPService manages the lifecycle and interaction with an MCP client.
  */
@@ -101,56 +129,106 @@ export class MCPService {
   constructor(config: ServerConfigEntry, serverKey: string) {
     this.config = config;
     this.displayName = config.label || serverKey;
+    
+    // Log server startup
+    mcpLogger.logServerLifecycle(McpOperation.SERVER_STARTUP, serverKey, {
+      serverInfo: {
+        name: config.name || this.displayName,
+        version: '1.0.0',
+        transport: config.transport.type === 'stdio' ? McpTransportType.STDIO : McpTransportType.SSE,
+        status: 'initializing'
+      },
+      metadata: {
+        command: config.transport.type === 'stdio' ? config.transport.command : undefined,
+        args: config.transport.type === 'stdio' ? config.transport.args : undefined,
+        env: config.transport.type === 'stdio' ? config.transport.env : undefined
+      }
+    });
+
     this._initializeClient(); // Fire-and-forget initialization
   }
 
   private async _initializeClient(): Promise<void> {
-    // Prevent re-initialization if already attempted
-    if (this.clientInitializationStatus !== 'pending') {
-      return;
-    }
-
     try {
-      console.log(`[${this.displayName}] Initializing MCP client with transport config:`, this.config.transport);
-
-      let transportForClient: Experimental_StdioMCPTransport | { type: 'sse'; url: string; headers?: Record<string, string> };
-
-      if (this.config.transport.type === 'sse') {
-        const sseConfig = this.config.transport;
-        transportForClient = { type: 'sse', url: sseConfig.url };
-        if (sseConfig.headers) (transportForClient as SseTransportConfig).headers = sseConfig.headers;
-      } else if (this.config.transport.type === 'stdio') {
-        const stdioConfig = this.config.transport;
-        transportForClient = new Experimental_StdioMCPTransport({
-          command: stdioConfig.command,
-          args: stdioConfig.args,
-          env: stdioConfig.env as Record<string, string>, // SDK expects Record<string, string>
-          cwd: stdioConfig.cwd,
-          ...(stdioConfig.stderr && { stderr: stdioConfig.stderr }), // Pass stderr if defined
+      appLogger.mcp.info(`Initializing MCP client: ${this.displayName}`);
+      
+      if (this.config.transport.type === 'stdio') {
+        const stdioConfig = this.config.transport; // Directly use the narrowed type
+        
+        // Log initialization start
+        mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
+          metadata: {
+            transport: 'stdio',
+            command: stdioConfig.command,
+            args: stdioConfig.args
+          }
         });
-      } else if (this.config.transport.type === 'custom') {
-        throw new Error(`'custom' transport type for server '${this.displayName}' is not supported.`);
+
+        this.mcpClient = await experimental_createMCPClient({
+          transport: new Experimental_StdioMCPTransport({
+            command: stdioConfig.command,
+            args: stdioConfig.args || [],
+            env: Object.fromEntries( // Ensure this results in Record<string, string>
+              Object.entries({ ...process.env, ...stdioConfig.env })
+                .filter(([, value]) => typeof value === 'string') as [string, string][]
+            ),
+            // TODO: Consider if stderr needs to be passed or handled, e.g., stdioConfig.stderr
+          }),
+        });
+        
+        // Log successful initialization
+        mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
+          protocolVersion: '2024-11-05',
+          metadata: { initializationType: 'experimental_createMCPClient' }
+        });
+        
+      } else if (this.config.transport.type === 'sse') {
+        const sseConfig = this.config.transport; // Type is SseTransportConfig here
+        
+        if (!sseConfig.url) {
+          throw new Error('SSE transport URL is missing in configuration.');
+        }
+
+        // Log SSE initialization
+        mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
+          metadata: {
+            transport: 'sse',
+            url: sseConfig.url
+          }
+        });
+
+        this.mcpClient = await experimental_createMCPClient({
+          transport: {
+            type: 'sse',
+            url: sseConfig.url, // Now confirmed to be a string
+          },
+        });
+        
+        mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
+          protocolVersion: '2024-11-05',
+          metadata: { initializationType: 'experimental_createMCPClient' }
+        });
       } else {
-        const transportFromConfig: unknown = this.config.transport;
-        const transportTypeString = (transportFromConfig && typeof (transportFromConfig as Record<string, unknown>)?.type === 'string') ? (transportFromConfig as Record<string, unknown>)?.type : 'unknown';
-        throw new Error(`Unsupported or misconfigured transport type ('${transportTypeString}') for server '${this.displayName}'.`);
+        throw new Error(`Unsupported transport: ${this.config.transport.type}`);
       }
 
-      const clientOptions: { name?: string; transport: typeof transportForClient } = { transport: transportForClient };
-      if (this.config.name) clientOptions.name = this.config.name;
-
-      console.log(`[${this.displayName}] Calling experimental_createMCPClient...`);
-      this.mcpClient = await experimental_createMCPClient(clientOptions);
       this.clientInitializationStatus = 'success';
-      console.log(`[${this.displayName}] MCP client initialized successfully.`);
-      if (this.mcpClient) {
-        console.log(`[${this.displayName}] MCP Client methods (debug):`, Object.keys(this.mcpClient));
-      }
-
-    } catch (error) {
-      console.error(`[${this.displayName}] Failed to initialize MCP client:`, error);
+      appLogger.mcp.info(`✅ MCP client initialized successfully: ${this.displayName}`);
+      
+    } catch (error: unknown) {
       this.clientInitializationStatus = 'error';
       this.clientInitializationError = error instanceof Error ? error : new Error(String(error));
+      
+      // Log initialization error
+      mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+        error: this.clientInitializationError,
+        metadata: { 
+          phase: 'initialization',
+          transport: this.config.transport.type
+        }
+      });
+      
+      appLogger.mcp.error(`❌ Failed to initialize MCP client: ${this.displayName}`, this.clientInitializationError);
     }
   }
 
@@ -315,83 +393,92 @@ export class MCPService {
    * Invoke tool via stdio transport using MCP protocol over the child process
    */
   private async _invokeViaStdio(toolName: string, args: Record<string, unknown>): Promise<unknown> {
-    if (this.config.transport.type !== 'stdio') {
-      throw new Error(`[${this.displayName}] Expected stdio transport config`);
-    }
-
-    const stdioConfig = this.config.transport;
+    const stdioConfig = this.config.transport as StdioTransportConfig; // Ensure it is StdioTransportConfig
     let childProcess: ChildProcess | null = null;
 
+    // Start tool execution logging
+            const requestId = generateCorrelationId();
+    const executionId = mcpLogger.logToolExecutionStart(toolName, this.displayName, requestId, args);
+
     try {
-      console.log(`[${this.displayName}] Creating child process for tool invocation: ${stdioConfig.command}`);
+      appLogger.mcp.info(`🔧 Invoking ${toolName} via stdio for ${this.displayName}...`);
       
-      // Network connectivity check for tools that might need external access
-      if (['fetch', 'searxng', 'brave_web_search'].includes(toolName)) {
-        console.log(`[${this.displayName}] 🌐 Tool '${toolName}' may require network access. Checking connectivity...`);
-        
-        // Quick DNS resolution test (doesn't add much delay but helps diagnose issues)
-        try {
-          await new Promise((resolve) => {
-            dns.lookup('google.com', (err: NodeJS.ErrnoException | null) => {
-              if (err) {
-                console.warn(`[${this.displayName}] ⚠️ DNS resolution issue detected:`, err.message);
-                console.warn(`[${this.displayName}] This might indicate WSL2 networking problems`);
-              } else {
-                console.log(`[${this.displayName}] ✅ Basic DNS resolution working`);
-              }
-              resolve(null); // Don't fail on DNS issues, just warn
-            });
-          });
-        } catch (dnsError) {
-          console.warn(`[${this.displayName}] DNS check failed, but continuing:`, dnsError);
-        }
+      // Ensure command is a string
+      if (typeof stdioConfig.command !== 'string') {
+        throw new Error('Stdio command must be a string.');
       }
-      
+
       // Create child process
       childProcess = spawn(stdioConfig.command, stdioConfig.args || [], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
-          ...process.env, 
+        env: {
+          ...process.env,
           ...stdioConfig.env,
-          // Add potentially missing network-related env vars for WSL2
+          NODE_ENV: process.env.NODE_ENV || 'development',
           ...(process.platform === 'linux' && {
-            'NODE_TLS_REJECT_UNAUTHORIZED': '0', // Help with HTTPS in WSL2
-            'NPM_CONFIG_REGISTRY': 'https://registry.npmjs.org/',
-          })
-        },
+            NODE_TLS_REJECT_UNAUTHORIZED: '0',
+            NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/',
+          }),
+        } as NodeJS.ProcessEnv,
         cwd: stdioConfig.cwd || process.cwd()
       });
 
-      if (!childProcess.stdin || !childProcess.stdout) {
-        throw new Error(`[${this.displayName}] Failed to create stdio streams for child process`);
+      if (!childProcess || !childProcess.stdin || !childProcess.stdout) {
+        throw new Error(`Failed to create stdio streams for child process`);
       }
 
-      // Set up error handling
-      childProcess.on('error', (error) => {
-        console.error(`[${this.displayName}] Child process error:`, error);
+      // ---- Store a reference to the non-null childProcess ----
+      const currentChildProcess = childProcess;
+
+      // Set up error handling with logging
+      currentChildProcess.on('error', (error) => {
+        appLogger.mcp.error(`Child process error for ${this.displayName}:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'process_execution', toolName }
+        });
       });
 
-      childProcess.on('exit', (code, signal) => {
+      currentChildProcess.on('exit', (code, signal) => {
         if (code !== 0) {
-          console.error(`[${this.displayName}] Child process exited with code ${code}, signal ${signal}`);
+          const error = new Error(`Child process exited with code ${code}, signal ${signal}`);
+          appLogger.mcp.error(`Child process exit error for ${this.displayName}:`, error);
+          mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+            error,
+            metadata: { phase: 'process_exit', exitCode: code, signal, toolName }
+          });
         }
       });
 
       // Initialize MCP connection with handshake
-      await this._initializeMCPConnection(childProcess);
+      await this._initializeMCPConnection(currentChildProcess);
 
       // Send tool call request
-      const result = await this._sendMCPToolCall(childProcess, toolName, args);
+      const result = await this._sendMCPToolCall(currentChildProcess, toolName, args);
+      
+      // Log successful tool execution
+      mcpLogger.logToolExecutionEnd(executionId, { result });
       
       return result;
 
     } catch (error) {
-      console.error(`[${this.displayName}] Error in stdio tool invocation:`, error);
+      appLogger.mcp.error(`Error in stdio tool invocation for ${this.displayName}:`, error);
+      
+      // Log tool execution error
+      mcpLogger.logToolExecutionEnd(executionId, { 
+        error: error instanceof Error ? error : new Error(String(error))
+      });
+      
       throw error;
     } finally {
       // Clean up child process
       if (childProcess) {
         childProcess.kill();
+        
+        // Log server shutdown
+        mcpLogger.logServerLifecycle(McpOperation.SERVER_SHUTDOWN, this.displayName, {
+          metadata: { reason: 'tool_execution_complete', toolName }
+        });
       }
     }
   }
@@ -408,9 +495,13 @@ export class MCPService {
 
       // Increased timeout from 10s to 30s to handle slower-starting servers
       const timeout = setTimeout(() => {
-        console.error(`[${this.displayName}] MCP initialization timeout - no response received within 30 seconds`);
-        console.error(`[${this.displayName}] This might indicate the MCP server is slow to start or having issues`);
-        reject(new Error('MCP initialization timeout after 30 seconds'));
+        const error = new Error('MCP initialization timeout after 30 seconds');
+        appLogger.mcp.error(`MCP initialization timeout for ${this.displayName}`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'initialization_timeout' }
+        });
+        reject(error);
       }, 30000); // 30 second timeout
 
       let responseBuffer = '';
@@ -419,7 +510,7 @@ export class MCPService {
       const responseHandler = (data: Buffer) => {
         const chunk = data.toString();
         responseCount++;
-        console.log(`[${this.displayName}] Init received raw data (chunk ${responseCount}):`, JSON.stringify(chunk));
+        appLogger.mcp.debug(`Init received raw data (chunk ${responseCount}) for ${this.displayName}:`, JSON.stringify(chunk));
         responseBuffer += chunk;
         
         // Look for complete JSON-RPC messages (separated by newlines)
@@ -428,51 +519,78 @@ export class MCPService {
         
         for (const line of lines) {
           if (line.trim()) {
-            console.log(`[${this.displayName}] Init processing line:`, JSON.stringify(line.trim()));
+            appLogger.mcp.debug(`Init processing line for ${this.displayName}:`, JSON.stringify(line.trim()));
             try {
               const response = JSON.parse(line);
-              console.log(`[${this.displayName}] Init parsed JSON response:`, response);
+              
+              // Log the JSON-RPC message
+              mcpLogger.logJsonRpcMessage(
+                response,
+                response.error ? JsonRpcMessageType.ERROR : JsonRpcMessageType.RESPONSE,
+                this.displayName,
+                McpTransportType.STDIO
+              );
+              
+              appLogger.mcp.debug(`Init parsed JSON response for ${this.displayName}:`, response);
               
               if (response.id === 'init') {
                 if (response.result) {
-                  console.log(`[${this.displayName}] ✅ Initialization successful, sending initialized notification`);
+                  appLogger.mcp.info(`✅ Initialization successful for ${this.displayName}, sending initialized notification`);
                   
                   // Send initialized notification to complete the handshake
                   const initializedNotification = {
-                    jsonrpc: "2.0",
+                    jsonrpc: "2.0" as const,
                     method: "notifications/initialized",
                     params: {}
                   };
                   
+                  // Log the notification
+                  mcpLogger.logJsonRpcMessage(
+                    initializedNotification,
+                    JsonRpcMessageType.NOTIFICATION,
+                    this.displayName,
+                    McpTransportType.STDIO
+                  );
+                  
                   const notificationString = JSON.stringify(initializedNotification) + '\n';
-                  console.log(`[${this.displayName}] 📤 Sending initialized notification:`, notificationString.trim());
+                  appLogger.mcp.debug(`📤 Sending initialized notification for ${this.displayName}:`, notificationString.trim());
                   
                   try {
                     childProcess.stdin!.write(notificationString);
-                    console.log(`[${this.displayName}] ✅ Initialized notification sent successfully`);
+                    appLogger.mcp.info(`✅ Initialized notification sent successfully for ${this.displayName}`);
                     
                     clearTimeout(timeout);
                     childProcess.stdout!.off('data', responseHandler);
                     resolve();
                     return;
                   } catch (writeError) {
-                    console.error(`[${this.displayName}] Error writing initialized notification:`, writeError);
+                    const error = new Error(`Failed to send initialized notification: ${writeError}`);
+                    appLogger.mcp.error(`Error writing initialized notification for ${this.displayName}:`, error);
+                    mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+                      error,
+                      metadata: { phase: 'notification_send' }
+                    });
                     clearTimeout(timeout);
                     childProcess.stdout!.off('data', responseHandler);
-                    reject(new Error(`Failed to send initialized notification: ${writeError}`));
+                    reject(error);
                     return;
                   }
                 } else if (response.error) {
-                  console.error(`[${this.displayName}] Initialization error:`, response.error);
+                  const error = new Error(`MCP initialization error: ${response.error.message || 'Unknown error'}`);
+                  appLogger.mcp.error(`Initialization error for ${this.displayName}:`, response.error);
+                  mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+                    error,
+                    metadata: { phase: 'initialization_response', mcpError: response.error }
+                  });
                   clearTimeout(timeout);
                   childProcess.stdout!.off('data', responseHandler);
-                  reject(new Error(`MCP initialization error: ${response.error.message || 'Unknown error'}`));
+                  reject(error);
                   return;
                 }
               }
             } catch (parseError) {
-              console.warn(`[${this.displayName}] Failed to parse JSON line during init:`, JSON.stringify(line.trim()));
-              console.warn(`[${this.displayName}] Parse error:`, parseError);
+              appLogger.mcp.warn(`Failed to parse JSON line during init for ${this.displayName}:`, JSON.stringify(line.trim()));
+              appLogger.mcp.warn(`Parse error for ${this.displayName}:`, parseError);
               // Continue processing other lines
             }
           }
@@ -485,32 +603,42 @@ export class MCPService {
       if (childProcess.stderr) {
         childProcess.stderr.on('data', (data) => {
           const stderrMsg = data.toString();
-          console.log(`[${this.displayName}] Init stderr:`, stderrMsg);
+          appLogger.mcp.debug(`Init stderr for ${this.displayName}:`, stderrMsg);
           
           // Check for critical errors during startup
           if (stderrMsg.toLowerCase().includes('fatal') || 
               stderrMsg.toLowerCase().includes('cannot start') ||
               stderrMsg.toLowerCase().includes('permission denied')) {
-            console.error(`[${this.displayName}] Critical error detected during initialization:`, stderrMsg);
+            const error = new Error(`Critical error detected during initialization: ${stderrMsg}`);
+            appLogger.mcp.error(`Critical error detected during initialization for ${this.displayName}:`, error);
+            mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+              error,
+              metadata: { phase: 'stderr_critical', stderrMsg }
+            });
           }
         });
       }
 
       // Monitor process exit during initialization
       const exitHandler = (code: number | null, signal: string | null) => {
-        console.error(`[${this.displayName}] Process exited during initialization with code ${code}, signal ${signal}`);
+        const error = new Error(`Process exited during initialization: code ${code}, signal ${signal}`);
+        appLogger.mcp.error(`Process exited during initialization for ${this.displayName}:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'process_exit_during_init', exitCode: code, signal }
+        });
         clearTimeout(timeout);
         if (childProcess.stdout) {
           childProcess.stdout.off('data', responseHandler);
         }
-        reject(new Error(`Process exited during initialization: code ${code}, signal ${signal}`));
+        reject(error);
       };
       
       childProcess.on('exit', exitHandler);
 
       // Send initialization request
       const initRequest = {
-        jsonrpc: "2.0",
+        jsonrpc: "2.0" as const,
         id: "init",
         method: "initialize",
         params: {
@@ -525,18 +653,31 @@ export class MCPService {
         }
       };
 
+      // Log the initialization request
+      mcpLogger.logJsonRpcMessage(
+        initRequest,
+        JsonRpcMessageType.REQUEST,
+        this.displayName,
+        McpTransportType.STDIO
+      );
+
       const requestString = JSON.stringify(initRequest) + '\n';
-      console.log(`[${this.displayName}] 📤 Sending initialization request:`, requestString.trim());
+      appLogger.mcp.debug(`📤 Sending initialization request for ${this.displayName}:`, requestString.trim());
       
       try {
         childProcess.stdin.write(requestString);
-        console.log(`[${this.displayName}] ✅ Initialization request sent successfully`);
+        appLogger.mcp.info(`✅ Initialization request sent successfully for ${this.displayName}`);
       } catch (writeError) {
+        const error = new Error(`Failed to send initialization request: ${writeError}`);
         clearTimeout(timeout);
         childProcess.stdout.off('data', responseHandler);
         childProcess.off('exit', exitHandler);
-        console.error(`[${this.displayName}] Error writing initialization request:`, writeError);
-        reject(new Error(`Failed to send initialization request: ${writeError}`));
+        appLogger.mcp.error(`Error writing initialization request for ${this.displayName}:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'request_send' }
+        });
+        reject(error);
       }
     });
   }
@@ -545,19 +686,23 @@ export class MCPService {
    * Send MCP tool call request and wait for response
    */
   private async _sendMCPToolCall(childProcess: ChildProcess, toolName: string, args: Record<string, unknown>): Promise<unknown> {
+    const requestId = `tool-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     return new Promise((resolve, reject) => {
       if (!childProcess.stdin || !childProcess.stdout) {
         reject(new Error('Child process streams not available'));
         return;
       }
 
-      const requestId = Math.random().toString(36).substring(2, 15);
-      // Increased timeout from 30s to 90s for longer-running tools
       const timeout = setTimeout(() => {
-        console.error(`[${this.displayName}] Tool call timeout for '${toolName}' - no response received within 90 seconds`);
-        console.error(`[${this.displayName}] This suggests the MCP server may be taking longer than expected or hanging`);
-        reject(new Error(`Tool call timeout for '${toolName}' after 90 seconds`));
-      }, 90000); // 90 second timeout
+        const error = new Error(`Tool call timeout after 60 seconds for tool: ${toolName}`);
+        appLogger.mcp.error(`Tool call timeout for ${this.displayName}:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'tool_call_timeout', toolName, requestId }
+        });
+        reject(error);
+      }, 60000); // 60 second timeout
 
       let responseBuffer = '';
       let responseCount = 0;
@@ -565,7 +710,7 @@ export class MCPService {
       const responseHandler = (data: Buffer) => {
         const chunk = data.toString();
         responseCount++;
-        console.log(`[${this.displayName}] Tool call received raw data (chunk ${responseCount}):`, JSON.stringify(chunk));
+        appLogger.mcp.debug(`Tool call received raw data (chunk ${responseCount}) for ${this.displayName}:`, JSON.stringify(chunk));
         responseBuffer += chunk;
         
         // Look for complete JSON-RPC messages
@@ -574,91 +719,70 @@ export class MCPService {
         
         for (const line of lines) {
           if (line.trim()) {
-            console.log(`[${this.displayName}] Tool call processing line:`, JSON.stringify(line.trim()));
+            appLogger.mcp.debug(`Tool call processing line for ${this.displayName}:`, JSON.stringify(line.trim()));
             try {
               const response = JSON.parse(line);
-              console.log(`[${this.displayName}] Tool call parsed JSON response:`, response);
+              
+              // Log the JSON-RPC response
+              mcpLogger.logJsonRpcMessage(
+                response,
+                response.error ? JsonRpcMessageType.ERROR : JsonRpcMessageType.RESPONSE,
+                this.displayName,
+                McpTransportType.STDIO
+              );
+              
+              appLogger.mcp.debug(`Tool call parsed JSON response for ${this.displayName}:`, response);
               
               if (response.id === requestId) {
-                console.log(`[${this.displayName}] ✅ Found matching response for request ID ${requestId}`);
                 clearTimeout(timeout);
                 childProcess.stdout!.off('data', responseHandler);
                 
                 if (response.error) {
-                  console.error(`[${this.displayName}] Tool call error response:`, response.error);
-                  reject(new Error(`MCP Error: ${response.error.message || 'Unknown error'}`));
-                } else {
-                  console.log(`[${this.displayName}] Tool call successful result:`, response.result);
-                  
-                  // Handle MCP CallToolResult format properly
+                  const error = mcpLogger.createMcpError(
+                    response.error.code,
+                    response.error.message,
+                    response.error.data
+                  );
+                  appLogger.mcp.error(`Tool call error for ${this.displayName}:`, error);
+                  reject(error);
+                  return;
+                }
+
+                if (response.result) {
                   let processedResult = response.result;
                   
-                  // Check if this is a standard MCP CallToolResult with content array
-                  if (response.result && typeof response.result === 'object' && 'content' in response.result) {
-                    const mcpResult = response.result as { content?: unknown[]; isError?: boolean };
+                  // Process MCP result format
+                  if (response.result && typeof response.result === 'object') {
+                    const mcpResult = response.result as { content?: Array<{ type: string; text?: string; data?: string }> };
                     
-                    if (mcpResult.isError) {
-                      console.error(`[${this.displayName}] Tool execution failed (isError=true):`, mcpResult);
-                      reject(new Error(`Tool execution failed: ${JSON.stringify(mcpResult.content || 'Unknown error')}`));
-                      return;
-                    }
-                    
-                    if (Array.isArray(mcpResult.content)) {
-                      console.log(`[${this.displayName}] Processing MCP content array with ${mcpResult.content.length} items`);
+                    if (mcpResult.content && Array.isArray(mcpResult.content)) {
+                      appLogger.mcp.debug(`Processing MCP result content array for ${this.displayName}, length:`, mcpResult.content.length);
                       
-                      // Extract text content from MCP content array
-                      const textContents: string[] = [];
+                      processedResult = mcpResult.content
+                        .filter(item => item.type === 'text' && item.text)
+                        .map(item => item.text)
+                        .join('\n');
                       
-                      for (const contentItem of mcpResult.content) {
-                        if (contentItem && typeof contentItem === 'object') {
-                          const item = contentItem as Record<string, unknown>;
-                          if (item.type === 'text' && typeof item.text === 'string') {
-                            textContents.push(item.text);
-                            console.log(`[${this.displayName}] Extracted text content:`, item.text.substring(0, 100) + '...');
-                          } else if (item.type === 'image') {
-                            textContents.push(`[Image: ${item.data ? 'base64 data' : 'no data'}]`);
-                            console.log(`[${this.displayName}] Found image content`);
-                          } else {
-                            // Handle other content types or plain objects
-                            textContents.push(JSON.stringify(contentItem));
-                            console.log(`[${this.displayName}] Found other content type:`, item.type || 'unknown');
-                          }
-                        } else if (typeof contentItem === 'string') {
-                          textContents.push(contentItem);
-                          console.log(`[${this.displayName}] Found plain string content`);
-                        }
-                      }
-                      
-                      // Return combined text or structured data based on content
-                      if (textContents.length === 1) {
-                        processedResult = textContents[0];
-                      } else if (textContents.length > 1) {
-                        processedResult = textContents.join('\n\n');
-                      } else {
-                        // No text content found, return the original content array
-                        processedResult = mcpResult.content;
-                      }
-                      
-                      console.log(`[${this.displayName}] Processed MCP result:`, 
+                      appLogger.mcp.debug(`Processed MCP result for ${this.displayName}:`, 
                         typeof processedResult === 'string' 
                           ? processedResult.substring(0, 200) + '...' 
                           : processedResult);
                     } else {
-                      console.log(`[${this.displayName}] MCP result content is not an array, using as-is`);
+                      appLogger.mcp.debug(`MCP result content is not an array for ${this.displayName}, using as-is`);
                       processedResult = mcpResult.content || response.result;
                     }
                   } else {
-                    console.log(`[${this.displayName}] Non-MCP result format, using as-is`);
+                    appLogger.mcp.debug(`Non-MCP result format for ${this.displayName}, using as-is`);
                   }
                   
                   resolve(processedResult);
                 }
               } else {
-                console.log(`[${this.displayName}] ⚠️ Received response with different ID: ${response.id}, expected: ${requestId}`);
+                appLogger.mcp.warn(`⚠️ Received response with different ID for ${this.displayName}: ${response.id}, expected: ${requestId}`);
               }
             } catch (parseError) {
-              console.warn(`[${this.displayName}] Failed to parse JSON line in tool call:`, JSON.stringify(line.trim()));
-              console.warn(`[${this.displayName}] Parse error:`, parseError);
+              appLogger.mcp.warn(`Failed to parse JSON line in tool call for ${this.displayName}:`, JSON.stringify(line.trim()));
+              appLogger.mcp.warn(`Parse error for ${this.displayName}:`, parseError);
               // Continue processing other lines
             }
           }
@@ -671,20 +795,20 @@ export class MCPService {
       if (childProcess.stderr) {
         childProcess.stderr.on('data', (data) => {
           const stderrMsg = data.toString();
-          console.log(`[${this.displayName}] Tool call stderr:`, stderrMsg);
+          appLogger.mcp.debug(`Tool call stderr for ${this.displayName}:`, stderrMsg);
           
           // Check for common MCP server errors that might indicate the tool call failed
           if (stderrMsg.toLowerCase().includes('error') || 
               stderrMsg.toLowerCase().includes('failed') ||
               stderrMsg.toLowerCase().includes('timeout')) {
-            console.warn(`[${this.displayName}] Potential error detected in stderr:`, stderrMsg);
+            appLogger.mcp.warn(`Potential error detected in stderr for ${this.displayName}:`, stderrMsg);
           }
         });
       }
 
       // Send tool call request
       const toolRequest = {
-        jsonrpc: "2.0",
+        jsonrpc: "2.0" as const,
         id: requestId,
         method: "tools/call",
         params: {
@@ -693,18 +817,31 @@ export class MCPService {
         }
       };
 
+      // Log the tool call request
+      mcpLogger.logJsonRpcMessage(
+        toolRequest,
+        JsonRpcMessageType.REQUEST,
+        this.displayName,
+        McpTransportType.STDIO
+      );
+
       const requestString = JSON.stringify(toolRequest) + '\n';
-      console.log(`[${this.displayName}] 📤 Sending tool call request:`, requestString.trim());
-      console.log(`[${this.displayName}] 📤 Request details - ID: ${requestId}, Tool: ${toolName}, Args:`, args);
+      appLogger.mcp.debug(`📤 Sending tool call request for ${this.displayName}:`, requestString.trim());
+      appLogger.mcp.debug(`📤 Request details for ${this.displayName} - ID: ${requestId}, Tool: ${toolName}, Args:`, args);
       
       try {
         childProcess.stdin.write(requestString);
-        console.log(`[${this.displayName}] ✅ Tool call request sent successfully`);
+        appLogger.mcp.info(`✅ Tool call request sent successfully for ${this.displayName}`);
       } catch (writeError) {
+        const error = new Error(`Failed to send tool call request: ${writeError}`);
         clearTimeout(timeout);
         childProcess.stdout.off('data', responseHandler);
-        console.error(`[${this.displayName}] Error writing tool call request:`, writeError);
-        reject(new Error(`Failed to send tool call request: ${writeError}`));
+        appLogger.mcp.error(`Error writing tool call request for ${this.displayName}:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
+          error,
+          metadata: { phase: 'tool_request_send', toolName, requestId }
+        });
+        reject(error);
       }
     });
   }

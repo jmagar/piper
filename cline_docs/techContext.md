@@ -7,92 +7,83 @@
 - **Backend:** Next.js API Routes (Node.js runtime environment)
 - **Database:** PostgreSQL
 - **ORM:** Prisma (for database access and schema management)
+- **Logging**: Winston (with winston-daily-rotate-file)
 - **Caching:** Redis (service `piper-cache`, used by MCP manager and potentially other features)
 - **Containerization:** Docker, Docker Compose
 - **Package Manager:** npm
+- **Key Dependencies (for logging)**: `winston`, `winston-daily-rotate-file`, `uuid`
 
 ## Development Environment (`dev.sh` & `docker-compose.dev.yml`)
 
-- **Orchestration:** The `dev.sh` script is used to manage the development lifecycle (down, up, build).
-- **Compose File:** `docker-compose.dev.yml` is the primary configuration for the development environment.
+- **Orchestration:** `dev.sh` script manages the development lifecycle.
+- **Compose File:** `docker-compose.dev.yml` for development environment.
 - **Services:**
-    - `piper-app`: The Next.js application.
+    - `piper-app`: Next.js application.
         - Builds from `Dockerfile.dev`.
-        - Runs as root (`user: "0:0"`) to avoid permission issues with mounted volumes.
-        - Startup Command: `sh -c "npx prisma db push && npm run dev"`. This ensures:
-            1. `npx prisma db push`: Synchronizes the Prisma schema with the PostgreSQL database (creates tables, applies changes).
-            2. `npm run dev`: Starts the Next.js development server with hot reloading.
-        - Ports: Maps port 3000 (container) to 8630 (host).
-        - Environment Variables:
-            - Loaded from `.env` file at the root of the project.
-            - `NODE_ENV=development` (set in `docker-compose.dev.yml`).
-            - `DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper` (connects to the `piper-db` service).
-            - `REDIS_URL=redis://piper-cache:6379` (connects to the `piper-cache` service).
-            - `NEXT_PUBLIC_APP_URL`: The base URL for the application (typically `http://localhost:3000` for development). **CRITICAL** for server-side fetch calls.
-        - Volumes:
-            - `.:/app`: Mounts the local project directory into the container for hot reloading.
-            - `/app/node_modules`: A named volume to keep container `node_modules` separate from host.
-            - Persistent data mounts for uploads, config, logs (e.g., `/mnt/cache/appdata/piper/...`).
-    - `piper-db`: PostgreSQL database service.
-        - Image: `postgres:15-alpine` (or `postgres:16` in `docker-compose.yml`).
-        - Environment: Defines `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
-        - Volumes: `piper_db_data` for persistent database storage.
-        - Ports: Maps port 5432 (container) to 8631 (host).
-    - `piper-cache`: Redis caching service.
-        - Image: `redis:alpine`.
-        - Volumes: `piper_cache` for persistent cache data.
-        - Ports: Maps port 6379 (container) to 8632 (host).
+        - Startup Command: `sh -c "npx prisma db push && npm run dev"`.
+        - Ports: `8630:3000`.
+        - Environment: From `.env`, `NODE_ENV=development`, `DATABASE_URL`, `REDIS_URL`, `NEXT_PUBLIC_APP_URL`.
+        - Volumes: `.:/app` (hot reloading), `/app/node_modules`, persistent data mounts for `uploads/`, `config/`, `logs/`.
+    - `piper-db`: PostgreSQL service (Image: `postgres:15-alpine`).
+    - `piper-cache`: Redis service (Image: `redis:alpine`).
 
 ## Key Libraries, Patterns, and Files
 
-- **Prisma (`lib/prisma.ts`, `prisma/schema.prisma`):**
-    - Handles all database interactions.
-    - `schema.prisma` defines the database schema.
-    - Prisma Client is generated based on the schema.
-- **Server-Side Fetch Utility (`lib/server-fetch.ts`)**:
-    - Provides utilities for making server-side fetch calls with absolute URLs.
-    - `serverFetch` and `serverFetchJson` functions ensure that Server Actions and API routes can safely make internal API calls.
-    - Uses `NEXT_PUBLIC_APP_URL` environment variable to construct absolute URLs.
-    - **CRITICAL**: Must be used instead of regular `fetch` for any server-side code (marked with `"use server"`) that needs to call API routes.
-- **Enhanced MCP Server Dashboard (`app/components/mcp-servers/mcp-servers-dashboard.tsx`)**:
-    - **Comprehensive Management Interface**: Combines server status monitoring with full CRUD configuration management.
-    - **Dual API Integration**: Uses both `/api/mcp-servers` (status) and `/api/mcp-config` (CRUD) endpoints.
-    - **Advanced State Management**: Handles status data, configuration data, form states, modal states, and dirty tracking.
-    - **Modal-Based UI**: Add/edit operations use comprehensive modal forms with transport-specific fields.
-    - **Enhanced Server Cards**: Preserves hover functionality while adding action controls (toggle, edit, delete).
-    - **Form Validation**: Client-side validation with transport-specific requirements and user-friendly error messages.
-    - **Responsive Design**: Grid layout adapts to different screen sizes with proper mobile considerations.
-- **Client-Side State/Cache (`lib/chat-store/`):
-    - Uses IndexedDB (via `idb-keyval`) for caching chats and messages to improve UX and reduce direct DB calls for reads.
-    - `ChatsProvider` (`lib/chat-store/chats/provider.tsx`) manages loading and syncing chat data.
-    - Server Actions (functions marked with `"use server"`) in `lib/chat-store/chats/api.ts` use the `serverFetch` utility for API calls.
-- **API Routes (`app/api/`):
-    - `app/api/create-chat/route.ts`: Handles POST requests to create new chats. Interacts with Prisma to save to DB.
-    - `app/api/mcp-servers/route.ts`: Provides real-time MCP server status and health information.
-    - `app/api/mcp-config/route.ts`: Handles CRUD operations for MCP server configurations.
-- **Environment Configuration (`.env`):
-    - Stores sensitive information and critical configuration like `DATABASE_URL` (though overridden in compose for service name), API keys, admin credentials.
-    - **NEXT_PUBLIC_APP_URL**: Must be set to the internal Docker container URL, typically `http://localhost:3000`. This is used by server-side fetch calls.
-- **Dockerfiles (`Dockerfile`, `Dockerfile.dev`):
-    - Define the build process for the `piper-app` image. `Dockerfile.dev` is optimized for development (e.g., potentially different dependencies or build steps for hot reloading).
+- **Prisma (`lib/prisma.ts`, `prisma/schema.prisma`):** Database interactions, schema definition.
+- **Server-Side Fetch Utility (`lib/server-fetch.ts`)**: For server-side absolute URL API calls using `NEXT_PUBLIC_APP_URL`.
+- **Enhanced MCP Server Dashboard (`app/components/mcp-servers/mcp-servers-dashboard.tsx`)**: Unified MCP management interface.
+- **Client-Side State/Cache (`lib/chat-store/`):** IndexedDB (via `idb-keyval`) for chat data caching.
+- **API Routes (`app/api/`):** Backend operations, Prisma for DB access.
+    - `app/api/logs/route.ts`: Serves log data to the log viewer.
+    - `app/api/logs/export/route.ts`: Handles log export functionality.
+    - `app/api/logs/health/route.ts`: Provides health status of the logging system.
+- **Environment Configuration (`.env`):** Secrets, `NEXT_PUBLIC_APP_URL`.
+- **Dockerfiles (`Dockerfile`, `Dockerfile.dev`):** Application image build process.
+
+## Logging System Architecture (`lib/logger/`, `middleware/`)
+
+- **Core Logger (`lib/logger/index.ts`)**: 
+    - Singleton `appLogger` (Winston instance).
+    - Structured JSON logging.
+    - Multiple transports (daily rotate for app, error, mcp, ai-sdk, http; console for dev).
+    - Source-specific loggers (e.g., `appLogger.mcp.info(...)`).
+- **Type Definitions (`lib/logger/types.ts`)**: TypeScript interfaces for `LogEntry`, `ClassifiedError`, `McpLogEntry`, `AiSdkLogEntry`, etc.
+- **Correlation (`lib/logger/correlation.ts`, `middleware/correlation.ts`)**: 
+    - `AsyncLocalStorage` for context propagation.
+    - `correlationManager` singleton.
+    - Middleware for `x-correlation-id` handling.
+- **Request/Response Logging (`middleware/logging.ts`)**: `nextRequestLoggingMiddleware` for HTTP details.
+- **Error Handling (`middleware/error-handler.ts`, `lib/logger/error-handler.ts`):
+    - `nextErrorHandler`, `expressErrorHandlingMiddleware`.
+    - `AppError` custom error class.
+    - `ErrorClassifier` with pattern matching.
+    - Global unhandled rejection/exception handlers.
+- **Specialized Loggers:**
+    - `McpLogger (`lib/logger/mcp-logger.ts`): JSON-RPC messages, server lifecycle, tool performance.
+    - `AiSdkLogger (`lib/logger/ai-sdk-logger.ts`): AI operations, streaming, costs, token usage.
+- **Security (`lib/logger/security.ts`)**:
+    - `logSecurity` singleton.
+    - PII detection (regex for email, phone, API keys, etc.) and masking (`[REDACTED]`).
+    - Sensitive field name redaction.
+- **Rotation (`lib/logger/rotation-config.ts`)**:
+    - `logRotationManager` singleton.
+    - Winston DailyRotateFile config (`YYYY-MM-DD`, `maxSize`, `maxFiles`).
+    - Environment-specific settings.
+- **Log Viewer Component (`app/components/log-viewer/index.tsx`)**: React component for log display, filtering, search.
+- **Middleware Integration (`middleware.ts`):** Orchestrates all logging-related middleware.
 
 ## MCP Server Management Architecture
 
-- **Configuration Storage**: MCP servers are configured via `config.json` file with support for multiple transport types.
-- **Transport Types Supported**:
-    - **STDIO**: Command-based execution with arguments, environment variables, and working directory options.
-    - **SSE/HTTP**: URL-based connections with custom headers support.
-- **Real-time Status Monitoring**: Backend service (`lib/mcp/mcpManager.ts`) polls server status and caches results in Redis.
-- **Unified Management Interface**: Single dialog combines status display with configuration management capabilities.
+- **Configuration Storage**: `config.json` (STDIO, SSE/HTTP transports).
+- **Real-time Status Monitoring**: `lib/mcp/mcpManager.ts` polls status, caches in Redis.
+- **Unified Management Interface**: `app/components/mcp-servers/mcp-servers-dashboard.tsx`.
 - **Data Flow**:
-    - Status data flows from MCP services → Redis cache → `/api/mcp-servers` → Dashboard UI
-    - Configuration data flows between Dashboard UI ↔ `/api/mcp-config` ↔ `config.json` file
+    - Status: MCP services → Redis → `/api/mcp-servers` → UI.
+    - Config: UI ↔ `/api/mcp-config` ↔ `config.json`.
 
 ## Networking & Communication
 
-- **Internal Docker Network:** Services (`piper-app`, `piper-db`, `piper-cache`) communicate using their service names (e.g., `piper-db:5432`).
-- **External Access:** The `piper-app` is accessible on the host machine at `http://localhost:8630`.
-- **API Calls:** 
-    - **Client-side**: Frontend components make relative API calls (e.g., `/api/create-chat`) which are resolved by the browser to the currently accessed host.
-    - **Server-side**: Server components and Server Actions must use `serverFetch` from `lib/server-fetch.ts` to make API calls with absolute URLs.
-- **Security**: Relies on Authelia 2FA for authentication and authorization (CSRF protection removed as unnecessary).
+- **Internal Docker Network:** Service-to-service communication (e.g., `piper-db:5432`).
+- **External Access:** `piper-app` at `http://localhost:8630`.
+- **API Calls:** Client-side relative, server-side absolute via `serverFetch`.
+- **Security**: Authelia 2FA. CSRF protection removed.

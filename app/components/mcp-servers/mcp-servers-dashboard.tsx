@@ -158,27 +158,6 @@ export function McpServersDashboard() {
     };
   });
 
-  // Helper function to ensure server exists in config when toggling
-  const ensureServerInConfig = (serverKey: string, serverLabel: string) => {
-    const existingConfig = configServers.find(config => config.name === serverKey);
-    if (!existingConfig) {
-      // Create a basic config entry for this server
-      const statusServer = servers.find(s => s.key === serverKey);
-      if (statusServer) {
-        const newConfigServer: MCPServerConfigFromUI = {
-          id: crypto.randomUUID(),
-          name: serverKey,
-          displayName: serverLabel,
-          enabled: true, // Default to enabled
-          transport: { type: 'stdio', command: 'unknown' } // Placeholder transport
-        };
-        setConfigServers(prev => [...prev, newConfigServer]);
-        return newConfigServer.id;
-      }
-    }
-    return existingConfig?.id;
-  };
-
   // Load data on component mount
   useEffect(() => {
     fetchAllData();
@@ -388,12 +367,7 @@ export function McpServersDashboard() {
                   <div className="flex items-center space-x-1">
                     <Switch
                       checked={server.enabled}
-                      onCheckedChange={() => {
-                        const serverId = server.configData?.id || ensureServerInConfig(server.key, server.label);
-                        if (serverId) {
-                          handleToggleEnable(serverId);
-                        }
-                      }}
+                      onCheckedChange={() => server.configData && handleToggleEnable(server.configData.id)}
                       aria-label={`Toggle ${server.label} ${server.enabled ? 'off' : 'on'}`}
                     />
                   </div>
@@ -402,11 +376,10 @@ export function McpServersDashboard() {
                 {/* Action Buttons */}
                 <div className="flex items-center justify-between">
                   <div className="text-[10px] text-muted-foreground">
-                    {!server.configData ? 'Not in config' :
-                     !server.enabled ? 'Disabled (config)' : 
+                    {!server.enabled ? 'Disabled' : 
                      server.status === 'error' && server.errorDetails ? `Error: ${server.errorDetails.substring(0,25)}...` : 
                      server.status === 'no_tools_found' ? 'No tools found' : 
-                     server.status === 'disabled' ? 'Disabled (status)' : ''}
+                     server.status === 'disabled' ? 'Disabled by system' : ''}
                   </div>
                   <div className="flex items-center space-x-1">
                     <Button
@@ -418,9 +391,6 @@ export function McpServersDashboard() {
                         if (server.configData) {
                           setEditingServer(server.configData);
                           setIsEditModalOpen(true);
-                        } else {
-                          // Can't edit servers that aren't in config
-                          toast.error('This server is not in your configuration file. Please add it first.');
                         }
                       }}
                     >
@@ -435,9 +405,6 @@ export function McpServersDashboard() {
                         if (server.configData) {
                           setDeletingServer(server.configData);
                           setIsDeleteModalOpen(true);
-                        } else {
-                          // Can't delete servers that aren't in config
-                          toast.error('This server is not in your configuration file.');
                         }
                       }}
                     >

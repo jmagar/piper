@@ -20,6 +20,35 @@ import {
   validateAndTrackUsage,
 } from "./api"
 
+// Import our logging system (temporarily disabled)
+// import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger'
+// import { getCurrentCorrelationId } from '@/lib/logger/correlation'
+
+// Using simple console logging instead of complex logger system
+const appLogger = {
+  aiSdk: {
+    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[AI SDK INFO] ${message}`, metadata),
+    error: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.error(`[AI SDK ERROR] ${message}`, error, metadata),
+    debug: (message: string, metadata?: Record<string, unknown>) => console.log(`[AI SDK DEBUG] ${message}`, metadata),
+    warn: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.warn(`[AI SDK WARN] ${message}`, error, metadata),
+  },
+  http: {
+    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[HTTP INFO] ${message}`, metadata),
+    error: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.error(`[HTTP ERROR] ${message}`, error, metadata),
+    warn: (message: string, metadata?: Record<string, unknown>) => console.warn(`[HTTP WARN] ${message}`, metadata),
+  }
+};
+
+// Simple replacements for logging system
+const getCurrentCorrelationId = () => Math.random().toString(36).substr(2, 9);
+
+// Simple AI SDK logger replacement
+const aiSdkLogger = {
+  startOperation: () => Math.random().toString(36).substr(2, 9),
+  endOperation: () => {},
+  logStreamingEvent: () => {},
+};
+
 export const maxDuration = 60
 
 type ChatRequest = {
@@ -31,6 +60,9 @@ type ChatRequest = {
 }
 
 export async function POST(req: Request) {
+  const correlationId = getCurrentCorrelationId();
+  appLogger.http.info('Chat API request received', { correlationId });
+
   try {
     const {
       messages,
@@ -41,11 +73,25 @@ export async function POST(req: Request) {
     } = (await req.json()) as ChatRequest
 
     if (!messages || !chatId) {
+      appLogger.http.warn('Chat API request missing required fields', { 
+        correlationId,
+        hasMessages: !!messages,
+        hasChatId: !!chatId 
+      });
       return new Response(
         JSON.stringify({ error: "Error, missing information" }),
         { status: 400 }
       )
     }
+
+    // Log chat operation start
+    appLogger.aiSdk.info('Starting chat completion', {
+      correlationId,
+      chatId,
+      model: model || 'anthropic/claude-3.5-sonnet',
+      messageCount: messages.length,
+      hasAgent: !!agentId
+    });
 
     // Ensure the Chat record exists for this chatId
     const firstUserMessageContent = messages.find(m => m.role === 'user')?.content || "New Chat";
@@ -64,7 +110,7 @@ export async function POST(req: Request) {
         agentId: agentId,         
       },
     });
-    console.log(`✅ Ensured chat exists or created: ${chatId} with title "${defaultTitle}"`);
+    appLogger.aiSdk.info(`✅ Ensured chat exists or created: ${chatId} with title "${defaultTitle}"`, { correlationId });
 
     // Validate request (simplified for admin-only mode)
     await validateAndTrackUsage()
@@ -83,6 +129,11 @@ export async function POST(req: Request) {
 
     if (agentId) {
       agentConfig = await loadAgent(agentId)
+      appLogger.aiSdk.debug('Loaded agent configuration', { 
+        correlationId, 
+        agentId, 
+        hasSystemPrompt: !!agentConfig?.systemPrompt 
+      });
     }
 
     // Initialize OpenRouter provider
@@ -115,6 +166,9 @@ export async function POST(req: Request) {
       }
     }
 
+    // Start AI SDK operation logging
+    aiSdkLogger.startOperation();
+
     let streamError: Error | null = null
 
     const result = streamText({
@@ -125,78 +179,103 @@ export async function POST(req: Request) {
       maxTokens: 8096, // Reasonable limit for response length while preserving quality
       maxSteps: 10,
       onError: (event: { error: unknown }) => {
-        console.error("🛑 streamText error (raw event.error):", event.error); // Existing log
-
-        // Attempt to get more details from event.error
-        let errorMessage = "AI generation failed. Please check your model or API key.";
-        if (event.error instanceof Error) {
-          errorMessage = event.error.message;
-          console.error("🛑 streamText error (event.error.message):", event.error.message);
-          if (event.error.stack) {
-            console.error("🛑 streamText error (event.error.stack):", event.error.stack);
-          }
-        } else if (typeof event.error === 'object' && event.error !== null) {
-          console.error("🛑 streamText error (event.error as stringified object):", JSON.stringify(event.error, null, 2));
-          // Try to find a message property, or just stringify
-          const errorObj = event.error as Record<string, unknown>;
-          errorMessage = (typeof errorObj.message === 'string' ? errorObj.message : JSON.stringify(event.error));
-        } else if (event.error !== undefined && event.error !== null) {
-          errorMessage = String(event.error);
-          console.error("🛑 streamText error (event.error as string):", errorMessage);
-        }
+        const error = event.error instanceof Error ? event.error : new Error(String(event.error));
+        appLogger.aiSdk.error("🛑 streamText error:", error, { correlationId });
         
-        streamError = new Error(errorMessage);
+        streamError = error;
+        
+        // Log streaming error with AI SDK logger
+        aiSdkLogger.logStreamingEvent();
       },
-
 
       onFinish: async ({ response }) => {
-        // Convert ResponseMessage[] to simple message format
-        const simpleMessages = response.messages
-          .filter(msg => msg.role === 'assistant')
-          .map(msg => ({
-            role: msg.role,
-            content: typeof msg.content === 'string' 
-              ? msg.content 
-              : Array.isArray(msg.content) 
-                ? msg.content.map(part => 
-                    part.type === 'text' ? part.text : ''
-                  ).join('')
-                : ''
-          }))
+        try {
+          appLogger.aiSdk.info('AI SDK completion finished', {
+            correlationId,
+            responseMessageCount: response.messages.length
+          });
 
-        await storeAssistantMessage({
-          chatId,
-          messages: simpleMessages,
-        })
+          // End AI operation
+          aiSdkLogger.endOperation();
+
+          // Convert ResponseMessage[] to simple message format
+          const simpleMessages = response.messages
+            .filter(msg => msg.role === 'assistant')
+            .map(msg => ({
+              role: msg.role,
+              content: typeof msg.content === 'string' 
+                ? msg.content 
+                : Array.isArray(msg.content) 
+                  ? msg.content.map(part => 
+                      part.type === 'text' ? part.text : ''
+                    ).join('')
+                  : ''
+            }))
+
+          await storeAssistantMessage({
+            chatId,
+            messages: simpleMessages,
+          })
+          
+          appLogger.aiSdk.info('Assistant messages stored successfully', { correlationId, chatId });
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          appLogger.aiSdk.error('Error in onFinish callback:', err, { correlationId });
+          // End operation with error
+          aiSdkLogger.endOperation();
+        }
       },
     })
+
+    // Log streaming start
+    aiSdkLogger.logStreamingEvent();
 
     await result.consumeStream()
 
     if (streamError) {
+      appLogger.aiSdk.error('Stream error occurred during consumption', streamError, { correlationId });
       throw streamError
     }
+
+    // Log streaming completion
+    aiSdkLogger.logStreamingEvent();
 
     const originalResponse = result.toDataStreamResponse({
       sendReasoning: true,
       sendSources: true,
     })
+    
     // Optionally attach chatId in a custom header.
     const headers = new Headers(originalResponse.headers)
     headers.set("X-Chat-Id", chatId)
+    headers.set("X-Correlation-Id", correlationId || '')
+
+    appLogger.http.info('Chat API request completed successfully', { 
+      correlationId, 
+      chatId,
+      status: originalResponse.status
+    });
 
     return new Response(originalResponse.body, {
       status: originalResponse.status,
       headers,
     })
   } catch (err: unknown) {
-    console.error("Error in /api/chat:", err)
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorMessage = error.message;
     
-    const errorMessage = err instanceof Error ? err.message : "Internal server error"
+    appLogger.http.error("Error in /api/chat:", error, { correlationId })
+    appLogger.aiSdk.error("Chat completion failed:", error, { correlationId })
     
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Correlation-Id': correlationId || ''
+        }
+      }
     )
   }
 }

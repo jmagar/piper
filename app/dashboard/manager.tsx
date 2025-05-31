@@ -27,7 +27,13 @@ import { Label } from '@/components/ui/label'; // Assuming path
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Assuming path
 import { Textarea } from '@/components/ui/textarea'; // Assuming path
 import { Switch } from '@/components/ui/switch'; // Assuming path
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings, FileText, Server, Activity } from 'lucide-react';
 import { toast } from 'sonner'; // Assuming you use sonner for toasts, common with Shadcn
+
+// Import the log viewer component
+import LogViewer from '@/app/components/log-viewer';
 
 // Interfaces (can be moved to a shared types file later)
 interface MCPTransportSSE {
@@ -219,168 +225,243 @@ export default function McpServersManager() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">MCP Server Configuration Manager</h1>
-        <div className="space-x-2">
-          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">Add New Server</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Add New MCP Server</DialogTitle>
-                <DialogDescription>
-                  Configure the details for the new MCP server. The Key Name must be unique.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddNewServerToList} className="space-y-4 py-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Key Name (Unique ID)</Label>
-                    <Input id="name" name="name" value={newServerForm.name} onChange={handleNewServerFormChange} placeholder="e.g., my-custom-mcp" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="displayName">Display Name</Label>
-                    <Input id="displayName" name="displayName" value={newServerForm.displayName} onChange={handleNewServerFormChange} placeholder="e.g., My Custom MCP"/>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="transportType">Transport Type</Label>
-                  <Select name="transport.type" value={newServerForm.transport.type} onValueChange={handleNewServerTransportTypeChange}>
-                    <SelectTrigger id="transportType">
-                      <SelectValue placeholder="Select transport type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="stdio">STDIO</SelectItem>
-                      <SelectItem value="sse">SSE</SelectItem>
-                      <SelectItem value="http">HTTP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Conditional fields for STDIO */} 
-                {newServerForm.transport.type === 'stdio' && (
-                  <>
-                    <div>
-                      <Label htmlFor="command">Command</Label>
-                      <Input id="command" name="transport.command" value={(newServerForm.transport as MCPTransportStdio).command || ''} onChange={handleNewServerFormChange} placeholder="e.g., /path/to/executable or mcp-server-name" required/>
-                    </div>
-                    <div>
-                      <Label htmlFor="args">Arguments (comma-separated)</Label>
-                      <Input id="args" name="transport.args" value={((newServerForm.transport as MCPTransportStdio).args || []).join(',')} onChange={(e) => {
-                        const transportField = e.target.name.split('.')[1] as keyof MCPTransportStdio;
-                        setNewServerForm(prev => ({
-                          ...prev,
-                          transport: {
-                            ...prev.transport,
-                            [transportField]: e.target.value.split(',').map(arg => arg.trim()).filter(arg => arg),
-                          } as MCPTransportStdio,
-                        }));
-                      }} placeholder="arg1,arg2,arg3"/>
-                    </div>
-                    <div>
-                      <Label htmlFor="env">Environment Variables (KEY=VALUE, one per line)</Label>
-                      <Textarea id="env" name="transport.env" value={Object.entries((newServerForm.transport as MCPTransportStdio).env || {}).map(([k,v]) => `${k}=${v}`).join('\n')} onChange={(e) => {
-                        const lines = e.target.value.split('\n');
-                        const envVars: Record<string, string> = {};
-                        lines.forEach(line => {
-                          const [key, ...valParts] = line.split('=');
-                          if (key.trim()) envVars[key.trim()] = valParts.join('=');
-                        });
-                        setNewServerForm(prev => ({ ...prev, transport: { ...prev.transport, env: envVars } as MCPTransportStdio }));
-                      }} placeholder="VAR1=value1\nVAR2=value2" />
-                    </div>
-                     <div>
-                      <Label htmlFor="cwd">Working Directory (CWD)</Label>
-                      <Input id="cwd" name="transport.cwd" value={(newServerForm.transport as MCPTransportStdio).cwd || ''} onChange={handleNewServerFormChange} placeholder="Optional: /path/to/working/dir"/>
-                    </div>
-                  </>
-                )}
-
-                {/* Conditional fields for SSE/HTTP */} 
-                {(newServerForm.transport.type === 'sse' || newServerForm.transport.type === 'http') && (
-                  <>
-                    <div>
-                      <Label htmlFor="url">URL</Label>
-                      <Input id="url" name="transport.url" type="url" value={(newServerForm.transport as MCPTransportSSE).url || ''} onChange={handleNewServerFormChange} placeholder="e.g., http://localhost:8000/mcp" required/>
-                    </div>
-                    <div>
-                      <Label htmlFor="headers">Headers (Header:Value, one per line)</Label>
-                      <Textarea id="headers" name="transport.headers" value={Object.entries((newServerForm.transport as MCPTransportSSE).headers || {}).map(([k,v]) => `${k}:${v}`).join('\n')} onChange={(e) => {
-                        const lines = e.target.value.split('\n');
-                        const headers: Record<string, string> = {};
-                        lines.forEach(line => {
-                          const [key, ...valParts] = line.split(':');
-                          if (key.trim()) headers[key.trim()] = valParts.join(':').trim();
-                        });
-                        setNewServerForm(prev => ({ ...prev, transport: { ...prev.transport, headers: headers } as MCPTransportSSE }));
-                      }} placeholder="Content-Type:application/json\nAuthorization:Bearer token"/>
-                    </div>
-                  </>
-                )}
-
-                <div className='flex items-center space-x-2 pt-2'>
-                    <Switch id="enabled" name="enabled" checked={newServerForm.enabled} onCheckedChange={(checked) => setNewServerForm(prev => ({...prev, enabled: checked}))} />
-                    <Label htmlFor="enabled">Enabled</Label>
-                </div>
-
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">Add to List</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Button onClick={handleSaveChanges} disabled={!isDirty || isSaving}>
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-          </Button>
-        </div>
+        <h1 className="text-2xl font-semibold">System Administration</h1>
       </div>
 
-      {error && <div className="p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">Error: {error}</div>}
+      <Tabs defaultValue="mcp-servers" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="mcp-servers" className="flex items-center gap-2">
+            <Server className="h-4 w-4" />
+            MCP Servers
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Logs
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Monitoring
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
 
-      {servers.length === 0 && !isLoading ? (
-        <p>No MCP server configurations found. Click "Add New Server" to get started.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Display Name</TableHead>
-              <TableHead>Key Name</TableHead>
-              <TableHead>Transport</TableHead>
-              <TableHead>Enabled</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {servers.map((server) => (
-              <TableRow key={server.id}>
-                <TableCell>{server.displayName || server.name}</TableCell>
-                <TableCell className="font-mono text-xs">{server.name}</TableCell>
-                <TableCell>{server.transport.type}</TableCell>
-                <TableCell>
-                  <Switch
-                    checked={server.enabled}
-                    onCheckedChange={() => handleToggleEnable(server.id)}
-                    aria-label={`Toggle ${server.name} ${server.enabled ? 'off' : 'on'}`}
-                  />
-                </TableCell>
-                <TableCell className="space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEditServer(server)}>
-                    Edit
+        <TabsContent value="mcp-servers" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>MCP Server Configuration</CardTitle>
+                  <CardDescription>
+                    Manage your Model Context Protocol server configurations
+                  </CardDescription>
+                </div>
+                <div className="space-x-2">
+                  <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">Add New Server</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Add New MCP Server</DialogTitle>
+                        <DialogDescription>
+                          Configure the details for the new MCP server. The Key Name must be unique.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleAddNewServerToList} className="space-y-4 py-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name">Key Name (Unique ID)</Label>
+                            <Input id="name" name="name" value={newServerForm.name} onChange={handleNewServerFormChange} placeholder="e.g., my-custom-mcp" required />
+                          </div>
+                          <div>
+                            <Label htmlFor="displayName">Display Name</Label>
+                            <Input id="displayName" name="displayName" value={newServerForm.displayName} onChange={handleNewServerFormChange} placeholder="e.g., My Custom MCP"/>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="transportType">Transport Type</Label>
+                          <Select name="transport.type" value={newServerForm.transport.type} onValueChange={handleNewServerTransportTypeChange}>
+                            <SelectTrigger id="transportType">
+                              <SelectValue placeholder="Select transport type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="stdio">STDIO</SelectItem>
+                              <SelectItem value="sse">SSE</SelectItem>
+                              <SelectItem value="http">HTTP</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Conditional fields for STDIO */} 
+                        {newServerForm.transport.type === 'stdio' && (
+                          <>
+                            <div>
+                              <Label htmlFor="command">Command</Label>
+                              <Input id="command" name="transport.command" value={(newServerForm.transport as MCPTransportStdio).command || ''} onChange={handleNewServerFormChange} placeholder="e.g., /path/to/executable or mcp-server-name" required/>
+                            </div>
+                            <div>
+                              <Label htmlFor="args">Arguments (comma-separated)</Label>
+                              <Input id="args" name="transport.args" value={((newServerForm.transport as MCPTransportStdio).args || []).join(',')} onChange={(e) => {
+                                const transportField = e.target.name.split('.')[1] as keyof MCPTransportStdio;
+                                setNewServerForm(prev => ({
+                                  ...prev,
+                                  transport: {
+                                    ...prev.transport,
+                                    [transportField]: e.target.value.split(',').map(arg => arg.trim()).filter(arg => arg),
+                                  } as MCPTransportStdio,
+                                }));
+                              }} placeholder="arg1,arg2,arg3"/>
+                            </div>
+                            <div>
+                              <Label htmlFor="env">Environment Variables (KEY=VALUE, one per line)</Label>
+                              <Textarea id="env" name="transport.env" value={Object.entries((newServerForm.transport as MCPTransportStdio).env || {}).map(([k,v]) => `${k}=${v}`).join('\n')} onChange={(e) => {
+                                const lines = e.target.value.split('\n');
+                                const envVars: Record<string, string> = {};
+                                lines.forEach(line => {
+                                  const [key, ...valParts] = line.split('=');
+                                  if (key.trim()) envVars[key.trim()] = valParts.join('=');
+                                });
+                                setNewServerForm(prev => ({ ...prev, transport: { ...prev.transport, env: envVars } as MCPTransportStdio }));
+                              }} placeholder="VAR1=value1\nVAR2=value2" />
+                            </div>
+                             <div>
+                              <Label htmlFor="cwd">Working Directory (CWD)</Label>
+                              <Input id="cwd" name="transport.cwd" value={(newServerForm.transport as MCPTransportStdio).cwd || ''} onChange={handleNewServerFormChange} placeholder="Optional: /path/to/working/dir"/>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Conditional fields for SSE/HTTP */} 
+                        {(newServerForm.transport.type === 'sse' || newServerForm.transport.type === 'http') && (
+                          <>
+                            <div>
+                              <Label htmlFor="url">URL</Label>
+                              <Input id="url" name="transport.url" type="url" value={(newServerForm.transport as MCPTransportSSE).url || ''} onChange={handleNewServerFormChange} placeholder="e.g., http://localhost:8000/mcp" required/>
+                            </div>
+                            <div>
+                              <Label htmlFor="headers">Headers (Header:Value, one per line)</Label>
+                              <Textarea id="headers" name="transport.headers" value={Object.entries((newServerForm.transport as MCPTransportSSE).headers || {}).map(([k,v]) => `${k}:${v}`).join('\n')} onChange={(e) => {
+                                const lines = e.target.value.split('\n');
+                                const headers: Record<string, string> = {};
+                                lines.forEach(line => {
+                                  const [key, ...valParts] = line.split(':');
+                                  if (key.trim()) headers[key.trim()] = valParts.join(':').trim();
+                                });
+                                setNewServerForm(prev => ({ ...prev, transport: { ...prev.transport, headers: headers } as MCPTransportSSE }));
+                              }} placeholder="Content-Type:application/json\nAuthorization:Bearer token"/>
+                            </div>
+                          </>
+                        )}
+
+                        <div className='flex items-center space-x-2 pt-2'>
+                            <Switch id="enabled" name="enabled" checked={newServerForm.enabled} onCheckedChange={(checked) => setNewServerForm(prev => ({...prev, enabled: checked}))} />
+                            <Label htmlFor="enabled">Enabled</Label>
+                        </div>
+
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button type="submit">Add to List</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button onClick={handleSaveChanges} disabled={!isDirty || isSaving}>
+                    {isSaving ? 'Saving...' : 'Save Configuration'}
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteServer(server.id)}>
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {error && <div className="p-3 bg-red-100 text-red-700 border border-red-300 rounded-md mb-4">Error: {error}</div>}
+
+              {servers.length === 0 && !isLoading ? (
+                <p>No MCP server configurations found. Click "Add New Server" to get started.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Display Name</TableHead>
+                      <TableHead>Key Name</TableHead>
+                      <TableHead>Transport</TableHead>
+                      <TableHead>Enabled</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {servers.map((server) => (
+                      <TableRow key={server.id}>
+                        <TableCell>{server.displayName || server.name}</TableCell>
+                        <TableCell className="font-mono text-xs">{server.name}</TableCell>
+                        <TableCell>{server.transport.type}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={server.enabled}
+                            onCheckedChange={() => handleToggleEnable(server.id)}
+                            aria-label={`Toggle ${server.name} ${server.enabled ? 'off' : 'on'}`}
+                          />
+                        </TableCell>
+                        <TableCell className="space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditServer(server)}>
+                            Edit
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteServer(server.id)}>
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="space-y-4">
+          <LogViewer />
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Monitoring</CardTitle>
+              <CardDescription>
+                Real-time system performance and health monitoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Advanced monitoring features coming soon. This will include system metrics, 
+                performance dashboards, and alert management.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Settings</CardTitle>
+              <CardDescription>
+                Configure global application settings and preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                System configuration options coming soon. This will include API settings, 
+                security configurations, and application preferences.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,62 +1,83 @@
-# Active Context: Piper Chat Application - MCP Server Dashboard Enhancement
+# Active Context: Piper Chat Application - Comprehensive Logging System Implementation
 
-**Last Updated**: 2025-01-27 (Current Session)
+**Last Updated**: Current Session (Reflecting logging system Bivvy climb completion)
 
-**Overall Goal**: Successfully completed the enhancement of the MCP Servers Dashboard Dialog by merging all management functionality from the standalone manager.tsx component into the existing read-only dashboard.
+**Overall Goal**: Successfully implemented a comprehensive, production-ready logging and error handling system throughout the Piper application.
 
-## Completed Project: MCP Server Dashboard Enhancement (Bivvy Climb p7X2)
+## Completed Project: Comprehensive Logging System (Bivvy Climb x7K2)
 
 ### Project Summary:
-Transformed the read-only MCP Servers Dashboard dialog into a fully functional management interface by integrating comprehensive CRUD capabilities from `app/dashboard/manager.tsx` into `app/components/mcp-servers/mcp-servers-dashboard.tsx`.
+Designed and implemented an app-wide logging architecture using Winston. This system includes structured JSON logging, correlation ID tracking, specialized loggers for MCP and AI SDK operations, security features (PII detection, sanitization), a web-based log viewer for administrators, and automated log rotation and health checks.
 
 ### Problem Solved:
-Previously, users had two separate interfaces for MCP server management:
-- A read-only dashboard dialog for health checks and tool listings (accessed via header Server icon)
-- A separate standalone manager page for configuration (manager.tsx)
+Prior to this implementation, the application lacked a centralized or detailed logging mechanism, making debugging, error tracking, and operational monitoring difficult. The new system provides deep visibility into all aspects of the application, significantly improving observability and maintainability.
 
-This created confusion and poor UX. Now there's a single unified interface.
+## Successfully Completed Features & Bivvy Moves (x7K2 - 25 Moves):
 
-## Successfully Completed Features:
+### ✅ **Core Logging Infrastructure**
+- **Dependencies**: Winston, winston-daily-rotate-file, uuid installed. (Move 1)
+- **Directory Structure**: `/logs` with `archived/` subdirectory created. (Move 2)
+- **Core Logger Service (`lib/logger/index.ts`)**: Winston configured with multiple transports, structured JSON logging, source-specific loggers (MCP, AI SDK, HTTP), correlation ID support, and health checks. (Move 3)
+- **Type Definitions (`lib/logger/types.ts`)**: Comprehensive TypeScript interfaces for all logging aspects. (Move 4)
+- **Log Rotation Configuration (`lib/logger/rotation-config.ts`)**: Automated log rotation and retention policies with environment-specific settings. (Move 23)
 
-### ✅ **Full CRUD Operations**
-- **Add New Server**: Complete modal form with validation for all transport types (stdio, sse, http)
-- **Edit Server**: Pre-populated modal forms for updating existing server configurations
-- **Delete Server**: Confirmation dialogs for safe removal of servers
-- **Toggle Enable/Disable**: Switch controls for each server card
+### ✅ **Correlation & Context Management**
+- **Correlation ID Management (`lib/logger/correlation.ts`)**: AsyncLocalStorage for context tracking. (Move 5)
+- **Correlation Middleware (`middleware/correlation.ts`)**: Injects correlation IDs into requests (Next.js & Express support). (Move 6)
 
-### ✅ **Enhanced User Interface**
-- **Header Controls**: "Add New Server" and "Save Configuration" buttons with dirty state detection
-- **Server Cards**: Enhanced with action buttons (edit/delete) while preserving hover functionality
-- **Status Indicators**: Maintained existing health check and tool listing capabilities
-- **Responsive Design**: Works seamlessly across all screen sizes
+### ✅ **Request & Error Handling Middleware**
+- **Request/Response Logging (`middleware/logging.ts`)**: Logs HTTP requests/responses with security features and timing. (Move 7)
+- **Global Error Handling (`middleware/error-handler.ts`)**: Catches unhandled errors, uses custom `AppError`. (Move 8)
+- **Error Classification (`lib/logger/error-handler.ts`)**: Advanced pattern matching for error categorization and retry logic. (Move 9)
 
-### ✅ **Technical Implementation**
-- **Dual API Integration**: Combined `/api/mcp-servers` (status) and `/api/mcp-config` (CRUD) endpoints
-- **State Management**: Comprehensive state handling with dirty tracking and optimistic updates
-- **Form Validation**: Robust client-side validation with user-friendly error messages
-- **Error Handling**: Proper error boundaries and user feedback via toast notifications
+### ✅ **Specialized Loggers**
+- **MCP Logger (`lib/logger/mcp-logger.ts`)**: Handles JSON-RPC messages, server lifecycle, and tool execution performance. (Move 10)
+- **AI SDK Logger (`lib/logger/ai-sdk-logger.ts`)**: Tracks AI operations, streaming, costs, and token usage. (Move 11)
 
-### ✅ **All 10 Bivvy Moves Completed**
-1. ✅ Setup enhanced dashboard component structure and imports
-2. ✅ Add CRUD state management and dual API integration  
-3. ✅ Add header controls and action buttons
-4. ✅ Create add server modal with full form
-5. ✅ Add edit server functionality
-6. ✅ Implement delete server with confirmation
-7. ✅ Implement save configuration functionality
-8. ✅ Enhance server cards with action controls
-9. ✅ Add form validation and error handling
-10. ✅ Final testing and responsive design verification
+### ✅ **Integration & Wrapping**
+- **Next.js Middleware Update (`middleware.ts`)**: Integrated all logging, correlation, and error handling middleware. (Move 12)
+- **MCP Server Implementation Wrapping**: Added logging to MCP server operations and tool executions in `lib/mcp/client.ts`. (Move 13)
+- **AI SDK Operation Wrapping**: Added logging to AI SDK operations in `app/api/chat/route.ts`. (Move 14)
+- **API Route Error Handling**: Ensured consistent error handling and logging in API routes. (Move 15)
 
-## Key Files Modified:
-- **`app/components/mcp-servers/mcp-servers-dashboard.tsx`**: Main enhancement - transformed from read-only to full management interface
-- **`.bivvy/p7X2-climb.md`**: Comprehensive PRD documenting the feature requirements
-- **`.bivvy/p7X2-moves.json`**: Task breakdown and completion tracking
+### ✅ **Log Viewer & Admin Interface**
+- **Log Viewer Component (`app/components/log-viewer/index.tsx`)**: Comprehensive UI with filtering, search, real-time updates, and detailed log inspection. (Moves 16, 17, 18, 19)
+- **Log Viewer API (`app/api/logs/route.ts`, `app/api/logs/export/route.ts`)**: Endpoints for querying, fetching, and exporting logs. (Created during log viewer implementation)
+- **Admin Interface Integration (`app/dashboard/manager.tsx`)**: Log viewer added as a tab in the system administration dashboard. (Move 20)
+
+### ✅ **Security & Monitoring**
+- **Log Health Check Endpoint (`app/api/logs/health/route.ts`)**: Monitors log system health, disk space, and logger status. (Move 21)
+- **Security Measures (`lib/logger/security.ts`)**: PII detection, data sanitization, access controls, and audit logging. (Move 22)
+
+### ✅ **Testing & Documentation**
+- **Testing**: Foundational test structure for logging components implemented (basic patterns). (Move 24)
+- **Documentation (`docs/logging-system.md`)**: Comprehensive documentation covering setup, usage, configuration, and troubleshooting. (Move 25)
+
+## Key Files Created/Modified (Logging System):
+- `lib/logger/index.ts`
+- `lib/logger/types.ts`
+- `lib/logger/correlation.ts`
+- `lib/logger/error-handler.ts` (middleware version and lib version consolidated/refined)
+- `lib/logger/mcp-logger.ts`
+- `lib/logger/ai-sdk-logger.ts`
+- `lib/logger/security.ts`
+- `lib/logger/rotation-config.ts`
+- `middleware/correlation.ts`
+- `middleware/logging.ts`
+- `middleware/error-handler.ts`
+- `middleware.ts` (updated)
+- `app/components/log-viewer/index.tsx`
+- `app/api/logs/route.ts`
+- `app/api/logs/export/route.ts`
+- `app/api/logs/health/route.ts`
+- `app/dashboard/manager.tsx` (updated for log viewer tab)
+- `docs/logging-system.md`
+- `.bivvy/x7K2-climb.md` & `.bivvy/x7K2-moves.json` (for tracking the logging project)
 
 ## Current Status:
-**🎉 PROJECT COMPLETE** - The MCP Servers Dashboard Dialog now provides a complete management experience within the existing dialog structure. Users can view server status AND manage configurations from a single, intuitive interface.
+**🎉 PROJECT COMPLETE: Comprehensive Logging System** - The application now has a robust, centralized logging system with advanced features for error handling, monitoring, and security. All 25 moves of Bivvy climb x7K2 are complete.
 
 ## Next Focus Areas:
-- Monitor user experience with the enhanced dashboard
-- Consider additional MCP server management features (bulk operations, templates, etc.)
-- Continue with other application enhancements as needed
+- Ongoing monitoring of the new logging system's performance and effectiveness.
+- Addressing any new bugs or issues that arise from user testing or system operation.
+- Continuing with other application enhancements as prioritized.

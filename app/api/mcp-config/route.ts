@@ -41,7 +41,7 @@ interface StoredMCPServerEntry {
   disabled?: boolean; // To allow disabling from config
   displayName?: string; // User-friendly name, can be stored
   // Allow any other properties that might exist
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PiperConfig {
@@ -90,7 +90,7 @@ export async function GET() {
         name: name,
         displayName: details.displayName || name, 
         transport: transport,
-        enabled: typeof details.enabled === 'boolean' ? details.enabled : true, 
+        enabled: !details.disabled, // Convert disabled (config) to enabled (UI)
       };
     });
 
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     const configToWrite: PiperConfig = { mcpServers: {} };
 
     for (const serverUI of newServersConfigFromUI) {
-      const { id, name, displayName, transport, enabled, ...rest } = serverUI; 
+      const { name, displayName, transport, enabled, ...rest } = serverUI; 
       
       let storedEntry: StoredMCPServerEntry = {
         disabled: !enabled,

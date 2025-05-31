@@ -1,55 +1,75 @@
 import { NextResponse, type NextRequest } from "next/server"
-// import { validateCsrfToken } from "./lib/csrf"
+// import { appLogger } from "@/lib/logger" // Now unused
+import { 
+  nextCorrelationMiddleware,
+  addCorrelationHeaders 
+} from "./middleware/correlation"
+import { nextRequestLoggingMiddleware } from "./middleware/logging"
+import { nextErrorHandler } from "./middleware/error-handler"
+import { correlationManager } from "./lib/logger/correlation"
 
 export async function middleware(request: NextRequest) {
-  // Check for required environment variables on startup
-  // if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
-  //   console.error("ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables")
-  //   return new NextResponse("Server configuration error", { status: 500 })
-  // }
+  try {
+    // Initialize correlation context first
+    const correlationResponse = nextCorrelationMiddleware(request);
+    let response = correlationResponse || NextResponse.next();
 
-  // Simple basic auth check for admin access
-  // const authHeader = request.headers.get("authorization")
-  // 
-  // if (!authHeader || !authHeader.startsWith("Basic ")) {
-  //   return new NextResponse("Authentication required", {
-  //     status: 401,
-  //     headers: {
-  //       "WWW-Authenticate": "Basic realm=\"Admin Access\"",
-  //     },
-  //   })
-  // }
+    // Extract correlation context for this request
+    const context = correlationManager.createContextFromRequest({
+      headers: Object.fromEntries(request.headers.entries()),
+      method: request.method,
+      url: request.url,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+    });
 
-  // const base64Credentials = authHeader.split(" ")[1]
-  // const credentials = Buffer.from(base64Credentials, "base64").toString("ascii")
-  // const [username, password] = credentials.split(":")
+    // Run the rest of the middleware within correlation context
+    return correlationManager.runWithContext(context, () => {
+      // Log the request
+      const loggingResponse = nextRequestLoggingMiddleware(request);
+      if (loggingResponse) {
+        response = loggingResponse;
+      }
 
-  // if (username !== process.env.ADMIN_USERNAME || password !== process.env.ADMIN_PASSWORD) {
-  //   return new NextResponse("Invalid credentials", { status: 401 })
-  // }
+      // Add security headers (CSP)
+      const isDev = process.env.NODE_ENV === "development"
+      response.headers.set(
+        "Content-Security-Policy",
+        isDev
+          ? `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' wss: https://api.openai.com https://api.mistral.ai https://api.github.com;`
+          : `default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://analytics.umami.is https://vercel.live; frame-src 'self' https://vercel.live; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' wss: https://api.openai.com https://api.mistral.ai https://api-gateway.umami.dev https://api.github.com;`
+      )
 
-  // CSRF protection for state-changing requests
-  // if (["POST", "PUT", "DELETE"].includes(request.method)) {
-  //   const csrfCookie = request.cookies.get("csrf_token")?.value
-  //   const headerToken = request.headers.get("x-csrf-token")
+      // Add timing header for performance monitoring
+      response.headers.set('X-Response-Time', Date.now().toString())
 
-  //   if (!csrfCookie || !headerToken || !validateCsrfToken(headerToken)) {
-  //     return new NextResponse("Invalid CSRF token", { status: 403 })
-  //   }
-  // }
+      // Ensure correlation headers are added
+      addCorrelationHeaders(response, context.correlationId, context.requestId)
 
-  // CSP for development and production
-  const isDev = process.env.NODE_ENV === "development"
+      // Log middleware completion
+      console.debug('Middleware processing completed', {
+        path: request.nextUrl.pathname,
+        method: request.method,
+        correlationId: context.correlationId,
+        source: 'next-middleware',
+      });
 
-  const response = NextResponse.next()
-  response.headers.set(
-    "Content-Security-Policy",
-    isDev
-      ? `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' wss: https://api.openai.com https://api.mistral.ai https://api.github.com;`
-      : `default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://analytics.umami.is https://vercel.live; frame-src 'self' https://vercel.live; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' wss: https://api.openai.com https://api.mistral.ai https://api-gateway.umami.dev https://api.github.com;`
-  )
+      return response;
+    });
 
-  return response
+  } catch (error) {
+    // Handle any errors in middleware
+    console.error('Error in Next.js middleware', {
+      error,
+      path: request.nextUrl.pathname,
+      method: request.method,
+      userAgent: request.headers.get('user-agent'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      source: 'next-middleware',
+    });
+
+    // Use our error handler to create a standardized error response
+    return nextErrorHandler(error as Error, request);
+  }
 }
 
 export const config = {

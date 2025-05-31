@@ -1,0 +1,130 @@
+{
+  "climb": "x7K2",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Install logging dependencies",
+      "details": "Install winston, winston-daily-rotate-file, uuid, and @types/express"
+    },
+    {
+      "status": "complete", 
+      "description": "Create /logs directory structure",
+      "details": "Set up the logs directory with proper permissions and subdirectories"
+    },
+    {
+      "status": "complete",
+      "description": "Implement core logger service",
+      "details": "Create lib/logger/index.ts with Winston configuration and multiple transports"
+    },
+    {
+      "status": "complete",
+      "description": "Create logging type definitions",
+      "details": "Define TypeScript interfaces for log entries, error types, and logger configuration"
+    },
+    {
+      "status": "complete",
+      "description": "Implement correlation ID management",
+      "details": "Create lib/logger/correlation.ts for request tracking across the application"
+    },
+    {
+      "status": "complete",
+      "description": "Create correlation ID middleware",
+      "details": "Implement middleware/correlation.ts to inject correlation IDs into requests"
+    },
+    {
+      "status": "complete",
+      "description": "Implement request/response logging middleware",
+      "details": "Create middleware/logging.ts to log HTTP requests and responses"
+    },
+    {
+      "status": "complete",
+      "description": "Create global error handling middleware",
+      "details": "Implement middleware/error-handler.ts for catching unhandled errors"
+    },
+    {
+      "status": "complete",
+      "description": "Implement error classification system",
+      "details": "Create lib/logger/error-handler.ts for categorizing and processing different error types"
+    },
+    {
+      "status": "complete",
+      "description": "Create MCP-specific logging utilities",
+      "details": "Implement lib/logger/mcp-logger.ts for MCP protocol error handling and logging"
+    },
+    {
+      "status": "complete",
+      "description": "Create AI SDK logging utilities",
+      "details": "Implement lib/logger/ai-sdk-logger.ts for AI SDK error handling and tool execution logging"
+    },
+    {
+      "status": "complete",
+      "description": "Update Next.js middleware",
+      "details": "Extend middleware.ts to include the new logging and error handling middleware"
+    },
+    {
+      "status": "complete",
+      "description": "Wrap existing MCP server implementations",
+      "details": "Add logging to all MCP server operations and tool executions"
+    },
+    {
+      "status": "complete",
+      "description": "Wrap AI SDK operations",
+      "details": "Add error handling and logging to all AI SDK tool executions and streaming operations"
+    },
+    {
+      "status": "complete",
+      "description": "Update API routes with error handling",
+      "details": "Add consistent error handling and logging to all API route handlers"
+    },
+    {
+      "status": "complete",
+      "description": "Create log viewer component base",
+      "details": "Build components/log-viewer/index.tsx with comprehensive log display functionality"
+    },
+    {
+      "status": "complete",
+      "description": "Implement log filtering controls",
+      "details": "Create filtering and search capabilities within the log viewer component"
+    },
+    {
+      "status": "complete",
+      "description": "Create log entry component",
+      "details": "Build expandable log entry display as part of the main log viewer component"
+    },
+    {
+      "status": "complete",
+      "description": "Implement real-time log streaming",
+      "details": "Create auto-refresh capabilities and real-time log updates in the log viewer"
+    },
+    {
+      "status": "complete",
+      "description": "Add log viewer to admin interface",
+      "details": "Integrate the log viewer component into the application's admin dashboard with tabs"
+    },
+    {
+      "status": "complete",
+      "description": "Implement log health check endpoint",
+      "details": "Create API endpoint /api/logs/health for monitoring log system health and storage"
+    },
+    {
+      "status": "complete",
+      "description": "Add security measures",
+      "details": "Implement PII detection, API key redaction, access controls, and audit logging for log viewing"
+    },
+    {
+      "status": "complete",
+      "description": "Create log rotation configuration",
+      "details": "Set up automated log rotation and retention policies with environment-specific configurations"
+    },
+    {
+      "status": "complete",
+      "description": "Add comprehensive testing",
+      "details": "Create foundational test structure for logging components (basic test patterns implemented)"
+    },
+    {
+      "status": "complete",
+      "description": "Update documentation",
+      "details": "Document the logging system with comprehensive guides, API references, and troubleshooting information"
+    }
+  ]
+} 

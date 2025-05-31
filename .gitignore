@@ -16,6 +16,7 @@ config.json
 # next.js
 /.next/
 /out/
+.pnpm-store
 
 # production
 /build
