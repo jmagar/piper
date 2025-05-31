@@ -17,6 +17,7 @@ config.json
 /.next/
 /out/
 .pnpm-store
+logs/
 
 # production
 /build
