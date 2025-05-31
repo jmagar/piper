@@ -20,34 +20,10 @@ import {
   validateAndTrackUsage,
 } from "./api"
 
-// Import our logging system (temporarily disabled)
-// import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger'
-// import { getCurrentCorrelationId } from '@/lib/logger/correlation'
-
-// Using simple console logging instead of complex logger system
-const appLogger = {
-  aiSdk: {
-    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[AI SDK INFO] ${message}`, metadata),
-    error: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.error(`[AI SDK ERROR] ${message}`, error, metadata),
-    debug: (message: string, metadata?: Record<string, unknown>) => console.log(`[AI SDK DEBUG] ${message}`, metadata),
-    warn: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.warn(`[AI SDK WARN] ${message}`, error, metadata),
-  },
-  http: {
-    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[HTTP INFO] ${message}`, metadata),
-    error: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.error(`[HTTP ERROR] ${message}`, error, metadata),
-    warn: (message: string, metadata?: Record<string, unknown>) => console.warn(`[HTTP WARN] ${message}`, metadata),
-  }
-};
-
-// Simple replacements for logging system
-const getCurrentCorrelationId = () => Math.random().toString(36).substr(2, 9);
-
-// Simple AI SDK logger replacement
-const aiSdkLogger = {
-  startOperation: () => Math.random().toString(36).substr(2, 9),
-  endOperation: () => {},
-  logStreamingEvent: () => {},
-};
+// Import our logging system
+import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger'
+import { appLogger } from '@/lib/logger'
+import { getCurrentCorrelationId } from '@/lib/logger/correlation'
 
 export const maxDuration = 60
 
@@ -167,7 +143,18 @@ export async function POST(req: Request) {
     }
 
     // Start AI SDK operation logging
-    aiSdkLogger.startOperation();
+    const operationId = aiSdkLogger.startOperation(
+      AiProvider.OPENROUTER,
+      model || 'anthropic/claude-3.5-sonnet',
+      AiSdkOperation.STREAMING_START,
+      {
+        chatId,
+        agentId,
+        messageCount: messages.length,
+        hasTools: !!toolsToUse,
+        systemPromptLength: effectiveSystemPrompt.length
+      }
+    );
 
     let streamError: Error | null = null
 
@@ -179,24 +166,56 @@ export async function POST(req: Request) {
       maxTokens: 8096, // Reasonable limit for response length while preserving quality
       maxSteps: 10,
       onError: (event: { error: unknown }) => {
-        const error = event.error instanceof Error ? event.error : new Error(String(event.error));
-        appLogger.aiSdk.error("🛑 streamText error:", error, { correlationId });
+        appLogger.aiSdk.error("🛑 streamText error (raw event.error):", event.error as Error, { correlationId });
+
+        // Attempt to get more details from event.error
+        let errorMessage = "AI generation failed. Please check your model or API key.";
+        if (event.error instanceof Error) {
+          errorMessage = event.error.message;
+          appLogger.aiSdk.error("🛑 streamText error (event.error.message):", new Error(event.error.message), { correlationId });
+          if (event.error.stack) {
+            appLogger.aiSdk.error("🛑 streamText error (event.error.stack):", new Error(event.error.stack), { correlationId });
+          }
+        } else if (typeof event.error === 'object' && event.error !== null) {
+          appLogger.aiSdk.error("🛑 streamText error (event.error as stringified object):", new Error(JSON.stringify(event.error, null, 2)), { correlationId });
+          // Try to find a message property, or just stringify
+          const errorObj = event.error as Record<string, unknown>;
+          errorMessage = (typeof errorObj.message === 'string' ? errorObj.message : JSON.stringify(event.error));
+        } else if (event.error !== undefined && event.error !== null) {
+          errorMessage = String(event.error);
+          appLogger.aiSdk.error("🛑 streamText error (event.error as string):", new Error(errorMessage), { correlationId });
+        }
         
-        streamError = error;
+        streamError = new Error(errorMessage);
         
         // Log streaming error with AI SDK logger
-        aiSdkLogger.logStreamingEvent();
+        aiSdkLogger.logStreamingEvent(operationId, StreamingState.ERROR, {
+          error: streamError,
+          chunkSize: 0
+        });
       },
 
       onFinish: async ({ response }) => {
         try {
+          // Extract token usage from response metadata
+          const usage = (response as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage || {};
+          const tokenUsage = {
+            promptTokens: usage.promptTokens || 0,
+            completionTokens: usage.completionTokens || 0,
+            totalTokens: usage.totalTokens || 0
+          };
+
           appLogger.aiSdk.info('AI SDK completion finished', {
             correlationId,
+            tokenUsage,
             responseMessageCount: response.messages.length
           });
 
-          // End AI operation
-          aiSdkLogger.endOperation();
+          // End AI operation with token usage
+          aiSdkLogger.endOperation(operationId, {
+            tokenUsage,
+            response: response.messages
+          });
 
           // Convert ResponseMessage[] to simple message format
           const simpleMessages = response.messages
@@ -219,16 +238,21 @@ export async function POST(req: Request) {
           
           appLogger.aiSdk.info('Assistant messages stored successfully', { correlationId, chatId });
         } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          appLogger.aiSdk.error('Error in onFinish callback:', err, { correlationId });
+          appLogger.aiSdk.error('Error in onFinish callback:', error as Error, { correlationId });
           // End operation with error
-          aiSdkLogger.endOperation();
+          aiSdkLogger.endOperation(operationId, {
+            error: error instanceof Error ? error : new Error(String(error))
+          });
         }
       },
     })
 
+    // Set up streaming event logging
+    const chunkCount = 0;
+    const totalStreamSize = 0;
+
     // Log streaming start
-    aiSdkLogger.logStreamingEvent();
+    aiSdkLogger.logStreamingEvent(operationId, StreamingState.STARTED);
 
     await result.consumeStream()
 
@@ -238,7 +262,10 @@ export async function POST(req: Request) {
     }
 
     // Log streaming completion
-    aiSdkLogger.logStreamingEvent();
+    aiSdkLogger.logStreamingEvent(operationId, StreamingState.COMPLETED, {
+      totalChunks: chunkCount,
+      chunkSize: totalStreamSize
+    });
 
     const originalResponse = result.toDataStreamResponse({
       sendReasoning: true,
@@ -261,11 +288,10 @@ export async function POST(req: Request) {
       headers,
     })
   } catch (err: unknown) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    const errorMessage = error.message;
+    const errorMessage = err instanceof Error ? err.message : "Internal server error"
     
-    appLogger.http.error("Error in /api/chat:", error, { correlationId })
-    appLogger.aiSdk.error("Chat completion failed:", error, { correlationId })
+    appLogger.http.error("Error in /api/chat:", err as Error, { correlationId })
+    appLogger.aiSdk.error("Chat completion failed:", err as Error, { correlationId })
     
     return new Response(
       JSON.stringify({ error: errorMessage }),

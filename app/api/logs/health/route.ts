@@ -2,13 +2,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import { constants } from 'fs'
 import path from 'path'
-// Using simple console logging instead of complex logger system
-const appLogger = {
-  info: (message: string, metadata?: Record<string, unknown>) => console.log(`[INFO] ${message}`, metadata),
-  error: (message: string, error?: Error, metadata?: Record<string, unknown>) => console.error(`[ERROR] ${message}`, error, metadata),
-  debug: (message: string, metadata?: Record<string, unknown>) => console.log(`[DEBUG] ${message}`, metadata),
-  healthCheck: async () => ({ status: 'healthy' as const, message: 'Simple logger active' }),
-};
+import { appLogger } from '@/lib/logger'
 import { getCurrentCorrelationId } from '@/lib/logger/correlation'
 
 interface LogHealthCheck {

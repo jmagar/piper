@@ -19,18 +19,7 @@ import {
 // import { McpLogEntry } from '@/lib/logger/types'; // Unused
 // import { correlationMiddleware } from '@/middleware/correlation'; // Unused
 import { generateCorrelationId } from '@/lib/logger/correlation';
-// Using simple console logging instead of complex logger system
-const appLogger = {
-  mcp: {
-    info: (message: string, metadata?: Record<string, unknown>) => console.log(`[MCP INFO] ${message}`, metadata),
-    error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
-      const err = error instanceof Error ? error : new Error(String(error));
-      console.error(`[MCP ERROR] ${message}`, err, metadata);
-    },
-    debug: (message: string, metadata?: Record<string, unknown> | string | number) => console.log(`[MCP DEBUG] ${message}`, metadata),
-    warn: (message: string, metadata?: Record<string, unknown> | string | unknown) => console.warn(`[MCP WARN] ${message}`, metadata),
-  }
-};
+import { appLogger } from '@/lib/logger';
 
 // Define a local representation of what we expect from the SDK's tool definition
 // This helps in type-safe access within fetchToolsAndStatus

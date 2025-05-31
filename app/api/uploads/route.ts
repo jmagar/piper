@@ -2,11 +2,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { prisma } from "@/lib/prisma"
 import { NextRequest } from "next/server"
-// Using simple console logging instead of complex logger system
-const uploadLogger = {
-  info: (message: string, metadata?: Record<string, unknown>) => console.log(`[UPLOAD INFO] ${message}`, metadata),
-  error: (message: string, metadata?: Record<string, unknown>) => console.error(`[UPLOAD ERROR] ${message}`, metadata),
-};
+import { uploadLogger } from "@/lib/logger"
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 

@@ -3,9 +3,13 @@ import { getCurrentCorrelationId, getCurrentContext } from './correlation';
 import { AiSdkLogEntry, AiSdkOperation, ErrorCategory } from './types';
 import { errorHandler } from './error-handler';
 
+// Re-export AiSdkOperation for external use
+export { AiSdkOperation } from './types';
+
 // AI Provider types
 export enum AiProvider {
   OPENAI = 'openai',
+  OPENROUTER = 'openrouter',
   ANTHROPIC = 'anthropic',
   GOOGLE = 'google',
   COHERE = 'cohere',
