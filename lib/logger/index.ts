@@ -1,18 +1,10 @@
 import winston from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 // Environment configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
 const logsDir = path.join(process.cwd(), 'logs');
-
-// Winston format for structured JSON logging (for files)
-const structuredFileFormat = winston.format.combine(
-  winston.format.timestamp(),
-  winston.format.errors({ stack: true }),
-  winston.format.json()
-);
 
 // Console format for development
 const consoleFormat = winston.format.combine(
@@ -26,55 +18,99 @@ const consoleFormat = winston.format.combine(
     output += `: ${message}`;
     
     const metaObj = meta.metadata || meta;
-    if (metaObj && Object.keys(metaObj).length > 0 && metaObj.constructor === Object) {
-      const metaString = JSON.stringify(metaObj, null, 2);
-      if (metaString !== '{}') {
-          output += `\n${metaString}`;
-      }
+    if (Object.keys(metaObj).length > 0) {
+      output += ` ${JSON.stringify(metaObj)}`;
     }
+    
     return output;
   })
 );
 
-// Create daily rotate file transport factory
-const createRotateTransport = (filename: string, level?: string) => {
-  return new DailyRotateFile({
-    filename: path.join(logsDir, filename),
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '20m',
-    maxFiles: '30d',
-    format: structuredFileFormat,
-    level: level || 'info'
+export type LogSource = 'APP' | 'MCP' | 'AI_SDK' | 'HTTP';
+
+export interface LogMetadata {
+  [key: string]: unknown;
+}
+
+// Create regular file transport (no date rotation)
+const createFileTransport = (filename: string, level?: string) => {
+  return new winston.transports.File({
+    filename: path.join(logsDir, `${filename}.log`),
+    level: level || 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    maxsize: 20 * 1024 * 1024, // 20MB
+    maxFiles: 5, // Keep 5 backup files
   });
 };
 
 // Create Winston logger with file transports
 const createWinstonLogger = () => {
+  const logFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  );
+
+  const transports = [
+    createFileTransport('app', 'info'), // General app logs
+    createFileTransport('error', 'error'), // Error logs
+  ];
+
   const logger = winston.createLogger({
-    level: isDevelopment ? 'debug' : 'info',
-    format: structuredFileFormat,
-    transports: [
-      createRotateTransport('app-%DATE%.log'),
-      createRotateTransport('error-%DATE%.log', 'error'),
-      createRotateTransport('mcp-%DATE%.log'),
-      createRotateTransport('ai-sdk-%DATE%.log'),
-      createRotateTransport('http-%DATE%.log'),
-    ],
+    level: 'debug',
+    format: logFormat,
+    transports,
+    defaultMeta: { service: 'piper' },
   });
 
   // Add console transport for development
   if (isDevelopment) {
     logger.add(new winston.transports.Console({
-      format: consoleFormat,
-      level: 'debug'
+      format: consoleFormat
     }));
   }
 
   return logger;
 };
 
-// Initialize Winston logger
+// Create source-specific loggers
+const createSourceLoggers = () => {
+  return {
+    mcp: winston.createLogger({
+      level: 'debug',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+      transports: [createFileTransport('mcp')],
+      defaultMeta: { service: 'piper' },
+    }),
+    aiSdk: winston.createLogger({
+      level: 'debug',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+      transports: [createFileTransport('ai-sdk')],
+      defaultMeta: { service: 'piper' },
+    }),
+    http: winston.createLogger({
+      level: 'debug',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      ),
+      transports: [createFileTransport('http')],
+      defaultMeta: { service: 'piper' },
+    }),
+  };
+};
+
+// Initialize Winston loggers
 const winstonLogger = createWinstonLogger();
+const sourceLoggers = createSourceLoggers();
 
 // Enhanced logger implementation with Winston file logging
 export const appLogger = {
@@ -101,56 +137,56 @@ export const appLogger = {
   mcp: {
     debug: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.debug(message, { source: 'MCP', metadata: metaObj });
+      sourceLoggers.mcp.debug(message, { source: 'MCP', metadata: metaObj });
     },
     info: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.info(message, { source: 'MCP', metadata: metaObj });
+      sourceLoggers.mcp.info(message, { source: 'MCP', metadata: metaObj });
     },
     warn: (message: string, metadata?: Record<string, unknown> | string | number | unknown) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.warn(message, { source: 'MCP', metadata: metaObj });
+      sourceLoggers.mcp.warn(message, { source: 'MCP', metadata: metaObj });
     },
     error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
       const err = error instanceof Error ? error : new Error(String(error));
-      winstonLogger.error(message, { source: 'MCP', error: err, metadata });
+      sourceLoggers.mcp.error(message, { source: 'MCP', error: err, metadata });
     },
   },
   aiSdk: {
     debug: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.debug(message, { source: 'AI_SDK', metadata: metaObj });
+      sourceLoggers.aiSdk.debug(message, { source: 'AI_SDK', metadata: metaObj });
     },
     info: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.info(message, { source: 'AI_SDK', metadata: metaObj });
+      sourceLoggers.aiSdk.info(message, { source: 'AI_SDK', metadata: metaObj });
     },
     warn: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
       const err = error instanceof Error ? error : undefined;
       const metaData = metadata || (typeof error === 'object' && !(error instanceof Error) ? error as Record<string, unknown> : {});
-      winstonLogger.warn(message, { source: 'AI_SDK', error: err, metadata: metaData });
+      sourceLoggers.aiSdk.warn(message, { source: 'AI_SDK', error: err, metadata: metaData });
     },
     error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
       const err = error instanceof Error ? error : new Error(String(error));
-      winstonLogger.error(message, { source: 'AI_SDK', error: err, metadata });
+      sourceLoggers.aiSdk.error(message, { source: 'AI_SDK', error: err, metadata });
     },
   },
   http: {
     debug: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.debug(message, { source: 'HTTP', metadata: metaObj });
+      sourceLoggers.http.debug(message, { source: 'HTTP', metadata: metaObj });
     },
     info: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.info(message, { source: 'HTTP', metadata: metaObj });
+      sourceLoggers.http.info(message, { source: 'HTTP', metadata: metaObj });
     },
     warn: (message: string, metadata?: Record<string, unknown> | string | number) => {
       const metaObj = typeof metadata === 'object' ? metadata : { data: metadata };
-      winstonLogger.warn(message, { source: 'HTTP', metadata: metaObj });
+      sourceLoggers.http.warn(message, { source: 'HTTP', metadata: metaObj });
     },
     error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => {
       const err = error instanceof Error ? error : new Error(String(error));
-      winstonLogger.error(message, { source: 'HTTP', error: err, metadata });
+      sourceLoggers.http.error(message, { source: 'HTTP', error: err, metadata });
     },
   },
   withContext: (correlationId?: string) => ({
