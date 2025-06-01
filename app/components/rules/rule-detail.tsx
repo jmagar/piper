@@ -1,7 +1,5 @@
 "use client"
 
-import { AgentSummary } from "@/app/types/agent"
-import type { Tables } from "@/app/types/database.types"
 import { ButtonCopy } from "@/components/common/button-copy"
 import {
   AlertDialog,
@@ -13,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -30,10 +27,9 @@ import {
 import { fetchClient } from "@/lib/fetch"
 import { cn } from "@/lib/utils"
 import {
-  ChatCircle,
+  Article,
   Check,
   CopySimple,
-  Cube,
   DotsThree,
   PencilSimple,
   Trash,
@@ -41,7 +37,7 @@ import {
 } from "@phosphor-icons/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { DialogEditAgentTrigger } from "./dialog-edit-agent/dialog-trigger-edit-agent"
+import { DialogEditRuleTrigger } from "./dialog-edit-rule/dialog-trigger-edit-rule"
 
 function SystemPromptDisplay({ prompt }: { prompt: string }) {
   const [expanded, setExpanded] = useState(false)
@@ -72,74 +68,67 @@ function SystemPromptDisplay({ prompt }: { prompt: string }) {
   )
 }
 
-type AgentDetailProps = {
+type RuleDetailProps = {
   id: string
   slug: string
   name: string
   description: string
-  example_inputs: string[]
-  avatar_url?: string | null
-  onAgentClickAction?: (agentId: string) => void
-  randomAgents: AgentSummary[]
+  system_prompt: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  onRuleClickAction?: (ruleId: string) => void
+  moreRules?: Array<{
+    id: string
+    name: string
+    description: string
+    slug: string
+  }>
   isFullPage?: boolean
-  system_prompt?: string | null
-  tools?: string[] | null
-  mcp_config?: Tables<"agents">["mcp_config"] | null
 }
 
-export function AgentDetail({
+export function RuleDetail({
   id,
   slug,
   name,
   description,
-  example_inputs,
-  avatar_url,
-  onAgentClickAction,
-  randomAgents,
-  isFullPage,
   system_prompt,
-  tools,
-  mcp_config,
-}: AgentDetailProps) {
+  createdAt,
+  updatedAt,
+  onRuleClickAction,
+  moreRules = [],
+  isFullPage,
+}: RuleDetailProps) {
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/agents/${slug}`)
+    navigator.clipboard.writeText(`${window.location.origin}/rules/${slug}`)
     setCopied(true)
     setTimeout(() => setCopied(false), 1000)
   }
 
   useEffect(() => {
-    if (randomAgents.length > 0 && isFullPage) {
-      randomAgents.forEach((agent) => {
-        router.prefetch(`/agents/${agent.slug}`)
+    if (moreRules.length > 0 && isFullPage) {
+      moreRules.forEach((rule) => {
+        router.prefetch(`/rules/${rule.slug}`)
       })
     }
-  }, [randomAgents, router, isFullPage])
+  }, [moreRules, router, isFullPage])
 
-  const handleAgentClick = (agent: AgentSummary) => {
-    if (onAgentClickAction) {
-      onAgentClickAction(agent.id)
+  const handleRuleClick = (rule: { id: string; slug: string }) => {
+    if (onRuleClickAction) {
+      onRuleClickAction(rule.id)
     } else {
-      router.push(`/agents/${agent.slug}`)
+      router.push(`/rules/${rule.slug}`)
     }
-  }
-
-  const tryAgentWithPrompt = async (prompt: string) => {
-    router.push(`/?agent=${slug}&prompt=${encodeURIComponent(prompt)}`)
-  }
-
-  const tryAgent = async () => {
-    router.push(`/?agent=${slug}`)
   }
 
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      const response = await fetchClient(`/api/delete-agent/${id}`, {
+      const response = await fetchClient(`/api/delete-rule/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       })
@@ -152,27 +141,27 @@ export function AgentDetail({
 
       toast({
         title: "Success",
-        description: "Agent deleted successfully.",
+        description: "Rule deleted successfully.",
         status: "success",
       })
 
       setShowDeleteDialog(false)
 
       // If we're in a dialog (not full page), close it first
-      if (!isFullPage && onAgentClickAction) {
-        onAgentClickAction("")
+      if (!isFullPage && onRuleClickAction) {
+        onRuleClickAction("")
       }
 
-      // Navigate to agents page
-      router.push("/agents")
+      // Navigate to rules page
+      router.push("/rules")
     } catch (error) {
-      console.error("Failed to delete agent:", error)
+      console.error("Failed to delete rule:", error)
       toast({
         title: "Error",
         description:
           error instanceof Error
             ? error.message
-            : "Failed to delete agent. Please try again.",
+            : "Failed to delete rule. Please try again.",
         status: "error",
       })
     } finally {
@@ -197,19 +186,9 @@ export function AgentDetail({
       >
         <div className="mb-6 flex items-center justify-between gap-4 pt-8 pr-8 pl-8">
           <div className="flex items-center gap-4">
-            {avatar_url ? (
-              <Avatar className="size-16">
-                <AvatarImage
-                  src={avatar_url}
-                  alt={name}
-                  className="h-full w-full object-cover"
-                />
-              </Avatar>
-            ) : (
-              <div className="bg-background flex size-16 items-center justify-center rounded-full border border-dashed">
-                <Cube className="size-8" />
-              </div>
-            )}
+            <div className="bg-background flex size-16 items-center justify-center rounded-full border border-dashed">
+              <Article className="size-8" />
+            </div>
             <h1 className="text-2xl font-medium">{name}</h1>
           </div>
 
@@ -232,23 +211,21 @@ export function AgentDetail({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DialogEditAgentTrigger
+                  <DialogEditRuleTrigger
                     trigger={
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                         <PencilSimple className="size-4" />
-                        Edit agent
+                        Edit rule
                       </DropdownMenuItem>
                     }
-                    agentData={{
+                    ruleData={{
                       id,
                       slug,
                       name,
                       description,
                       system_prompt,
-                      tools,
-                      mcp_config,
                     }}
-                    onAgentUpdatedAction={() => {
+                    onRuleUpdatedAction={() => {
                       router.refresh()
                     }}
                   />
@@ -257,7 +234,7 @@ export function AgentDetail({
                     onClick={() => setShowDeleteDialog(true)}
                   >
                     <Trash className="fill-destructive size-4" />
-                    Delete agent
+                    Delete rule
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -278,23 +255,21 @@ export function AgentDetail({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DialogEditAgentTrigger
+                      <DialogEditRuleTrigger
                         trigger={
                           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                             <PencilSimple className="size-4" />
-                            Edit agent
+                            Edit rule
                           </DropdownMenuItem>
                         }
-                        agentData={{
+                        ruleData={{
                           id,
                           slug,
                           name,
                           description,
                           system_prompt,
-                          tools,
-                          mcp_config,
                         }}
-                        onAgentUpdatedAction={() => {
+                        onRuleUpdatedAction={() => {
                           router.refresh()
                         }}
                       />
@@ -303,7 +278,7 @@ export function AgentDetail({
                         onClick={() => setShowDeleteDialog(true)}
                       >
                         <Trash className="fill-destructive size-4" />
-                        Delete agent
+                        Delete rule
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -313,7 +288,7 @@ export function AgentDetail({
                   size="sm"
                   className="h-8 w-8 p-0"
                   type="button"
-                  onClick={() => onAgentClickAction?.("")}
+                  onClick={() => onRuleClickAction?.("")}
                 >
                   <X className="size-4" />
                 </Button>
@@ -326,56 +301,36 @@ export function AgentDetail({
           <p className="text-muted-foreground mb-6">{description}</p>
         </div>
 
-        {system_prompt && (
-          <div className="mt-4 mb-8 px-4 md:px-8">
-            <h2 className="mb-4 text-lg font-medium">System Prompt</h2>
-            <SystemPromptDisplay prompt={system_prompt} />
-          </div>
-        )}
+        <div className="mt-4 mb-8 px-4 md:px-8">
+          <h2 className="mb-4 text-lg font-medium">System Prompt</h2>
+          <SystemPromptDisplay prompt={system_prompt} />
+        </div>
 
-        {(tools || mcp_config) && (
+        {(createdAt || updatedAt) && (
           <div className="mb-8 grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:px-8">
-            {tools && (
+            {createdAt && (
               <div className="rounded-md border p-2">
-                <h3 className="mb-2 text-xs font-medium">Tools</h3>
-                <p className="text-muted-foreground text-xs">{tools}</p>
+                <h3 className="mb-2 text-xs font-medium">Created</h3>
+                <p className="text-muted-foreground text-xs">
+                  {new Date(createdAt).toLocaleString()}
+                </p>
               </div>
             )}
-            {mcp_config && (
+            {updatedAt && (
               <div className="rounded-md border p-2">
-                <h3 className="mb-2 text-xs font-medium">MCP</h3>
-                <p className="text-muted-foreground truncate text-xs">
-                  {JSON.stringify(mcp_config)}
+                <h3 className="mb-2 text-xs font-medium">Updated</h3>
+                <p className="text-muted-foreground text-xs">
+                  {new Date(updatedAt).toLocaleString()}
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {example_inputs && example_inputs.length > 0 && (
-          <div className="mb-8 px-4 md:px-8">
-            <h2 className="mb-4 text-lg font-medium">What can I ask?</h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {example_inputs.map((example_input) => (
-                <Button
-                  key={example_input}
-                  type="button"
-                  className="flex h-auto w-full items-center justify-start px-2 py-1 text-left text-xs break-words whitespace-normal"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => tryAgentWithPrompt(example_input)}
-                >
-                  {example_input}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {randomAgents && randomAgents.length > 0 && (
+        {moreRules && moreRules.length > 0 && (
           <div className="mt-8 pb-8">
             <h2 className="mb-4 pl-4 text-lg font-medium md:pl-8">
-              More agents
+              More rules
             </h2>
             <div
               className={cn(
@@ -387,40 +342,28 @@ export function AgentDetail({
                 scrollbarWidth: "none",
               }}
             >
-              {randomAgents.map((agent, index) => (
+              {moreRules.map((rule, index) => (
                 <div
-                  key={agent.id}
-                  onClick={() => handleAgentClick(agent)}
+                  key={rule.id}
+                  onClick={() => handleRuleClick(rule)}
                   className={cn(
                     "bg-secondary hover:bg-accent h-full cursor-pointer rounded-xl p-4 transition-colors",
                     isFullPage ? "w-full" : "min-w-[280px]",
-                    index === randomAgents.length - 1 && "mr-6"
+                    index === moreRules.length - 1 && "mr-6"
                   )}
                 >
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      {agent.avatar_url ? (
-                        <div className="bg-muted size-12 overflow-hidden rounded-full">
-                          <Avatar className="size-12 object-cover">
-                            <AvatarImage
-                              src={agent.avatar_url}
-                              alt={agent.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </Avatar>
-                        </div>
-                      ) : (
-                        <div className="bg-muted size-12 overflow-hidden rounded-full">
-                          <Cube className="size-8" />
-                        </div>
-                      )}
+                      <div className="bg-muted size-12 overflow-hidden rounded-full flex items-center justify-center">
+                        <Article className="size-6" />
+                      </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-foreground truncate text-base font-medium">
-                        {agent.name}
+                        {rule.name}
                       </h3>
                       <p className="text-foreground mt-1 line-clamp-2 text-xs">
-                        {agent.description}
+                        {rule.description}
                       </p>
                     </div>
                   </div>
@@ -450,16 +393,16 @@ export function AgentDetail({
               ) : (
                 <CopySimple className="size-4" />
               )}
-              Share this agent
+              Share this rule
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             {copied ? "Copied to clipboard" : "Copy link to clipboard"}
           </TooltipContent>
         </Tooltip>
-        <Button onClick={tryAgent} className="flex-1 text-center" type="button">
-          <ChatCircle className="size-4" />
-          Chat with {name}
+        <Button className="flex-1 text-center" type="button">
+          <Article className="size-4" />
+          Use @{slug}
         </Button>
       </div>
 
@@ -469,7 +412,7 @@ export function AgentDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the agent
+              This action cannot be undone. This will permanently delete the rule
               and remove its data from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -485,4 +428,4 @@ export function AgentDetail({
       </AlertDialog>
     </div>
   )
-}
+} 

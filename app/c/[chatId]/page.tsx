@@ -1,14 +1,14 @@
 import { Chat } from "@/app/components/chat/chat"
-import { LayoutApp } from "@/app/components/layout/layout-app"
+import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 
 export default async function Page() {
   // In admin-only mode, no authentication required
   return (
     <MessagesProvider>
-      <LayoutApp>
+      <ClientLayoutWrapper>
         <Chat />
-      </LayoutApp>
+      </ClientLayoutWrapper>
     </MessagesProvider>
   )
 }

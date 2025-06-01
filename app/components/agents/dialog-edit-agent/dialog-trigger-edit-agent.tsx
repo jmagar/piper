@@ -18,12 +18,12 @@ import {
 } from "@/components/ui/drawer"
 import { toast } from "@/components/ui/toast"
 import { fetchClient } from "@/lib/fetch"
-import { API_ROUTE_CREATE_AGENT } from "@/lib/routes"
 import { useRouter } from "next/navigation"
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useBreakpoint } from "../../../hooks/use-breakpoint"
-import { CreateAgentForm } from "./create-agent-form"
+import { EditAgentForm } from "./edit-agent-form"
+import type { Tables } from "@/app/types/database.types"
 
 type AgentFormData = {
   name: string
@@ -34,13 +34,25 @@ type AgentFormData = {
   tools: string[]
 }
 
-type DialogCreateAgentTrigger = {
+type DialogEditAgentTriggerProps = {
   trigger: React.ReactNode
+  agentData: {
+    id: string
+    slug: string
+    name: string
+    description: string
+    system_prompt?: string | null
+    tools?: string[] | null
+    mcp_config?: Tables<"agents">["mcp_config"] | null
+  }
+  onAgentUpdatedAction?: () => void
 }
 
-export function DialogCreateAgentTrigger({
+export function DialogEditAgentTrigger({
   trigger,
-}: DialogCreateAgentTrigger) {
+  agentData,
+  onAgentUpdatedAction,
+}: DialogEditAgentTriggerProps) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData>({
     name: "",
@@ -54,6 +66,33 @@ export function DialogCreateAgentTrigger({
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const isMobile = useBreakpoint(768)
+
+  // Pre-populate form data when dialog opens
+  useEffect(() => {
+    if (open && agentData) {
+      const mcpArray = Array.isArray(agentData.mcp_config) 
+        ? (agentData.mcp_config as string[])
+        : agentData.mcp_config 
+          ? [agentData.mcp_config as string]
+          : []
+
+      setFormData({
+        name: agentData.name,
+        description: agentData.description,
+        systemPrompt: agentData.system_prompt || "",
+        mcp: mcpArray,
+        tools: agentData.tools || [],
+      })
+      
+      // If git-mcp is configured, try to extract repository info
+      if (mcpArray.includes("git-mcp") && agentData.system_prompt) {
+        const repoMatch = agentData.system_prompt.match(/repository: ([^.]+)/)
+        if (repoMatch) {
+          setRepository(repoMatch[1])
+        }
+      }
+    }
+  }, [open, agentData])
 
   const generateSystemPrompt = (owner: string, repo: string) => {
     return `You are a helpful GitHub assistant focused on the repository: ${owner}/${repo}.
@@ -75,7 +114,6 @@ Never invent answers. Use tools and return what you find.`
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
 
-    // Clear error for this field if it exists
     if (error[name]) {
       setError({ ...error, [name]: "" })
     }
@@ -85,12 +123,10 @@ Never invent answers. Use tools and return what you find.`
     const repoValue = e.target.value
     setRepository(repoValue)
 
-    // Clear repository error if it exists
     if (error.repository) {
       setError({ ...error, repository: "" })
     }
 
-    // Update system prompt if git-mcp is selected and repository format is valid
     if (formData.mcp.includes("git-mcp") && validateRepository(repoValue)) {
       const [owner, repo] = repoValue.split("/")
       setFormData((prev) => ({
@@ -101,16 +137,13 @@ Never invent answers. Use tools and return what you find.`
   }
 
   const handleSelectChange = (value: string) => {
-    // Handle comma-separated string from the collapsible component
     const selectedServers = value === "" ? [] : value.split(',').filter(s => s.trim() !== '')
     setFormData({ ...formData, mcp: selectedServers })
 
-    // Clear repository error if switching away from git-mcp
     if (!selectedServers.includes("git-mcp") && error.repository) {
       setError({ ...error, repository: "" })
     }
 
-    // If switching to git-mcp and repository is already valid, update system prompt
     if (selectedServers.includes("git-mcp") && validateRepository(repository)) {
       const [owner, repo] = repository.split("/")
       setFormData((prev) => ({
@@ -125,7 +158,6 @@ Never invent answers. Use tools and return what you find.`
   }
 
   const validateRepository = (repo: string) => {
-    // Simple validation for owner/repo format
     const regex = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/
     return regex.test(repo)
   }
@@ -164,7 +196,6 @@ Never invent answers. Use tools and return what you find.`
     setIsLoading(true)
 
     try {
-      // If git-mcp is selected, validate the repository
       if (formData.mcp.includes("git-mcp")) {
         const response = await fetch(
           `https://api.github.com/repos/${repository}`
@@ -187,15 +218,14 @@ Never invent answers. Use tools and return what you find.`
           return
         }
 
-        // Add repository to form data
         formData.repository = repository
       }
 
       const owner = repository ? repository.split("/")[0] : null
       const repo = repository ? repository.split("/")[1] : null
 
-      const apiResponse = await fetchClient(API_ROUTE_CREATE_AGENT, {
-        method: "POST",
+      const apiResponse = await fetchClient(`/api/update-agent/${agentData.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
@@ -211,13 +241,19 @@ Never invent answers. Use tools and return what you find.`
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json()
-        throw new Error(errorData.error || "Failed to create agent")
+        throw new Error(errorData.error || "Failed to update agent")
       }
 
-      const result = await apiResponse.json()
-      toast({ title: "Agent created successfully!", status: "success" })
-      setOpen(false) // Close dialog on success
-      router.push(`/a/${result.agent.slug}`) // Changed from result.slug to result.agent.slug
+      toast({ title: "Agent updated successfully!", status: "success" })
+      setOpen(false)
+      
+      // Call the callback to refresh agent data if provided
+      if (onAgentUpdatedAction) {
+        onAgentUpdatedAction()
+      }
+      
+      // Refresh the current page to reflect changes
+      router.refresh()
     } catch (err: unknown) {
       let errorMessage = "An unexpected error occurred."
       if (err instanceof Error) {
@@ -225,26 +261,24 @@ Never invent answers. Use tools and return what you find.`
       } else if (typeof err === 'string') {
         errorMessage = err
       }
-      // Display error toast or update error state
-      toast({ title: "Error creating agent", description: errorMessage, status: "error" })
-      // Optionally, set specific form field errors if applicable from err
+      toast({ title: "Error updating agent", description: errorMessage, status: "error" })
     } finally {
       setIsLoading(false)
     }
   }
 
   const content = (
-    <CreateAgentForm
+    <EditAgentForm
       formData={formData}
       repository={repository}
-      setRepository={handleRepositoryChange}
+      setRepositoryAction={handleRepositoryChange}
       error={error}
       isLoading={isLoading}
-      handleInputChange={handleInputChange}
-      handleSelectChange={handleSelectChange}
-      handleToolsChange={handleToolsChange}
-      handleSubmit={handleSubmit}
-      onClose={() => setOpen(false)}
+      handleInputChangeAction={handleInputChange}
+      handleSelectChangeAction={handleSelectChange}
+      handleToolsChangeAction={handleToolsChange}
+      handleSubmitAction={handleSubmit}
+      onCloseAction={() => setOpen(false)}
       isDrawer={isMobile}
     />
   )
@@ -255,9 +289,9 @@ Never invent answers. Use tools and return what you find.`
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
         <DrawerContent className="max-h-[90vh]">
           <VaulDrawerHeader className="text-left">
-            <VaulDrawerTitle>Create agent (experimental)</VaulDrawerTitle>
+            <VaulDrawerTitle>Edit agent</VaulDrawerTitle>
             <VaulDrawerDescription>
-              Agents can use a system prompt and optionally connect to multiple MCP servers. More tools and MCP integrations are available.
+              Edit your agent&apos;s configuration, system prompt, and MCP server connections.
             </VaulDrawerDescription>
           </VaulDrawerHeader>
           {content}
@@ -272,14 +306,13 @@ Never invent answers. Use tools and return what you find.`
       <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-xl">
         <div
           className="h-full w-full"
-          // Prevent the dialog from closing when clicking on the content, needed because of the agent-command component
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <DialogHeader className="border-border border-b px-6 py-4">
-            <DialogTitle>Create agent (experimental)</DialogTitle>
+            <DialogTitle>Edit agent</DialogTitle>
             <DialogDescription>
-              Agents can use a system prompt and optionally connect to multiple MCP servers. More tools and MCP integrations are available.
+              Edit your agent&apos;s configuration, system prompt, and MCP server connections.
             </DialogDescription>
           </DialogHeader>
           {content}
@@ -287,4 +320,4 @@ Never invent answers. Use tools and return what you find.`
       </DialogContent>
     </Dialog>
   )
-}
+} 

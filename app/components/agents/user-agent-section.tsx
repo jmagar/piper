@@ -49,7 +49,7 @@ export function UserAgentsSection({
       <div className="mt-8 border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-6 text-center">
           <h3 className="mb-2 text-lg font-medium">
-            You haven't created any agents yet
+            You haven&apos;t created any agents yet
           </h3>
           <p className="text-muted-foreground mb-4">
             Create your first custom agent to get started
@@ -76,15 +76,14 @@ export function UserAgentsSection({
             avatar_url={agent.avatar_url}
             example_inputs={agent.example_inputs || []}
             isAvailable={true}
-            onAgentClick={handleAgentClick}
-            isOpen={openAgentId === agent.id}
-            onOpenChange={(open) => setOpenAgentId(open ? agent.id : null)}
+                                onAgentClickAction={handleAgentClick}
+                    isOpen={openAgentId === agent.id}
+                    onOpenChangeAction={(open) => setOpenAgentId(open ? agent.id : null)}
             randomAgents={moreAgents}
             slug={agent.slug}
             system_prompt={agent.system_prompt}
             tools={agent.tools}
             mcp_config={agent.mcp_config}
-            creator_id={agent.creator_id}
           />
         ))}
       </div>

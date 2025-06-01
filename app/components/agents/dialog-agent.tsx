@@ -17,16 +17,15 @@ type DialogAgentProps = {
   className?: string
   isAvailable: boolean
   slug: string
-  onAgentClick?: (agentId: string | null) => void
+  onAgentClickAction?: (agentId: string | null) => void
   isOpen: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChangeAction: (open: boolean) => void
   randomAgents: AgentSummary[]
   trigger?: React.ReactNode
   system_prompt?: string | null
   tools?: string[] | null
   mcp_config?: Tables<"agents">["mcp_config"] | null
   isCardLight?: boolean
-  creator_id?: string | null
 }
 
 export function DialogAgent({
@@ -39,15 +38,14 @@ export function DialogAgent({
   system_prompt,
   className,
   isAvailable,
-  onAgentClick,
+  onAgentClickAction,
   isOpen,
-  onOpenChange,
+  onOpenChangeAction,
   randomAgents,
   trigger = null,
   tools,
   mcp_config,
   isCardLight = false,
-  creator_id,
 }: DialogAgentProps) {
   const isMobile = useBreakpoint(768)
 
@@ -57,7 +55,7 @@ export function DialogAgent({
     }
 
     window.history.replaceState(null, "", `/agents/${slug}`)
-    onOpenChange(open)
+    onOpenChangeAction(open)
   }
 
   const defaultTrigger = (
@@ -77,6 +75,7 @@ export function DialogAgent({
 
   const renderContent = () => (
     <AgentDetail
+      id={id}
       slug={slug}
       name={name}
       description={description}
@@ -85,7 +84,7 @@ export function DialogAgent({
       system_prompt={system_prompt}
       tools={tools}
       mcp_config={mcp_config}
-      onAgentClick={onAgentClick}
+      onAgentClickAction={onAgentClickAction}
       randomAgents={randomAgents}
     />
   )

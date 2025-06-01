@@ -1,5 +1,5 @@
 import { AgentsPage } from "@/app/components/agents/agents-page"
-import { LayoutApp } from "@/app/components/layout/layout-app"
+import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { prisma } from "@/lib/prisma"
 
@@ -14,22 +14,22 @@ export default async function Page() {
 
     return (
       <MessagesProvider>
-        <LayoutApp>
+        <ClientLayoutWrapper>
           <AgentsPage
             curatedAgents={agents}
             userAgents={agents} // In admin-only mode, all agents are "user" agents
             userId="admin" // Hardcoded admin user
           />
-        </LayoutApp>
+        </ClientLayoutWrapper>
       </MessagesProvider>
     )
   } catch (error) {
     console.error("Error loading agents:", error)
     return (
       <MessagesProvider>
-        <LayoutApp>
+        <ClientLayoutWrapper>
           <div>Error loading agents</div>
-        </LayoutApp>
+        </ClientLayoutWrapper>
       </MessagesProvider>
     )
   }

@@ -31,9 +31,9 @@ export function ResearchSection({
         avatar_url={researchAgent.avatar_url}
         example_inputs={researchAgent.example_inputs || []}
         isAvailable={true}
-        onAgentClick={handleAgentClick}
+        onAgentClickAction={handleAgentClick}
         isOpen={openAgentId === researchAgent.id}
-        onOpenChange={(open) => setOpenAgentId(open ? researchAgent.id : null)}
+        onOpenChangeAction={(open) => setOpenAgentId(open ? researchAgent.id : null)}
         randomAgents={randomAgents}
         system_prompt={researchAgent.system_prompt}
         tools={researchAgent.tools || []}

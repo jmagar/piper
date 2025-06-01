@@ -1,0 +1,105 @@
+{
+  "Climb": "R7x3",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Add edit and delete buttons to modal agent view",
+      "details": "Add edit/delete buttons to the modal version of AgentDetail component (when isFullPage is false)"
+    },
+    {
+      "status": "complete", 
+      "description": "Create edit agent dialog component",
+      "details": "Create dialog-edit-agent component similar to dialog-create-agent with pre-populated form"
+    },
+    {
+      "status": "complete",
+      "description": "Add Rules table to Prisma schema",
+      "details": "Add Rules model with id, slug, name, description, system_prompt, createdAt, updatedAt fields"
+    },
+    {
+      "status": "complete",
+      "description": "Create Rules API endpoints - GET /api/rules",
+      "details": "Create endpoint to list all rules with pagination support"
+    },
+    {
+      "status": "complete",
+      "description": "Create Rules API endpoints - POST /api/create-rule",
+      "details": "Create endpoint to create new rules with validation"
+    },
+    {
+      "status": "complete", 
+      "description": "Create Rules API endpoints - PUT /api/update-rule/[id]",
+      "details": "Create endpoint to update existing rules"
+    },
+    {
+      "status": "complete",
+      "description": "Create Rules API endpoints - DELETE /api/delete-rule/[id]", 
+      "details": "Create endpoint to delete rules"
+    },
+    {
+      "status": "complete",
+      "description": "Create rules page layout and navigation",
+      "details": "Create /rules page route and add navigation to rules section"
+    },
+    {
+      "status": "complete",
+      "description": "Create rule components - RuleCard",
+      "details": "Create RuleCard component similar to AgentCard for displaying rule summary"
+    },
+    {
+      "status": "complete",
+      "description": "Create rule components - RuleDetail", 
+      "details": "Create RuleDetail component similar to AgentDetail for full rule view"
+    },
+    {
+      "status": "complete",
+      "description": "Create rule components - CreateRule dialog",
+      "details": "Create dialog-create-rule component for rule creation"
+    },
+    {
+      "status": "complete",
+      "description": "Create rule components - EditRule dialog",
+      "details": "Create dialog-edit-rule component for rule editing"
+    },
+    {
+      "status": "complete",
+      "description": "Create rules listing page",
+      "details": "Create main rules page that displays all rules in grid/list format"
+    },
+    {
+      "status": "complete",
+      "description": "Create individual rule detail pages",
+      "details": "Create /rules/[slug] route for individual rule pages"
+    },
+    {
+      "status": "todo",
+      "description": "Add rules mention detection to chat",
+      "details": "Extend existing mention system to detect @rule-name patterns"
+    },
+    {
+      "status": "todo", 
+      "description": "Implement rule prompt appending to messages",
+      "details": "When rule is mentioned, append rule's system_prompt to the message"
+    },
+    {
+      "status": "todo",
+      "description": "Add rules to chat suggestions/autocomplete",
+      "details": "Include rules in @ mention autocomplete dropdown alongside agents"
+    },
+    {
+      "status": "todo",
+      "description": "Update navigation to include Rules section",
+      "details": "Add Rules link to main navigation sidebar"
+    },
+    {
+      "status": "todo",
+      "description": "Add rules management to admin/settings",
+      "details": "Add rules management interface to admin dashboard if needed"
+    },
+    {
+      "status": "todo",
+      "description": "Update types and interfaces for rules",
+      "details": "Add Rule types to app/types/ and update database types"
+    }
+  ]
+} 

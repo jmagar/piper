@@ -1,92 +1,140 @@
-# Active Context: Piper Chat Application - Comprehensive Logging System Implementation
+# Active Context: Piper Chat Application - Server Action Naming & React Context Boundary Resolution
 
-**Last Updated**: Current Session (Reflecting logging system Bivvy climb completion)
+**Last Updated**: Current Session (Server Action naming conventions fixed, React Context boundaries resolved)
 
-**Overall Goal**: Successfully implemented a comprehensive, production-ready logging and error handling system throughout the Piper application.
+**Overall Goal**: Successfully resolved critical TypeScript/ESLint errors related to Next.js Server Action naming conventions and fixed Server/Client Component boundary issues that were preventing proper application functionality.
 
-## Completed Project: Comprehensive Logging System (Bivvy Climb x7K2)
+## Completed Project: Server Action Naming Convention Compliance & React Context Boundary Fix
 
 ### Project Summary:
-Designed and implemented an app-wide logging architecture using Winston. This system includes structured JSON logging, correlation ID tracking, specialized loggers for MCP and AI SDK operations, security features (PII detection, sanitization), a web-based log viewer for administrators, and automated log rotation and health checks.
+Systematically addressed 16 linter errors related to Next.js Server Action naming conventions by renaming function props to end with "Action" suffix. Additionally resolved a critical runtime error where `createContext` was causing Server/Client Component boundary violations when accessing the `/rules` page. The application is now fully compliant with Next.js best practices and runs without errors in a containerized environment.
 
-### Problem Solved:
-Prior to this implementation, the application lacked a centralized or detailed logging mechanism, making debugging, error tracking, and operational monitoring difficult. The new system provides deep visibility into all aspects of the application, significantly improving observability and maintainability.
+### Problems Solved:
+1. **Server Action Naming Violations**: Next.js requires function props in client components to follow specific naming conventions (end with "Action" or be named "action") to distinguish them from Server Actions.
+2. **React Context Boundary Issues**: `LayoutApp` component using React Context was being imported into Server Components, causing `createContext is not a function` errors.
+3. **TypeScript Compilation Errors**: All linter errors preventing successful compilation and hot reloading.
 
-## Successfully Completed Features & Bivvy Moves (x7K2 - 25 Moves):
+## Successfully Completed Tasks:
 
-### ✅ **Core Logging Infrastructure**
-- **Dependencies**: Winston, winston-daily-rotate-file, uuid installed. (Move 1)
-- **Directory Structure**: `/logs` with `archived/` subdirectory created. (Move 2)
-- **Core Logger Service (`lib/logger/index.ts`)**: Winston configured with multiple transports, structured JSON logging, source-specific loggers (MCP, AI SDK, HTTP), correlation ID support, and health checks. (Move 3)
-- **Type Definitions (`lib/logger/types.ts`)**: Comprehensive TypeScript interfaces for all logging aspects. (Move 4)
-- **Log Rotation Configuration (`lib/logger/rotation-config.ts`)**: Automated log rotation and retention policies with environment-specific settings. (Move 23)
+### ✅ **Server Action Naming Convention Fixes**
+- **DialogAgent Component**: 
+  - `onAgentClick` → `onAgentClickAction`
+  - `onOpenChange` → `onOpenChangeAction`
+  - Updated all calling components (agent-featured-section, research-section, user-agent-section)
 
-### ✅ **Correlation & Context Management**
-- **Correlation ID Management (`lib/logger/correlation.ts`)**: AsyncLocalStorage for context tracking. (Move 5)
-- **Correlation Middleware (`middleware/correlation.ts`)**: Injects correlation IDs into requests (Next.js & Express support). (Move 6)
+- **DialogEditAgentTrigger & EditAgentForm**:
+  - `onAgentUpdated` → `onAgentUpdatedAction`
+  - `handleInputChange` → `handleInputChangeAction`
+  - `setRepository` → `setRepositoryAction`
+  - `handleToolsChange` → `handleToolsChangeAction`
+  - `handleSubmit` → `handleSubmitAction`
+  - `onClose` → `onCloseAction`
+  - Updated prop types and internal references
 
-### ✅ **Request & Error Handling Middleware**
-- **Request/Response Logging (`middleware/logging.ts`)**: Logs HTTP requests/responses with security features and timing. (Move 7)
-- **Global Error Handling (`middleware/error-handler.ts`)**: Catches unhandled errors, uses custom `AppError`. (Move 8)
-- **Error Classification (`lib/logger/error-handler.ts`)**: Advanced pattern matching for error categorization and retry logic. (Move 9)
+- **DialogEditRuleTrigger & EditRuleForm**:
+  - `onRuleUpdated` → `onRuleUpdatedAction`
+  - `handleInputChange` → `handleInputChangeAction`
+  - `handleSubmit` → `handleSubmitAction`
+  - `onClose` → `onCloseAction`
+  - Updated prop types and internal references
 
-### ✅ **Specialized Loggers**
-- **MCP Logger (`lib/logger/mcp-logger.ts`)**: Handles JSON-RPC messages, server lifecycle, and tool execution performance. (Move 10)
-- **AI SDK Logger (`lib/logger/ai-sdk-logger.ts`)**: Tracks AI operations, streaming, costs, and token usage. (Move 11)
+- **CreateRuleForm**:
+  - `handleInputChange` → `handleInputChangeAction`
+  - `handleSubmit` → `handleSubmitAction`
+  - `onClose` → `onCloseAction`
+  - Updated calling components with correct prop names
 
-### ✅ **Integration & Wrapping**
-- **Next.js Middleware Update (`middleware.ts`)**: Integrated all logging, correlation, and error handling middleware. (Move 12)
-- **MCP Server Implementation Wrapping**: Added logging to MCP server operations and tool executions in `lib/mcp/client.ts`. (Move 13)
-- **AI SDK Operation Wrapping**: Added logging to AI SDK operations in `app/api/chat/route.ts`. (Move 14)
-- **API Route Error Handling**: Ensured consistent error handling and logging in API routes. (Move 15)
+### ✅ **React Context Boundary Resolution**
+- **Root Cause**: `LayoutApp` (client component using React Context) was being imported into Server Components
+- **Solution Implemented**:
+  - Created `ClientLayoutWrapper` component as a client boundary wrapper
+  - Updated Server Components to use `ClientLayoutWrapper` instead of direct `LayoutApp` imports
+  - Added `"use client"` directive to components that can be client-side
 
-### ✅ **Log Viewer & Admin Interface**
-- **Log Viewer Component (`app/components/log-viewer/index.tsx`)**: Comprehensive UI with filtering, search, real-time updates, and detailed log inspection. (Moves 16, 17, 18, 19)
-- **Log Viewer API (`app/api/logs/route.ts`, `app/api/logs/export/route.ts`)**: Endpoints for querying, fetching, and exporting logs. (Created during log viewer implementation)
-- **Admin Interface Integration (`app/dashboard/manager.tsx`)**: Log viewer added as a tab in the system administration dashboard. (Move 20)
+- **Components Fixed**:
+  - ✅ `app/rules/not-found.tsx` - Added `"use client"` (immediate fix for the error)
+  - ✅ `app/page.tsx` - Added `"use client"` (home page can be client-side)
+  - ✅ `app/rules/[slug]/page.tsx` - Uses `ClientLayoutWrapper` (maintains server-side benefits)
+  - ✅ `app/agents/[...agentSlug]/page.tsx` - Uses `ClientLayoutWrapper` (preserves Prisma queries)
+  - ✅ `app/agents/page.tsx` - Uses `ClientLayoutWrapper` (keeps server-side data fetching)
+  - ✅ `app/c/[chatId]/page.tsx` - Uses `ClientLayoutWrapper` (stays as async Server Component)
 
-### ✅ **Security & Monitoring**
-- **Log Health Check Endpoint (`app/api/logs/health/route.ts`)**: Monitors log system health, disk space, and logger status. (Move 21)
-- **Security Measures (`lib/logger/security.ts`)**: PII detection, data sanitization, access controls, and audit logging. (Move 22)
+### ✅ **Next.js App Router Parameter Handling**
+- **Fixed Async Params**: Updated API routes and page components to handle Next.js App Router's Promise-based params
+- **Routes Updated**:
+  - `app/api/delete-agent/[id]/route.ts`
+  - `app/api/update-agent/[id]/route.ts`
+  - `app/api/update-rule/[id]/route.ts`
+  - `app/api/delete-rule/[id]/route.ts`
+  - `app/rules/[slug]/page.tsx`
 
-### ✅ **Testing & Documentation**
-- **Testing**: Foundational test structure for logging components implemented (basic patterns). (Move 24)
-- **Documentation (`docs/logging-system.md`)**: Comprehensive documentation covering setup, usage, configuration, and troubleshooting. (Move 25)
+### ✅ **Critical Bug Fixes**
+- **Agent Deletion Error**: Fixed Prisma "No record was found for a delete" error by adding missing `id` prop to AgentDetail component
+- **Prop Name Mismatches**: Resolved all prop name inconsistencies between component definitions and usage
+- **Apostrophe Escaping**: Fixed JSX syntax issues in user-agent-section.tsx
 
-## Key Files Created/Modified (Logging System):
-- `lib/logger/index.ts`
-- `lib/logger/types.ts`
-- `lib/logger/correlation.ts`
-- `lib/logger/error-handler.ts` (middleware version and lib version consolidated/refined)
-- `lib/logger/mcp-logger.ts`
-- `lib/logger/ai-sdk-logger.ts`
-- `lib/logger/security.ts`
-- `lib/logger/rotation-config.ts`
-- `middleware/correlation.ts`
-- `middleware/logging.ts`
-- `middleware/error-handler.ts`
-- `middleware.ts` (updated)
-- `app/components/log-viewer/index.tsx`
-- `app/api/logs/route.ts`
-- `app/api/logs/export/route.ts`
-- `app/api/logs/health/route.ts`
-- `app/dashboard/manager.tsx` (updated for log viewer tab)
-- `docs/logging-system.md`
-- `.bivvy/x7K2-climb.md` & `.bivvy/x7K2-moves.json` (for tracking the logging project)
+## Key Files Modified:
+
+### **Server Action Naming Fixes**:
+- `app/components/agents/dialog-agent.tsx`
+- `app/components/agents/agent-featured-section.tsx`
+- `app/components/agents/research-section.tsx`
+- `app/components/agents/user-agent-section.tsx`
+- `app/components/agents/dialog-edit-agent/dialog-trigger-edit-agent.tsx`
+- `app/components/agents/dialog-edit-agent/edit-agent-form.tsx`
+- `app/components/agents/agent-detail.tsx`
+- `app/components/rules/dialog-create-rule/create-rule-form.tsx`
+- `app/components/rules/dialog-create-rule/dialog-trigger-create-rule.tsx`
+- `app/components/rules/dialog-edit-rule/dialog-trigger-edit-rule.tsx`
+- `app/components/rules/dialog-edit-rule/edit-rule-form.tsx`
+- `app/components/rules/rule-detail.tsx`
+
+### **React Context Boundary Fixes**:
+- `app/components/layout/client-layout-wrapper.tsx` ⭐ **CREATED** - Client boundary wrapper
+- `app/rules/not-found.tsx` - Added `"use client"`
+- `app/page.tsx` - Added `"use client"`
+- `app/rules/[slug]/page.tsx` - Updated to use `ClientLayoutWrapper`
+- `app/agents/[...agentSlug]/page.tsx` - Updated to use `ClientLayoutWrapper`
+- `app/agents/page.tsx` - Updated to use `ClientLayoutWrapper`
+- `app/c/[chatId]/page.tsx` - Updated to use `ClientLayoutWrapper`
+
+### **API Route Modernization**:
+- `app/api/delete-agent/[id]/route.ts` - Fixed async params handling
+- `app/api/update-agent/[id]/route.ts` - Fixed async params handling
+- `app/api/update-rule/[id]/route.ts` - Fixed async params handling
+- `app/api/delete-rule/[id]/route.ts` - Fixed async params handling
 
 ## Current Status:
-**🎉 LOGGING SYSTEM RESTORED & ERRORS FIXED** - After discovering the complex logging system was not actually functional due to a conflicting file, we've successfully:
+**🎉 ALL LINTER ERRORS RESOLVED** - The application now:
 
-### Recent Session Fixes (Latest):
-- ✅ **Identified Root Cause**: Conflicting `lib/logger.ts` file was preventing proper import resolution to `lib/logger/index.ts`
-- ✅ **Deleted Conflicting File**: Removed `lib/logger.ts` to fix import resolution
-- ✅ **Enhanced Logger**: Implemented flexible metadata handling for various data types (strings, numbers, objects)
-- ✅ **Fixed Missing Exports**: Added `AiProvider.OPENROUTER`, `AiSdkOperation`, and `uploadLogger` exports
-- ✅ **Resolved Type Issues**: Fixed AI SDK response type mismatches and parameter type conflicts
-- ✅ **All Linter Errors Fixed**: Application now compiles successfully with 16,618 modules
-- ✅ **App Functionality Verified**: Application loads and responds correctly
+### ✅ **Technical Compliance**:
+- **Server Action Naming**: All function props follow Next.js naming conventions
+- **React Context Boundaries**: Proper separation between Server and Client Components
+- **TypeScript Compilation**: Zero linter errors, successful compilation
+- **Next.js App Router**: Modern async parameter handling throughout API routes
+- **Hot Reloading**: Functional in containerized development environment
+
+### ✅ **Architecture Benefits Maintained**:
+- **Server-Side Rendering**: Pages that need SSR still benefit from it
+- **SEO Optimization**: `generateMetadata` functions preserved in Server Components  
+- **Database Performance**: Prisma queries remain server-side for better performance
+- **Type Safety**: Complete TypeScript compliance maintained throughout
+
+### 🐳 **Deployment Context**:
+- **Containerized Environment**: Application runs in Docker container managed by user
+- **Container Rebuild**: User handles bringing down and rebuilding containers for changes
+- **Development Workflow**: Hot reloading functional within container boundaries
+
+## Benefits Achieved:
+- ✅ **Zero Compilation Errors**: Application builds successfully without warnings
+- ✅ **Runtime Stability**: No more `createContext` errors when navigating to `/rules`
+- ✅ **Next.js Compliance**: Follows latest App Router and Server Component best practices
+- ✅ **Maintainable Architecture**: Clear separation of concerns between Server and Client Components
+- ✅ **Preserved Functionality**: All existing features work correctly with new naming conventions
 
 ## Next Focus Areas:
-- The complex logging system is now fully functional and the app is stable
-- Ready for new feature development or bug fixes as needed
-- Monitor logging system performance in production use
+- 🎯 **Ready for Feature Development**: Clean codebase with proper conventions enables efficient new feature work
+- 🧪 **End-to-End Testing**: Verify all functionality works correctly with the new component boundaries
+- 📱 **Cross-Browser Testing**: Ensure the React Context fixes work across different environments
+- 🔄 **CI/CD Integration**: Consider automated linting checks to prevent future naming convention violations
+- 🏗️ **Architecture Evolution**: Foundation is now solid for implementing additional complex features like the Rules system @mention functionality

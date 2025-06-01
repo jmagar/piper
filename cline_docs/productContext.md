@@ -2,7 +2,7 @@
 
 ## Overview
 
-Piper is a web-based chat application designed to facilitate interactions with various AI models through an extensible MCP (Model Context Protocol) server architecture. It allows users to create and manage chat sessions, select different AI models for conversation, configure and manage MCP servers that provide specialized tools and capabilities, and persists chat history. The application is intended for local development and potentially self-hosted deployment, utilizing Docker for containerization. **It now features a comprehensive logging and error handling system.**
+Piper is a web-based chat application designed to facilitate interactions with various AI models through an extensible MCP (Model Context Protocol) server architecture. It allows users to create and manage chat sessions, select different AI models for conversation, configure and manage MCP servers that provide specialized tools and capabilities, and persists chat history. The application is intended for local development and potentially self-hosted deployment, utilizing Docker for containerization. **It now features a comprehensive logging and error handling system, and maintains strict Next.js compliance with zero TypeScript/ESLint errors.**
 
 ## Problems Solved
 
@@ -12,6 +12,7 @@ Piper is a web-based chat application designed to facilitate interactions with v
 - **Extensible Tool Ecosystem**: Supports both STDIO and SSE/HTTP MCP servers to extend AI capabilities with specialized tools.
 - Aims to provide a stable and configurable environment for AI chat interactions.
 - **Enhanced Observability & Debugging**: Implemented a robust logging system to capture detailed information about application behavior, errors, MCP communication, and AI SDK operations. This significantly improves troubleshooting and monitoring capabilities.
+- **Next.js Compliance & Architecture Stability**: Resolved Server Action naming violations and React Context boundary issues to ensure proper Next.js App Router compliance, eliminating runtime errors and maintaining clean, maintainable code architecture.
 
 ## How It Should Work (User Perspective)
 
@@ -26,6 +27,13 @@ Piper is a web-based chat application designed to facilitate interactions with v
   - Enable/disable servers with toggle switches
   - Delete servers with confirmation dialogs
   - Save all configuration changes to persist settings
+- **Rules Management**: Users can create and manage reusable prompt snippets called "Rules":
+  - Browse existing rules with search and pagination
+  - Create new rules with name, description, and prompt content
+  - Edit existing rules with pre-populated forms
+  - Delete rules with confirmation dialogs
+  - View individual rule details with "more rules" suggestions
+  - Future: @mention rules in conversations for prompt injection
 - Chat messages and session details are saved to a PostgreSQL database.
 - The application handles user authentication through Authelia 2FA integration.
 - API calls are made from the frontend (Next.js client-side components) to backend Next.js API routes to perform actions such as creating chats, sending messages, managing MCP servers, and fetching data.
@@ -40,3 +48,8 @@ Piper is a web-based chat application designed to facilitate interactions with v
     - The Log Viewer allows filtering logs by level, source, correlation ID, user ID, and time range.
     - It provides real-time updates, detailed log inspection, and options to export logs.
     - A **Log Health Check** endpoint (`/api/logs/health`) is available for monitoring the logging system's status.
+- **Development & Deployment**:
+    - **Containerized Environment**: Application runs in Docker containers for consistent deployment
+    - **Hot Reloading**: Changes to source code reflect immediately in the running application
+    - **Zero Linter Errors**: Application maintains strict TypeScript/ESLint compliance for clean development
+    - **Next.js App Router Compliance**: Proper Server/Client component boundaries and naming conventions ensure stable runtime behavior

@@ -53,17 +53,45 @@
 ### 10. Component Enhancement Pattern (Bivvy Climb System)
     - Structured development for major features (PRDs, task breakdowns).
 
-### 11. Comprehensive Logging System (`lib/logger/`, `middleware/`)
+### 11. Server Action Naming Conventions & React Context Boundaries - **ESTABLISHED PATTERNS**
+    - **Next.js Server Action Compliance**:
+        - All function props in client components must end with "Action" suffix or be named "action"
+        - Pattern: `onClick` → `onClickAction`, `onChange` → `onChangeAction`, `handleSubmit` → `handleSubmitAction`
+        - Enforced throughout component hierarchy (prop types, internal references, calling components)
+    - **React Context Boundary Management**:
+        - **Problem**: Client components using React Context cannot be directly imported into Server Components
+        - **Solution Pattern**: `ClientLayoutWrapper` component as boundary wrapper
+        - **Implementation**:
+            ```typescript
+            // ✅ For Server Components that need client layout
+            import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
+            
+            // ✅ For pages that can be fully client-side
+            "use client"
+            import { LayoutApp } from "@/app/components/layout/layout-app"
+            ```
+    - **Next.js App Router Parameter Handling**:
+        - **Pattern**: API routes and pages must handle Promise-based params
+        - **Implementation**: `const { id } = await params` instead of direct destructuring
+        - **Routes**: All dynamic `[id]` and `[slug]` routes updated for async params
+    - **Critical Bug Prevention**:
+        - Always verify prop passing in component hierarchies (especially `id` props)
+        - Maintain consistency between prop type definitions and usage
+        - Use proper JSX escaping for apostrophes (`&apos;`)
+
+### 12. Comprehensive Logging System (`lib/logger/`, `middleware/`) - **FULLY FUNCTIONAL**
     - **Centralized Winston Logger (`lib/logger/index.ts`)**:
-        - Structured JSON logging format.
-        - Multiple transports: Daily rotating files for app, error, MCP, AI SDK, HTTP.
-        - Console transport for development with colorization.
-        - Source-specific logger instances (e.g., `appLogger.mcp`, `appLogger.aiSdk`).
+        - Structured JSON logging format for all file outputs.
+        - **Static File Logging**: Uses static filenames (`app.log`, `ai-sdk.log`, `mcp.log`, `http.log`, `error.log`) instead of date-stamped rotation.
+        - **Separate Logger Instances**: Individual Winston logger instances for each source to ensure proper file separation.
+        - **File Size Rotation**: 20MB max file size with 5 backup files per log type.
+        - Console transport for development with colorization and structured output.
+        - **Source-specific logger methods** (e.g., `appLogger.mcp.info()`, `appLogger.aiSdk.debug()`).
     - **Correlation ID Tracking (`lib/logger/correlation.ts`, `middleware/correlation.ts`)**:
         - `AsyncLocalStorage` for context propagation across async operations.
         - Middleware injects/extracts correlation IDs (e.g., `x-correlation-id`).
     - **Request/Response Logging (`middleware/logging.ts`)**:
-        - Logs incoming requests and outgoing responses.
+        - Logs incoming requests and outgoing responses to dedicated HTTP log file.
         - Includes timing, status codes, sanitized headers/body.
     - **Global Error Handling (`middleware/error-handler.ts`, `lib/logger/error-handler.ts`)**:
         - Centralized middleware (`nextErrorHandler`, `expressErrorHandlingMiddleware`).
@@ -73,26 +101,30 @@
         - Retry logic helpers (`shouldRetry`, `getRetryDelay`).
         - Handles unhandled promise rejections and uncaught exceptions.
     - **Specialized Loggers (`lib/logger/mcp-logger.ts`, `lib/logger/ai-sdk-logger.ts`)**:
-        - `mcpLogger`: Logs JSON-RPC messages, server lifecycle events, tool execution (start/end, performance).
-        - `aiSdkLogger`: Logs AI provider operations, model calls, streaming events, token usage, and costs.
+        - `mcpLogger`: Logs JSON-RPC messages, server lifecycle events, tool execution (start/end, performance) to `mcp.log`.
+        - `aiSdkLogger`: Logs AI provider operations, model calls, streaming events, token usage, and costs to `ai-sdk.log`.
     - **Log Security (`lib/logger/security.ts`)**:
         - PII detection using regex patterns (email, phone, SSN, credit card, API keys, JWTs).
         - Data masking for sensitive fields and PII in log messages and metadata (`[REDACTED]`).
         - Access control stubs for log viewer (role-based).
         - Audit logging for log access attempts.
-    - **Log Rotation & Management (`lib/logger/rotation-config.ts`)**:
-        - Winston DailyRotateFile for automated log rotation (`YYYY-MM-DD` pattern).
-        - Configurable `maxSize`, `maxFiles`, compression.
-        - Environment-specific rotation configurations (dev, prod, test).
-        - Scheduled cleanup of old log files.
+    - **Log File Management**:
+        - **Static Filenames**: `app.log`, `ai-sdk.log`, `mcp.log`, `http.log`, `error.log` for easier management.
+        - **Size-based Rotation**: Winston File transport with `maxsize` and `maxFiles` configuration.
+        - **Source Filtering**: Each source writes only to its designated file through separate logger instances.
     - **Log Viewer & API (`app/components/log-viewer/`, `app/api/logs/`)**:
         - React component for viewing, filtering, and searching logs.
-        - API endpoints for querying logs, exporting (JSON, CSV), and health checks.
+        - API endpoints for querying logs, exporting (JSON, CSV), and health checks (`/api/logs/health` ⭐ **VERIFIED WORKING**).
     - **Middleware Integration (`middleware.ts`)**:
         - Orchestrates correlation, request logging, and error handling middleware for all matched requests.
         - Ensures correlation context is available throughout the request lifecycle.
+    - **🔥 Critical Implementation Notes**:
+        - **Import Resolution**: Conflicting `lib/logger.ts` file was removed to ensure proper imports to `lib/logger/index.ts`.
+        - **Flexible Metadata**: Supports various data types (strings, numbers, objects) in log metadata.
+        - **TypeScript Compliance**: All exports properly defined, no linter errors.
+        - **Production Ready**: File logging verified functional with proper source separation.
 
-### 12. Application Structure (Key Directories)
+### 13. Application Structure (Key Directories)
     - `app/`: Next.js App Router (pages, layouts, API routes).
     - `components/`: Shared React components (UI, common, motion, prompt-kit).
     - `lib/`: Core application logic (Prisma, MCP client, loggers, stores, utilities).
@@ -100,3 +132,9 @@
     - `cline_docs/`: AI agent memory bank.
     - `docs/`: Project documentation (e.g., `logging-system.md`).
     - `logs/`: Runtime log file storage.
+
+### 14. Containerized Development Workflow
+    - **Container Lifecycle**: User manages container bring-down and rebuild process
+    - **Hot Reloading**: Functional within container boundaries via volume mounting
+    - **Environment Isolation**: Container provides consistent development environment
+    - **Deployment Pattern**: Self-contained containerized application ready for production

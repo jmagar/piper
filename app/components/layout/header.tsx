@@ -22,6 +22,7 @@ import { useAgent } from "@/lib/agent-store/provider"
 import { APP_NAME } from "@/lib/config"
 import Link from "next/link"
 import { AgentLink } from "./agent-link"
+import { RuleLink } from "./rule-link"
 import { DialogPublish } from "./dialog-publish"
 import { HeaderSidebarTrigger } from "./header-sidebar-trigger"
 
@@ -76,6 +77,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
               </DialogContent>
             </Dialog>
             <AgentLink />
+            <RuleLink />
             {!isSidebarOpen && <HistoryTrigger hasSidebar={hasSidebar} />}
             <UserMenu />
           </div>

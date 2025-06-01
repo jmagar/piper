@@ -1,5 +1,5 @@
 import { AgentDetail } from "@/app/components/agents/agent-detail"
-import { LayoutApp } from "@/app/components/layout/layout-app"
+import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
@@ -33,9 +33,10 @@ export default async function AgentIdPage({
 
     return (
       <MessagesProvider>
-        <LayoutApp>
+        <ClientLayoutWrapper>
           <div className="bg-background mx-auto max-w-3xl pt-20">
             <AgentDetail
+              id={agent.id}
               slug={agent.slug}
               name={agent.name}
               description={agent.description}
@@ -48,7 +49,7 @@ export default async function AgentIdPage({
               mcp_config={agent.mcp_config}
             />
           </div>
-        </LayoutApp>
+        </ClientLayoutWrapper>
       </MessagesProvider>
     )
   } catch (error) {

@@ -36,9 +36,9 @@ export function AgentFeaturedSection({
             example_inputs={agent.example_inputs || []}
             isAvailable={true}
             slug={agent.slug}
-            onAgentClick={handleAgentClick}
+            onAgentClickAction={handleAgentClick}
             isOpen={openAgentId === agent.id}
-            onOpenChange={(open) => setOpenAgentId(open ? agent.id : null)}
+            onOpenChangeAction={(open) => setOpenAgentId(open ? agent.id : null)}
             randomAgents={moreAgents}
           />
         ))}
