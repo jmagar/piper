@@ -247,25 +247,22 @@ export async function POST(req: Request) {
       },
     })
 
-    // Set up streaming event logging
-    const chunkCount = 0;
-    const totalStreamSize = 0;
-
     // Log streaming start
     aiSdkLogger.logStreamingEvent(operationId, StreamingState.STARTED);
 
-    await result.consumeStream()
+    // Note: Removed consumeStream() call to enable proper streaming
+    // The stream will be consumed by the client as chunks arrive
 
     if (streamError) {
       appLogger.aiSdk.error('Stream error occurred during consumption', streamError, { correlationId });
       throw streamError
     }
 
-    // Log streaming completion
-    aiSdkLogger.logStreamingEvent(operationId, StreamingState.COMPLETED, {
-      totalChunks: chunkCount,
-      chunkSize: totalStreamSize
-    });
+    // Log streaming completion (will be called by onFinish callback)
+    // aiSdkLogger.logStreamingEvent(operationId, StreamingState.COMPLETED, {
+    //   totalChunks: chunkCount,
+    //   chunkSize: totalStreamSize
+    // });
 
     const originalResponse = result.toDataStreamResponse({
       sendReasoning: true,

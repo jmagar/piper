@@ -25,6 +25,7 @@ import { AgentLink } from "./agent-link"
 import { RuleLink } from "./rule-link"
 import { DialogPublish } from "./dialog-publish"
 import { HeaderSidebarTrigger } from "./header-sidebar-trigger"
+import { ThemeToggle } from "./theme-toggle"
 
 export type AgentHeader = Pick<
   Agent,
@@ -41,7 +42,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
       <div className="relative mx-auto flex h-full max-w-full items-center justify-between bg-transparent px-4 sm:px-6 lg:bg-transparent lg:px-8">
         <div className="flex flex-1 items-center justify-between">
           <div className="flex flex-1 items-center gap-2">
-            {hasSidebar && <HeaderSidebarTrigger />}
+            <HeaderSidebarTrigger />
             {Boolean(!currentAgent || !isMobile) && (
               <div className="flex-1">
                 <Link
@@ -76,6 +77,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
                 </DialogFooter> */}
               </DialogContent>
             </Dialog>
+            <ThemeToggle />
             <AgentLink />
             <RuleLink />
             {!isSidebarOpen && <HistoryTrigger hasSidebar={hasSidebar} />}
