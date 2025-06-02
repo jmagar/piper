@@ -13,19 +13,14 @@ export async function getMessagesFromDb(
     });
 
     return messages.map((message) => {
-      interface TextPart { type: string; text: string; [key: string]: unknown; }
-      let content = "";
-      if (Array.isArray(message.parts) && message.parts.length > 0) {
-        const firstPart = message.parts[0] as TextPart;
-        if (firstPart && typeof firstPart === 'object' && firstPart.text && typeof firstPart.text === 'string') {
-          content = firstPart.text;
-        }
-      }
+      // Type assertion for message with content field (matches actual DB schema)
+      const messageWithContent = message as typeof message & { content: string };
+      
       return {
-        id: message.id,
-        content: content,
-        role: message.role as MessageAISDK["role"],
-        createdAt: message.createdAt,
+        id: messageWithContent.id,
+        content: messageWithContent.content || "",
+        role: messageWithContent.role as MessageAISDK["role"],
+        createdAt: messageWithContent.createdAt,
         experimental_attachments: [],
       };
     });
@@ -41,7 +36,7 @@ export async function insertMessageToDb(chatId: string, message: MessageAISDK) {
       data: {
         chatId,
         role: message.role,
-        parts: [{ type: "text", text: message.content }] 
+        content: message.content // Use content field matching database schema
       }
     });
   } catch (error) {
@@ -54,7 +49,7 @@ export async function insertMessagesToDb(chatId: string, messages: MessageAISDK[
     const messageData = messages.map((message) => ({
       chatId,
       role: message.role,
-      parts: [{ type: "text", text: message.content }]
+      content: message.content // Use content field matching database schema
     }));
     await prisma.message.createMany({
       data: messageData

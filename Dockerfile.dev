@@ -31,7 +31,7 @@ USER node
 COPY --chown=node:node package*.json ./
 
 # Install project dependencies as node user
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy the rest of the application's code into the container as node user
 # This ensures files copied are owned by node, which helps with permissions for .next etc.

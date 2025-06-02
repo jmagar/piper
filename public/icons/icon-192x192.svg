@@ -1,0 +1,14 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="96" cy="96" r="96" fill="#000000"/>
+  
+  <!-- Piper logo placeholder - stylized P -->
+  <rect x="48" y="48" width="8" height="96" fill="#ffffff"/>
+  <rect x="48" y="48" width="48" height="8" fill="#ffffff"/>
+  <rect x="48" y="92" width="40" height="8" fill="#ffffff"/>
+  <rect x="88" y="56" width="8" height="36" fill="#ffffff"/>
+  
+  <!-- Chat bubble accent -->
+  <circle cx="132" cy="132" r="16" fill="#ffffff" opacity="0.8"/>
+  <circle cx="140" cy="140" r="8" fill="#000000"/>
+</svg> 

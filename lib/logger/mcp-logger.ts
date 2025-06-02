@@ -143,7 +143,7 @@ export class McpLogger {
     // Log error details if present
     if (message.error) {
       const errorLevel = this.getErrorSeverity(message.error.code);
-      appLogger.mcp[errorLevel]('JSON-RPC error message', undefined, {
+      appLogger.mcp[errorLevel]('JSON-RPC error message', {
         ...logData,
         error: {
           code: message.error.code,
@@ -514,11 +514,11 @@ export class McpLogger {
     message?: string,
     data?: unknown
   ): Error {
-    const errorMessage = message || MCP_ERROR_MESSAGES[code] || 'Unknown MCP error';
+    const errorMessage = message || (MCP_ERROR_MESSAGES as Record<number, string>)[code] || 'Unknown MCP error';
     const error = new Error(errorMessage);
-    (error as any).code = code;
-    (error as any).data = data;
-    (error as any).category = ErrorCategory.MCP_PROTOCOL;
+    (error as unknown as { code: number; data: unknown; category: ErrorCategory }).code = code;
+    (error as unknown as { code: number; data: unknown; category: ErrorCategory }).data = data;
+    (error as unknown as { code: number; data: unknown; category: ErrorCategory }).category = ErrorCategory.MCP_PROTOCOL;
     return error;
   }
 

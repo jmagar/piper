@@ -283,7 +283,10 @@ const REDIS_CACHE_EXPIRY_SECONDS = 300;
 if (process.env.NODE_ENV === 'production') {
   mcpServices = new Map<string, MCPService>();
   isManagerInitialized = false;
-  redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  if (!process.env.REDIS_URL) {
+    throw new Error('REDIS_URL environment variable is not set.');
+  }
+  redisClient = new Redis(process.env.REDIS_URL);
   redisClient.on('error', (err) => console.error('[MCP Manager] Redis Client Error:', err));
   redisClient.on('connect', () => console.log('[MCP Manager] Redis Client Connected.'));
   console.log('[MCP Manager] Production mode: Initializing fresh state and Redis client.');
@@ -302,7 +305,10 @@ if (process.env.NODE_ENV === 'production') {
 
   if (!globalThis.__redisClientForMCP) {
     console.log('[MCP Manager] Development mode: Initializing __redisClientForMCP on globalThis.');
-    globalThis.__redisClientForMCP = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    if (!process.env.REDIS_URL) {
+    throw new Error('REDIS_URL environment variable is not set for globalThis.__redisClientForMCP.');
+  }
+  globalThis.__redisClientForMCP = new Redis(process.env.REDIS_URL);
     globalThis.__redisClientForMCP.on('error', (err) => console.error('[MCP Manager] Redis Client Error (Dev):', err));
     globalThis.__redisClientForMCP.on('connect', () => console.log('[MCP Manager] Redis Client Connected (Dev).'));
   }

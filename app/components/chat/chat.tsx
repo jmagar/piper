@@ -14,7 +14,7 @@ import {
   MESSAGE_MAX_LENGTH,
   SYSTEM_PROMPT_DEFAULT,
 } from "@/lib/config"
-import { Attachment } from "@/lib/file-handling"
+import { MODELS } from "@/lib/models"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat } from "@ai-sdk/react"
@@ -72,9 +72,6 @@ export function Chat() {
   const {
     files,
     setFiles,
-    handleFileUploads,
-    createOptimisticAttachments,
-    cleanupOptimisticAttachments,
     handleFileUpload,
     handleFileRemove,
   } = useFileUpload()
@@ -98,6 +95,8 @@ export function Chat() {
     api: API_ROUTE_CHAT,
     initialMessages,
     initialInput: draftValue,
+    // Throttle streaming updates to improve performance during long responses
+    experimental_throttle: 50,
     onFinish: async (message) => {
       // store the assistant message in the cache
       await cacheAndAddMessage(message)
@@ -148,6 +147,29 @@ export function Chat() {
           return;
         }
         const models: { id: string; name: string; description: string; context_length: number | null; providerId: string; }[] = await response.json();
+        
+        // ===== DEBUG LOGGING: Model Source Comparison =====
+        console.group("🔍 Model Source Analysis - OpenRouter vs Internal MODELS");
+        console.log(`📡 OpenRouter API returned ${models.length} models`);
+        console.log(`📚 Internal MODELS array has ${MODELS.length} models`);
+        
+        const anthropicFromOpenRouter = models.filter(m => m.id.includes('anthropic') || m.id.includes('claude'));
+        const anthropicFromInternal = MODELS.filter(m => m.id.includes('anthropic') || m.id.includes('claude'));
+        
+        console.log(`🤖 Anthropic models from OpenRouter (${anthropicFromOpenRouter.length}):`, anthropicFromOpenRouter.map(m => m.id));
+        console.log(`🏠 Anthropic models from internal MODELS (${anthropicFromInternal.length}):`, anthropicFromInternal.map(m => m.id));
+        
+        // Check for mismatches
+        const openRouterIds = new Set(models.map(m => m.id));
+        const internalIds = new Set(MODELS.map(m => m.id));
+        const onlyInOpenRouter = models.filter(m => !internalIds.has(m.id));
+        const onlyInInternal = MODELS.filter(m => !openRouterIds.has(m.id));
+        
+        console.log(`❌ Models ONLY in OpenRouter (${onlyInOpenRouter.length}):`, onlyInOpenRouter.slice(0, 5).map(m => m.id));
+        console.log(`❌ Models ONLY in internal MODELS (${onlyInInternal.length}):`, onlyInInternal.slice(0, 5).map(m => m.id));
+        console.groupEnd();
+        // ===== END DEBUG LOGGING =====
+        
         const modelsWithInitialStar = models.map(m => ({...m, starred: starredModelIds.includes(m.id) }))
         setAvailableModels(modelsWithInitialStar);
 
@@ -266,38 +288,14 @@ export function Chat() {
     const uid = await getOrCreateGuestUserId()
     if (!uid) return
 
-    const optimisticId = `optimistic-${Date.now().toString()}`
-    const optimisticAttachments =
-      files.length > 0 ? createOptimisticAttachments(files) : []
-
-    const optimisticMessage = {
-      id: optimisticId,
-      content: input,
-      role: "user" as const,
-      createdAt: new Date(),
-      experimental_attachments:
-        optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
-    }
-
-    setMessages((prev) => [...prev, optimisticMessage])
-    setInput("")
-
-    const submittedFiles = [...files]
-    setFiles([])
-
     const allowed = await checkLimitsAndNotify(uid)
     if (!allowed) {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       setIsSubmitting(false)
       return
     }
 
     const currentChatId = await ensureChatExists()
-
     if (!currentChatId) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       setIsSubmitting(false)
       return
     }
@@ -307,22 +305,24 @@ export function Chat() {
         title: `The message you submitted was too long, please submit something shorter. (Max ${MESSAGE_MAX_LENGTH} characters)`,
         status: "error",
       })
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       setIsSubmitting(false)
       return
     }
 
-    let attachments: Attachment[] | null = []
-    if (submittedFiles.length > 0) {
-      attachments = await handleFileUploads(currentChatId)
-      if (attachments === null) {
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
-        setIsSubmitting(false)
-        return
-      }
-    }
+    // ✅ AI SDK PATTERN: Convert files to data URLs for AI model access
+    const attachments = files.length > 0 ? await Promise.all(
+      files.map(async (file) => {
+        const arrayBuffer = await file.arrayBuffer()
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        const dataUrl = `data:${file.type};base64,${base64}`
+        
+        return {
+          name: file.name,
+          contentType: file.type,
+          url: dataUrl,
+        }
+      })
+    ) : undefined
 
     const options = {
       body: {
@@ -330,20 +330,17 @@ export function Chat() {
         userId: uid,
         model: selectedModel,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        ...(currentAgent && { agentId: currentAgent.id }),
       },
-      experimental_attachments: attachments || undefined,
+      experimental_attachments: attachments,
     }
 
     try {
-      handleSubmit(undefined, options)
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
-      cacheAndAddMessage(optimisticMessage)
+      await handleSubmit(undefined, options)
+      setFiles([])  // Clear files after submission
       clearDraft()
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
       toast({ title: "Failed to send message", status: "error" })
       console.error("Error submitting message:", submitError)
     } finally {
@@ -476,7 +473,7 @@ export function Chat() {
             }}
           >
             <h1 className="mb-6 text-3xl font-medium tracking-tight">
-              What&apos;s on your mind?
+              How can I help?
             </h1>
           </motion.div>
         ) : (
@@ -526,3 +523,4 @@ export function Chat() {
     </div>
   )
 }
+

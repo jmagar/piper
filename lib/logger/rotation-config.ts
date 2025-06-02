@@ -1,4 +1,7 @@
 import { appLogger } from './index';
+import winston from 'winston';
+import fs from 'fs/promises';
+import path from 'path';
 
 // Log rotation configuration interface
 export interface LogRotationConfig {
@@ -127,8 +130,6 @@ export class LogRotationManager {
    * Get log format for Winston
    */
   private getLogFormat() {
-    const winston = require('winston');
-    
     return winston.format.combine(
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
@@ -185,9 +186,6 @@ export class LogRotationManager {
     totalSize: number;
     errors: string[];
   }> {
-    const fs = require('fs/promises');
-    const path = require('path');
-    
     const deletedFiles: string[] = [];
     const errors: string[] = [];
     let totalSize = 0;
@@ -251,9 +249,6 @@ export class LogRotationManager {
     compressedFiles: number;
     config: LogRotationConfig;
   }> {
-    const fs = require('fs/promises');
-    const path = require('path');
-
     try {
       const logsDir = path.join(process.cwd(), 'logs');
       const files = await fs.readdir(logsDir);
@@ -265,7 +260,7 @@ export class LogRotationManager {
       let newestTime = 0;
       let compressedFiles = 0;
 
-      const logFiles = files.filter(file => 
+      const logFiles = files.filter((file: string) => 
         file.endsWith('.log') || file.endsWith('.gz')
       );
 

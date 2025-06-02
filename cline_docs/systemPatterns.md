@@ -99,7 +99,33 @@
         - Blocked streaming: 3-15 seconds wait, complete response at once
         - User experience improvement: ~90% reduction in perceived response time
 
-### 13. Server Action Naming Conventions & React Context Boundaries - **ESTABLISHED PATTERNS**
+### 13. 3-Way @mention System Architecture - **REVOLUTIONARY PATTERN ESTABLISHED**
+    - **Complete Integration Pattern**: Unified @mention system supporting agents, tools, AND database rules
+    - **3-Way Fuzzy Matching Algorithm**: 
+        - Intelligent detection in `use-agent-command.ts` determines mention type based on user input
+        - Lowered trigger threshold to 5 for better responsiveness
+        - Combines fuzzy scoring with direct string matching for optimal UX
+        - Single hook manages state for all three mention types (agents, tools, rules)
+    - **Dropdown Component Pattern**:
+        - `AgentCommand`: Shows available chat agents for switching
+        - `ToolCommand`: Shows MCP tools with server labels for execution
+        - `RuleCommand`: Shows database rules with slug badges for context injection
+        - Consistent keyboard navigation and click handling across all three
+    - **Data Structure Patterns**:
+        - **Tool Mentions**: `@toolname({"parameter":"value"})` format with parameter parsing
+        - **Rule Mentions**: `@rule-slug` format (no parentheses) for clean injection
+        - **Agent Mentions**: Standard agent selection pattern
+    - **API Integration Pattern**:
+        - `/api/rules-available` endpoint fetches database rules for dropdown
+        - Server-side processing in chat API for rule context injection
+        - Comprehensive error handling for missing/invalid rules
+    - **Context Enhancement Pattern**:
+        - Rule content injected into enhanced system prompt before AI processing
+        - Transparent rule application - users see enhanced AI responses naturally
+        - Rule mentions stripped from user message after processing
+    - **Performance**: Zero impact on existing functionality, maintains streaming performance
+
+### 14. Server Action Naming Conventions & React Context Boundaries - **ESTABLISHED PATTERNS**
     - **Next.js Server Action Compliance**:
         - All function props in client components must end with "Action" suffix or be named "action"
         - Pattern: `onClick` → `onClickAction`, `onChange` → `onChangeAction`, `handleSubmit` → `handleSubmitAction`

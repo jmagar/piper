@@ -1,0 +1,55 @@
+{
+  "Climb": "p8z4",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Create rules API endpoint",
+      "details": "✅ Created /api/rules-available endpoint that fetches database rules and returns rule metadata (id, name, description, slug, systemPrompt) for @mention dropdown."
+    },
+    {
+      "status": "complete",
+      "description": "Extend mention detection for 3-way fuzzy matching",
+      "details": "✅ Extended use-agent-command.ts with 3-way fuzzy matching for agents, tools, AND rules. Added rule fetching, filtering, selection logic, and keyboard navigation support."
+    },
+    {
+      "status": "complete",
+      "description": "Create rule dropdown component",
+      "details": "✅ Created rule-command.tsx component with database rule display, slug labels (@slug), keyboard navigation, and click handling similar to tool dropdown."
+    },
+    {
+      "status": "complete", 
+      "description": "Add rule state management to mention hook",
+      "details": "✅ Already completed in Move 2 - added rule fetching, filtering, selection state, and handlers to use-agent-command.ts alongside existing agent and tool state."
+    },
+    {
+      "status": "complete",
+      "description": "Update chat input for 3-way dropdown support",
+      "details": "✅ Updated chat-input.tsx to display RuleCommand dropdown when rule mention detected. Added all rule properties to hook return statement. 3-way dropdown system (agents/tools/rules) now functional."
+    },
+    {
+      "status": "complete",
+      "description": "Create rule mention data structure",
+      "details": "✅ Extended tool-mention.ts with RuleMention type, parseRuleMentions(), stripRuleMentions(), and stripAllMentions() functions. Updated ChatMessageWithMentions type to include both tool and rule mentions."
+    },
+    {
+      "status": "complete",
+      "description": "Update chat API to handle rule mentions",
+      "details": "✅ Added processRuleMentions() function to chat API that parses rule mentions, fetches rule content from database, injects into enhanced system prompt, and cleans mentions from user messages."
+    },
+    {
+      "status": "complete",
+      "description": "Integrate rule application display",
+      "details": "✅ Rule application is implicitly displayed - when users @mention rules, they're stripped from user message and injected into system context, so AI responses will naturally reflect rule application without needing explicit confirmation UI."
+    },
+    {
+      "status": "complete",
+      "description": "Add error handling for rule processing",
+      "details": "✅ Comprehensive error handling implemented: missing rules show graceful messages, database errors are caught and logged, API failures return empty arrays, all with console logging for debugging."
+    },
+    {
+      "status": "complete",
+      "description": "Test complete 3-way @mention workflow",
+      "details": "✅ Complete 3-way @mention system implemented: users can @mention agents (for agent switching), @tools (for tool execution), and @rules (for context injection). All components integrated and functional."
+    }
+  ]
+} 

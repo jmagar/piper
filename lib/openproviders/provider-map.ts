@@ -76,16 +76,19 @@ const MODEL_PROVIDER_MAP: Record<SupportedModel, Provider> = {
   "learnlm-1.5-pro-experimental": "google",
 
   // Anthropic
-  "claude-3-7-sonnet-20250219": "anthropic",
-  "claude-3-5-sonnet-latest": "anthropic",
-  "claude-3-5-sonnet-20241022": "anthropic",
-  "claude-3-5-sonnet-20240620": "anthropic",
-  "claude-3-5-haiku-latest": "anthropic",
-  "claude-3-5-haiku-20241022": "anthropic",
-  "claude-3-opus-latest": "anthropic",
-  "claude-3-opus-20240229": "anthropic",
-  "claude-3-sonnet-20240229": "anthropic",
-  "claude-3-haiku-20240307": "anthropic",
+  "anthropic/claude-3-7-sonnet-20250219": "openrouter",
+  "anthropic/claude-3-5-sonnet-latest": "openrouter",
+  "anthropic/claude-3-5-sonnet-20241022": "openrouter",
+  "anthropic/claude-3-5-sonnet-20240620": "openrouter",
+  "anthropic/claude-3-5-haiku-latest": "openrouter",
+  "anthropic/claude-3-5-haiku-20241022": "openrouter",
+  "anthropic/claude-3.5-haiku-20240620": "openrouter", // Ensuring this one from types.ts is also present and prefixed
+  "anthropic/claude-3-opus-latest": "openrouter",
+  "anthropic/claude-3-opus-20240229": "openrouter",
+  "anthropic/claude-3-sonnet-20240229": "openrouter",
+  "anthropic/claude-3-haiku-20240307": "openrouter",
+  "anthropic/claude-4-sonnet-20250514": "openrouter",
+  "anthropic/claude-4-opus-20250514": "openrouter",
 
   // XAI
   "grok-3": "xai",

@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full bleed background for maskable icon -->
+  <rect width="512" height="512" fill="#000000"/>
+  
+  <!-- Safe zone content (40% safe zone, so content in center 204x204 area) -->
+  <!-- Piper logo placeholder - scaled and centered for safe zone -->
+  <rect x="154" y="154" width="20" height="204" fill="#ffffff"/>
+  <rect x="154" y="154" width="120" height="20" fill="#ffffff"/>
+  <rect x="154" y="246" width="100" height="20" fill="#ffffff"/>
+  <rect x="234" y="174" width="20" height="72" fill="#ffffff"/>
+  
+  <!-- Chat bubble accent in safe zone -->
+  <circle cx="338" cy="338" r="32" fill="#ffffff" opacity="0.8"/>
+  <circle cx="354" cy="354" r="16" fill="#000000"/>
+  
+  <!-- Safe zone guide (remove in production) -->
+  <rect x="102.4" y="102.4" width="307.2" height="307.2" fill="none" stroke="#ff0000" stroke-width="2" opacity="0.3" stroke-dasharray="10,10"/>
+</svg> 

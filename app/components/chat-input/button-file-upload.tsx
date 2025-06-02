@@ -26,12 +26,41 @@ type ButtonFileUploadProps = {
   model: string
 }
 
+// Clean vision detection function
+function hasVisionSupport(modelId: string): boolean {
+  // Check exact match in MODELS array
+  const exactMatch = MODELS.find(m => m.id === modelId);
+  if (exactMatch) {
+    return exactMatch.vision || false;
+  }
+
+  // Fallback for known vision-capable models
+  if (modelId.includes('claude-4') || modelId.includes('claude-3.5') || modelId.includes('claude-3.7')) {
+    return true;
+  }
+
+  if (modelId.includes('gpt-4') || modelId.includes('o1') || modelId.includes('o3')) {
+    return true;
+  }
+
+  // Try to find similar models with vision support
+  const similarModels = MODELS.filter(m => 
+    m.vision && (
+      m.id.includes(modelId.split('-')[1]) || // Same model family
+      (m.id.includes('claude') && modelId.includes('claude')) ||
+      (m.id.includes('gpt') && modelId.includes('gpt'))
+    )
+  );
+
+  return similarModels.length > 0;
+}
+
 export function ButtonFileUpload({
   onFileUpload,
   isUserAuthenticated,
   model,
 }: ButtonFileUploadProps) {
-  const isFileUploadAvailable = MODELS.find((m) => m.id === model)?.vision
+  const isFileUploadAvailable = hasVisionSupport(model);
 
   if (!isFileUploadAvailable) {
     return (

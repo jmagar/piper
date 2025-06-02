@@ -1,4 +1,5 @@
 import type { NextConfig } from "next"
+import withSerwist from '@serwist/next'
 
 // const withBundleAnalyzer = require("@next/bundle-analyzer")({
 //   enabled: process.env.ANALYZE === "true",
@@ -34,4 +35,8 @@ const nextConfig: NextConfig = { // Removed withBundleAnalyzer wrapper
   },
 }
 
-export default nextConfig
+export default withSerwist({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development', // Optionally disable PWA in dev for faster builds
+})(nextConfig)

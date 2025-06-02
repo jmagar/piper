@@ -13,8 +13,9 @@ import {
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
 export const AUTH_DAILY_MESSAGE_LIMIT = 1000
+export const MAX_FILE_SIZE_MB = 100
+export const MAX_PROMPT_LENGTH = 8000
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
-export const DAILY_FILE_UPLOAD_LIMIT = 5
 export const DAILY_SPECIAL_AGENT_LIMIT = 2
 export const DAILY_LIMIT_PRO_MODELS = 5
 

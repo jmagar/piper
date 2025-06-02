@@ -6,16 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
 import { 
   Search, 
-  Filter, 
   Download, 
-  Refresh, 
+  RefreshCw, 
   Eye, 
   AlertTriangle, 
   Info, 
@@ -126,9 +123,8 @@ export default function LogViewer() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<LogFilters>({})
-  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState(5000)
+  const [refreshInterval] = useState(5000)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 100,
@@ -232,7 +228,7 @@ export default function LogViewer() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (err) {
+    } catch {
       setError('Failed to export logs')
     }
   }
@@ -334,7 +330,7 @@ export default function LogViewer() {
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 className={autoRefresh ? "bg-green-50" : ""}
               >
-                <Refresh className={cn("h-4 w-4 mr-2", autoRefresh && "animate-spin")} />
+                <RefreshCw className={cn("h-4 w-4 mr-2", autoRefresh && "animate-spin")} />
                 {autoRefresh ? "Auto" : "Manual"}
               </Button>
               <Button variant="outline" size="sm" onClick={exportLogs}>
@@ -427,7 +423,7 @@ export default function LogViewer() {
             <div className="divide-y">
               {loading && logs.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
-                  <Refresh className="h-8 w-8 animate-spin mx-auto mb-4" />
+                  <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
                   Loading logs...
                 </div>
               ) : displayLogs.length === 0 ? (
@@ -573,7 +569,6 @@ export default function LogViewer() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedLog(log)}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>

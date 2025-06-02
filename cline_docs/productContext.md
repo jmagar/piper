@@ -10,6 +10,7 @@ Piper is a web-based chat application designed to facilitate interactions with v
 - Manages and stores chat history for users.
 - **MCP Server Management**: Provides comprehensive management of MCP servers including configuration, monitoring, and tool access through an intuitive unified interface.
 - **Extensible Tool Ecosystem**: Supports both STDIO and SSE/HTTP MCP servers to extend AI capabilities with specialized tools.
+- **Revolutionary @mention System**: Implemented complete 3-way @mention functionality allowing users to seamlessly integrate agents, tools, AND database rules directly into conversations for enhanced AI responses.
 - Aims to provide a stable and configurable environment for AI chat interactions.
 - **Enhanced Observability & Debugging**: Implemented a robust logging system to capture detailed information about application behavior, errors, MCP communication, and AI SDK operations. This significantly improves troubleshooting and monitoring capabilities.
 - **Next.js Compliance & Architecture Stability**: Resolved Server Action naming violations and React Context boundary issues to ensure proper Next.js App Router compliance, eliminating runtime errors and maintaining clean, maintainable code architecture.
@@ -29,6 +30,12 @@ Piper is a web-based chat application designed to facilitate interactions with v
   - AI responses stream progressively as they're generated (no waiting for complete responses)
   - Immediate feedback with text appearing in real-time (~300ms to first content)
   - Dramatically improved perceived performance compared to blocking response patterns
+- **Revolutionary @mention System**: Users can enhance conversations by typing `@` in chat input to access:
+  - **@agents** → Switch between different chat agents for specialized capabilities
+  - **@tools** → Execute MCP tools directly with parameter input (e.g., `@searx({"query":"latest news"})`)
+  - **@rules** → Inject database-stored rule content into AI context (e.g., `@coding-standards` enhances system prompt)
+  - **Intelligent Detection**: Fuzzy matching automatically determines which dropdown to show based on user input
+  - **Unified Interface**: Single `@` trigger provides access to all three enhancement types seamlessly
 - **MCP Server Management**: Users can access a comprehensive MCP Servers Dashboard (via the Server icon in the header) that allows them to:
   - View real-time status and health of all configured MCP servers
   - See available tools for each server via hover cards

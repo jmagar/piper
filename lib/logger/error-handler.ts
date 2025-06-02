@@ -1,6 +1,25 @@
 import { appLogger } from './index';
 import { getCurrentCorrelationId, getCurrentContext } from './correlation';
-import { ErrorCategory, ClassifiedError, ErrorInfo } from './types';
+import { ErrorCategory, ClassifiedError } from './types';
+
+// Extended error interfaces for type safety
+interface ErrorWithCode extends Error {
+  code?: string | number;
+  statusCode?: number;
+  errno?: string | number;
+  syscall?: string;
+  hostname?: string;
+  port?: number;
+  address?: string;
+}
+
+interface ValidationError extends ErrorWithCode {
+  errors?: unknown[];
+}
+
+interface PrismaError extends ErrorWithCode {
+  meta?: unknown;
+}
 
 // Error patterns for classification
 export interface ErrorPattern {
@@ -158,8 +177,9 @@ export class ErrorClassifier {
   public classify(error: Error): ClassifiedError {
     const errorName = error.name.toLowerCase();
     const errorMessage = error.message.toLowerCase();
-    const errorCode = (error as any).code;
-    const errorStatusCode = (error as any).statusCode;
+    const errorWithCode = error as ErrorWithCode;
+    const errorCode = errorWithCode.code;
+    const errorStatusCode = errorWithCode.statusCode;
     
     // Find matching pattern
     const matchedPattern = this.findMatchingPattern(error, errorName, errorMessage, errorCode);
@@ -242,7 +262,8 @@ export class ErrorClassifier {
    * Fallback classification for unmatched errors
    */
   private fallbackClassification(error: Error): ClassifiedError {
-    const statusCode = (error as any).statusCode || 500;
+    const errorWithCode = error as ErrorWithCode;
+    const statusCode = errorWithCode.statusCode || 500;
     
     // Determine category based on status code
     let category = ErrorCategory.UNKNOWN;
@@ -259,46 +280,51 @@ export class ErrorClassifier {
       retryable = true;
     }
     
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      code: (error as any).code,
-      statusCode,
-      category,
-      severity,
-      retryable,
-      userFacing: true,
-      details: this.extractErrorDetails(error),
-    };
-  }
+          return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        code: errorWithCode.code,
+        statusCode,
+        category,
+        severity,
+        retryable,
+        userFacing: true,
+        details: this.extractErrorDetails(error),
+      };
+    }
   
-  /**
-   * Extract additional error details
-   */
-  private extractErrorDetails(error: Error): Record<string, unknown> {
-    const details: Record<string, unknown> = {};
-    
-    // Extract common error properties
-    const errorProps = ['code', 'errno', 'syscall', 'hostname', 'port', 'address'];
-    for (const prop of errorProps) {
-      if ((error as any)[prop] !== undefined) {
-        details[prop] = (error as any)[prop];
+    /**
+     * Extract additional error details
+     */
+    private extractErrorDetails(error: Error): Record<string, unknown> {
+      const details: Record<string, unknown> = {};
+      const errorWithCode = error as ErrorWithCode;
+      
+      // Extract common error properties
+      const errorProps: (keyof ErrorWithCode)[] = ['code', 'errno', 'syscall', 'hostname', 'port', 'address'];
+      for (const prop of errorProps) {
+        if (errorWithCode[prop] !== undefined) {
+          details[prop] = errorWithCode[prop];
+        }
       }
+      
+      // Extract specific error types
+      if (error.name === 'ValidationError') {
+        const validationError = error as ValidationError;
+        if (validationError.errors) {
+          details.validationErrors = validationError.errors;
+        }
+      }
+      
+      if (error.name === 'PrismaClientKnownRequestError') {
+        const prismaError = error as PrismaError;
+        details.prismaCode = prismaError.code;
+        details.meta = prismaError.meta;
+      }
+      
+      return details;
     }
-    
-    // Extract specific error types
-    if (error.name === 'ValidationError' && (error as any).errors) {
-      details.validationErrors = (error as any).errors;
-    }
-    
-    if (error.name === 'PrismaClientKnownRequestError') {
-      details.prismaCode = (error as any).code;
-      details.meta = (error as any).meta;
-    }
-    
-    return details;
-  }
   
   /**
    * Check if error should be retried
@@ -397,18 +423,19 @@ export class ErrorHandler {
     };
     
     // Log based on severity
+    const fullLogMetadata = { ...logMetadata, error: error.message, stack: error.stack };
     switch (classified.severity) {
       case 'critical':
-        appLogger.fatal('Critical error occurred', error, logMetadata);
+        appLogger.fatal('Critical error occurred', fullLogMetadata);
         break;
       case 'high':
-        appLogger.error('High severity error occurred', error, logMetadata);
+        appLogger.error('High severity error occurred', fullLogMetadata);
         break;
       case 'medium':
-        appLogger.warn('Medium severity error occurred', error, logMetadata);
+        appLogger.warn('Medium severity error occurred', fullLogMetadata);
         break;
       case 'low':
-        appLogger.info('Low severity error occurred', error, logMetadata);
+        appLogger.info('Low severity error occurred', fullLogMetadata);
         break;
     }
     
@@ -490,14 +517,11 @@ export const errorClassifier = ErrorClassifier.getInstance();
 export const errorHandler = new ErrorHandler();
 
 // Convenience functions (classifyError removed to avoid duplicate export with middleware)
-export const handleError = (error: Error, context?: any) => errorHandler.handle(error, context);
+export const handleError = (error: Error, context?: Record<string, unknown>) => errorHandler.handle(error, context);
 export const shouldRetryError = (error: Error, attemptCount?: number) => 
   errorClassifier.shouldRetry(error, attemptCount);
 export const getRetryDelay = (error: Error, attemptCount: number) => 
   errorClassifier.getRetryDelay(error, attemptCount);
-
-// Internal function for this module only
-const classifyError = (error: Error) => errorClassifier.classify(error);
 
 // Types and patterns are already exported when declared above
 // (ERROR_PATTERNS, ErrorPattern)

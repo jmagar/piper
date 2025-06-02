@@ -30,8 +30,12 @@ export function AppSidebar() {
   const params = useParams<{ chatId: string }>()
   const currentChatId = params.chatId
 
-  const groupedChats = useMemo(() => groupChatsByDate(chats, ""), [chats])
-  const hasChats = chats.length > 0
+  const groupedChats = useMemo(() => {
+    // Ensure chats is always an array before passing to groupChatsByDate
+    const safeChats = Array.isArray(chats) ? chats : []
+    return groupChatsByDate(safeChats, "")
+  }, [chats])
+  const hasChats = Array.isArray(chats) && chats.length > 0
 
   return (
     <Sidebar collapsible="offcanvas" variant="sidebar" className="border-none">

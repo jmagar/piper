@@ -56,12 +56,18 @@ export function ChatsProvider({
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      const cached = await getCachedChats()
-      setChats(cached)
-
       try {
+        const cached = await getCachedChats()
+        // Ensure we always have an array, never undefined/null
+        setChats(Array.isArray(cached) ? cached : [])
+
         const fresh = await fetchAndCacheChats()
-        setChats(fresh)
+        // Ensure we always have an array, never undefined/null
+        setChats(Array.isArray(fresh) ? fresh : [])
+      } catch (error) {
+        console.error("Error loading chats:", error)
+        // Ensure chats is always an array even on error
+        setChats([])
       } finally {
         setIsLoading(false)
       }
@@ -71,8 +77,15 @@ export function ChatsProvider({
   }, [])
 
   const refresh = async () => {
-    const fresh = await fetchAndCacheChats()
-    setChats(fresh)
+    try {
+      const fresh = await fetchAndCacheChats()
+      // Ensure we always have an array, never undefined/null
+      setChats(Array.isArray(fresh) ? fresh : [])
+    } catch (error) {
+      console.error("Error refreshing chats:", error)
+      // Keep existing chats on error, but ensure it's still an array
+      setChats(prevChats => Array.isArray(prevChats) ? prevChats : [])
+    }
   }
 
   const updateTitle = async (id: string, title: string) => {
@@ -134,6 +147,11 @@ export function ChatsProvider({
   }
 
   const getChatById = (id: string) => {
+    // Defensive check to prevent runtime errors during initialization
+    if (!chats || !Array.isArray(chats)) {
+      console.warn("getChatById: chats is not initialized yet, returning undefined")
+      return undefined
+    }
     const chat = chats.find((c) => c.id === id)
     return chat
   }

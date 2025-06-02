@@ -40,6 +40,17 @@ export function openproviders<T extends SupportedModel>(
 ): LanguageModelV1 {
   const provider = getProviderForModel(modelId)
 
+  if (provider === "openrouter") {
+    // Use the generic OpenAI client, configured for OpenRouter
+    // The modelId (e.g., "anthropic/claude-3.5-sonnet-20240620") is passed directly to OpenRouter
+    return openai(modelId as string, { // Pass modelId as a generic string for OpenRouter
+      ...(settings as OpenAIChatSettings), // Spread existing settings, ensure they are compatible
+      baseURL: "https://openrouter.ai/api/v1",
+      // API key needs to be managed. Typically, setting OPENAI_API_KEY to your OpenRouter key
+      // in the environment is the simplest way if the SDK doesn't allow explicit apiKey pass-through here.
+    } as OpenAIChatSettings);
+  }
+
   if (provider === "openai") {
     return openai(modelId as OpenAIModel, settings as OpenAIChatSettings)
   }

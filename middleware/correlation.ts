@@ -3,7 +3,7 @@ import { correlationManager, CORRELATION_HEADERS } from '../lib/logger/correlati
 import { LogContext } from '../lib/logger/types';
 
 // Express-style middleware interface
-export interface ExpressRequest extends Request {
+export interface ExpressRequest {
   headers: Record<string, string | string[] | undefined>;
   method: string;
   url: string;
@@ -11,6 +11,12 @@ export interface ExpressRequest extends Request {
   user?: { id: string };
   correlationId?: string;
   context?: LogContext;
+}
+
+// Define a type for Next.js App Router context (second argument to handlers)
+interface AppRouterContext {
+  params?: Record<string, string | string[]>;
+  [key: string]: unknown; // For other potential properties Next.js might add
 }
 
 export interface ExpressResponse {
@@ -39,7 +45,7 @@ export function nextCorrelationMiddleware(request: NextRequest): NextResponse {
     headers: Object.fromEntries(request.headers.entries()),
     method: request.method,
     url: request.url,
-    ip: request.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
   });
 
   // Create response with correlation headers
@@ -74,7 +80,7 @@ export function expressCorrelationMiddleware(
       headers: req.headers,
       method: req.method,
       url: req.url,
-      ip: req.ip,
+      ip: (req.headers['x-forwarded-for'] as string) || (req.headers['x-real-ip'] as string) || req.ip || undefined,
       user: req.user,
     });
 
@@ -99,8 +105,15 @@ export function expressCorrelationMiddleware(
 /**
  * Higher-order function to wrap API route handlers with correlation context
  */
-export function withCorrelationContext<T extends (...args: any[]) => any>(handler: T): T {
-  return (async (req: ExpressRequest, res: ExpressResponse, ...args: any[]) => {
+export function withCorrelationContext<
+  Req extends ExpressRequest,
+  Res extends ExpressResponse,
+  Args extends unknown[], // Captures 'next' and other args
+  Ret // Return type of the original handler
+>(
+  handler: (req: Req, res: Res, ...args: Args) => Ret
+): (req: Req, res: Res, ...args: Args) => Promise<Awaited<Ret>> {
+  return async (req: Req, res: Res, ...args: Args): Promise<Awaited<Ret>> => {
     // Check if context already exists (from middleware)
     let context = req.context;
     
@@ -113,7 +126,7 @@ export function withCorrelationContext<T extends (...args: any[]) => any>(handle
         headers: req.headers,
         method: req.method,
         url: req.url,
-        ip: req.ip,
+        ip: (req.headers['x-forwarded-for'] as string) || (req.headers['x-real-ip'] as string) || req.ip || undefined,
         user: req.user,
       });
       
@@ -128,17 +141,18 @@ export function withCorrelationContext<T extends (...args: any[]) => any>(handle
     }
 
     // Run handler within correlation context
-    return correlationManager.runWithContextAsync(context, () => handler(req, res, ...args));
-  }) as T;
+    const result: Awaited<Ret> = await correlationManager.runWithContextAsync(context, async () => handler(req, res, ...args));
+    return result;
+  };
 }
 
 /**
  * Next.js API route wrapper for correlation context
  */
 export function withNextCorrelationContext(
-  handler: (req: NextRequest, res?: any) => Promise<Response | NextResponse>
+  handler: (req: NextRequest, routeContext?: AppRouterContext) => Promise<Response | NextResponse>
 ) {
-  return async (req: NextRequest, res?: any): Promise<Response | NextResponse> => {
+  return async (req: NextRequest, routeContext?: AppRouterContext): Promise<Response | NextResponse> => {
     // Extract context from headers (set by Next.js middleware)
     const contextHeader = req.headers.get('x-internal-correlation-context');
     let context: LogContext;
@@ -152,7 +166,7 @@ export function withNextCorrelationContext(
           headers: Object.fromEntries(req.headers.entries()),
           method: req.method,
           url: req.url,
-          ip: req.ip,
+          ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
         });
       }
     } else {
@@ -161,12 +175,12 @@ export function withNextCorrelationContext(
         headers: Object.fromEntries(req.headers.entries()),
         method: req.method,
         url: req.url,
-        ip: req.ip,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
       });
     }
 
     // Run handler within correlation context
-    return correlationManager.runWithContextAsync(context, () => handler(req, res));
+    return correlationManager.runWithContextAsync(context, () => handler(req, routeContext));
   };
 }
 

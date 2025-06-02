@@ -18,11 +18,11 @@ type ModelConfig = {
   vision?: boolean
   tools?: boolean
   audio?: boolean
-  reasoning?: boolean
+  reasoning?: "Low" | "Medium" | "High" | "Very High" | "Frontier" | undefined
   openSource?: boolean
 
-  speed?: "Fast" | "Medium" | "Slow"
-  intelligence?: "Low" | "Medium" | "High"
+  speed?: "Fast" | "Medium" | "Slow" | "Fastest" | undefined
+  intelligence?: "Low" | "Medium" | "High" | "Very High" | "Frontier" | undefined
 
   website?: string // official website (e.g. https://openai.com)
   apiDocs?: string // official API docs (e.g. https://platform.openai.com/docs/api-reference)

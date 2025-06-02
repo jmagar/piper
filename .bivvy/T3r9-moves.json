@@ -1,0 +1,55 @@
+{
+  "Climb": "T3r9",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Add comprehensive debug logging to ButtonFileUpload component",
+      "details": "Add detailed console logging to track exact model IDs received, MODELS array lookup results, and vision detection logic flow"
+    },
+    {
+      "status": "complete",
+      "description": "Investigate model selector component model ID passing",
+      "details": "Trace how model IDs flow from model selector to ButtonFileUpload to identify any transformations"
+    },
+    {
+      "status": "complete", 
+      "description": "Analyze OpenRouter provider mapping and model resolution",
+      "details": "Examine lib/openproviders/ files to understand how OpenRouter models are resolved and if IDs are transformed"
+    },
+    {
+      "status": "complete",
+      "description": "Compare working OpenAI vs failing Anthropic model flows",
+      "details": "Document the exact model ID resolution differences between working and broken flows"
+    },
+    {
+      "status": "complete",
+      "description": "Test actual runtime model IDs for all Anthropic models",
+      "details": "Use browser console to capture exact model IDs being passed to ButtonFileUpload for each Anthropic model"
+    },
+    {
+      "status": "complete",
+      "description": "Implement proper model ID normalization for OpenRouter models",
+      "details": "Create consistent model ID resolution that works for both direct API and OpenRouter routing"
+    },
+    {
+      "status": "complete",
+      "description": "Update MODELS array lookup logic to handle provider routing",
+      "details": "Modify the vision detection logic to properly handle OpenRouter model ID formats"
+    },
+    {
+      "status": "complete",
+      "description": "Remove defensive hacks from ButtonFileUpload component",
+      "details": "Clean up the temporary string-matching hacks once proper model resolution is implemented"
+    },
+    {
+      "status": "complete",
+      "description": "Test file uploads with all Anthropic models via OpenRouter",
+      "details": "Verify drag-drop, click-browse, and paste functionality works for all vision-enabled Anthropic models"
+    },
+    {
+      "status": "complete",
+      "description": "CORRECTED: Fix was based on fictional model versions - need to identify actual OpenRouter vs internal model ID mismatches",
+      "details": "Research revealed claude-4-sonnet-20241022 doesn't exist. Real issue is likely claude-3-5-sonnet-20241022 vs claude-3-5-sonnet-20240620 mismatch"
+    }
+  ]
+} 

@@ -1,6 +1,8 @@
 # Use official Node.js image
 FROM node:22-alpine AS base
 
+ARG REDIS_URL
+
 WORKDIR /app
 
 # Install Python and system dependencies for both Node.js and Python MCP servers
@@ -16,7 +18,7 @@ RUN mv /usr/local/uv /usr/local/bin/uv && \
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy all files
 COPY . .
@@ -24,6 +26,12 @@ COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy config.json if it exists in the build context, for build-time access
+COPY config/config.json /config/config.json
+
+# Make REDIS_URL available during build
+ENV REDIS_URL=${REDIS_URL}
 
 # Build the app (if needed)
 RUN npm run build

@@ -4,6 +4,8 @@ import "./globals.css"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { OfflineIndicator } from "@/components/offline/offline-indicator"
+import { InstallPrompt } from "@/components/pwa/install-prompt"
 import { AgentProvider } from "@/lib/agent-store/provider"
 import { ChatsProvider } from "@/lib/chat-store/chats/provider"
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/config"
@@ -12,6 +14,7 @@ import { ThemeProvider } from "next-themes"
 import Script from "next/script"
 import { LayoutClient } from "./layout-client"
 import { ChatSessionProvider } from "./providers/chat-session-provider"
+import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { UserPreferencesProvider } from "./providers/user-preferences-provider"
 import { UserProvider } from "./providers/user-provider"
 import '@/lib/mcp/mcpManager'; // Initialize MCP Manager on server start
@@ -41,6 +44,12 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="color-scheme" content="light dark" />
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       {!isDev ? (
         <Script
           async
@@ -55,7 +64,8 @@ export default async function RootLayout({
         <UserProvider>
           <ChatsProvider>
             <ChatSessionProvider>
-              <AgentProvider userId={userProfile?.id}>
+              <MessagesProvider>
+                <AgentProvider userId={userProfile?.id}>
                 <UserPreferencesProvider>
                   <TooltipProvider delayDuration={200} skipDelayDuration={500}>
                     <ThemeProvider
@@ -67,11 +77,15 @@ export default async function RootLayout({
                       <SidebarProvider defaultOpen>
                         <Toaster position="top-center" />
                         {children}
+                        {/* PWA Components */}
+                        <OfflineIndicator />
+                        <InstallPrompt />
                       </SidebarProvider>
                     </ThemeProvider>
                   </TooltipProvider>
                 </UserPreferencesProvider>
-              </AgentProvider>
+                </AgentProvider>
+              </MessagesProvider>
             </ChatSessionProvider>
           </ChatsProvider>
         </UserProvider>

@@ -125,6 +125,82 @@
 - **Server Resources**: Lower memory usage, better concurrency
 - **Perceived Performance**: ~90% improvement in response time
 
+## 3-Way @mention System Architecture - **REVOLUTIONARY IMPLEMENTATION**
+
+### **Core Architecture Components**
+- **Unified Hook**: `app/components/chat-input/use-agent-command.ts`
+  ```typescript
+  // Intelligent 3-way detection
+  const detectMentionType = (query: string) => {
+    // Fuzzy matching + scoring to determine agents vs tools vs rules
+    // Returns: 'agent' | 'tool' | 'rule' | null
+  }
+  ```
+- **State Management**: Single hook manages all three mention types with proper isolation
+- **Dropdown Components**: Consistent pattern across AgentCommand, ToolCommand, RuleCommand
+
+### **Rules API Implementation (`app/api/rules-available/route.ts`)**
+- **Database Integration**: Direct Prisma query to fetch all rules
+- **Data Format**:
+  ```typescript
+  interface RuleForMention {
+    id: string
+    name: string
+    description: string | null
+    slug: string
+    systemPrompt: string
+  }
+  ```
+- **Error Handling**: Graceful fallbacks for database errors
+
+### **Rule Dropdown Component (`app/components/chat-input/rule-command.tsx`)**
+- **Visual Design**: Green badges showing `@rule-slug` format
+- **Keyboard Navigation**: Arrow keys, Enter selection, Escape dismissal
+- **Click Handling**: Direct selection and insertion into chat input
+- **Responsive Layout**: Adapts to rule name/description length
+
+### **Rule Mention Processing**
+- **Type Definitions**: Extended `app/types/tool-mention.ts` with rule structures
+- **Parsing Functions**:
+  ```typescript
+  parseRuleMentions(content: string): RuleMention[]
+  stripRuleMentions(content: string): string
+  stripAllMentions(content: string): string // agents + tools + rules
+  ```
+- **Pattern**: `@rule-slug` format (no parameters unlike tools)
+
+### **Chat API Rule Integration (`app/api/chat/route.ts`)**
+- **Processing Function**: `processRuleMentions()`
+  ```typescript
+  async function processRuleMentions(content: string, systemPrompt: string) {
+    // 1. Parse rule mentions from user message
+    // 2. Look up rules in database by slug
+    // 3. Inject rule content into enhanced system prompt
+    // 4. Return cleaned message + enhanced prompt
+  }
+  ```
+- **Context Injection**: Rule content prepended to system prompt for AI context
+- **Error Handling**: Missing rules handled gracefully with fallback messages
+- **Performance**: Minimal impact on chat processing time
+
+### **3-Way Fuzzy Matching Algorithm**
+- **Scoring System**: 
+  ```typescript
+  // Combination of fuzzy matching + direct string matching
+  const agentScore = fuzzyMatch(query, agent.name) + directMatch(query, agent.name)
+  const toolScore = fuzzyMatch(query, tool.name) + directMatch(query, tool.name)  
+  const ruleScore = fuzzy.match(query, rule.name) + directMatch(query, rule.slug)
+  ```
+- **Intelligent Detection**: Highest scoring category determines dropdown type
+- **Threshold**: Minimum score of 5 to trigger dropdown display
+- **Performance**: Real-time filtering with debounced API calls
+
+### **Integration Points**
+- **Chat Input**: Modified to support three dropdown states
+- **State Isolation**: Each mention type has independent state management
+- **Keyboard Navigation**: Unified navigation pattern across all dropdowns
+- **Error Boundaries**: Comprehensive error handling at each integration point
+
 ## Server Action Naming & React Context Boundary Architecture - **ESTABLISHED STANDARDS**
 
 ### **Next.js Server Action Naming Compliance**

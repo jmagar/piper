@@ -73,16 +73,21 @@ export type GeminiModel =
   | "learnlm-1.5-pro-experimental"
 
 export type AnthropicModel =
-  | "claude-3-7-sonnet-20250219"
-  | "claude-3-5-sonnet-latest"
-  | "claude-3-5-sonnet-20241022"
-  | "claude-3-5-sonnet-20240620"
-  | "claude-3-5-haiku-latest"
-  | "claude-3-5-haiku-20241022"
-  | "claude-3-opus-latest"
-  | "claude-3-opus-20240229"
-  | "claude-3-sonnet-20240229"
-  | "claude-3-haiku-20240307"
+  | "anthropic/claude-3-7-sonnet-20250219"
+  | "anthropic/claude-3-5-sonnet-latest"
+  | "anthropic/claude-3-5-sonnet-20241022"
+  | "anthropic/claude-3-5-sonnet-20240620"
+  | "anthropic/claude-3-5-haiku-latest"
+  | "anthropic/claude-3-5-haiku-20241022"
+  // Assuming claude-3.5-haiku-20240620 is the specific ID for the one used in claude.ts, adding if not covered by latest
+  | "anthropic/claude-3.5-haiku-20240620" 
+  | "anthropic/claude-3-opus-latest"
+  | "anthropic/claude-3-opus-20240229"
+  | "anthropic/claude-3-sonnet-20240229"
+  | "anthropic/claude-3-haiku-20240307"
+  // Adding new Claude 4 models
+  | "anthropic/claude-4-sonnet-20250514"
+  | "anthropic/claude-4-opus-20250514"
 
 export type XaiModel =
   | "grok-3"
@@ -105,7 +110,7 @@ export type XaiModel =
   | "grok-vision-beta"
   | "grok-beta"
 
-export type Provider = "openai" | "mistral" | "google" | "anthropic" | "xai"
+export type Provider = "openai" | "mistral" | "google" | "anthropic" | "xai" | "openrouter"
 
 export type SupportedModel =
   | OpenAIModel

@@ -11,13 +11,18 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAgent } from "@/lib/agent-store/provider"
 import { MODELS } from "@/lib/models"
-import { ArrowUp, Stop, Warning } from "@phosphor-icons/react"
-import React, { useCallback, useEffect } from "react"
+import { ArrowUp, Stop, Warning, Sparkle } from "@phosphor-icons/react"
+import React, { useCallback, useEffect, useState } from "react"
 import { PromptSystem } from "../suggestions/prompt-system"
 import { AgentCommand } from "./agent-command"
-import { ButtonFileUpload } from "./button-file-upload"
 import { FileList } from "./file-list"
 import { SelectedAgent } from "./selected-agent"
+import { ToolCommand } from "./tool-command"
+import { ToolParameterInput } from "./tool-parameter-input"
+import { RuleCommand } from "./rule-command"
+import { AttachMenu } from "./attach-menu"
+import { validateFile } from "@/lib/file-handling"
+import { toast } from "@/components/ui/toast"
 
 type AvailableModelData = {
   id: string;
@@ -67,6 +72,7 @@ export function ChatInput({
   status,
 }: ChatInputProps) {
   const { currentAgent, curatedAgents, userAgents } = useAgent()
+  const [isEnhancing, setIsEnhancing] = useState(false)
 
   const agentCommand = useAgentCommand({
     value,
@@ -75,43 +81,33 @@ export function ChatInput({
     defaultAgent: currentAgent,
   })
 
-  const selectModelConfig = MODELS.find((model) => model.id === selectedModel)
-  const noToolSupport = selectModelConfig?.tools
+  const noToolSupport =
+    currentAgent &&
+    !MODELS.find((model) => model.id === selectedModel)?.tools
 
-  const handleSend = useCallback(() => {
-    if (isSubmitting) {
-      return
-    }
-
-    if (status === "streaming") {
-      stop()
-      return
-    }
-
-    onSend()
-  }, [isSubmitting, onSend, status, stop])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // First process agent command related key handling
-      agentCommand.handleKeyDown(e)
-
-      if (isSubmitting) {
-        e.preventDefault()
-        return
+  const handleFileUpload = useCallback(
+    async (newFiles: File[]) => {
+      // ✅ AI SDK PATTERN: Validate files before adding to state
+      const validFiles: File[] = []
+      
+      for (const file of newFiles) {
+        const validation = await validateFile(file)
+        if (validation.isValid) {
+          validFiles.push(file)
+        } else {
+          toast({
+            title: `File "${file.name}" rejected`,
+            description: validation.error,
+            status: "error",
+          })
+        }
       }
-
-      if (e.key === "Enter" && status === "streaming") {
-        e.preventDefault()
-        return
-      }
-
-      if (e.key === "Enter" && !e.shiftKey && !agentCommand.showAgentCommand) {
-        e.preventDefault()
-        onSend()
+      
+      if (validFiles.length > 0) {
+        onFileUpload(validFiles)
       }
     },
-    [agentCommand, isSubmitting, onSend, status]
+    [onFileUpload]
   )
 
   const handlePaste = useCallback(
@@ -146,13 +142,82 @@ export function ChatInput({
         }
 
         if (imageFiles.length > 0) {
-          onFileUpload(imageFiles)
+          handleFileUpload(imageFiles)
         }
       }
       // Text pasting will work by default for everyone
     },
-    [isUserAuthenticated, onFileUpload]
+    [isUserAuthenticated, handleFileUpload]
   )
+
+  const handleSend = useCallback(() => {
+    if (isSubmitting) {
+      return
+    }
+
+    if (status === "streaming") {
+      stop()
+      return
+    }
+
+    onSend()
+  }, [isSubmitting, onSend, status, stop])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      // First process agent command related key handling
+      agentCommand.handleKeyDown(e)
+
+      if (isSubmitting) {
+        e.preventDefault()
+        return
+      }
+
+      if (e.key === "Enter" && status === "streaming") {
+        e.preventDefault()
+        return
+      }
+
+      if (e.key === "Enter" && !e.shiftKey && !agentCommand.showAgentCommand && !agentCommand.showToolCommand) {
+        e.preventDefault()
+        onSend()
+      }
+    },
+    [agentCommand, isSubmitting, onSend, status]
+  )
+
+  const handleEnhance = useCallback(async () => {
+    if (!value?.trim() || isEnhancing || isSubmitting) return
+    
+    setIsEnhancing(true)
+    try {
+      const response = await fetch('/api/enhance-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: value })
+      })
+      
+      if (response.ok) {
+        const { enhancedPrompt } = await response.json()
+        onValueChange(enhancedPrompt)
+      } else {
+        toast({
+          title: "Enhancement failed",
+          description: "Could not enhance the prompt. Please try again.",
+          status: "error",
+        })
+      }
+    } catch (error) {
+      console.error('Enhance prompt error:', error)
+      toast({
+        title: "Enhancement failed", 
+        description: "Could not enhance the prompt. Please try again.",
+        status: "error",
+      })
+    } finally {
+      setIsEnhancing(false)
+    }
+  }, [value, isEnhancing, isSubmitting, onValueChange])
 
   useEffect(() => {
     const el = agentCommand.textareaRef.current
@@ -191,14 +256,45 @@ export function ChatInput({
               />
             </div>
           )}
+          {agentCommand.showToolCommand && (
+            <div className="absolute bottom-full left-0 w-full">
+              <ToolCommand
+                isOpen={agentCommand.showToolCommand}
+                onSelect={agentCommand.handleToolSelect}
+                onClose={agentCommand.closeToolCommand}
+                activeIndex={agentCommand.activeToolIndex}
+                onActiveIndexChange={agentCommand.setActiveToolIndex}
+                filteredTools={agentCommand.filteredTools}
+              />
+            </div>
+          )}
+          {agentCommand.showRuleCommand && (
+            <div className="absolute bottom-full left-0 w-full">
+              <RuleCommand
+                isOpen={agentCommand.showRuleCommand}
+                onSelect={agentCommand.handleRuleSelect}
+                onClose={agentCommand.closeRuleCommand}
+                activeIndex={agentCommand.activeRuleIndex}
+                onActiveIndexChange={agentCommand.setActiveRuleIndex}
+                filteredRules={agentCommand.filteredRules}
+              />
+            </div>
+          )}
           <SelectedAgent
             selectedAgent={agentCommand.selectedAgent}
             removeSelectedAgent={agentCommand.removeSelectedAgent}
           />
+          {agentCommand.pendingTool && (
+            <ToolParameterInput
+              tool={agentCommand.pendingTool}
+              onSubmit={agentCommand.handleToolParametersSubmit}
+              onCancel={agentCommand.handleToolParametersCancel}
+            />
+          )}
           <FileList files={files} onFileRemove={onFileRemove} />
           <PromptInputTextarea
             placeholder={
-              "Ask Piper or @mention an agent"
+              "Ask Piper, @mention an agent, or @mention a tool"
             }
             onKeyDown={handleKeyDown}
             className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
@@ -206,15 +302,29 @@ export function ChatInput({
           />
           <PromptInputActions className="mt-5 w-full justify-between px-3 pb-3">
             <div className="flex gap-2">
-              <ButtonFileUpload
-                onFileUpload={onFileUpload}
+              <AttachMenu
+                onFileUpload={handleFileUpload}
                 isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
+                onTriggerMention={(prefix) => {
+                  // Simulate @mention behavior: add @ and focus input
+                  const newValue = value + prefix
+                  onValueChange(newValue)
+                  // Focus the input after a brief delay to let state update
+                  setTimeout(() => {
+                    agentCommand.textareaRef.current?.focus()
+                  }, 10)
+                }}
               />
               <ModelSelector
                 availableModels={availableModels}
                 selectedModelId={selectedModel}
-                setSelectedModelId={onSelectModel}
+                setSelectedModelId={(modelId) => {
+                  console.log(`🔄 ChatInput ModelSelector: Model changed to "${modelId}"`);
+                  console.log(`📊 Available models source: OpenRouter API (${availableModels.length} models)`);
+                  console.log(`📋 Internal MODELS array: ${MODELS.length} models from lib/models`);
+                  onSelectModel(modelId);
+                }}
                 onStarModel={onStarModel}
                 isUserAuthenticated={isUserAuthenticated}
               />
@@ -228,24 +338,39 @@ export function ChatInput({
                 </div>
               )}
             </div>
-            <PromptInputAction
-              tooltip={status === "streaming" ? "Stop" : "Send"}
-            >
-              <Button
-                size="sm"
-                className="size-9 rounded-full transition-all duration-300 ease-out"
-                disabled={!value || isSubmitting}
-                type="button"
-                onClick={handleSend}
-                aria-label={status === "streaming" ? "Stop" : "Send message"}
+            <div className="flex gap-2">
+              <PromptInputAction tooltip="Enhance prompt">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="size-9 rounded-full transition-all duration-300 ease-out"
+                  disabled={!value?.trim() || isEnhancing || Boolean(isSubmitting)}
+                  type="button"
+                  onClick={handleEnhance}
+                  aria-label="Enhance prompt"
+                >
+                  <Sparkle className={`size-4 ${isEnhancing ? 'animate-pulse' : ''}`} />
+                </Button>
+              </PromptInputAction>
+              <PromptInputAction
+                tooltip={status === "streaming" ? "Stop" : "Send"}
               >
-                {status === "streaming" ? (
-                  <Stop className="size-4" />
-                ) : (
-                  <ArrowUp className="size-4" />
-                )}
-              </Button>
-            </PromptInputAction>
+                <Button
+                  size="sm"
+                  className="size-9 rounded-full transition-all duration-300 ease-out"
+                  disabled={!value?.trim() || Boolean(isSubmitting)}
+                  type="button"
+                  onClick={handleSend}
+                  aria-label={status === "streaming" ? "Stop" : "Send message"}
+                >
+                  {status === "streaming" ? (
+                    <Stop className="size-4" />
+                  ) : (
+                    <ArrowUp className="size-4" />
+                  )}
+                </Button>
+              </PromptInputAction>
+            </div>
           </PromptInputActions>
         </PromptInput>
       </div>

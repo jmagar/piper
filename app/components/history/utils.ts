@@ -7,10 +7,16 @@ type TimeGroup = {
 
 // Group chats by time periods
 export function groupChatsByDate(
-  chats: Chats[],
+  chats: Chats[] | undefined | null,
   searchQuery: string
 ): TimeGroup[] | null {
   if (searchQuery) return null // Don't group when searching
+
+  // Defensive check to prevent runtime errors during initialization
+  if (!chats || !Array.isArray(chats)) {
+    console.warn("groupChatsByDate: chats is not initialized yet, returning empty array")
+    return []
+  }
 
   const now = new Date()
   const today = new Date(
