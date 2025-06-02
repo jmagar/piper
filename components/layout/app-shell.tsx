@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { SkeletonChatInterface } from '@/components/ui/skeleton-screens'
 import { OfflineIndicator } from '@/components/offline/offline-indicator'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
+import { ErrorBoundary } from '@/app/components/error-boundary'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -30,8 +31,18 @@ export function AppShell({
       </main>
       
       {/* PWA-specific UI overlays */}
-      {showOfflineIndicator && <OfflineIndicator />}
-      {showInstallPrompt && <InstallPrompt />}
+      {showOfflineIndicator && (
+        <ErrorBoundary 
+          fallback={<div className="fixed top-4 right-4 z-50 text-xs text-muted-foreground">PWA features temporarily unavailable</div>}
+        >
+          <OfflineIndicator />
+        </ErrorBoundary>
+      )}
+      {showInstallPrompt && (
+        <ErrorBoundary fallback={null}>
+          <InstallPrompt />
+        </ErrorBoundary>
+      )}
       
       {/* App shell footer if needed */}
       <div id="app-shell-footer" className="app-shell-footer">
@@ -105,15 +116,9 @@ export function useAppShell() {
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    // Mark shell as ready when DOM is loaded
+    // Mark both as ready when DOM is loaded and hydrated
     setIsShellReady(true)
-    
-    // Mark as hydrated when React has taken over
-    const timer = setTimeout(() => {
-      setIsHydrated(true)
-    }, 0)
-
-    return () => clearTimeout(timer)
+    setIsHydrated(true)
   }, [])
 
   return {

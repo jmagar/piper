@@ -1,8 +1,15 @@
-import type { Chats } from "@/lib/chat-store/types"
+import { Chats } from "@/lib/chat-store/types"
 
 type TimeGroup = {
   name: string
   chats: Chats[]
+}
+
+// Type guard to ensure we have a valid Chats array
+function isValidChatsArray(chats: unknown): chats is Chats[] {
+  return Array.isArray(chats) && (chats.length === 0 || chats.every(chat => 
+    chat && typeof chat === 'object' && 'id' in chat
+  ))
 }
 
 // Group chats by time periods
@@ -12,9 +19,14 @@ export function groupChatsByDate(
 ): TimeGroup[] | null {
   if (searchQuery) return null // Don't group when searching
 
-  // Defensive check to prevent runtime errors during initialization
-  if (!chats || !Array.isArray(chats)) {
-    console.warn("groupChatsByDate: chats is not initialized yet, returning empty array")
+  // Enhanced defensive checks to prevent runtime errors during initialization
+  if (!chats) {
+    console.warn("groupChatsByDate: chats is null or undefined, returning empty array")
+    return []
+  }
+
+  if (!isValidChatsArray(chats)) {
+    console.warn("groupChatsByDate: chats is not a valid array or contains invalid chat objects, returning empty array")
     return []
   }
 
@@ -35,27 +47,45 @@ export function groupChatsByDate(
   const olderChats: Record<number, Chats[]> = {}
 
   chats.forEach((chat) => {
-    if (!chat.createdAt) {
-      todayChats.push(chat)
-      return
-    }
-
-    const chatTimestamp = new Date(chat.createdAt).getTime()
-
-    if (chatTimestamp >= today) {
-      todayChats.push(chat)
-    } else if (chatTimestamp >= weekAgo) {
-      last7DaysChats.push(chat)
-    } else if (chatTimestamp >= monthAgo) {
-      last30DaysChats.push(chat)
-    } else if (chatTimestamp >= yearStart) {
-      thisYearChats.push(chat)
-    } else {
-      const year = new Date(chat.createdAt).getFullYear()
-      if (!olderChats[year]) {
-        olderChats[year] = []
+    try {
+      if (!chat || typeof chat !== 'object') {
+        console.warn("groupChatsByDate: Invalid chat object, skipping", chat)
+        return
       }
-      olderChats[year].push(chat)
+
+      if (!chat.createdAt) {
+        todayChats.push(chat)
+        return
+      }
+
+      const chatTimestamp = new Date(chat.createdAt).getTime()
+      
+      // Validate timestamp
+      if (isNaN(chatTimestamp)) {
+        console.warn("groupChatsByDate: Invalid date for chat", chat.id, chat.createdAt)
+        todayChats.push(chat) // Default to today if date is invalid
+        return
+      }
+
+      if (chatTimestamp >= today) {
+        todayChats.push(chat)
+      } else if (chatTimestamp >= weekAgo) {
+        last7DaysChats.push(chat)
+      } else if (chatTimestamp >= monthAgo) {
+        last30DaysChats.push(chat)
+      } else if (chatTimestamp >= yearStart) {
+        thisYearChats.push(chat)
+      } else {
+        const year = new Date(chat.createdAt).getFullYear()
+        if (!olderChats[year]) {
+          olderChats[year] = []
+        }
+        olderChats[year].push(chat)
+      }
+    } catch (error) {
+      console.error("groupChatsByDate: Error processing chat", chat, error)
+      // Add to today as fallback
+      todayChats.push(chat)
     }
   })
 

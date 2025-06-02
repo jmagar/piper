@@ -1,5 +1,6 @@
 "use client"
 
+import { ChatErrorBoundary } from "@/app/components/error-boundary"
 import { groupChatsByDate } from "@/app/components/history/utils"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -19,7 +20,7 @@ import {
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useParams } from "next/navigation"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { HistoryTrigger } from "../../history/history-trigger"
 import { SidebarList } from "./sidebar-list"
 
@@ -29,6 +30,16 @@ export function AppSidebar() {
   const { chats, isLoading } = useChats()
   const params = useParams<{ chatId: string }>()
   const currentChatId = params.chatId
+  
+  // Hydration-safe loading state - always start with loading on server
+  const [isHydrated, setIsHydrated] = useState(false)
+  
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+  
+  // Use hydration-safe loading state to prevent SSR/client mismatch
+  const safeIsLoading = !isHydrated || isLoading
 
   const groupedChats = useMemo(() => {
     // Ensure chats is always an array before passing to groupChatsByDate
@@ -73,19 +84,21 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="mask-t-from-98% mask-t-to-100% mask-b-from-98% mask-b-to-100% px-3">
         <ScrollArea className="flex h-full [&>div>div]:!block">
-          {isLoading ? (
+          {safeIsLoading ? (
             <div className="h-full" />
           ) : hasChats ? (
-            <div className="space-y-5">
-              {groupedChats?.map((group) => (
-                <SidebarList
-                  key={group.name}
-                  title={group.name}
-                  items={group.chats}
-                  currentChatId={currentChatId}
-                />
-              ))}
-            </div>
+            <ChatErrorBoundary>
+              <div className="space-y-5">
+                {groupedChats?.map((group) => (
+                  <SidebarList
+                    key={group.name}
+                    title={group.name}
+                    items={group.chats}
+                    currentChatId={currentChatId}
+                  />
+                ))}
+              </div>
+            </ChatErrorBoundary>
           ) : (
             <div className="flex h-[calc(100vh-160px)] flex-col items-center justify-center">
               <ChatTeardropText

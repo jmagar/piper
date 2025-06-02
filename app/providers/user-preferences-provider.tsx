@@ -32,8 +32,17 @@ export function UserPreferencesProvider({
   const [preferences, setPreferences] =
     useState<UserPreferences>(defaultPreferences)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Hydration effect - runs only on client after hydration
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   useEffect(() => {
+    // Only run after hydration to prevent SSR/client mismatch
+    if (!isHydrated) return
+
     // Always try to load from localStorage since there's no auth gate
     try {
       const storedPrefs = localStorage.getItem(PREFERENCES_STORAGE_KEY)
@@ -54,7 +63,7 @@ export function UserPreferencesProvider({
     } finally {
       setIsInitialized(true)
     }
-  }, [])
+  }, [isHydrated])
 
   useEffect(() => {
     if (isInitialized) { // Save whenever initialized and preferences change

@@ -66,7 +66,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
               </DialogTrigger>
               <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-6xl">
                 <DialogHeader>
-                  <DialogTitle>MCP Servers Dashboard</DialogTitle>
+                  <DialogTitle>MCP Dashboard</DialogTitle>
                   <DialogDescription>
                     View status and tools of connected MCP servers. Hover over a server for more details.
                   </DialogDescription>

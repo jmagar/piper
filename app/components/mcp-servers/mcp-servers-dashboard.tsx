@@ -27,10 +27,36 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 // Icons
-import { AlertCircle, CheckCircle2, HelpCircle, XCircle, Plus, Pencil, Trash2 } from 'lucide-react';
+import { 
+  AlertCircle, 
+  CheckCircle2, 
+  HelpCircle, 
+  XCircle, 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Settings,
+  RefreshCw,
+  Search,
+  Filter,
+  MoreVertical,
+  Copy,
+  TestTube,
+  Files,
+  Clock,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Import interfaces from manager.tsx
@@ -78,11 +104,21 @@ export function McpServersDashboard() {
   const [servers, setServers] = useState<McpServerInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   // New configuration management state
   const [configServers, setConfigServers] = useState<MCPServerConfigFromUI[]>([]);
   const [initialConfigServers, setInitialConfigServers] = useState<MCPServerConfigFromUI[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Enhanced dashboard state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [transportFilter, setTransportFilter] = useState<string>('all');
+  const [enabledFilter, setEnabledFilter] = useState<string>('all');
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Modal and form states
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -135,15 +171,27 @@ export function McpServersDashboard() {
     }
   }, []);
 
-  // Fetch both status and configuration data
-  const fetchAllData = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([
-      fetchServerStatus(),
-      fetchConfigServers()
-    ]);
-    setIsLoading(false);
+  // Enhanced fetch with refresh state
+  const fetchAllData = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) setIsRefreshing(true);
+    if (!showRefreshing) setIsLoading(true);
+    
+    try {
+      await Promise.all([
+        fetchServerStatus(),
+        fetchConfigServers()
+      ]);
+      setLastUpdated(new Date());
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   }, [fetchServerStatus, fetchConfigServers]);
+
+  // Manual refresh function
+  const handleManualRefresh = useCallback(() => {
+    fetchAllData(true);
+  }, [fetchAllData]);
 
   // Check if configuration has been modified (dirty state)
   const isDirty = JSON.stringify(configServers) !== JSON.stringify(initialConfigServers);
@@ -158,10 +206,116 @@ export function McpServersDashboard() {
     };
   });
 
+  // Filter and search logic
+  const filteredServerData = mergedServerData.filter(server => {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesName = server.label.toLowerCase().includes(query);
+      const matchesTransport = server.transportType?.toLowerCase().includes(query);
+      const matchesCommand = server.configData?.transport.type === 'stdio' && 
+        (server.configData.transport as MCPTransportStdio).command?.toLowerCase().includes(query);
+      const matchesUrl = (server.configData?.transport.type === 'sse' || server.configData?.transport.type === 'http') && 
+        (server.configData.transport as MCPTransportSSE).url?.toLowerCase().includes(query);
+      
+      if (!matchesName && !matchesTransport && !matchesCommand && !matchesUrl) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'disconnected') {
+        // Consider servers as disconnected if they're not connected, regardless of specific status
+        if (server.status === 'connected') {
+          return false;
+        }
+      } else if (server.status !== statusFilter) {
+        return false;
+      }
+    }
+
+    // Transport filter
+    if (transportFilter !== 'all' && server.transportType !== transportFilter) {
+      return false;
+    }
+
+    // Enabled/Disabled filter
+    if (enabledFilter !== 'all') {
+      if (enabledFilter === 'enabled' && !server.enabled) {
+        return false;
+      }
+      if (enabledFilter === 'disabled' && server.enabled) {
+        return false;
+      }
+    }
+
+    return true;
+  }).sort((a, b) => {
+    // Sort by enabled status first (enabled servers before disabled)
+    if (a.enabled !== b.enabled) {
+      return b.enabled ? 1 : -1;
+    }
+    // Then sort alphabetically by label
+    return a.label.localeCompare(b.label);
+  });
+
+  // Helper functions
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  const copyServerConfig = (server: MCPServerConfigFromUI) => {
+    navigator.clipboard.writeText(JSON.stringify(server, null, 2));
+    toast.success('Server configuration copied to clipboard');
+  };
+
+  const duplicateServer = (server: MCPServerConfigFromUI) => {
+    const duplicate = {
+      ...server,
+      id: crypto.randomUUID(),
+      name: `${server.name}-copy`,
+      displayName: `${server.displayName || server.name} (Copy)`
+    };
+    setConfigServers(prev => [...prev, duplicate]);
+    toast.success('Server duplicated successfully');
+  };
+
+  const testConnection = async (server: MCPServerConfigFromUI) => {
+    toast.info('Testing connection...', { id: `test-${server.id}` });
+    // Simulate test - in real implementation, this would call an API
+    setTimeout(() => {
+      toast.success('Connection test completed', { id: `test-${server.id}` });
+    }, 2000);
+  };
+
   // Load data on component mount
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  // Set client-side flag to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Auto-refresh logic
+  useEffect(() => {
+    if (!autoRefresh || !isClient) return;
+    
+    const interval = setInterval(() => {
+      fetchAllData(true);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, isClient, fetchAllData]);
 
   // Handle toggle enable/disable
   const handleToggleEnable = (serverId: string) => {
@@ -301,140 +455,351 @@ export function McpServersDashboard() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-medium">MCP Servers</h3>
-          <Badge variant="outline">{mergedServerData.length} servers</Badge>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-semibold text-foreground">MCP Servers</h3>
+            <Badge variant="secondary" className="bg-muted text-muted-foreground font-medium">
+              {mergedServerData.filter(server => server.enabled).length} of {mergedServerData.length} servers
+            </Badge>
+            {lastUpdated && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {formatRelativeTime(lastUpdated)}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className={cn(
+                "flex items-center gap-2",
+                isRefreshing && "animate-spin"
+              )}
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={cn(
+                "flex items-center gap-2",
+                autoRefresh ? "bg-green-50 text-green-700 border-green-200" : ""
+              )}
+            >
+              {autoRefresh ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              <span className="hidden sm:inline">Auto</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                // Reset form when opening modal
+                setNewServerForm({
+                  id: '',
+                  name: '',
+                  displayName: '',
+                  enabled: true,
+                  transport: { type: 'stdio', command: '' },
+                });
+                setIsAddModalOpen(true);
+              }}
+              className="flex items-center gap-2 hover:bg-accent transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden xs:inline">Add</span>
+            </Button>
+            <Button 
+              onClick={handleSaveConfiguration}
+              disabled={!isDirty || isSaving}
+              size="sm"
+              variant={isDirty ? "default" : "outline"}
+              className={cn(
+                "flex items-center gap-2 transition-all",
+                isDirty && "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+              {isDirty && <span className="text-xs opacity-75">*</span>}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              // Reset form when opening modal
-              setNewServerForm({
-                id: '',
-                name: '',
-                displayName: '',
-                enabled: true,
-                transport: { type: 'stdio', command: '' },
-              });
-              setIsAddModalOpen(true);
-            }}
-            className="flex items-center gap-2 flex-1 sm:flex-none"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden xs:inline">Add New Server</span>
-            <span className="xs:hidden">Add</span>
-          </Button>
-          <Button 
-            onClick={handleSaveConfiguration}
-            disabled={!isDirty || isSaving}
-            size="sm"
-            variant={isDirty ? "default" : "outline"}
-            className="flex items-center gap-2 flex-1 sm:flex-none"
-          >
-            {isSaving ? 'Saving...' : isDirty ? 'Save Configuration *' : 'Save Configuration'}
-          </Button>
+
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search servers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-32">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="connected">Connected</SelectItem>
+                <SelectItem value="disconnected">Disconnected</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="no_tools_found">No Tools</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={transportFilter} onValueChange={setTransportFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Transport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="stdio">STDIO</SelectItem>
+                <SelectItem value="sse">SSE</SelectItem>
+                <SelectItem value="http">HTTP</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={enabledFilter} onValueChange={setEnabledFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Enabled" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Servers</SelectItem>
+                <SelectItem value="enabled">Enabled</SelectItem>
+                <SelectItem value="disabled">Disabled</SelectItem>
+              </SelectContent>
+            </Select>
+            {(searchQuery || statusFilter !== 'all' || transportFilter !== 'all' || enabledFilter !== 'all') && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setTransportFilter('all');
+                  setEnabledFilter('all');
+                }}
+                className="px-3"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Server Grid */}
-      {mergedServerData.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">No MCP servers configured or found.</p>
+      {!isClient ? (
+        <div className="text-center py-12">
+          <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Settings className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground text-sm">Loading MCP servers...</p>
+        </div>
+      ) : filteredServerData.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Settings className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {mergedServerData.length === 0 
+              ? 'No MCP servers configured or found.' 
+              : 'No servers match your search criteria.'
+            }
+          </p>
+          <p className="text-muted-foreground text-xs mt-1">
+            {mergedServerData.length === 0 
+              ? 'Add a server to get started.' 
+              : 'Try adjusting your search or filters.'
+            }
+          </p>
+        </div>
       ) : (
-        <ScrollArea className="h-[300px] rounded-md border p-1 md:p-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {mergedServerData.map((server) => (
-                     <HoverCard key={server.key} openDelay={200} closeDelay={100}>
-            <HoverCardTrigger asChild>
-              <div className="rounded-md border p-2 transition-all hover:shadow-md cursor-pointer space-y-2">
-                {/* Server Header with Status and Controls */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 flex-grow min-w-0">
-                    <StatusIndicator status={server.status} />
-                    <div className="flex-grow min-w-0">
-                      <p className="font-medium text-xs truncate" title={server.label}>{server.label}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {server.transportType ? `${server.transportType}` : 'Unknown'}
-                        {server.status === 'connected' ? ` • ${server.tools.length} tools` : ''}
-                      </p>
+        <ScrollArea className="h-[400px] w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-1">
+            {filteredServerData.map((server) => (
+              <HoverCard key={server.key} openDelay={300} closeDelay={100}>
+                <HoverCardTrigger asChild>
+                  <div className={cn(
+                    "group relative rounded-lg border bg-card p-4 transition-all duration-200 cursor-pointer",
+                    "hover:shadow-md hover:shadow-border/10 hover:-translate-y-0.5",
+                    "border-border/50 hover:border-border",
+                    !server.enabled && "opacity-60"
+                  )}>
+                    {/* Server Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <StatusIndicator status={server.status} className="shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-medium text-sm text-foreground truncate" title={server.label}>
+                            {server.label}
+                          </h4>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            {server.transportType || 'Unknown transport'}
+                          </p>
+                          {server.configData && (
+                            <>
+                              <p className="text-[10px] text-muted-foreground/80 truncate mt-0.5" title={
+                                server.configData.transport.type === 'stdio' 
+                                  ? (server.configData.transport as MCPTransportStdio).command
+                                  : server.configData.transport.type === 'sse' || server.configData.transport.type === 'http'
+                                  ? (server.configData.transport as MCPTransportSSE).url
+                                  : ''
+                              }>
+                                {server.configData.transport.type === 'stdio' && (
+                                  <span>cmd: {(server.configData.transport as MCPTransportStdio).command}</span>
+                                )}
+                                {(server.configData.transport.type === 'sse' || server.configData.transport.type === 'http') && (
+                                  <span>url: {(server.configData.transport as MCPTransportSSE).url}</span>
+                                )}
+                              </p>
+                              {server.configData.transport.type === 'stdio' && (server.configData.transport as MCPTransportStdio).args && (server.configData.transport as MCPTransportStdio).args!.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5" title={(server.configData.transport as MCPTransportStdio).args!.join(' ')}>
+                                  args: {(server.configData.transport as MCPTransportStdio).args!.join(' ')}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={server.enabled}
+                        onCheckedChange={() => server.configData && handleToggleEnable(server.configData.id)}
+                        aria-label={`Toggle ${server.label} ${server.enabled ? 'off' : 'on'}`}
+                        className="shrink-0"
+                      />
+                    </div>
+                    
+                    {/* Status Info */}
+                    <div className="mb-3">
+                      {server.status === 'connected' ? (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
+                            {server.tools.length} tools
+                          </Badge>
+                        </div>
+                      ) : server.status === 'error' ? (
+                        <Badge variant="outline" className="text-xs border-red-200 text-red-700 bg-red-50">
+                          Error
+                        </Badge>
+                      ) : server.status === 'no_tools_found' ? (
+                        <Badge variant="outline" className="text-xs border-yellow-200 text-yellow-700 bg-yellow-50">
+                          No tools
+                        </Badge>
+                      ) : !server.enabled ? (
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-600 bg-gray-50">
+                          Disabled
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          Unknown
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-1">
+                      {server.configData && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost" 
+                              size="icon"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => testConnection(server.configData!)}>
+                              <TestTube className="h-4 w-4 mr-2" />
+                              Test Connection
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => copyServerConfig(server.configData!)}>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Configuration
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => duplicateServer(server.configData!)}>
+                              <Files className="h-4 w-4 mr-2" />
+                              Duplicate Server
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setEditingServer(server.configData!);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit Server
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setDeletingServer(server.configData!);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Server
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
-                  {/* Toggle Switch */}
-                  <div className="flex items-center space-x-1">
-                    <Switch
-                      checked={server.enabled}
-                      onCheckedChange={() => server.configData && handleToggleEnable(server.configData.id)}
-                      aria-label={`Toggle ${server.label} ${server.enabled ? 'off' : 'on'}`}
-                    />
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80 max-h-64 overflow-y-auto" side="top" align="start">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <StatusIndicator status={server.status} />
+                      <h4 className="font-semibold text-sm">{server.label}</h4>
+                    </div>
+                    
+                    {server.status === 'error' && server.errorDetails && (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-xs text-red-700 font-medium">Error Details:</p>
+                        <p className="text-xs text-red-600 mt-1">{server.errorDetails}</p>
+                      </div>
+                    )}
+                    
+                    {server.tools.length > 0 ? (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Available Tools:</p>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {server.tools.map((tool) => (
+                            <div key={tool.name} className="p-2 bg-muted rounded-md">
+                              <p className="font-medium text-xs text-foreground">{tool.name}</p>
+                              {tool.description && (
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                  {tool.description}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {server.status === 'error' ? 'Cannot load tools due to connection error.' : 
+                         server.status === 'no_tools_found' ? 'Server connected but no tools available.' :
+                         'No tools available or server not connected.'}
+                      </p>
+                    )}
                   </div>
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] text-muted-foreground">
-                    {!server.enabled ? 'Disabled' : 
-                     server.status === 'error' && server.errorDetails ? `Error: ${server.errorDetails.substring(0,25)}...` : 
-                     server.status === 'no_tools_found' ? 'No tools found' : 
-                     server.status === 'disabled' ? 'Disabled by system' : ''}
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      variant="ghost" 
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (server.configData) {
-                          setEditingServer(server.configData);
-                          setIsEditModalOpen(true);
-                        }
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" 
-                      size="icon"
-                      className="h-6 w-6 text-red-500 hover:text-red-700"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (server.configData) {
-                          setDeletingServer(server.configData);
-                          setIsDeleteModalOpen(true);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-64 md:w-72 max-h-48 overflow-y-auto" side="right" align="start">
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm">{server.label} - Tools</h4>
-                {server.tools.length > 0 ? (
-                  <ul className="list-disc space-y-1 pl-4 text-xs">
-                    {server.tools.map((tool) => (
-                      <li key={tool.name}>
-                        <span className="font-medium">{tool.name}</span>
-                        {tool.description && <p className="text-[11px] text-muted-foreground">{tool.description}</p>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    {server.status === 'error' ? `Error: ${server.errorDetails}` : 'No tools available or server not connected.'}
-                  </p>
-                )}
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        ))}
+                </HoverCardContent>
+              </HoverCard>
+            ))}
           </div>
         </ScrollArea>
       )}

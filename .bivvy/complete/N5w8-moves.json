@@ -1,0 +1,30 @@
+{
+  "Climb": "N5w8",
+  "moves": [
+    {
+      "status": "complete",
+      "description": "Remove aggressive throttling from OfflineIndicator",
+      "details": "Remove the initialLoadComplete state and 1+ second delays that destroy UX. Keep only essential hydration safety."
+    },
+    {
+      "status": "complete",
+      "description": "Implement CSS-first animation approach",
+      "details": "Use CSS transitions during hydration, then enhance with Framer Motion after mount. No functionality delays."
+    },
+    {
+      "status": "complete",
+      "description": "Add conditional AnimatePresence rendering",
+      "details": "Only use AnimatePresence after hydration is complete. Use static divs with CSS transitions during initial render."
+    },
+    {
+      "status": "complete",
+      "description": "Restore immediate notification functionality",
+      "details": "Allow notifications to appear immediately when online status changes, using CSS animations during hydration."
+    },
+    {
+      "status": "complete",
+      "description": "Test the surgical fix maintains functionality",
+      "details": "Verify notifications appear immediately, animations work after hydration, and no hydration errors occur."
+    }
+  ]
+} 

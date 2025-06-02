@@ -24,6 +24,7 @@ export interface Message {
   id: string
   chatId: string
   content: string
+  parts?: unknown // JSON field for structured message parts (step badges, tool calls, etc.)
   role: string
   createdAt: Date
   chat?: Chat

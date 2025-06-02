@@ -1,5 +1,6 @@
 import { getSources } from "@/app/components/chat/get-sources"
 import { SourcesList } from "@/app/components/chat/sources-list"
+import { InlinePartsRenderer } from "@/app/components/chat/inline-parts-renderer"
 import type { Tables } from "@/app/types/database.types"
 import { Message, MessageContent } from "@/components/prompt-kit/message"
 import { Button } from "@/components/ui/button"
@@ -76,7 +77,11 @@ export default function Article({
           {messages.map((message) => {
             let parts: MessageAISDK['parts'] | undefined = undefined;
 
-            if (message.role === 'assistant' && typeof message.content === 'string') {
+            // Use the parts field from the database if available
+            if (message.parts && Array.isArray(message.parts)) {
+              parts = message.parts as MessageAISDK['parts'];
+            } else if (message.role === 'assistant' && typeof message.content === 'string') {
+              // Fallback: try to parse content as JSON (for legacy messages)
               try {
                 const parsedContent = JSON.parse(message.content);
                 if (Array.isArray(parsedContent) && parsedContent.every(p => typeof p === 'object' && p !== null && 'type' in p)) {
@@ -106,17 +111,25 @@ export default function Article({
                     message.role === "user" && "w-full items-end"
                   )}
                 >
-                  <MessageContent
-                    markdown={true}
-                    className={cn(
-                      message.role === "user" && "bg-blue-600 text-white",
-                      message.role === "assistant" &&
-                        "w-full min-w-full bg-transparent",
-                      "prose-h1:scroll-m-20 prose-h1:text-2xl prose-h1:font-semibold prose-h2:mt-8 prose-h2:scroll-m-20 prose-h2:text-xl prose-h2:mb-3 prose-h2:font-medium prose-h3:scroll-m-20 prose-h3:text-base prose-h3:font-medium prose-h4:scroll-m-20 prose-h5:scroll-m-20 prose-h6:scroll-m-20 prose-strong:font-medium prose-table:block prose-table:overflow-y-auto"
-                    )}
-                  >
-                    {message.content!}
-                  </MessageContent>
+                  {message.role === "assistant" && parts ? (
+                    <InlinePartsRenderer 
+                      parts={parts}
+                      textContent={message.content || ""}
+                      isStreaming={false}
+                    />
+                  ) : (
+                    <MessageContent
+                      markdown={true}
+                      className={cn(
+                        message.role === "user" && "bg-blue-600 text-white",
+                        message.role === "assistant" &&
+                          "w-full min-w-full bg-transparent",
+                        "prose-h1:scroll-m-20 prose-h1:text-2xl prose-h1:font-semibold prose-h2:mt-8 prose-h2:scroll-m-20 prose-h2:text-xl prose-h2:mb-3 prose-h2:font-medium prose-h3:scroll-m-20 prose-h3:text-base prose-h3:font-medium prose-h4:scroll-m-20 prose-h5:scroll-m-20 prose-h6:scroll-m-20 prose-strong:font-medium prose-table:block prose-table:overflow-y-auto"
+                      )}
+                    >
+                      {message.content!}
+                    </MessageContent>
+                  )}
                 </Message>
                 {sources && sources.length > 0 && (
                   <SourcesList sources={sources} />

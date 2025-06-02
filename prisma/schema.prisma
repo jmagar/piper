@@ -27,6 +27,7 @@ model Message {
   chat      Chat     @relation(fields: [chatId], references: [id])
   chatId    String
   content   String
+  parts     Json?    // Store structured message parts (step badges, tool calls, etc.)
   role      String
   createdAt DateTime @default(now())
 }
@@ -87,4 +88,57 @@ model AdminSetting {
   id            String    @id @default("default_admin_settings") // Use a fixed ID to ensure only one row
   systemPrompt  String?
   updatedAt     DateTime  @updatedAt
+}
+
+model MCPServerMetric {
+  id                String    @id @default(uuid())
+  serverId          String    // Unique identifier for the MCP server
+  serverName        String    // Human-readable name
+  transportType     String    // 'stdio', 'sse', 'streamable-http'
+  status            String    // 'connected', 'disconnected', 'error', 'timeout'
+  connectionTime    DateTime  // When the connection was established
+  lastActiveAt      DateTime? // Last time the server was used
+  disconnectionTime DateTime? // When the connection was lost
+  errorCount        Int       @default(0)
+  totalRequests     Int       @default(0)
+  averageLatency    Float     @default(0) // in milliseconds
+  toolsCount        Int       @default(0) // Number of tools provided
+  metadata          Json?     // Additional server-specific data
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relationships
+  toolExecutions    MCPToolExecution[]
+  
+  @@index([serverId])
+  @@index([status])
+  @@index([transportType])
+}
+
+model MCPToolExecution {
+  id               String    @id @default(uuid())
+  server           MCPServerMetric @relation(fields: [serverId], references: [id])
+  serverId         String
+  toolName         String
+  callId           String?   // Optional call identifier
+  executionTime    Float     // Execution time in milliseconds
+  success          Boolean
+  errorType        String?   // 'malformed_arguments', 'invalid_schema', 'execution_error', 'timeout', etc.
+  errorMessage     String?
+  repairAttempts   Int       @default(0)
+  repairSuccessful Boolean   @default(false)
+  inputSize        Int?      // Size of input arguments in bytes
+  outputSize       Int?      // Size of output result in bytes
+  outputType       String?   // 'text', 'image', 'file', 'audio', 'video', 'data', 'mixed'
+  aborted          Boolean   @default(false)
+  cached           Boolean   @default(false)
+  retryCount       Int       @default(0)
+  metadata         Json?     // Additional execution-specific data
+  executedAt       DateTime  @default(now())
+  
+  @@index([serverId])
+  @@index([toolName])
+  @@index([success])
+  @@index([executedAt])
+  @@index([errorType])
 }

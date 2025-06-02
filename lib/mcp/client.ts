@@ -2,11 +2,19 @@ import 'server-only';
 import * as fs from 'fs';
 import { Writable } from 'stream';
 import { ChildProcess, spawn } from 'child_process';
-// import dns from 'dns'; // Unused
-import { experimental_createMCPClient } from 'ai';
-import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio'; // Re-added
+// Removed unused AI SDK imports - now using Enhanced MCP Client
 
 import { join as pathJoin } from 'path';
+
+// Import enhanced MCP client
+import { 
+  createEnhancedStdioMCPClient,
+  createEnhancedSSEMCPClient,
+  MCPMetricsCollector,
+  EnhancedStdioConfig,
+  EnhancedSSEConfig,
+  MCPToolSet
+} from './enhanced-mcp-client';
 
 // Import our logging system
 import { McpOperation } from '@/lib/logger/types';
@@ -104,20 +112,26 @@ export type StdioServerConfig = ServerConfigEntry & { transport: StdioTransportC
 export type SSEServerConfig = ServerConfigEntry & { transport: SseTransportConfig };
 
 /**
- * MCPService manages the lifecycle and interaction with an MCP client.
+ * Enhanced MCPService manages the lifecycle and interaction with an MCP client.
+ * Uses the Enhanced MCP Client for better error handling, metrics, and multi-modal support.
  */
 export class MCPService {
   // Status of the MCP client itself, distinct from operational status derived from tool fetching
   private clientInitializationStatus: 'pending' | 'success' | 'error' = 'pending';
   private clientInitializationError?: Error;
-  private mcpClient: (Awaited<ReturnType<typeof experimental_createMCPClient>> & { tools: (schemas?: Record<string, LocalMCPToolSchema>) => Promise<Record<string, LocalMCPToolDefinition>> }) | null = null;
+  private enhancedClient: MCPToolSet | null = null;
   private config: ServerConfigEntry;
   private displayName: string; // For logging
-  private isTransportHealthyForStdio: boolean = true; // Flag for stdio transport health
+  private serverKey: string;
+  private metricsCollector: MCPMetricsCollector;
 
   constructor(config: ServerConfigEntry, serverKey: string) {
     this.config = config;
     this.displayName = config.label || serverKey;
+    this.serverKey = serverKey;
+    
+    // Initialize metrics collector
+    this.metricsCollector = new MCPMetricsCollector(true);
     
     // Log server startup
     mcpLogger.logServerLifecycle(McpOperation.SERVER_STARTUP, serverKey, {
@@ -139,10 +153,10 @@ export class MCPService {
 
   private async _initializeClient(): Promise<void> {
     try {
-      appLogger.mcp.info(`Initializing MCP client: ${this.displayName}`);
+      appLogger.mcp.info(`Initializing Enhanced MCP client: ${this.displayName}`);
       
       if (this.config.transport.type === 'stdio') {
-        const stdioConfig = this.config.transport; // Directly use the narrowed type
+        const stdioConfig = this.config.transport;
         
         // Log initialization start
         mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
@@ -153,26 +167,38 @@ export class MCPService {
           }
         });
 
-        this.mcpClient = await experimental_createMCPClient({
-          transport: new Experimental_StdioMCPTransport({
-            command: stdioConfig.command,
-            args: stdioConfig.args || [],
-            env: Object.fromEntries( // Ensure this results in Record<string, string>
-              Object.entries({ ...process.env, ...stdioConfig.env })
-                .filter(([, value]) => typeof value === 'string') as [string, string][]
-            ),
-            // TODO: Consider if stderr needs to be passed or handled, e.g., stdioConfig.stderr
-          }),
-        });
+        const enhancedConfig: EnhancedStdioConfig = {
+          command: stdioConfig.command,
+          args: stdioConfig.args || [],
+          env: {
+            ...process.env,
+            ...stdioConfig.env
+          } as Record<string, string>,
+          cwd: stdioConfig.cwd,
+          clientName: this.config.name || 'piper-mcp-client',
+          timeout: 30000
+        };
+
+        this.enhancedClient = await createEnhancedStdioMCPClient(enhancedConfig);
+        
+        // Record server connection metrics
+        const toolsCount = Object.keys(this.enhancedClient.tools).length;
+        await this.metricsCollector.recordServerConnection(
+          this.serverKey,
+          this.displayName,
+          'stdio',
+          toolsCount,
+          { transport: stdioConfig }
+        );
         
         // Log successful initialization
         mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
           protocolVersion: '2024-11-05',
-          metadata: { initializationType: 'experimental_createMCPClient' }
+          metadata: { initializationType: 'enhanced_mcp_client', toolsCount }
         });
         
       } else if (this.config.transport.type === 'sse') {
-        const sseConfig = this.config.transport; // Type is SseTransportConfig here
+        const sseConfig = this.config.transport;
         
         if (!sseConfig.url) {
           throw new Error('SSE transport URL is missing in configuration.');
@@ -186,27 +212,42 @@ export class MCPService {
           }
         });
 
-        this.mcpClient = await experimental_createMCPClient({
-          transport: {
-            type: 'sse',
-            url: sseConfig.url, // Now confirmed to be a string
-          },
-        });
+        const enhancedConfig: EnhancedSSEConfig = {
+          url: sseConfig.url,
+          headers: sseConfig.headers,
+          clientName: this.config.name || 'piper-mcp-client',
+          timeout: 30000
+        };
+
+        this.enhancedClient = await createEnhancedSSEMCPClient(enhancedConfig);
+        
+        // Record server connection metrics
+        const toolsCount = Object.keys(this.enhancedClient.tools).length;
+        await this.metricsCollector.recordServerConnection(
+          this.serverKey,
+          this.displayName,
+          'sse',
+          toolsCount,
+          { transport: sseConfig }
+        );
         
         mcpLogger.logServerLifecycle(McpOperation.INITIALIZE, this.displayName, {
           protocolVersion: '2024-11-05',
-          metadata: { initializationType: 'experimental_createMCPClient' }
+          metadata: { initializationType: 'enhanced_mcp_client', toolsCount }
         });
       } else {
         throw new Error(`Unsupported transport: ${this.config.transport.type}`);
       }
 
       this.clientInitializationStatus = 'success';
-      appLogger.mcp.info(`✅ MCP client initialized successfully: ${this.displayName}`);
+      appLogger.mcp.info(`✅ Enhanced MCP client initialized successfully: ${this.displayName}`);
       
     } catch (error: unknown) {
       this.clientInitializationStatus = 'error';
       this.clientInitializationError = error instanceof Error ? error : new Error(String(error));
+      
+      // Record server error metrics
+      await this.metricsCollector.recordServerError(this.serverKey);
       
       // Log initialization error
       mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.displayName, {
@@ -217,7 +258,7 @@ export class MCPService {
         }
       });
       
-      appLogger.mcp.error(`❌ Failed to initialize MCP client: ${this.displayName}`, this.clientInitializationError);
+      appLogger.mcp.error(`❌ Failed to initialize Enhanced MCP client: ${this.displayName}`, this.clientInitializationError);
     }
   }
 
@@ -248,19 +289,16 @@ export class MCPService {
       };
     }
 
-    if (!this.mcpClient) { // Should be caught by clientInitializationStatus === 'error'
-      return { status: 'error', tools: [], errorDetails: 'MCP Client is not available.', transportType: this.config.transport.type };
+    if (!this.enhancedClient) { // Should be caught by clientInitializationStatus === 'error'
+      return { status: 'error', tools: [], errorDetails: 'Enhanced MCP Client is not available.', transportType: this.config.transport.type };
     }
 
     try {
-      console.log(`[${this.displayName}] Fetching tools...`);
-      // The SDK's .tools() method likely returns a Record<string, MCPToolDefinition>
-      // where MCPToolDefinition might include name, description, inputSchema, etc.
-      // tools() likely returns Record<string, unknown> or a more specific SDK type if available
-      const toolsRecord = await this.mcpClient.tools(this.config.schemas || undefined) as Record<string, LocalMCPToolDefinition>;
+      console.log(`[${this.displayName}] Fetching tools with Enhanced MCP Client...`);
+      
+      const toolsRecord = this.enhancedClient.tools as Record<string, LocalMCPToolDefinition>;
       
       const toolsArray: FetchedToolInfo[] = Object.entries(toolsRecord || {}).map(([name, toolDef]) => {
-        // toolDef is now LocalMCPToolDefinition
         const toolEntry: FetchedToolInfo = {
           name: toolDef.name || name, // Prefer name from definition, fallback to key
           description: toolDef.description,
@@ -271,12 +309,6 @@ export class MCPService {
         if (toolDef.annotations) {
           toolEntry.annotations = toolDef.annotations;
         }
-        // If LocalMCPToolDefinition could have other dynamic properties you want to carry over:
-        // Object.keys(toolDef).forEach(key => {
-        //   if (!['name', 'description', 'inputSchema', 'annotations'].includes(key)) {
-        //     toolEntry[key] = toolDef[key];
-        //   }
-        // });
         return toolEntry;
       });
 
@@ -285,36 +317,20 @@ export class MCPService {
         return { status: 'no_tools_found', tools: [], transportType: this.config.transport.type };
       }
 
-      console.log(`[${this.displayName}] Found ${toolsArray.length} tools.`);
-      let currentStatus: 'uninitialized' | 'connected' | 'error' | 'no_tools_found' = 'connected';
-      let currentTools: FetchedToolInfo[] = toolsArray;
-      let currentErrorDetails: string | undefined = undefined;
-
-      if (toolsArray.length === 0) {
-        console.log(`[${this.displayName}] No tools found.`);
-        currentStatus = 'no_tools_found';
-      } else {
-        console.log(`[${this.displayName}] Found ${toolsArray.length} tools.`);
-      }
-
-      // For stdio transport, if the SDK's logger indicated unhealthiness, override status to 'error'.
-      if (this.config.transport.type === 'stdio' && !this.isTransportHealthyForStdio) {
-        // If transport is unhealthy, the status must be 'error', tools cleared, and details noted.
-        // This overrides any prior determination of 'connected' or 'no_tools_found'.
-        console.warn(
-          `[${this.displayName}] Overriding status '${currentStatus}' to 'error' because stdio transport was marked unhealthy.`,
-        );
-        currentStatus = 'error';
-        currentTools = [];
-        currentErrorDetails = 'Stdio transport reported unhealthy via SDK logs.';
-      }
-      return { status: currentStatus, tools: currentTools, errorDetails: currentErrorDetails, transportType: this.config.transport.type };
+      console.log(`[${this.displayName}] Found ${toolsArray.length} tools with Enhanced MCP Client.`);
+      
+      return { 
+        status: 'connected', 
+        tools: toolsArray, 
+        errorDetails: undefined, 
+        transportType: this.config.transport.type 
+      };
     } catch (error) {
-      console.error(`[${this.displayName}] Failed to fetch tools:`, error);
-      // Ensure isTransportHealthyForStdio is also false if an explicit error occurs during fetch
-      if (this.config.transport.type === 'stdio') {
-        this.isTransportHealthyForStdio = false;
-      }
+      console.error(`[${this.displayName}] Failed to fetch tools with Enhanced MCP Client:`, error);
+      
+      // Record error metrics
+      await this.metricsCollector.recordServerError(this.serverKey);
+      
       return {
         status: 'error',
         tools: [],
@@ -342,9 +358,9 @@ export class MCPService {
       }
     }
 
-    if (this.clientInitializationStatus === 'error' || !this.mcpClient) {
-      console.error(`[${this.displayName}] MCP client not initialized or in error state. Cannot invoke tool '${toolName}'. Error: ${this.clientInitializationError?.message}`);
-      throw new Error(`[${this.displayName}] MCP client not initialized or in error state. Cannot invoke tool '${toolName}'. Error: ${this.clientInitializationError?.message}`);
+    if (this.clientInitializationStatus === 'error' || !this.enhancedClient) {
+      console.error(`[${this.displayName}] Enhanced MCP client not initialized or in error state. Cannot invoke tool '${toolName}'. Error: ${this.clientInitializationError?.message}`);
+      throw new Error(`[${this.displayName}] Enhanced MCP client not initialized or in error state. Cannot invoke tool '${toolName}'. Error: ${this.clientInitializationError?.message}`);
     }
 
     try {

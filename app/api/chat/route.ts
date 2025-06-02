@@ -4,6 +4,7 @@ import { loadAgent } from "@/lib/agents/load-agent"
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { loadMCPToolsFromURL } from "@/lib/mcp/load-mcp-from-url";
 import { getCombinedMCPToolsForAISDK, getManagedServersInfo } from "@/lib/mcp/mcpManager";
+import { reportMCPError } from "@/lib/mcp/enhanced-integration";
 // import { MODELS } from "@/lib/models" // Removed unused import
 import { Attachment } from "@ai-sdk/ui-utils"
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
@@ -15,10 +16,10 @@ import {
 import { prisma } from "@/lib/prisma"; 
 import {
   logUserMessage,
-  storeAssistantMessage,
-  trackSpecialAgentUsage,
   validateAndTrackUsage,
+  trackSpecialAgentUsage,
 } from "./api"
+import { saveFinalAssistantMessage } from "./db"
 import { parseToolMentions, stripToolMentions, parseRuleMentions, stripRuleMentions } from "@/app/types/tool-mention"
 
 // Import our logging system
@@ -109,6 +110,16 @@ async function processToolMentions(messages: MessageAISDK[]): Promise<MessageAIS
       console.log(`[Chat API] Tool ${matchingTool.fullId} executed successfully`)
     } catch (error) {
       console.error(`[Chat API] Error executing tool ${matchingTool.fullId}:`, error)
+      
+      // Enhanced error reporting with metrics
+      if (error instanceof Error) {
+        await reportMCPError(matchingTool.serverId, mention.toolName, error, {
+          fullId: matchingTool.fullId,
+          parameters: mention.parameters,
+          correlationId: getCurrentCorrelationId()
+        })
+      }
+      
       toolResults.push({
         id: `tool-error-${Date.now()}-${Math.random()}`,
         role: 'assistant', 
@@ -422,26 +433,10 @@ export async function POST(req: Request) {
             response: response.messages
           });
 
-          // Convert ResponseMessage[] to simple message format
-          const simpleMessages = response.messages
-            .filter(msg => msg.role === 'assistant')
-            .map(msg => ({
-              role: msg.role,
-              content: typeof msg.content === 'string' 
-                ? msg.content 
-                : Array.isArray(msg.content) 
-                  ? msg.content.map(part => 
-                      part.type === 'text' ? part.text : ''
-                    ).join('')
-                  : ''
-            }))
-
-          await storeAssistantMessage({
-            chatId,
-            messages: simpleMessages,
-          })
+          // Save the complete assistant messages with parts preserved
+          await saveFinalAssistantMessage(chatId, response.messages)
           
-          appLogger.aiSdk.info('Assistant messages stored successfully', { correlationId, chatId });
+          appLogger.aiSdk.info('Assistant messages stored successfully with parts', { correlationId, chatId });
         } catch (error) {
           appLogger.aiSdk.error('Error in onFinish callback:', error as Error, { correlationId });
           // End operation with error

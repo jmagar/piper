@@ -1,13 +1,12 @@
-import { experimental_createMCPClient as createMCPClient } from "ai"
+import { createEnhancedSSEMCPClient, EnhancedSSEConfig } from './enhanced-mcp-client'
 
 export async function loadMCPToolsFromURL(url: string) {
-  const mcpClient = await createMCPClient({
-    transport: {
-      type: "sse",
-      url,
-    },
-  })
+  const config: EnhancedSSEConfig = {
+    url,
+    clientName: 'piper-mcp-client',
+    timeout: 30000
+  }
 
-  const tools = await mcpClient.tools()
-  return { tools, close: () => mcpClient.close() }
+  const client = await createEnhancedSSEMCPClient(config)
+  return { tools: client.tools, close: () => client.close() }
 }

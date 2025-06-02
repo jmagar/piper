@@ -4,7 +4,7 @@ import { MessageContent } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
 import type { Message as MessageAISDK } from "@ai-sdk/react"
 import type { ToolInvocationUIPart } from "@ai-sdk/ui-utils"
-import { Spinner, Wrench, CaretDown, CheckCircle as Check, Code, ArrowRight } from "@phosphor-icons/react"
+import { Spinner, Wrench, CaretDown, CheckCircle as Check, Code, ArrowRight, Play } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState } from "react"
 
@@ -41,14 +41,18 @@ export function InlinePartsRenderer({
     return null
   }
 
+  // Check if textContent is already included in parts as a text part
+  const hasTextParts = parts.some(part => part.type === 'text')
+  const shouldRenderTextContent = textContent && !hasTextParts
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       {parts.map((part, index) => (
         <PartRenderer key={`${part.type}-${index}`} part={part} />
       ))}
       
-      {/* If there's additional text content not in parts, render it at the end */}
-      {textContent && (
+      {/* Only render textContent if it's not already included in parts */}
+      {shouldRenderTextContent && (
         <MessageContent
           className={cn(
             "prose dark:prose-invert relative min-w-full bg-transparent p-0",
@@ -93,13 +97,27 @@ function PartRenderer({ part }: PartRendererProps) {
         </div>
       )
 
-    default:
-      // Handle other part types generically
+    case "step-start":
       return (
-        <div className="text-sm text-muted-foreground p-2 bg-muted/20 rounded">
-          Unsupported part type: {part.type}
+        <div className="bg-green-50 dark:bg-green-950/20 border-l-4 border-green-500 p-3 rounded-r-md">
+          <div className="flex items-center gap-2">
+            <Play className="size-4 text-green-600 dark:text-green-400" />
+            <div className="text-xs font-medium text-green-600 dark:text-green-400">
+              Starting Step
+            </div>
+          </div>
+          {(part as { description?: string }).description && (
+            <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+              {(part as { description?: string }).description}
+            </div>
+          )}
         </div>
       )
+
+    default:
+      // Handle other part types generically - but don't show the error for now
+      console.warn(`Unhandled part type: ${part.type}`, part)
+      return null
   }
 }
 

@@ -90,7 +90,7 @@ export async function saveFinalAssistantMessage(
   }
 
   // Merge tool parts at the end
-  parts.push(...toolMap.values())
+  parts.push(...Array.from(toolMap.values()))
 
   const finalPlainText = textParts.join("\n\n")
 
@@ -100,12 +100,11 @@ export async function saveFinalAssistantMessage(
         chatId: chatId,
         role: "assistant",
         content: finalPlainText || "",
-        // Store parts as JSON in a separate field if needed
-        // parts: parts, // Note: You may need to add this field to your Prisma schema
+        parts: parts.length > 0 ? JSON.parse(JSON.stringify(parts)) : undefined, // Convert to JSON and use undefined
       }
     })
     
-    console.log("Assistant message saved successfully (merged).")
+    console.log("Assistant message saved successfully with parts:", parts.length)
   } catch (error) {
     console.error("Error saving final assistant message:", error)
     throw new Error(`Failed to save assistant message: ${error}`)

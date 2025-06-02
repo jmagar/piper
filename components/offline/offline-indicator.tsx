@@ -5,7 +5,7 @@ import { AlertTriangle, Wifi, WifiOff, X, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { motion, AnimatePresence } from 'framer-motion'
+// Using pure CSS animations to prevent hydration issues - Framer Motion removed
 
 interface OfflineIndicatorProps {
   className?: string
@@ -15,12 +15,28 @@ interface OfflineIndicatorProps {
 export function OfflineIndicator({ className = '', showDetails = true }: OfflineIndicatorProps) {
   const [isOnline, setIsOnline] = useState(true)
   const [isReconnecting, setIsReconnecting] = useState(false)
-  const [showFullNotification, setShowFullNotification] = useState(true)
+  const [showFullNotification, setShowFullNotification] = useState(false) // Start false to prevent hydration issues
   const [lastOfflineTime, setLastOfflineTime] = useState<Date | null>(null)
+  const [hasMounted, setHasMounted] = useState(false)
+  const [isAnimationReady, setIsAnimationReady] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
 
   useEffect(() => {
-    // Initialize online status
+    // Mark as mounted and enable functionality immediately
+    setHasMounted(true)
     setIsOnline(navigator.onLine)
+    
+    // Only delay animation readiness briefly to prevent hydration mismatch
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsAnimationReady(true)
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    // Only set up event listeners after animation is ready
+    if (!isAnimationReady) return
 
     const handleOnline = () => {
       console.log('[Offline Indicator] Back online')
@@ -28,9 +44,16 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
       setIsReconnecting(false)
       setLastOfflineTime(null)
       
-      // Show reconnection notification briefly
+      // Show notification immediately - use CSS animations during hydration
       setShowFullNotification(true)
-      setTimeout(() => setShowFullNotification(false), 3000)
+      setTimeout(() => {
+        console.log('[Offline Indicator] Auto-dismissing notification after 3 seconds')
+        setIsExiting(true)
+        setTimeout(() => {
+          setShowFullNotification(false)
+          setIsExiting(false)
+        }, 300) // Wait for exit animation
+      }, 3000)
     }
 
     const handleOffline = () => {
@@ -38,6 +61,7 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
       setIsOnline(false)
       setIsReconnecting(false)
       setLastOfflineTime(new Date())
+      // Show notification immediately - use CSS animations during hydration
       setShowFullNotification(true)
     }
 
@@ -50,7 +74,7 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [])
+  }, [isAnimationReady])
 
   const handleRetryConnection = async () => {
     setIsReconnecting(true)
@@ -76,69 +100,90 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
   }
 
   const handleDismiss = () => {
-    setShowFullNotification(false)
+    console.log('[Offline Indicator] Manually dismissing notification')
+    setIsExiting(true)
+    // Wait for exit animation to complete before hiding
+    setTimeout(() => {
+      setShowFullNotification(false)
+      setIsExiting(false)
+    }, 300) // Match animation duration
   }
 
-  // Show online status briefly when reconnected
+  // Don't render anything until mounted
+  if (!hasMounted) {
+    return null
+  }
+
+  // Handle online status notifications - PURE CSS ANIMATIONS ONLY to prevent hydration issues
   if (isOnline && showFullNotification) {
     return (
       <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 ${className}`}>
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ 
-              type: "spring", 
-              duration: 0.4, 
-              bounce: 0.1 
-            }}
-          >
-            <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 shadow-lg">
-              <CardContent className="flex items-center gap-3 p-4">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
-                >
-                  <Wifi className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </motion.div>
-                <div className="flex-1">
-                  <motion.p 
-                    className="text-sm font-medium text-green-800 dark:text-green-200"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    Back online
-                  </motion.p>
-                  <motion.p 
-                    className="text-xs text-green-600 dark:text-green-400"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    All features are now available
-                  </motion.p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDismiss}
-                  className="h-8 w-8 p-0 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
+        <div 
+          key={`notification-${Date.now()}`}
+          className={isExiting ? "notification-exit" : "notification-enter"}
+          style={{
+            animation: isExiting 
+              ? 'slideOutFadeOut 0.3s ease-out forwards' 
+              : 'slideInFadeIn 0.3s ease-out forwards'
+          }}
+        >
+          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 shadow-lg transition-all duration-300">
+            <CardContent className="flex items-center gap-3 p-4">
+              <Wifi className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Back online
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  All features are now available
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDismiss}
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <style jsx>{`
+          @keyframes slideInFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-20px) scale(0.95);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+          
+          @keyframes slideOutFadeOut {
+            from {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateY(-20px) scale(0.95);
+            }
+          }
+          
+          .notification-enter {
+            animation: slideInFadeIn 0.3s ease-out forwards;
+          }
+          
+          .notification-exit {
+            animation: slideOutFadeOut 0.3s ease-out forwards;
+          }
+        `}</style>
       </div>
     )
   }
-
-  // Don't show anything if online and notification is dismissed
-  if (isOnline) return null
 
   // Minimal offline indicator
   if (!showDetails || !showFullNotification) {
@@ -241,23 +286,42 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
 // Hook for checking online status in other components
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(true)
+  const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
-    setIsOnline(navigator.onLine)
+    setHasMounted(true)
+    
+    // Delay online status check to prevent hydration issues
+    const initializeStatus = () => {
+      setIsOnline(navigator.onLine)
+      
+      const handleOnline = () => setIsOnline(true)
+      const handleOffline = () => setIsOnline(false)
 
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
 
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
+      return () => {
+        window.removeEventListener('online', handleOnline)
+        window.removeEventListener('offline', handleOffline)
+      }
+    }
+    
+    // Small delay to ensure hydration is complete
+    const timeoutId = setTimeout(initializeStatus, 100)
+    
     return () => {
+      clearTimeout(timeoutId)
+      // Clean up any existing listeners
+      const handleOnline = () => setIsOnline(true)
+      const handleOffline = () => setIsOnline(false)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
 
-  return isOnline
+  // Return true until mounted to prevent hydration errors
+  return hasMounted ? isOnline : true
 }
 
 // Context for offline state management
@@ -276,28 +340,38 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true)
   const [isReconnecting, setIsReconnecting] = useState(false)
   const [lastOfflineTime, setLastOfflineTime] = useState<Date | null>(null)
+  const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
-    setIsOnline(navigator.onLine)
+    setHasMounted(true)
+    
+    // Delay online status initialization to prevent hydration issues
+    const initializeProvider = () => {
+      setIsOnline(navigator.onLine)
 
-    const handleOnline = () => {
-      setIsOnline(true)
-      setIsReconnecting(false)
-      setLastOfflineTime(null)
+      const handleOnline = () => {
+        setIsOnline(true)
+        setIsReconnecting(false)
+        setLastOfflineTime(null)
+      }
+
+      const handleOffline = () => {
+        setIsOnline(false)
+        setLastOfflineTime(new Date())
+      }
+
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
+
+      return () => {
+        window.removeEventListener('online', handleOnline)
+        window.removeEventListener('offline', handleOffline)
+      }
     }
-
-    const handleOffline = () => {
-      setIsOnline(false)
-      setLastOfflineTime(new Date())
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
+    
+    const timeoutId = setTimeout(initializeProvider, 100)
+    
+    return () => clearTimeout(timeoutId)
   }, [])
 
   const retryConnection = async () => {
@@ -322,7 +396,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   return (
     <OfflineContext.Provider 
       value={{ 
-        isOnline, 
+        isOnline: hasMounted ? isOnline : true, 
         isReconnecting, 
         lastOfflineTime, 
         retryConnection 

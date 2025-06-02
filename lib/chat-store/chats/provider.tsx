@@ -50,8 +50,8 @@ export function ChatsProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [chats, setChats] = useState<Chats[]>([])
+  const [isLoading, setIsLoading] = useState(true) // Start with loading true
+  const [chats, setChats] = useState<Chats[]>([]) // Always initialize as empty array
 
   useEffect(() => {
     const load = async () => {
@@ -120,25 +120,35 @@ export function ChatsProvider({
     title?: string,
     model?: string
   ) => {
-    const prev = [...chats]
+    // Defensive check to ensure chats is properly initialized
+    const prev = Array.isArray(chats) ? [...chats] : []
 
     try {
       const newChat = await createNewChatFromDb(
         title,
         model || MODEL_DEFAULT
       )
-      setChats((prev) =>
-        prev
+      
+      // Ensure newChat exists before proceeding
+      if (!newChat) {
+        throw new Error("Failed to create chat: No chat returned")
+      }
+
+      setChats((prevChats) => {
+        const currentChats = Array.isArray(prevChats) ? prevChats : []
+        return currentChats
           .concat(newChat)
           .sort(
             (a, b) =>
               +new Date(b.createdAt || "") - +new Date(a.createdAt || "")
           )
-      )
+      })
       return newChat
-    } catch {
+    } catch (error) {
+      console.error("Error creating new chat:", error)
       setChats(prev)
       toast({ title: "Failed to create chat", status: "error" })
+      return undefined
     }
   }
 

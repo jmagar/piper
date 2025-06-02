@@ -33,8 +33,15 @@ export function InstallPrompt({
   const [isInstalling, setIsInstalling] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
   const [installPlatform, setInstallPlatform] = useState<string>('')
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
+    // Mark as hydrated to prevent hydration mismatch
+    setIsHydrated(true)
+    
+    // All browser API checks must happen after hydration
+    if (typeof window === 'undefined') return
+    
     // Check if already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     const isIOSWebKit = 'standalone' in window.navigator && Boolean((window.navigator as { standalone?: boolean }).standalone)
@@ -44,15 +51,25 @@ export function InstallPrompt({
       return
     }
 
-    // Check localStorage for dismiss preference
-    const isDismissed = localStorage.getItem('pwa-install-dismissed')
-    const dismissedTime = localStorage.getItem('pwa-install-dismissed-time')
+    // Check localStorage for dismiss preference - only after hydration
+    let isDismissed = false
+    let daysSinceDismissed = 0
     
-    if (isDismissed && dismissedTime) {
-      const daysSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
-      if (daysSinceDismissed < 7) {
-        return // Don't show again for 7 days
+    try {
+      const dismissedValue = localStorage.getItem('pwa-install-dismissed')
+      const dismissedTime = localStorage.getItem('pwa-install-dismissed-time')
+      
+      if (dismissedValue && dismissedTime) {
+        daysSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
+        isDismissed = daysSinceDismissed < 7
       }
+    } catch (error) {
+      // Handle localStorage errors gracefully
+      console.warn('localStorage not available:', error)
+    }
+    
+    if (isDismissed) {
+      return // Don't show again for 7 days
     }
 
     const handler = (e: Event) => {
@@ -113,9 +130,16 @@ export function InstallPrompt({
 
   const handleDismiss = (reason: string = 'manual') => {
     setShowPrompt(false)
-    localStorage.setItem('pwa-install-dismissed', 'true')
-    localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
-    localStorage.setItem('pwa-install-dismiss-reason', reason)
+    
+    // Safely handle localStorage
+    try {
+      localStorage.setItem('pwa-install-dismissed', 'true')
+      localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
+      localStorage.setItem('pwa-install-dismiss-reason', reason)
+    } catch (error) {
+      console.warn('Could not save dismiss preference:', error)
+    }
+    
     onDismiss?.()
   }
 
@@ -123,6 +147,11 @@ export function InstallPrompt({
     if (deferredPrompt) {
       setShowPrompt(true)
     }
+  }
+
+  // Don't render anything until hydrated to prevent hydration mismatch
+  if (!isHydrated) {
+    return null
   }
 
   // Don't render anything if already installed
@@ -151,6 +180,8 @@ export function InstallPrompt({
   }
 
   const getPlatformIcon = () => {
+    if (typeof window === 'undefined') return <Monitor className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+    
     if (installPlatform.includes('mobile') || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       return <Smartphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
     }
@@ -158,6 +189,8 @@ export function InstallPrompt({
   }
 
   const getPlatformText = () => {
+    if (typeof window === 'undefined') return 'desktop'
+    
     if (installPlatform.includes('mobile') || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       return 'mobile device'
     }
@@ -260,8 +293,15 @@ export function usePWAInstall() {
   const [canInstall, setCanInstall] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
+    // Mark as hydrated to prevent hydration mismatch
+    setIsHydrated(true)
+    
+    // All browser API checks must happen after hydration
+    if (typeof window === 'undefined') return
+    
     // Check if already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     const isIOSWebKit = 'standalone' in window.navigator && Boolean((window.navigator as { standalone?: boolean }).standalone)
@@ -304,8 +344,8 @@ export function usePWAInstall() {
   }
 
   return {
-    canInstall,
-    isInstalled,
+    canInstall: isHydrated ? canInstall : false,
+    isInstalled: isHydrated ? isInstalled : false,
     install
   }
 }

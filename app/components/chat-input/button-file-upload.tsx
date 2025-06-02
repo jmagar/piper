@@ -60,7 +60,28 @@ export function ButtonFileUpload({
   isUserAuthenticated,
   model,
 }: ButtonFileUploadProps) {
+  const [isClient, setIsClient] = React.useState(false);
   const isFileUploadAvailable = hasVisionSupport(model);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Prevent hydration mismatch by rendering consistent content first
+  if (!isClient) {
+    return (
+      <Button
+        size="sm"
+        variant="secondary"
+        className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent"
+        type="button"
+        aria-label="Add files"
+        disabled
+      >
+        <Paperclip className="size-4" />
+      </Button>
+    );
+  }
 
   if (!isFileUploadAvailable) {
     return (

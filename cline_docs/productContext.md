@@ -2,7 +2,7 @@
 
 ## Overview
 
-Piper is a web-based chat application designed to facilitate interactions with various AI models through an extensible MCP (Model Context Protocol) server architecture. It allows users to create and manage chat sessions, select different AI models for conversation, configure and manage MCP servers that provide specialized tools and capabilities, and persists chat history. The application is intended for local development and potentially self-hosted deployment, utilizing Docker for containerization. **It now features a comprehensive logging and error handling system, maintains strict Next.js compliance with zero TypeScript/ESLint errors, includes enhanced header UI with theme controls, and provides high-performance streaming AI responses.**
+Piper is a web-based chat application designed to facilitate interactions with various AI models through an extensible MCP (Model Context Protocol) server architecture. It allows users to create and manage chat sessions, select different AI models for conversation, configure and manage MCP servers that provide specialized tools and capabilities, and persists chat history. The application is intended for local development and potentially self-hosted deployment, utilizing Docker for containerization. **It now features a comprehensive logging and error handling system, maintains strict Next.js compliance with zero TypeScript/ESLint errors, includes enhanced header UI with theme controls, provides high-performance streaming AI responses, revolutionary 3-way @mention system, breakthrough AttachMenu integration with modern file upload capabilities, critical hydration safety architecture for reliable PWA functionality, and unified Enhanced MCP Client documentation with verified implementation accuracy.**
 
 ## Problems Solved
 
@@ -10,7 +10,16 @@ Piper is a web-based chat application designed to facilitate interactions with v
 - Manages and stores chat history for users.
 - **MCP Server Management**: Provides comprehensive management of MCP servers including configuration, monitoring, and tool access through an intuitive unified interface.
 - **Extensible Tool Ecosystem**: Supports both STDIO and SSE/HTTP MCP servers to extend AI capabilities with specialized tools.
+- **Enhanced MCP Client Architecture**: Implemented production-ready enhanced MCP client with comprehensive error handling, real-time metrics collection, and database persistence - now properly documented with unified source of truth.
+- **Technical Documentation Excellence**: Resolved fragmented documentation by consolidating three overlapping Enhanced MCP Client docs into one accurate, implementation-verified source of truth using MECE methodology.
 - **Revolutionary @mention System**: Implemented complete 3-way @mention functionality allowing users to seamlessly integrate agents, tools, AND database rules directly into conversations for enhanced AI responses.
+- **AttachMenu Integration**: Created unified attachment interface that serves as perfect discovery layer for @mention functionality while providing direct file upload capabilities.
+- **Modern File Upload Architecture**: Implemented AI SDK-compliant file handling that eliminates complex pre-upload pipelines in favor of direct file passing to AI models.
+- **Model Compatibility Resolution**: Solved file upload compatibility issues with OpenRouter API model IDs through robust vision detection with multiple fallback strategies.
+- **Critical React Hydration Safety**: Resolved server-client rendering mismatches that were causing runtime errors, particularly with PWA offline/online notifications and animation systems.
+- **PWA Notification Reliability**: Eliminated hydration conflicts in offline indicator components by implementing pure CSS animations that render consistently across server and client.
+- **Server Action Stability**: Established container lifecycle management patterns to resolve Server Action ID mismatches that prevented form submissions.
+- **Container Development Workflow**: Created reliable patterns for managing Docker container rebuilds and client-server build synchronization in development environments.
 - Aims to provide a stable and configurable environment for AI chat interactions.
 - **Enhanced Observability & Debugging**: Implemented a robust logging system to capture detailed information about application behavior, errors, MCP communication, and AI SDK operations. This significantly improves troubleshooting and monitoring capabilities.
 - **Next.js Compliance & Architecture Stability**: Resolved Server Action naming violations and React Context boundary issues to ensure proper Next.js App Router compliance, eliminating runtime errors and maintaining clean, maintainable code architecture.
@@ -30,12 +39,35 @@ Piper is a web-based chat application designed to facilitate interactions with v
   - AI responses stream progressively as they're generated (no waiting for complete responses)
   - Immediate feedback with text appearing in real-time (~300ms to first content)
   - Dramatically improved perceived performance compared to blocking response patterns
+- **Reliable PWA Functionality**:
+  - **Immediate Offline/Online Notifications**: Users see instant feedback when connectivity changes with zero artificial delays
+  - **Smooth Animation Experience**: Native CSS animations provide consistent behavior across all devices and rendering environments
+  - **Hydration-Safe Interface**: All UI components render identically on server and client, preventing React hydration errors
+  - **Stable Container Experience**: Form submissions and Server Actions work reliably after container restarts
+  - **No Flash or Flicker**: Progressive enhancement ensures smooth loading experience without content layout shifts
+- **Revolutionary AttachMenu System**: Users can access a unified attachment interface via the paperclip button that provides:
+  - **Perfect @mention Discovery**: Intuitive way to discover and access powerful @mention functionality
+  - **📚 Rules Category**: Click to trigger @mention for database-stored rules that enhance AI context
+  - **🤖 Agents Category**: Click to trigger @mention for switching between different chat agents
+  - **🔧 Tools Category**: Click to trigger @mention for executing any of 109 available MCP tools
+  - **📁 Files Category**: Direct file upload for documents and images (vision-capable models only)
+  - **✨ Prompts Category**: Use saved templates (coming soon)
+  - **🔗 URLs Category**: Fetch web content (coming soon)
+  - **Elegant @mention Simulation**: Clicking categories adds "@" to input and focuses it, triggering existing proven @mention system
+  - **Zero Code Duplication**: Leverages existing @mention components, modals, and interaction patterns
+  - **Mobile Excellence**: Touch-optimized with 44px minimum touch targets and responsive design
 - **Revolutionary @mention System**: Users can enhance conversations by typing `@` in chat input to access:
   - **@agents** → Switch between different chat agents for specialized capabilities
   - **@tools** → Execute MCP tools directly with parameter input (e.g., `@searx({"query":"latest news"})`)
   - **@rules** → Inject database-stored rule content into AI context (e.g., `@coding-standards` enhances system prompt)
   - **Intelligent Detection**: Fuzzy matching automatically determines which dropdown to show based on user input
   - **Unified Interface**: Single `@` trigger provides access to all three enhancement types seamlessly
+- **Modern File Upload Experience**: Users can attach files to conversations with:
+  - **Smart Model Awareness**: File upload automatically disabled for models that don't support vision
+  - **Direct Processing**: Files passed directly to AI models without intermediate upload steps
+  - **Immediate Validation**: Real-time file validation with toast notifications for errors
+  - **Performance Excellence**: No upload delays - files processed immediately when sending messages
+  - **Backwards Compatibility**: All existing uploaded files remain accessible and functional
 - **MCP Server Management**: Users can access a comprehensive MCP Servers Dashboard (via the Server icon in the header) that allows them to:
   - View real-time status and health of all configured MCP servers
   - See available tools for each server via hover cards
@@ -50,7 +82,7 @@ Piper is a web-based chat application designed to facilitate interactions with v
   - Edit existing rules with pre-populated forms
   - Delete rules with confirmation dialogs
   - View individual rule details with "more rules" suggestions
-  - Future: @mention rules in conversations for prompt injection
+  - @mention rules in conversations for prompt injection via AttachMenu or direct typing
 - Chat messages and session details are saved to a PostgreSQL database.
 - The application handles user authentication through Authelia 2FA integration.
 - API calls are made from the frontend (Next.js client-side components) to backend Next.js API routes to perform actions such as creating chats, sending messages, managing MCP servers, and fetching data.
@@ -65,9 +97,19 @@ Piper is a web-based chat application designed to facilitate interactions with v
     - The Log Viewer allows filtering logs by level, source, correlation ID, user ID, and time range.
     - It provides real-time updates, detailed log inspection, and options to export logs.
     - A **Log Health Check** endpoint (`/api/logs/health`) is available for monitoring the logging system's status.
+- **Enhanced MCP Client Observability (Developer/Admin Users)**:
+    - **Unified Documentation**: Single source of truth documentation (`docs/enhanced-mcp-client-unified.md`) provides accurate technical reference verified against implementation
+    - **Production Metrics**: Real-time Enhanced MCP Client metrics via `/api/mcp-metrics` endpoint showing server status, tool counts, and health checks
+    - **Database Insights**: PostgreSQL metrics collection provides historical analysis and performance monitoring (24+ server records)
+    - **Feature Transparency**: Clear separation of working features vs planned features prevents confusion and unrealistic expectations
+    - **Troubleshooting Guidance**: Implementation-verified examples and configuration patterns for reliable debugging
 - **Development & Deployment**:
     - **Containerized Environment**: Application runs in Docker containers for consistent deployment
     - **Hot Reloading**: Changes to source code reflect immediately in the running application
     - **Zero Linter Errors**: Application maintains strict TypeScript/ESLint compliance for clean development
     - **Next.js App Router Compliance**: Proper Server/Client component boundaries and naming conventions ensure stable runtime behavior
     - **Performance Excellence**: Streaming AI responses provide excellent user experience with immediate feedback
+    - **Modern Architecture**: AI SDK patterns for file handling provide better performance and simpler maintenance
+    - **Hydration Safety**: SSR-compatible components prevent React hydration mismatches and ensure consistent rendering
+    - **Container Lifecycle Management**: Clear patterns for managing container restarts and Server Action ID synchronization
+    - **Documentation Excellence**: MECE methodology ensures comprehensive, accurate technical documentation maintained as single source of truth
