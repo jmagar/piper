@@ -1,48 +1,69 @@
 # Piper
 
-[piper.chat](https://piper.chat)
+**Piper** is an advanced AI chat interface with powerful @mention capabilities, comprehensive tool integration, and enterprise-grade monitoring. Designed for both individual and team use, Piper combines the flexibility of modern AI with robust system management features.
 
-**Piper** is the open-source interface for AI chat with revolutionary @mention capabilities.
+![Piper Dashboard](/assets/mcp-dashboard.png)
 
-[![Chat with this repo](https://piper.chat/button/github.svg)](https://piper.chat/?agent=github/jmagar/piper)
+## Key Features
 
-![piper screenshot](./public/cover_piper.webp)
+### 🎯 **Intelligent @mention System**
+- **@agents** - Seamlessly switch between specialized AI agents with different capabilities and knowledge domains
+- **@tools** - Directly execute MCP tools with parameter support (e.g., `@searx({"query":"latest news"})`)
+- **@rules** - Inject context-aware rules and templates into conversations (e.g., `@coding-standards`)
+- **Smart Detection** - Intelligent fuzzy matching automatically suggests relevant mentions
+- **Unified Interface** - Single `@` trigger provides access to all enhancement types
 
-## Revolutionary Features
+### 🛠️ **Tool & Agent Management**
+- **Visual Tool Explorer** - Browse and attach MCP tools with interactive parameter configuration
+- **Agent Orchestration** - Create and manage AI agents with specialized roles and capabilities
+- **Tool Discovery** - Hover cards display detailed tool documentation and usage examples
+- **Parameter Validation** - Real-time validation for tool parameters with helpful error messages
+- **Tool Chaining** - Combine multiple tools in sequence for complex workflows
 
-### 🎯 **3-Way @mention System**
-- **@agents** → Switch between specialized chat agents instantly
-- **@tools** → Execute MCP tools directly with parameters (e.g., `@searx({"query":"latest news"})`)
-- **@rules** → Inject database-stored rules into AI context (e.g., `@coding-standards`)
-- **Intelligent Detection**: Fuzzy matching automatically determines which dropdown to show
-- **Unified Interface**: Single `@` trigger provides seamless access to all enhancement types
+![Tool Management](/assets/mcp-tools.png)
 
-### 🔧 **MCP Server Management**
-- **Comprehensive Dashboard**: Real-time server status and health monitoring
-- **Full CRUD Operations**: Add, edit, delete, and configure MCP servers
-- **Dual Transport Support**: STDIO and SSE/HTTP MCP server protocols
-- **Tool Discovery**: Hover cards showing available tools for each server
-- **Hot Configuration**: Save changes without server restart
+### 📊 **Comprehensive Monitoring**
+- **Real-time Metrics** - Monitor system health with detailed CPU, memory, and disk usage
+- **Performance Analytics** - Track response times, token usage, and system performance
+- **Alert System** - Configure custom alerts for system events and performance thresholds
+- **Resource Utilization** - Visualize resource allocation and identify bottlenecks
 
-### 📋 **Advanced Rules System**
-- **Rule Management**: Create, edit, and organize reusable prompt templates
-- **Context Injection**: Rules enhance AI responses through system prompt modification
-- **Smart Search**: Find and apply rules quickly with search and pagination
-- **Slug-based Access**: Clean `@rule-slug` format for easy mention in conversations
+![Metrics Dashboard](/assets/mcp-metrics.png)
 
-### 🎨 **Enhanced User Experience**
-- **Multi-model Support**: OpenAI, Mistral, Claude, Gemini with streaming responses
-- **Theme Control**: Light, dark, and system theme switching from header
-- **Responsive Design**: Clean UI with consistent sidebar access and navigation
-- **Real-time Streaming**: Progressive AI responses (~300ms to first content)
-- **File Uploads**: Context-aware document processing and analysis
+### 🔌 **MCP Server Management**
+- **Centralized Control** - Manage all MCP servers from a single dashboard
+- **Server Health** - Real-time monitoring of server status and resource usage
+- **Protocol Support** - Compatible with both STDIO and SSE/HTTP MCP server protocols
+- **Hot Reloading** - Apply configuration changes without server restarts
+- **Connection Management** - Easily connect/disconnect from MCP servers
 
-### 🔍 **Enterprise-Grade Monitoring**
-- **Comprehensive Logging**: Winston-based structured logging with file rotation
-- **Log Viewer**: Real-time log filtering, search, and export capabilities
-- **Health Monitoring**: System health checks and performance metrics
-- **Error Handling**: Advanced error classification and retry mechanisms
-- **Audit Trail**: Complete request/response logging with correlation IDs
+![MCP Server Management](/assets/edit-mcp.png)
+
+### 📋 **Rules & Templates**
+- **Rule Editor** - Create and edit rules with syntax highlighting and preview
+- **Template Library** - Organize and categorize reusable prompt templates
+- **Bulk Operations** - Apply multiple rules simultaneously
+
+![Rules Management](/assets/rules.png)
+
+### 💻 **Enhanced User Experience**
+- **Multi-model Support** - Seamlessly switch between OpenAI, Mistral, Claude, and other models
+- **Theme Customization** - Choose from light, dark, or system theme with persistent settings
+- **Responsive Layout** - Optimized for desktop and tablet with collapsible sidebars
+- **Code Handling** - Syntax highlighting, formatting, and execution for multiple languages
+- **File Management** - Upload, preview, and process various document formats
+- **Keyboard Shortcuts** - Speed up your workflow with customizable hotkeys
+
+![Code Block Handling](/assets/codeblock.png)
+
+### 📜 **Logging & Auditing**
+- **Structured Logging** - Winston-based logging with multiple log levels
+- **Advanced Filtering** - Filter logs by date, level, source, and custom tags
+- **Real-time Updates** - Stream logs as they're generated
+- **Audit Trails** - Track all system changes and user actions
+- **Error Analysis** - Automatic error grouping and correlation
+
+![Logs Interface](/assets/logs.png)
 
 ## Architecture Highlights
 
@@ -55,15 +76,6 @@
 
 ## Installation
 
-### Quick Start (Basic Features)
-```bash
-git clone https://github.com/jmagar/piper.git
-cd piper
-npm install
-echo "OPENAI_API_KEY=your-key" > .env.local
-npm run dev
-```
-
 ### Full Feature Installation (Recommended)
 For complete functionality including @mention system, MCP management, and rules:
 
@@ -72,14 +84,6 @@ git clone https://github.com/jmagar/piper.git
 cd piper
 ./dev.sh  # Starts containerized environment with database
 ```
-
-See [INSTALL.md](./INSTALL.md) for detailed setup instructions including:
-- Database configuration
-- Authentication setup (Authelia 2FA)
-- MCP server configuration
-- Environment variables
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jmagar/piper)
 
 ## Agent Capabilities
 
@@ -125,16 +129,10 @@ Piper is built with a modular architecture that makes it easy to contribute:
 4. **MCP Integration**: Tool integrations in `lib/mcp/`
 5. **Logging System**: Comprehensive logging in `lib/logger/`
 
-## Sponsors
+## Acknowledgments
 
-<a href="https://vercel.com/oss">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
-</a>
+Piper is built upon and inspired by the work done in the [Zola](https://github.com/ibelick/zola) project. We extend our gratitude to the original authors and contributors for their valuable work.
 
 ## License
 
 Apache License 2.0
-
-## Status
-
-**Production Ready** — Piper features a robust, tested architecture with comprehensive error handling, logging, and monitoring. The @mention system and MCP integration provide a powerful foundation for AI-enhanced workflows.
