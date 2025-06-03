@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAppConfig } from "@/lib/mcp/client"
+import { getAppConfig } from "@/lib/mcp/enhanced-mcp-client"
 
 export interface MCPServerOption {
   key: string

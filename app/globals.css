@@ -19,6 +19,15 @@
       opacity: 1;
     }
   }
+
+  @keyframes code-shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
 }
 
 @theme inline {
@@ -150,16 +159,153 @@
   }
 }
 
-code {
-  font-family: var(--font-geist-mono);
-  font-feature-settings: var(--default-mono-font-feature-settings);
-  font-variation-settings: var(--default-mono-font-variation-settings);
+/* Enhanced scrollbar styles for code blocks */
+.scrollbar-thin {
+  scrollbar-width: thin;
 }
 
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.705 0.015 286.067 / 0.3);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.705 0.015 286.067 / 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.705 0.015 286.067 / 0.4);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.705 0.015 286.067 / 0.6);
+}
+
+/* Code block specific enhancements */
+.group:hover .code-shimmer {
+  animation: code-shimmer 3s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.705 0.015 286.067 / 0.1),
+    transparent
+  );
+  background-size: 200% 100%;
+}
+
+/* Enhanced Code Typography */
+code {
+  font-family: var(--font-geist-mono), 
+    'JetBrains Mono', 
+    'Fira Code', 
+    'Cascadia Code', 
+    'SF Mono', 
+    'Monaco', 
+    'Inconsolata', 
+    'Roboto Mono', 
+    'Source Code Pro', 
+    'Ubuntu Mono',
+    'Droid Sans Mono',
+    'Courier New', 
+    Courier, 
+    monospace;
+  
+  /* Enhanced font features for better code readability */
+  font-feature-settings: 
+    "liga" 1,          /* Ligatures */
+    "calt" 1,          /* Contextual alternates */
+    "clig" 1,          /* Contextual ligatures */
+    "kern" 1,          /* Kerning */
+    "ss01" 1,          /* Stylistic set 1 (often zero with slash) */
+    "ss02" 1,          /* Stylistic set 2 (often >= <= ligatures) */
+    "ss03" 1,          /* Stylistic set 3 */
+    "ss04" 1,          /* Stylistic set 4 */
+    "ss05" 1,          /* Stylistic set 5 */
+    "zero" 1,          /* Slashed zero */
+    "onum" 0,          /* Disable old-style numbers for code */
+    "tnum" 1;          /* Tabular numbers for alignment */
+  
+  /* Better letter spacing for code */
+  letter-spacing: 0.015em;
+  
+  /* Improved font smoothing */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* Specific styles for code blocks vs inline code */
+pre code {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+/* Inline code gets slightly smaller and tighter */
+:not(pre) > code {
+  font-size: 0.85em;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+/* Language-specific font optimizations */
 pre code.language-bash,
 pre code.language-sh,
-pre code.language-shell {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+pre code.language-shell,
+pre code.language-zsh,
+pre code.language-fish {
+  font-family: 'SF Mono', 
+    'Monaco', 
+    'Inconsolata', 
+    'Roboto Mono',
+    'Source Code Pro',
+    'Consolas', 
+    'Liberation Mono', 
+    'Menlo', 
+    'Courier New',
+    monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Better font weight for different code contexts */
+.font-mono {
+  font-family: var(--font-geist-mono), 
+    'JetBrains Mono', 
+    'Fira Code', 
+    'Cascadia Code', 
+    'SF Mono', 
+    'Monaco', 
+    'Inconsolata', 
+    'Roboto Mono', 
+    'Source Code Pro', 
+    'Ubuntu Mono',
+    'Droid Sans Mono',
+    'Courier New', 
+    Courier, 
+    monospace;
+}
+
+/* Enhanced typography for specific elements */
+.prose code {
+  font-size: 0.875em;
+  font-weight: 500;
+  color: oklch(0.141 0.005 285.823);
+}
+
+.dark .prose code {
+  color: oklch(0.985 0 0);
 }
 
 body {

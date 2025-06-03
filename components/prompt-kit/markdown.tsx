@@ -40,7 +40,10 @@ const INITIAL_COMPONENTS: Partial<Components> = {
       return (
         <span
           className={cn(
-            "bg-primary-foreground rounded-sm px-1 font-mono text-sm",
+            "bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60",
+            "rounded-md px-1.5 py-0.5 font-mono text-sm",
+            "text-slate-700 dark:text-slate-300",
+            "ring-1 ring-slate-900/5 dark:ring-slate-100/5",
             className
           )}
           {...props}
@@ -54,16 +57,22 @@ const INITIAL_COMPONENTS: Partial<Components> = {
 
     return (
       <CodeBlock className={className}>
-        <CodeBlockGroup className="flex h-9 items-center justify-between px-4">
-          <div className="text-muted-foreground py-1 pr-2 font-mono text-xs">
-            {language}
+        <CodeBlockGroup className="flex h-12 items-center justify-between px-5">
+          {/* Language badge */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Language indicator dot */}
+              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 shadow-sm" />
+              <span className="text-slate-600 dark:text-slate-400 font-mono text-xs font-medium tracking-wide uppercase">
+                {language}
+              </span>
+            </div>
           </div>
+          
+          {/* Copy button */}
+          <ButtonCopy code={children as string} />
         </CodeBlockGroup>
-        <div className="sticky top-16 lg:top-0">
-          <div className="absolute right-0 bottom-0 flex h-9 items-center pr-1.5">
-            <ButtonCopy code={children as string} />
-          </div>
-        </div>
+        
         <CodeBlockCode code={children as string} language={language} />
       </CodeBlock>
     )

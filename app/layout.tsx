@@ -22,11 +22,16 @@ import '@/lib/mcp/mcpManager'; // Initialize MCP Manager on server start
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  // Enhanced font features for better code readability
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal"],
 })
 
 export const metadata: Metadata = {

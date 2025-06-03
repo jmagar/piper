@@ -49,12 +49,14 @@ async function processToolMentions(messages: MessageAISDK[]): Promise<MessageAIS
     return messages
   }
 
-  console.log(`[Chat API] Found ${toolMentions.length} tool mentions to process`)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Chat API] Found ${toolMentions.length} tool mentions to process`)
+  }
 
   // Get available MCP tools to find full tool IDs
   const serversInfo = await getManagedServersInfo()
   const availableTools = serversInfo
-    .filter(server => server.status === 'connected')
+    .filter(server => server.status === 'success')
     .flatMap(server => 
       server.tools.map(tool => ({
         name: tool.name,
@@ -159,7 +161,9 @@ async function processRuleMentions(messages: MessageAISDK[], currentSystemPrompt
     return { processedMessages: messages, enhancedSystemPrompt: currentSystemPrompt }
   }
 
-  console.log(`[Chat API] Found ${ruleMentions.length} rule mentions to process`)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Chat API] Found ${ruleMentions.length} rule mentions to process`)
+  }
 
   // Fetch rules from database
   const ruleContents: string[] = []
@@ -217,19 +221,122 @@ async function processRuleMentions(messages: MessageAISDK[], currentSystemPrompt
   return { processedMessages, enhancedSystemPrompt }
 }
 
+// Helper function to prune messages for large conversations  
+function pruneMessagesForPayloadSize(messages: MessageAISDK[], hasTools: boolean): MessageAISDK[] {
+  // Conservative limits to prevent OpenRouter payload issues
+  const MAX_MESSAGES_WITH_TOOLS = 12
+  const MAX_MESSAGES_WITHOUT_TOOLS = 20
+
+  const limit = hasTools ? MAX_MESSAGES_WITH_TOOLS : MAX_MESSAGES_WITHOUT_TOOLS
+  
+  if (messages.length <= limit) {
+    return messages
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Chat API] Pruning messages: ${messages.length} → ${limit} (hasTools: ${hasTools})`)
+  }
+
+  // Keep system messages separate
+  const systemMessages = messages.filter(m => m.role === 'system')
+  const nonSystemMessages = messages.filter(m => m.role !== 'system')
+  
+  if (nonSystemMessages.length <= limit) {
+    return messages
+  }
+
+  // Keep first exchange (important context) + recent messages
+  const firstExchange = nonSystemMessages.slice(0, 2) // First user + assistant
+  const recentMessages = nonSystemMessages.slice(-(limit - 2))
+  
+  const prunedMessages = [...systemMessages, ...firstExchange, ...recentMessages]
+  
+  appLogger.aiSdk.info(`Pruned conversation: ${messages.length} → ${prunedMessages.length} messages`, {
+    correlationId: getCurrentCorrelationId(),
+    hasTools,
+    originalCount: messages.length,
+    prunedCount: prunedMessages.length
+  })
+  
+  return prunedMessages
+}
+
+// Helper function to select relevant tools for large conversations
+function selectRelevantTools(allTools: ToolSet, messageCount: number): ToolSet {
+  const toolEntries = Object.entries(allTools)
+  
+  // Conservative tool limits to prevent payload issues
+  const MAX_TOOLS_LONG_CONVERSATION = 25
+  const MAX_TOOLS_MEDIUM_CONVERSATION = 50
+  
+  if (messageCount <= 10) {
+    return allTools // Short conversation: use all tools
+  } else if (messageCount <= 15) {
+    // Medium conversation: limit tools
+    if (toolEntries.length <= MAX_TOOLS_MEDIUM_CONVERSATION) {
+      return allTools
+    }
+    
+    // Prioritize general tools over server-specific ones
+    const prioritizedTools = toolEntries
+      .sort(([keyA], [keyB]) => {
+        // Prioritize tools without server prefixes (general tools)
+        const isGeneralA = !keyA.includes('_')
+        const isGeneralB = !keyB.includes('_')
+        if (isGeneralA && !isGeneralB) return -1
+        if (!isGeneralA && isGeneralB) return 1
+        return 0
+      })
+      .slice(0, MAX_TOOLS_MEDIUM_CONVERSATION)
+    
+    return Object.fromEntries(prioritizedTools) as ToolSet
+  } else {
+    // Long conversation: minimal essential tools
+    if (toolEntries.length <= MAX_TOOLS_LONG_CONVERSATION) {
+      return allTools
+    }
+    
+    // Select most essential tools (prioritize general + common MCP tools)
+    const essentialTools = toolEntries
+      .filter(([key]) => {
+        // Prioritize core tools
+        return key.includes('file') || 
+               key.includes('search') || 
+               key.includes('read') || 
+               key.includes('edit') || 
+               key.includes('codebase') ||
+               !key.includes('_') // General tools without server prefix
+      })
+      .slice(0, MAX_TOOLS_LONG_CONVERSATION)
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Chat API] Long conversation tool reduction: ${toolEntries.length} → ${essentialTools.length}`)
+    }
+    
+    appLogger.aiSdk.info(`Reduced tools for long conversation`, {
+      correlationId: getCurrentCorrelationId(),
+      messageCount,
+      originalToolCount: toolEntries.length,
+      selectedToolCount: essentialTools.length
+    })
+    
+    return Object.fromEntries(essentialTools) as ToolSet
+  }
+}
+
 export async function POST(req: Request) {
   const correlationId = getCurrentCorrelationId();
   appLogger.http.info('Chat API request received', { correlationId });
 
   try {
     const requestBody = await req.json()
-    console.log(`[Chat API] Raw request body keys:`, Object.keys(requestBody))
-    console.log(`[Chat API] Messages count:`, requestBody.messages?.length || 0)
-    if (requestBody.messages?.length > 0) {
-      const lastMessage = requestBody.messages[requestBody.messages.length - 1]
-      console.log(`[Chat API] Last message attachments:`, lastMessage.experimental_attachments?.length || 0)
-      if (lastMessage.experimental_attachments) {
-        console.log(`[Chat API] Attachment details:`, lastMessage.experimental_attachments.map((a: Attachment) => ({ name: a.name, url: a.url })))
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Chat API] Messages: ${requestBody.messages?.length || 0}, Chat: ${requestBody.chatId}`)
+      if (requestBody.messages?.length > 0) {
+        const lastMessage = requestBody.messages[requestBody.messages.length - 1]
+        if (lastMessage.experimental_attachments?.length > 0) {
+          console.log(`[Chat API] ${lastMessage.experimental_attachments.length} attachments`)
+        }
       }
     }
     
@@ -304,18 +411,8 @@ export async function POST(req: Request) {
     const { processedMessages, enhancedSystemPrompt } = await processRuleMentions(processedMessagesAfterTools, initialSystemPrompt)
 
     // Convert relative attachment URLs to absolute URLs for AI model access
-    console.log(`[Chat API] Processing ${processedMessages.length} messages for attachments`)
-    const messagesWithAbsoluteUrls = processedMessages.map((message, index) => {
-      if (message.experimental_attachments && message.experimental_attachments.length > 0) {
-        console.log(`[Chat API] Message ${index} has ${message.experimental_attachments.length} attachments`)
-        
-        // ✅ AI SDK PATTERN: Files are already handled by AI SDK, just pass through
-        console.log(`[Chat API] Using AI SDK attachment handling for ${message.experimental_attachments.length} attachments`)
-        
-        return message
-      } else {
-        console.log(`[Chat API] Message ${index} has no attachments`)
-      }
+    const messagesWithAbsoluteUrls = processedMessages.map((message) => {
+      // ✅ AI SDK PATTERN: Files are already handled by AI SDK, just pass through
       return message
     })
 
@@ -352,10 +449,22 @@ export async function POST(req: Request) {
       const generalMcpTools = await getCombinedMCPToolsForAISDK();
       if (Object.keys(generalMcpTools).length > 0) {
         toolsToUse = generalMcpTools;
-        console.log(`[Chat API] Using ${Object.keys(generalMcpTools).length} general MCP tools.`);
-      } else {
-        console.log('[Chat API] No general MCP tools available or returned empty.');
       }
+    }
+
+    // Apply smart conversation orchestration to prevent payload size issues
+    const messageCount = messagesWithAbsoluteUrls.length
+    
+    // Prune messages for large conversations to prevent OpenRouter payload errors
+    const prunedMessages = pruneMessagesForPayloadSize(messagesWithAbsoluteUrls, !!toolsToUse)
+    
+    // Select relevant tools for large conversations
+    if (toolsToUse && Object.keys(toolsToUse).length > 0) {
+      toolsToUse = selectRelevantTools(toolsToUse, messageCount)
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Chat API] Conversation orchestration: ${messageCount} messages → ${prunedMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
     }
 
     // Start AI SDK operation logging
@@ -374,13 +483,26 @@ export async function POST(req: Request) {
 
     let streamError: Error | null = null
 
-    const result = streamText({
-      model: openrouter.chat(model || 'anthropic/claude-3.5-sonnet'), // Use OpenRouter; defaults to claude-3.5-sonnet if no model specified
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Chat API] Streaming with ${model}, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
+    }
+    
+    // Build streamText configuration conditionally
+    const streamConfig = {
+      model: openrouter.chat(model || 'anthropic/claude-3.5-sonnet'),
       system: effectiveSystemPrompt,
-      messages: messagesWithAbsoluteUrls, // Use messages with absolute URLs for AI model access
-      tools: toolsToUse as ToolSet,
-      maxTokens: 8096, // Reasonable limit for response length while preserving quality
-      maxSteps: 10,
+      messages: prunedMessages,
+      maxTokens: 8096,
+    } as const;
+
+    // Only add tools and maxSteps if tools are available
+    const finalConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
+      ? { ...streamConfig, tools: toolsToUse, maxSteps: 10 }
+      : streamConfig;
+
+    const result = streamText({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(finalConfig as any),
       onError: (event: { error: unknown }) => {
         appLogger.aiSdk.error("🛑 streamText error (raw event.error):", event.error as Error, { correlationId });
 
@@ -465,8 +587,10 @@ export async function POST(req: Request) {
     // });
 
     const originalResponse = result.toDataStreamResponse({
-      sendReasoning: true,
-      sendSources: true,
+      getErrorMessage: (error) => {
+        console.error('[Chat API] Error in data stream:', error);
+        return error instanceof Error ? error.message : String(error);
+      }
     })
     
     // Optionally attach chatId in a custom header.

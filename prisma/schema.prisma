@@ -92,7 +92,7 @@ model AdminSetting {
 
 model MCPServerMetric {
   id                String    @id @default(uuid())
-  serverId          String    // Unique identifier for the MCP server
+  serverId          String    @unique // Make serverId unique for foreign key reference
   serverName        String    // Human-readable name
   transportType     String    // 'stdio', 'sse', 'streamable-http'
   status            String    // 'connected', 'disconnected', 'error', 'timeout'
@@ -117,7 +117,7 @@ model MCPServerMetric {
 
 model MCPToolExecution {
   id               String    @id @default(uuid())
-  server           MCPServerMetric @relation(fields: [serverId], references: [id])
+  server           MCPServerMetric @relation(fields: [serverId], references: [serverId])
   serverId         String
   toolName         String
   callId           String?   // Optional call identifier

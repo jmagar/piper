@@ -468,6 +468,8 @@
 
 ## Enhanced MCP Client Architecture
 
+**Note on Current State & Planned Refactor:** The Enhanced MCP Client system is currently split between `lib/mcp/client.ts` (containing the older `MCPService`) and `lib/mcp/enhanced-mcp-client.ts`. A major refactoring effort is planned (see `CLIENT-REFACTOR.md`) to consolidate all client logic into `enhanced-mcp-client.ts` and remove `client.ts`. The patterns described below will largely remain valid but will be centralized within `enhanced-mcp-client.ts` and its direct consumers like `mcpManager.ts` post-refactor.
+
 ### **Core Pattern: Layered Enhancement Over AI SDK**
 
 The system follows a **wrapper enhancement pattern** that extends the base AI SDK MCP capabilities:
@@ -553,7 +555,7 @@ createEnhancedStreamableHTTPMCPClient(config: EnhancedStreamableHTTPConfig)
 ```typescript
 class MCPConnectionPool {
   // Pattern: Centralized lifecycle management
-  private clients = new Map<string, MCPToolSet>()
+  private clients = new Map<string, MCPToolSet>() // MCPToolSet will be instances of EnhancedMCPClient post-refactor
   private abortControllers = new Map<string, AbortController>()
 }
 ```
@@ -660,9 +662,9 @@ setTimeout(() => {
 ### **Backward Compatibility Strategy**
 
 All enhancements are **non-breaking**:
-- Existing `mcpManager.ts` continues to work unchanged
-- Enhanced features are opt-in via configuration
-- Helper functions maintain existing API contracts
+- Existing `mcpManager.ts` continues to work unchanged (until it's refactored as part of the consolidation).
+- Enhanced features are opt-in via configuration.
+- Helper functions maintain existing API contracts (where applicable, or will be updated during refactor).
 
 ### **Forward Compatibility Hooks**
 

@@ -18,7 +18,7 @@
 
 ### **Enhanced MCP Client Stack**
 - **Core SDK**: AI SDK v4 (`ai`, `@ai-sdk/openai`)
-- **MCP Integration**: AI SDK MCP client with enhanced wrappers
+- **MCP Integration**: AI SDK MCP client with enhanced wrappers. **NOTE**: Currently, `lib/mcp/client.ts` (with `MCPService`) and `lib/mcp/enhanced-mcp-client.ts` coexist. A major refactor is planned to consolidate all logic into `enhanced-mcp-client.ts` and remove `client.ts`.
 - **Transport Support**: stdio, SSE, StreamableHTTP
 - **Abort Signals**: Native Web API AbortController/AbortSignal
 - **Metrics Collection**: Custom Prisma-based metrics system
@@ -51,6 +51,8 @@ services:
 - **Uploads**: `/uploads` directory for file storage
 
 ## Enhanced MCP Client Technical Details
+
+**Note**: The MCP client architecture is undergoing a significant refactoring. The goal is to consolidate all client logic into `lib/mcp/enhanced-mcp-client.ts` and remove the legacy `lib/mcp/client.ts`. The details below reflect the current state, but will be streamlined post-refactor. See `CLIENT-REFACTOR.md` for the full plan.
 
 ### **Core Dependencies**
 ```json

@@ -87,7 +87,7 @@ export interface MCPServerConfigFromUI {
 const StatusIndicator = ({ status, className }: { status: McpServerInfo['status'], className?: string }) => {
     const baseClasses = "h-4 w-4"; // Reduced size
   switch (status) {
-    case 'connected':
+    case 'success':
             return <CheckCircle2 className={cn(baseClasses, "text-green-500", className)} />;
     case 'error':
             return <XCircle className={cn(baseClasses, "text-red-500", className)} />;
@@ -227,7 +227,7 @@ export function McpServersDashboard() {
     if (statusFilter !== 'all') {
       if (statusFilter === 'disconnected') {
         // Consider servers as disconnected if they're not connected, regardless of specific status
-        if (server.status === 'connected') {
+        if (server.status === 'success') {
           return false;
         }
       } else if (server.status !== statusFilter) {
@@ -681,7 +681,7 @@ export function McpServersDashboard() {
                     
                     {/* Status Info */}
                     <div className="mb-3">
-                      {server.status === 'connected' ? (
+                      {server.status === 'success' ? (
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
                             {server.tools.length} tools

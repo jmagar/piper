@@ -52,7 +52,7 @@ export async function getEnhancedMCPMetrics() {
 
       // Update summary
       metrics.summary.totalServers++
-      if (server.status === 'connected') {
+      if (server.status === 'success') {
         metrics.summary.connectedServers++
         metrics.summary.totalTools += server.tools.length
       } else if (server.status === 'error') {

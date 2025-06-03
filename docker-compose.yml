@@ -26,6 +26,7 @@ services:
       - /mnt/user/docs:/docs
       - /mnt/user/compose:/compose
       - /mnt/user/downloads:/downloads
+      - /mnt/user/appdata:/appdata
     command: sh -c "npx prisma db push && npm start"
     depends_on:
       - piper-db

@@ -10,7 +10,7 @@ Piper is a web-based chat application designed to facilitate interactions with v
 - Manages and stores chat history for users.
 - **MCP Server Management**: Provides comprehensive management of MCP servers including configuration, monitoring, and tool access through an intuitive unified interface.
 - **Extensible Tool Ecosystem**: Supports both STDIO and SSE/HTTP MCP servers to extend AI capabilities with specialized tools.
-- **Enhanced MCP Client Architecture**: Implemented production-ready enhanced MCP client with comprehensive error handling, real-time metrics collection, and database persistence - now properly documented with unified source of truth.
+- **Enhanced MCP Client Architecture**: Implemented production-ready enhanced MCP client with comprehensive error handling, real-time metrics collection, and database persistence - now properly documented with unified source of truth. **(Note: A major refactoring is planned to consolidate `lib/mcp/client.ts` into `lib/mcp/enhanced-mcp-client.ts` for a cleaner architecture - see `CLIENT-REFACTOR.MD` for details).**
 - **Technical Documentation Excellence**: Resolved fragmented documentation by consolidating three overlapping Enhanced MCP Client docs into one accurate, implementation-verified source of truth using MECE methodology.
 - **Revolutionary @mention System**: Implemented complete 3-way @mention functionality allowing users to seamlessly integrate agents, tools, AND database rules directly into conversations for enhanced AI responses.
 - **AttachMenu Integration**: Created unified attachment interface that serves as perfect discovery layer for @mention functionality while providing direct file upload capabilities.
@@ -103,6 +103,7 @@ Piper is a web-based chat application designed to facilitate interactions with v
     - **Database Insights**: PostgreSQL metrics collection provides historical analysis and performance monitoring (24+ server records)
     - **Feature Transparency**: Clear separation of working features vs planned features prevents confusion and unrealistic expectations
     - **Troubleshooting Guidance**: Implementation-verified examples and configuration patterns for reliable debugging
+    - **(Planned Refactor)**: Consolidation of client logic into `enhanced-mcp-client.ts` will further streamline observability and maintainability.
 - **Development & Deployment**:
     - **Containerized Environment**: Application runs in Docker containers for consistent deployment
     - **Hot Reloading**: Changes to source code reflect immediately in the running application

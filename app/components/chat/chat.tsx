@@ -14,7 +14,7 @@ import {
   MESSAGE_MAX_LENGTH,
   SYSTEM_PROMPT_DEFAULT,
 } from "@/lib/config"
-import { MODELS } from "@/lib/models"
+
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat } from "@ai-sdk/react"
@@ -54,8 +54,7 @@ function SearchParamsProvider({
   return null
 }
 
-const DEFAULT_MODEL_ID = "anthropic/claude-sonnet-4";
-const FALLBACK_MODEL_ID = "anthropic/claude-3-haiku-20240307";
+// Dynamic model selection - no hardcoded defaults
 
 export function Chat() {
   const { chatId } = useChatSession()
@@ -76,7 +75,7 @@ export function Chat() {
     handleFileRemove,
   } = useFileUpload()
   const [selectedModel, setSelectedModel] = useState(
-    currentChat?.model || DEFAULT_MODEL_ID
+    currentChat?.model || ""
   );
   const [availableModels, setAvailableModels] = useState<{ id: string; name: string; description: string; context_length: number | null; providerId: string; starred?: boolean }[]>([]);
   const [starredModelIds, setStarredModelIds] = useState<string[]>([]);
@@ -148,56 +147,33 @@ export function Chat() {
         }
         const models: { id: string; name: string; description: string; context_length: number | null; providerId: string; }[] = await response.json();
         
-        // ===== DEBUG LOGGING: Model Source Comparison =====
-        console.group("🔍 Model Source Analysis - OpenRouter vs Internal MODELS");
-        console.log(`📡 OpenRouter API returned ${models.length} models`);
-        console.log(`📚 Internal MODELS array has ${MODELS.length} models`);
-        
-        const anthropicFromOpenRouter = models.filter(m => m.id.includes('anthropic') || m.id.includes('claude'));
-        const anthropicFromInternal = MODELS.filter(m => m.id.includes('anthropic') || m.id.includes('claude'));
-        
-        console.log(`🤖 Anthropic models from OpenRouter (${anthropicFromOpenRouter.length}):`, anthropicFromOpenRouter.map(m => m.id));
-        console.log(`🏠 Anthropic models from internal MODELS (${anthropicFromInternal.length}):`, anthropicFromInternal.map(m => m.id));
-        
-        // Check for mismatches
-        const openRouterIds = new Set(models.map(m => m.id));
-        const internalIds = new Set(MODELS.map(m => m.id));
-        const onlyInOpenRouter = models.filter(m => !internalIds.has(m.id));
-        const onlyInInternal = MODELS.filter(m => !openRouterIds.has(m.id));
-        
-        console.log(`❌ Models ONLY in OpenRouter (${onlyInOpenRouter.length}):`, onlyInOpenRouter.slice(0, 5).map(m => m.id));
-        console.log(`❌ Models ONLY in internal MODELS (${onlyInInternal.length}):`, onlyInInternal.slice(0, 5).map(m => m.id));
-        console.groupEnd();
-        // ===== END DEBUG LOGGING =====
+        // Model analysis logging (development only)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📡 Loaded ${models.length} models from OpenRouter API`);
+        }
         
         const modelsWithInitialStar = models.map(m => ({...m, starred: starredModelIds.includes(m.id) }))
         setAvailableModels(modelsWithInitialStar);
 
         if (modelsWithInitialStar.length > 0) {
           const currentModelExists = modelsWithInitialStar.find(model => model.id === selectedModel);
-          if (!currentModelExists) {
-            const defaultModel = modelsWithInitialStar.find(model => model.id === DEFAULT_MODEL_ID);
-            const fallbackModel = modelsWithInitialStar.find(model => model.id === FALLBACK_MODEL_ID);
-            const firstAvailableModel = modelsWithInitialStar[0];
+          if (!currentModelExists || !selectedModel) {
+            // Prefer Claude Sonnet models, then any Claude model, then first available
+            const preferredModel = modelsWithInitialStar.find(model => 
+              model.id.includes('claude') && model.id.includes('sonnet')
+            ) || modelsWithInitialStar.find(model => 
+              model.id.includes('claude')
+            ) || modelsWithInitialStar[0];
 
-            if (defaultModel) {
-              setSelectedModel(DEFAULT_MODEL_ID);
-            } else if (fallbackModel) {
-              setSelectedModel(FALLBACK_MODEL_ID);
-            } else if (firstAvailableModel) {
-              setSelectedModel(firstAvailableModel.id);
+            if (preferredModel) {
+              setSelectedModel(preferredModel.id);
             }
-          }
-        } else {
-          if (selectedModel !== DEFAULT_MODEL_ID && selectedModel !== FALLBACK_MODEL_ID) {
-             setSelectedModel(DEFAULT_MODEL_ID);
           }
         }
       } catch (error) {
         console.error("Error fetching available models:", error);
         setAvailableModels([]);
-        const modelDefaultFullId = "anthropic/claude-3-sonnet-20240229"; 
-        if (modelDefaultFullId) setSelectedModel(modelDefaultFullId);
+        // No fallback - wait for models to load
       }
     };
     fetchModels();
@@ -225,22 +201,17 @@ export function Chat() {
   useEffect(() => {
     if (availableModels.length > 0 && hydrated) { 
       const currentModelExists = availableModels.find(model => model.id === selectedModel);
-      if (!currentModelExists) {
-        const defaultModel = availableModels.find(model => model.id === DEFAULT_MODEL_ID);
-        const fallbackModel = availableModels.find(model => model.id === FALLBACK_MODEL_ID);
-        const firstAvailableModel = availableModels[0];
+      if (!currentModelExists || !selectedModel) {
+        // Prefer Claude Sonnet models, then any Claude model, then first available
+        const preferredModel = availableModels.find(model => 
+          model.id.includes('claude') && model.id.includes('sonnet')
+        ) || availableModels.find(model => 
+          model.id.includes('claude')
+        ) || availableModels[0];
 
-        if (defaultModel) {
-          setSelectedModel(DEFAULT_MODEL_ID);
-        } else if (fallbackModel) {
-          setSelectedModel(FALLBACK_MODEL_ID);
-        } else if (firstAvailableModel) {
-          setSelectedModel(firstAvailableModel.id);
+        if (preferredModel) {
+          setSelectedModel(preferredModel.id);
         }
-      }
-    } else if (hydrated) { 
-      if (selectedModel !== DEFAULT_MODEL_ID && selectedModel !== FALLBACK_MODEL_ID) {
-         setSelectedModel(DEFAULT_MODEL_ID);
       }
     }
   }, [availableModels, selectedModel, hydrated]);
@@ -389,7 +360,7 @@ export function Chat() {
           chatId: currentChatId,
           userId: uid,
           model: selectedModel,
-          systemPrompt: SYSTEM_PROMPT_DEFAULT,
+          systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
         },
       }
 
@@ -403,7 +374,7 @@ export function Chat() {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       setIsSubmitting(false)
     },
-    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages] 
+    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages, systemPrompt] 
   )
 
   const handleReload = async () => {

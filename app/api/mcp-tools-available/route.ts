@@ -6,7 +6,7 @@ export async function GET() {
     const serversInfo = await getManagedServersInfo()
     
     const mcpTools = serversInfo
-      .filter(server => server.status === 'connected' && server.tools.length > 0)
+      .filter(server => server.status === 'success' && server.tools.length > 0)
       .flatMap(server => 
         server.tools.map(tool => ({
           name: tool.name,

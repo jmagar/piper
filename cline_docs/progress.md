@@ -35,6 +35,13 @@
    - **Implementation-First Documentation**: All claims verified against source code, real configuration examples, working API endpoint structures
    - **Status**: Documentation excellence established with reliable technical reference for Enhanced MCP Client
 
+### 🛠️ **MCP Client Refactoring & Consolidation (PLANNED - Next Major Task)**
+   - **🎯 Goal**: Consolidate all MCP client logic into `lib/mcp/enhanced-mcp-client.ts` and remove `lib/mcp/client.ts`.
+   - **Plan**: Detailed refactoring steps are documented in `CLIENT-REFACTOR.md`.
+   - **Impact**: High-impact change affecting core MCP functionality, `mcpManager.ts`, and various consumers.
+   - **Benefits**: Simplified architecture, reduced duplication, improved maintainability.
+   - **Status**: Planning complete, ready for implementation.
+
 ### ✅ **Critical React Hydration & Server Action Error Resolution (COMPLETED - Previous Session)**
    - **🎯 Critical Issues Resolved**: Two severe React runtime errors that were breaking application functionality
    - **Hydration Mismatch Resolution**:
@@ -213,6 +220,7 @@
 ### 📄 **Documentation and Code Cleanup**
    - ✅ Ensure all `cline_docs` are current (This task is now complete).
    - ✅ **Enhanced MCP Client Documentation**: Unified source of truth established and verified
+   - 🟡 **MCP Client Architecture Documentation**: Update `systemPatterns.md` and `techContext.md` after refactor.
    - Review and finalize `docs/logging-system.md`.
    - Review and refactor any complex code sections from recent Bivvy climbs.
    - **Document Hydration Safety Patterns**: Create reference guide for future development
@@ -224,6 +232,7 @@
 
 ## Progress Status:
 - **Enhanced MCP Client Documentation Consolidation**: 🟢 **Green (COMPLETED)** 📚⭐✅ **NEW - DOCUMENTATION SUCCESS**
+- **MCP Client Refactoring & Consolidation**: 🟡 **Yellow (PLANNED)** 🛠️⭐
 - **React Hydration & Server Action Error Resolution**: 🟢 **Green (COMPLETED)** 🔥⭐✅ **CRITICAL SUCCESS**
 - **AttachMenu Integration**: 🟢 **Green (COMPLETED)** 🚀⭐✅ **BREAKTHROUGH SUCCESS**
 - **File Upload System Refactor**: 🟢 **Green (COMPLETED)** 🏗️⭐✅ **ARCHITECTURE SUCCESS**  
@@ -242,6 +251,7 @@
 
 ## Recent Major Achievements:
 **📚 DOCUMENTATION SUCCESS: Enhanced MCP Client Documentation Consolidation** - Applied MECE methodology to eliminate fragmented documentation, created unified source of truth verified against implementation.
+**⚙️ PLANNING COMPLETE: MCP Client Refactoring & Consolidation** - Detailed plan established for major architectural improvement.
 **🔥 CRITICAL SUCCESS: React Hydration & Server Action Error Resolution** - Eliminated severe runtime errors preventing proper application functionality through systematic debugging and pure CSS animation implementation.
 **🚀 BREAKTHROUGH SUCCESS: AttachMenu Integration** - Perfect @mention simulation creating ideal bridge between discoverability and power-user efficiency.
 **🏗️ ARCHITECTURE SUCCESS: File Upload System Refactor** - Complete overhaul following AI SDK patterns with 30% complexity reduction.

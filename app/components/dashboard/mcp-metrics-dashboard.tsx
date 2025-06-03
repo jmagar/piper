@@ -58,6 +58,7 @@ export default function MCPMetricsDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [isInitializing, setIsInitializing] = useState(false)
 
   const fetchMetrics = async () => {
     try {
@@ -73,6 +74,31 @@ export default function MCPMetricsDashboard() {
       toast.error('Failed to load MCP metrics')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const initializeNewServers = async () => {
+    setIsInitializing(true)
+    try {
+      const response = await fetch('/api/mcp-servers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'initialize_new_servers' }),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      await response.json()
+      toast.success('New server initialization triggered successfully')
+      // Refresh metrics after initialization
+      setTimeout(fetchMetrics, 1000)
+    } catch (error) {
+      console.error('Failed to initialize new servers:', error)
+      toast.error('Failed to initialize new servers')
+    } finally {
+      setIsInitializing(false)
     }
   }
 
@@ -165,6 +191,15 @@ export default function MCPMetricsDashboard() {
           >
             <Activity className={`h-4 w-4 mr-2 ${autoRefresh ? 'text-green-500' : 'text-gray-400'}`} />
             Auto Refresh: {autoRefresh ? 'On' : 'Off'}
+          </Button>
+          <Button 
+            onClick={initializeNewServers} 
+            size="sm" 
+            variant="outline"
+            disabled={isInitializing}
+          >
+            <Server className={`h-4 w-4 mr-2 ${isInitializing ? 'animate-spin' : ''}`} />
+            {isInitializing ? 'Initializing...' : 'Init New Servers'}
           </Button>
           <Button onClick={fetchMetrics} size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />

@@ -143,12 +143,14 @@ export function useAgentCommand({
         .map(item => item.tool)
     : mcpTools
 
-  console.log('🔧 [useAgentCommand] filteredTools state:', {
-    mcpToolsLength: mcpTools.length,
-    toolSearchTerm,
-    filteredToolsLength: filteredTools.length,
-    firstFewFiltered: filteredTools.slice(0, 3)
-  })
+  // Reduced logging: only show when search term changes or significant state change
+  if (process.env.NODE_ENV === 'development' && toolSearchTerm && filteredTools.length !== mcpTools.length) {
+    console.log('🔧 [useAgentCommand] filtered tools:', {
+      search: toolSearchTerm,
+      found: filteredTools.length,
+      total: mcpTools.length
+    })
+  }
 
   const filteredRules = ruleSearchTerm
     ? databaseRules
@@ -204,8 +206,6 @@ export function useAgentCommand({
       const match = newValue.match(/@([^@\s]*)$/)
       if (match) {
         const searchTerm = match[1]
-        console.log('Search term:', searchTerm, 'Available - agents:', agents.length, 'tools:', mcpTools.length, 'rules:', databaseRules.length)
-        
         // 3-way fuzzy matching: agents, tools, and rules
         const agentScores = agents.map(agent => fuzzyMatch(searchTerm, agent.name))
         const toolScores = mcpTools.map(tool => fuzzyMatch(searchTerm, tool.name))
@@ -215,14 +215,11 @@ export function useAgentCommand({
         const bestToolScore = Math.max(0, ...toolScores)
         const bestRuleScore = Math.max(0, ...ruleScores)
         
-        console.log('Best scores - Agent:', bestAgentScore, 'Tool:', bestToolScore, 'Rule:', bestRuleScore)
-        
         // Check for direct matches to make it easier to trigger
         const hasToolMatch = searchTerm.length > 0 && mcpTools.some(tool => tool.name.toLowerCase().includes(searchTerm.toLowerCase()))
         const hasRuleMatch = searchTerm.length > 0 && databaseRules.some(rule => rule.name.toLowerCase().includes(searchTerm.toLowerCase()) || rule.slug.toLowerCase().includes(searchTerm.toLowerCase()))
         
         if ((bestRuleScore > 5 && bestRuleScore >= bestAgentScore && bestRuleScore >= bestToolScore) || hasRuleMatch) {
-          console.log('Showing rule dropdown')
           setShowRuleCommand(true)
           setShowAgentCommand(false)
           setShowToolCommand(false)
@@ -230,7 +227,6 @@ export function useAgentCommand({
           setAgentSearchTerm("")
           setToolSearchTerm("")
         } else if ((bestToolScore > 5 && bestToolScore >= bestAgentScore) || hasToolMatch) {
-          console.log('Showing tool dropdown')
           setShowToolCommand(true)
           setShowAgentCommand(false)
           setShowRuleCommand(false)
@@ -238,7 +234,6 @@ export function useAgentCommand({
           setAgentSearchTerm("")
           setRuleSearchTerm("")
         } else {
-          console.log('Showing agent dropdown')
           setShowAgentCommand(true)
           setShowToolCommand(false)
           setShowRuleCommand(false)

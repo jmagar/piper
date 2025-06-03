@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-
-// Global map to track active abort controllers
-const activeAbortControllers = new Map<string, AbortController>()
+import { 
+  abortExecution, 
+  abortAllExecutions, 
+  abortServerExecutions, 
+  getActiveExecutions 
+} from "@/lib/mcp/abort-controller"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,11 +19,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Abort specific tool execution
-      const abortController = activeAbortControllers.get(callId)
-      if (abortController) {
-        abortController.abort()
-        activeAbortControllers.delete(callId)
-        
+      const success = abortExecution(callId)
+      if (success) {
         console.log(`[Abort API] Aborted tool execution: ${callId}`)
         
         return NextResponse.json({
@@ -37,12 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'abort-all') {
       // Abort all active tool executions
-      let abortedCount = 0
-      for (const [callId, controller] of activeAbortControllers.entries()) {
-        controller.abort()
-        activeAbortControllers.delete(callId)
-        abortedCount++
-      }
+      const abortedCount = abortAllExecutions()
       
       console.log(`[Abort API] Aborted ${abortedCount} tool executions`)
       
@@ -61,14 +56,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Abort all executions from a specific server
-      let abortedCount = 0
-      for (const [callId, controller] of activeAbortControllers.entries()) {
-        if (callId.startsWith(serverId)) {
-          controller.abort()
-          activeAbortControllers.delete(callId)
-          abortedCount++
-        }
-      }
+      const abortedCount = abortServerExecutions(serverId)
       
       console.log(`[Abort API] Aborted ${abortedCount} tool executions from server: ${serverId}`)
       
@@ -96,7 +84,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const activeExecutions = Array.from(activeAbortControllers.keys())
+    const activeExecutions = getActiveExecutions()
     
     return NextResponse.json({
       success: true,
@@ -114,21 +102,4 @@ export async function GET() {
       { status: 500 }
     )
   }
-}
-
-// Helper function to register abort controllers (called by tool execution)
-export function registerAbortController(callId: string, controller: AbortController) {
-  activeAbortControllers.set(callId, controller)
-  
-  // Clean up when aborted
-  controller.signal.addEventListener('abort', () => {
-    activeAbortControllers.delete(callId)
-  })
-  
-  // Auto-cleanup after 5 minutes for safety
-  setTimeout(() => {
-    if (activeAbortControllers.has(callId)) {
-      activeAbortControllers.delete(callId)
-    }
-  }, 5 * 60 * 1000)
 } 

@@ -159,6 +159,18 @@ export async function POST(request: Request) {
     }
 
     await fs.writeFile(configFilePath, JSON.stringify(configToWrite, null, 2), 'utf-8');
+    
+    // Trigger automatic initialization of new servers
+    try {
+      console.log('[MCP Config API] Config saved successfully. Checking for new servers to initialize...');
+      const { checkAndInitializeNewServers } = await import('../../../lib/mcp/mcpManager');
+      await checkAndInitializeNewServers();
+      console.log('[MCP Config API] New server initialization check completed.');
+    } catch (initError) {
+      console.error('[MCP Config API] Error during new server initialization:', initError);
+      // Don't fail the config save if initialization fails
+    }
+    
     return NextResponse.json({ message: 'Configuration saved successfully' });
 
   } catch (error) {

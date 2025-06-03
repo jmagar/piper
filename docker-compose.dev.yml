@@ -27,10 +27,11 @@ services:
       - /mnt/cache/appdata/piper/logs:/logs
       # Other mounts you had, ensure these paths exist on your host or are appropriate for dev
       - /mnt/user/data:/data
-      # - /mnt/user/code:/code # Removed as per request
+      - /mnt/user/code:/code
       - /mnt/user/docs:/docs
-      # - /mnt/user/compose:/compose # Removed as per request
+      - /mnt/user/compose:/compose
       - /mnt/user/downloads:/downloads
+      - /mnt/user/appdata:/appdata
     depends_on:
       - piper-db
       - piper-cache

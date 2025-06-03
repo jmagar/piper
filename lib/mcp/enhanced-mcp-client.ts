@@ -1,12 +1,17 @@
-import { experimental_createMCPClient as createMCPClient, generateObject } from "ai"
+import { experimental_createMCPClient as createMCPClient, generateObject } from "ai";
+import { appLogger } from '@/lib/logger';
 import { Experimental_StdioMCPTransport as StdioMCPTransport } from "ai/mcp-stdio"
 import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 import { fileTypeFromBuffer } from "file-type"
 import { createHash } from "crypto"
-import { promises as fs } from "fs"
+import { promises as fsPromises } from "fs";
+import { readFileSync } from 'fs';
 import { join, extname } from "path"
-import { PrismaClient, Prisma } from "@prisma/client"
+import { PrismaClient, Prisma } from "@prisma/client";
+import { join as pathJoin } from 'path';
+import { mcpLogger } from '@/lib/logger/mcp-logger';
+import { McpOperation } from '@/lib/logger/types';
 
 /**
  * Enhanced MCP Client with better error handling, resource management,
@@ -18,7 +23,7 @@ import { PrismaClient, Prisma } from "@prisma/client"
  */
 
 // Use actual AI SDK types for tools
-type AISDKToolCollection = Record<string, unknown>
+export type AISDKToolCollection = Record<string, unknown>
 
 // Define proper types for Prisma operations
 type ServerMetrics = {
@@ -60,8 +65,8 @@ export interface EnhancedStdioConfig {
   cwd?: string
   stderr?: 'inherit' | 'ignore' | 'pipe'
   clientName?: string
+  logger?: typeof appLogger.mcp // Added logger
   timeout?: number
-  abortSignal?: AbortSignal
   onUncaughtError?: (error: unknown) => void
 }
 
@@ -69,8 +74,8 @@ export interface EnhancedSSEConfig {
   url: string
   headers?: Record<string, string>
   clientName?: string
+  logger?: typeof appLogger.mcp // Added logger
   timeout?: number
-  abortSignal?: AbortSignal
   onUncaughtError?: (error: unknown) => void
 }
 
@@ -79,8 +84,8 @@ export interface EnhancedStreamableHTTPConfig {
   sessionId?: string
   headers?: Record<string, string>
   clientName?: string
+  logger?: typeof appLogger.mcp // Added logger
   timeout?: number
-  abortSignal?: AbortSignal
   onUncaughtError?: (error: unknown) => void
 }
 
@@ -89,6 +94,342 @@ export type EnhancedTransportConfig =
   | ({ type: 'stdio' } & EnhancedStdioConfig)
   | ({ type: 'sse' } & EnhancedSSEConfig)  
   | ({ type: 'streamable-http' } & EnhancedStreamableHTTPConfig)
+
+// Configuration types for config.json
+export type LocalMCPToolSchema = {
+  [key: string]: unknown; // Allow any other properties for flexibility
+};
+
+export interface FetchedToolInfo {
+  name: string;
+  description?: string;
+  inputSchema?: unknown;
+  annotations?: unknown;
+  [key: string]: unknown;
+}
+
+export interface ServerConfigEntry {
+  label?: string;
+  disabled?: boolean;
+  name?: string; // Client name for MCP client creation
+  transport: EnhancedTransportConfig; // Use EnhancedTransportConfig from this file
+  schemas?: Record<string, LocalMCPToolSchema>;
+  // Fallback properties for transport inference, if needed by specific logic
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  url?: string;
+  headers?: Record<string, string>;
+}
+
+export interface AppConfig {
+  mcpServers: Record<string, ServerConfigEntry>;
+}
+
+/**
+ * Loads application configuration from config.json.
+ * Assumes config.json is in the directory specified by CONFIG_DIR env var or /config.
+ */
+export function getAppConfig(): AppConfig {
+  const configPath = pathJoin(process.env.CONFIG_DIR || '/config', 'config.json');
+  
+  try {
+    const rawConfig = readFileSync(configPath, 'utf-8');
+    const parsedConfig = JSON.parse(rawConfig);
+    if (!parsedConfig.mcpServers) {
+      appLogger.mcp.error('config.json is missing the mcpServers property.');
+      return { mcpServers: {} };
+    }
+    return parsedConfig;
+  } catch (error) {
+    appLogger.mcp.error(`Failed to load or parse config.json from ${configPath}:`, error as Error);
+    return { mcpServers: {} };
+  }
+}
+
+// Managed MCP Client (formerly MCPService from client.ts)
+// This class handles the lifecycle of an MCP client, including initialization,
+// retries, tool fetching, and status reporting. It uses the enhanced client
+// creation functions and integrates with appLogger and mcpLogger.
+
+export class ManagedMCPClient {
+  private clientInitializationStatus: 'pending' | 'success' | 'error' = 'pending';
+  private clientInitializationError?: Error;
+  private enhancedClient: MCPToolSet | null = null;
+  private readonly config: ServerConfigEntry;
+  public readonly displayName: string;
+  public readonly serverKey: string;
+  private readonly metricsCollector: MCPMetricsCollector; // Assuming MCPMetricsCollector is available
+  private initializationPromise: Promise<void> | null = null;
+  private static readonly MAX_RETRIES = 3;
+  private static readonly INITIAL_RETRY_DELAY_MS = 1000;
+
+  constructor(config: ServerConfigEntry, serverKey: string) {
+    this.config = config;
+    this.serverKey = serverKey;
+    this.displayName = config.label || serverKey;
+    // Assuming MCPMetricsCollector is defined elsewhere and accessible
+    // If not, this needs to be adapted or the metrics feature simplified
+    this.metricsCollector = globalMetricsCollector; // Use global instance
+
+    mcpLogger.logServerLifecycle(McpOperation.SERVER_STARTUP, this.serverKey, {
+      metadata: {
+        transport: this.config.transport.type,
+        label: this.displayName,
+      }
+    });
+    this.initializeClient();
+  }
+
+  private initializeClient(): Promise<void> {
+    if (!this.initializationPromise) {
+      this.initializationPromise = this._attemptInitializationWithRetries().catch(
+        (error) => {
+          // This catch is for the final error after all retries
+          this.clientInitializationStatus = 'error';
+          this.clientInitializationError = error instanceof Error ? error : new Error(String(error));
+          appLogger.mcp.error(
+            `[MCP-${this.displayName}] Final initialization attempt failed after retries.`,
+            error
+          );
+          mcpLogger.logServerLifecycle(
+            McpOperation.ERROR_HANDLING, // Was SERVER_INIT_FAILED_FINAL
+            this.serverKey,
+            { error: error instanceof Error ? error : new Error(String(error)), metadata: { context: 'Final initialization attempt failed' } }
+          );
+          // Do not re-throw here, allow status to be checked
+        }
+      );
+    }
+    return this.initializationPromise;
+  }
+
+  private async _attemptInitializationWithRetries(): Promise<void> {
+    for (let attempt = 1; attempt <= ManagedMCPClient.MAX_RETRIES; attempt++) {
+      try {
+        appLogger.mcp.info(
+          `[MCP-${this.displayName}] Attempting to initialize client (Attempt ${attempt}/${ManagedMCPClient.MAX_RETRIES}). Transport: ${this.config.transport.type}`
+        );
+        mcpLogger.logServerLifecycle(
+          McpOperation.INITIALIZE, // Was SERVER_INIT_ATTEMPT
+          this.serverKey,
+          { metadata: { attempt, transport: this.config.transport.type, stage: 'attempt' } }
+        );
+
+        await this._initializeAndFetchTools();
+
+        this.clientInitializationStatus = 'success';
+        this.clientInitializationError = undefined;
+        appLogger.mcp.info(
+          `[MCP-${this.displayName}] Client initialized successfully with ${this.enhancedClient?.tools ? Object.keys(this.enhancedClient.tools).length : 0} tools.`
+        );
+        mcpLogger.logServerLifecycle(
+          McpOperation.INITIALIZE, // Was SERVER_INIT_SUCCESS
+          this.serverKey,
+          { metadata: { toolCount: this.enhancedClient?.tools ? Object.keys(this.enhancedClient.tools).length : 0, stage: 'success' } }
+        );
+        // Record successful connection with metrics collector
+        if (this.metricsCollector) {
+            await this.metricsCollector.recordServerConnection(
+                this.serverKey,
+                this.displayName,
+                this.config.transport.type as 'stdio' | 'sse' | 'streamable-http', // Cast to satisfy metrics type
+                this.enhancedClient?.tools ? Object.keys(this.enhancedClient.tools).length : 0,
+                { transportDetails: this.config.transport }
+            );
+        }
+        return; // Success
+      } catch (error: unknown) {
+        appLogger.mcp.warn(
+          `[MCP-${this.displayName}] Initialization attempt ${attempt} failed.`,
+          error
+        );
+        const currentError = error instanceof Error ? error : new Error(String(error));
+mcpLogger.logServerLifecycle(
+          McpOperation.ERROR_HANDLING, // Was SERVER_INIT_FAILED_ATTEMPT
+          this.serverKey,
+          { error: currentError, metadata: { attempt, context: 'Initialization attempt failed' } }
+        );
+        this.clientInitializationError = currentError; // Store last error
+        
+
+        if (attempt === ManagedMCPClient.MAX_RETRIES) {
+          throw error; // Rethrow to be caught by the caller of _attemptInitializationWithRetries
+        }
+        const delay = ManagedMCPClient.INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        appLogger.mcp.info(`[MCP-${this.displayName}] Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    // Should not be reached if MAX_RETRIES > 0
+    throw new MCPClientError(`[MCP-${this.displayName}] Exhausted all retries but did not initialize or throw final error.`);
+  }
+
+  private async _initializeAndFetchTools(): Promise<void> {
+    const transportConfig = this.config.transport;
+    let clientPromise: Promise<MCPToolSet>;
+
+    const commonConfig = {
+        clientName: this.displayName,
+        logger: appLogger.mcp, // Use appLogger.mcp for detailed client logs
+        timeout: 30000, // Example timeout
+        onUncaughtError: (error: unknown) => {
+          appLogger.mcp.error(`[MCP-${this.displayName}] Uncaught error in MCP client:`, error);
+          mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.serverKey, { // Was SERVER_UNCAUGHT_ERROR
+            error: error instanceof Error ? error : new Error(String(error)),
+            metadata: { context: 'Uncaught error in MCP client' }
+          });
+          this.clientInitializationStatus = 'error';
+          this.clientInitializationError = error instanceof Error ? error : new Error(String(error));
+          // Potentially trigger re-initialization or other recovery logic here
+        },
+      };
+
+    switch (transportConfig.type) {
+      case 'stdio':
+        clientPromise = createEnhancedStdioMCPClient({
+          ...commonConfig,
+          command: transportConfig.command,
+          args: transportConfig.args,
+          env: transportConfig.env,
+          cwd: transportConfig.cwd,
+          stderr: transportConfig.stderr || 'pipe',
+        });
+        break;
+      case 'sse':
+        clientPromise = createEnhancedSSEMCPClient({
+          ...commonConfig,
+          url: transportConfig.url,
+          headers: transportConfig.headers,
+        });
+        break;
+      case 'streamable-http':
+         clientPromise = createEnhancedStreamableHTTPMCPClient({
+            ...commonConfig,
+            url: transportConfig.url,
+            headers: transportConfig.headers,
+            // sessionId: transportConfig.sessionId, // If needed
+        });
+        break;
+      default:
+        throw new MCPClientError(
+          `[MCP-${this.displayName}] Unsupported transport type: ${(transportConfig as { type: string }).type}`
+        );
+    }
+
+    this.enhancedClient = await clientPromise;
+
+    if (!this.enhancedClient || !this.enhancedClient.tools) {
+        throw new MCPClientError(`[MCP-${this.displayName}] Client created but failed to provide tools.`);
+    }
+    // Tools are fetched as part of client creation in enhanced functions
+  }
+
+  public async getStatus(): Promise<{
+    status: 'pending' | 'success' | 'error' | 'initializing';
+    error?: string;
+    toolsCount?: number;
+    displayName: string;
+    serverKey: string;
+    transportType: string;
+  }> {
+    // Ensure initialization is triggered if pending and not yet started
+    if (this.clientInitializationStatus === 'pending' && !this.initializationPromise) {
+        this.initializeClient(); // Start initialization
+    }
+
+    // If initializationPromise exists, it means we are initializing or have finished/failed
+    if (this.initializationPromise) {
+        try {
+            await this.initializationPromise; // Wait for current attempt to resolve/reject
+        } catch {
+            // Error is already handled and status set by initializeClient's catch block
+        }
+    }
+    
+    return {
+      status: this.clientInitializationStatus === 'pending' && this.initializationPromise ? 'initializing' : this.clientInitializationStatus,
+      error: this.clientInitializationError?.message,
+      toolsCount: this.enhancedClient?.tools ? Object.keys(this.enhancedClient.tools).length : 0,
+      displayName: this.displayName,
+      serverKey: this.serverKey,
+      transportType: this.config.transport.type,
+    };
+  }
+
+  public async getTools(): Promise<AISDKToolCollection | null> {
+    await this.initializationPromise; // Ensure initialization is complete
+    if (this.clientInitializationStatus === 'success' && this.enhancedClient) {
+      return this.enhancedClient.tools;
+    }
+    return null;
+  }
+
+  public async getTypedTools<T extends Record<string, z.ZodSchema>>(
+    schemas: T
+  ): Promise<T | null> {
+    await this.initializationPromise; // Ensure initialization is complete
+    if (this.clientInitializationStatus === 'success' && this.enhancedClient) {
+        if ('typedTools' in this.enhancedClient && this.enhancedClient.typedTools) {
+            // Client has pre-existing typedTools.
+            // Log that the provided 'schemas' parameter is noted but existing typedTools are preferred.
+            if (schemas && Object.keys(schemas).length > 0) { // Check to ensure 'schemas' is meaningfully used
+                 appLogger.mcp.debug(`[MCP-${this.displayName}] getTypedTools: Client has pre-existing typedTools. Provided 'schemas' parameter will be noted but existing typedTools are generally preferred.`);
+            }
+            return this.enhancedClient.typedTools as T; // Return existing typedTools
+        }
+        // Client is not pre-typed. Attempt to use the provided 'schemas'.
+        appLogger.mcp.info(`[MCP-${this.displayName}] getTypedTools: Client not pre-typed. Attempting to apply and validate provided schemas.`);
+        try {
+            // Validate the client's tools against the provided 'schemas'.
+            // Note: validateToolsAgainstSchemas currently has a superficial implementation.
+            await validateToolsAgainstSchemas(this.enhancedClient.tools, schemas);
+            // If validation (even superficial) passes, return the provided 'schemas' as the typed representation.
+            return schemas;
+        } catch (e) {
+            appLogger.mcp.error(`[MCP-${this.displayName}] Failed to validate tools against provided schemas in getTypedTools.`, e);
+            return null; // Validation failed
+        }
+    }
+    return null;
+  }
+
+
+  public async close(): Promise<void> {
+    if (this.initializationPromise) {
+        try {
+            await this.initializationPromise; // Wait for any ongoing initialization
+        } catch (_e) {
+            // Initialization failed, client might not exist or be in a bad state
+            appLogger.mcp.warn(`[MCP-${this.displayName}] Closing client after initialization failure.`, _e);
+        }
+    }
+
+    if (this.enhancedClient && this.enhancedClient.close) {
+      try {
+        await this.enhancedClient.close();
+        appLogger.mcp.info(`[MCP-${this.displayName}] Client closed successfully.`);
+        mcpLogger.logServerLifecycle(McpOperation.SERVER_SHUTDOWN, this.serverKey);
+        if (this.metricsCollector) {
+            await this.metricsCollector.recordServerDisconnection(this.serverKey);
+        }
+      } catch (error: unknown) {
+        appLogger.mcp.error(`[MCP-${this.displayName}] Error closing client:`, error);
+        mcpLogger.logServerLifecycle(McpOperation.ERROR_HANDLING, this.serverKey, { // Was SERVER_SHUTDOWN_ERROR
+          error: error instanceof Error ? error : new Error(String(error)),
+          metadata: { context: 'Error during server shutdown' }
+        });
+         if (this.metricsCollector) {
+            await this.metricsCollector.recordServerError(this.serverKey); // Or a more specific error type
+        }
+      }
+    }
+    this.clientInitializationStatus = 'pending'; // Reset status
+    this.enhancedClient = null;
+    this.initializationPromise = null; // Allow re-initialization
+  }
+}
 
 // Tool call repair configuration interfaces
 export interface ToolCallRepairConfig {
@@ -569,7 +910,6 @@ export interface EnhancedToolExecutionContext {
   toolName: string
   arguments: Record<string, unknown>
   callId?: string
-  abortSignal?: AbortSignal
   timeout?: number
   retryConfig?: {
     maxAttempts: number
@@ -1049,8 +1389,8 @@ export class MultiModalContentHandler {
     const safeName = this.sanitizeFilename(filename)
     const filePath = join(this.UPLOAD_DIR, safeName)
     
-    await fs.mkdir(this.UPLOAD_DIR, { recursive: true })
-    await fs.writeFile(filePath, buffer)
+    await fsPromises.mkdir(this.UPLOAD_DIR, { recursive: true })
+    await fsPromises.writeFile(filePath, buffer)
     
     return {
       ...content,
@@ -1106,7 +1446,7 @@ export class MultiModalContentHandler {
 
       if (content.type === 'file' && typeof content.content === 'string' && content.content.startsWith('/')) {
         // Serve file from disk
-        data = await fs.readFile(content.content)
+        data = await fsPromises.readFile(content.content)
         headers['Content-Disposition'] = `attachment; filename="${content.metadata?.filename || 'download'}"`
       } else if (typeof content.content === 'string') {
         data = content.content
@@ -1136,17 +1476,40 @@ export interface MCPToolSet {
 // Global metrics collector instance for abort signal support
 const globalMetricsCollector = new MCPMetricsCollector(true)
 
+/**
+ * Simple large response processor to avoid circular imports
+ */
+function processLargeResponse(toolName: string, result: string): unknown {
+  // Simple truncation strategy to avoid circular import issues
+  if (result.length < 5000) return result;
+  
+  // Basic processing for common tool types
+  if (toolName.includes('fetch') || toolName.includes('crawl') || toolName.includes('search')) {
+    return {
+      type: 'large_response_summary',
+      tool: toolName,
+      summary: `${toolName} returned ${result.length} characters`,
+      preview: result.substring(0, 1500) + (result.length > 1500 ? '...\n\n[Content truncated for readability]' : ''),
+      metadata: {
+        original_length: result.length,
+        truncated: true
+      }
+    };
+  }
+  
+  // For other tools, just truncate
+  return result.substring(0, 3000) + (result.length > 3000 ? '\n\n[Content truncated for readability]' : '');
+}
+
 interface ToolExecutionOptions {
-  abortSignal?: AbortSignal
   callId?: string
 }
 
 /**
- * Wraps MCP tools with abort signal support for cancellation
+ * Wraps MCP tools with metrics collection and large response processing
  */
-async function wrapToolsWithAbortSignal(
-  tools: AISDKToolCollection,
-  globalAbortSignal?: AbortSignal
+async function wrapToolsWithMetrics(
+  tools: AISDKToolCollection
 ): Promise<AISDKToolCollection> {
   const wrappedTools: AISDKToolCollection = {}
 
@@ -1158,51 +1521,64 @@ async function wrapToolsWithAbortSignal(
       ...originalTool,
       execute: async (params: Record<string, unknown>, options?: ToolExecutionOptions) => {
         const startTime = Date.now()
-        let aborted = false
-        
-        // Combine global and local abort signals
-        const abortController = new AbortController()
-        const effectiveAbortSignal = abortController.signal
-        
-        if (globalAbortSignal) {
-          globalAbortSignal.addEventListener('abort', () => abortController.abort())
-        }
-        
-        if (options?.abortSignal) {
-          options.abortSignal.addEventListener('abort', () => abortController.abort())
-        }
 
         try {
-          // Check if already aborted
-          if (effectiveAbortSignal.aborted) {
-            aborted = true
-            throw new Error('Tool execution aborted before start')
-          }
-
-          // Execute the original tool with timeout and abort handling
-          const result = await executeWithAbort(originalTool, params, effectiveAbortSignal)
+          // Execute the original tool directly without abort handling
+          const executeFunction = originalTool.execute as ((params: Record<string, unknown>) => unknown) | undefined
+          const rawResult = await Promise.resolve(
+            executeFunction ? executeFunction(params) : (originalTool as unknown as (params: Record<string, unknown>) => unknown)(params)
+          )
           
-          // Record successful execution
+          // Process large responses automatically (simple check to avoid circular imports)
+          let processedResult = rawResult;
+          let wasProcessed = false;
+          let processingTime = 0;
+          
+          // Only process if result is a large string (>5000 chars)
+          if (typeof rawResult === 'string' && rawResult.length >= 5000) {
+            const processingStartTime = Date.now();
+            try {
+              // Simple processing to avoid circular import issues
+              processedResult = processLargeResponse(toolName, rawResult);
+              processingTime = Date.now() - processingStartTime;
+              wasProcessed = processedResult !== rawResult;
+              
+              if (wasProcessed) {
+                appLogger.mcp.info(`[Enhanced MCP] Processed large response for tool: ${toolName} (${processingTime}ms)`);
+              }
+            } catch (processingError) {
+              appLogger.mcp.warn(`[Enhanced MCP] Failed to process large response for ${toolName}:`, processingError);
+              processedResult = rawResult;
+              wasProcessed = false;
+            }
+          }
+          
+          // Record successful execution with processing metrics
           await globalMetricsCollector.recordToolExecution('enhanced-mcp', toolName, {
             executionTime: Date.now() - startTime,
             success: true,
             aborted: false,
-            callId: options?.callId
+            callId: options?.callId,
+            outputSize: typeof processedResult === 'string' ? processedResult.length : undefined,
+            outputType: typeof processedResult === 'object' && processedResult !== null && 'type' in processedResult 
+              ? (processedResult as { type: string }).type 
+              : typeof processedResult,
+            metadata: {
+              largeResponseProcessed: wasProcessed,
+              processingTime: wasProcessed ? processingTime : undefined,
+              originalSize: typeof rawResult === 'string' ? rawResult.length : undefined,
+              processedSize: typeof processedResult === 'string' ? processedResult.length : undefined
+            }
           })
 
-          return result
+          return processedResult
         } catch (error) {
-          // Check if error was due to abort
-          if (effectiveAbortSignal.aborted || error instanceof Error && error.message.includes('abort')) {
-            aborted = true
-          }
-
-          // Record failed/aborted execution
+          // Record failed execution
           await globalMetricsCollector.recordToolExecution('enhanced-mcp', toolName, {
             executionTime: Date.now() - startTime,
             success: false,
-            aborted,
-            errorType: aborted ? 'aborted' : 'execution_error',
+            aborted: false,
+            errorType: 'execution_error',
             errorMessage: error instanceof Error ? error.message : String(error),
             callId: options?.callId
           })
@@ -1217,53 +1593,18 @@ async function wrapToolsWithAbortSignal(
 }
 
 /**
- * Execute a tool with abort signal support
- */
-async function executeWithAbort(
-  tool: Record<string, unknown>,
-  params: Record<string, unknown>,
-  abortSignal: AbortSignal
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    // Check if already aborted
-    if (abortSignal.aborted) {
-      reject(new Error('Execution aborted'))
-      return
-    }
-
-    // Set up abort listener
-    const abortListener = () => {
-      reject(new Error('Execution aborted'))
-    }
-    abortSignal.addEventListener('abort', abortListener)
-
-    // Execute the tool
-    const executeFunction = tool.execute as ((params: Record<string, unknown>) => unknown) | undefined
-    Promise.resolve(executeFunction ? executeFunction(params) : (tool as unknown as (params: Record<string, unknown>) => unknown)(params))
-      .then(result => {
-        abortSignal.removeEventListener('abort', abortListener)
-        resolve(result)
-      })
-      .catch(error => {
-        abortSignal.removeEventListener('abort', abortListener)
-        reject(error)
-      })
-  })
-}
-
-/**
  * Enhanced MCP Client for stdio transport with robust error handling
  */
 export async function createEnhancedStdioMCPClient(
   config: EnhancedStdioConfig
 ): Promise<MCPToolSet> {
-  try {
-    console.log('[Enhanced MCP] Creating stdio client:', {
-      command: config.command,
-      args: config.args,
-      clientName: config.clientName || 'ai-sdk-mcp-client'
-    })
+  const logger = config.logger || appLogger.mcp;
+  logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
+    clientName: config.clientName || 'ai-sdk-mcp-client',
+    args: config.args, // Log arguments as part of the metadata object
+  });
 
+  try {
     const mcpClient = await createMCPClient({
       transport: new StdioMCPTransport({
         command: config.command,
@@ -1277,26 +1618,27 @@ export async function createEnhancedStdioMCPClient(
     // Get tools with optional schema validation
     const tools = await mcpClient.tools()
     
-    // Wrap tools with abort signal support
-    const enhancedTools = await wrapToolsWithAbortSignal(tools, config.abortSignal)
+    // Wrap tools with metrics collection
+    const enhancedTools = await wrapToolsWithMetrics(tools)
     
-    console.log('[Enhanced MCP] Successfully connected to stdio MCP server')
-    
+    logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+
     return {
       tools: enhancedTools,
       close: async () => {
+        logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
         try {
-          await mcpClient.close()
-          console.log('[Enhanced MCP] Stdio client closed successfully')
+          await mcpClient.close();
+          logger.info(`[Enhanced MCP] Stdio client for command ${config.command} closed successfully`);
         } catch (error) {
-          console.error('[Enhanced MCP] Error closing stdio client:', error)
-          throw new MCPClientError('Failed to close MCP client', 'CLOSE_ERROR')
+          logger.error(`[Enhanced MCP] Error closing stdio client for command ${config.command}:`, error as Error);
+          throw new MCPClientError(`Failed to close MCP client for command ${config.command}`, 'CLOSE_ERROR');
         }
       }
-    }
+    };
   } catch (error) {
-    console.error('[Enhanced MCP] Failed to create stdio client:', error)
-    
+    logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
+
     if (error instanceof Error) {
       throw new MCPClientError(
         `Failed to initialize stdio MCP client: ${error.message}`,
@@ -1314,13 +1656,13 @@ export async function createEnhancedStdioMCPClient(
 export async function createEnhancedSSEMCPClient(
   config: EnhancedSSEConfig
 ): Promise<MCPToolSet> {
-  try {
-    console.log('[Enhanced MCP] Creating SSE client:', {
-      url: config.url,
-      hasHeaders: !!config.headers,
-      clientName: config.clientName || 'ai-sdk-mcp-client'
-    })
+  const logger = config.logger || appLogger.mcp;
+  logger.info(`[Enhanced MCP] Creating SSE client for URL: ${config.url}`, {
+    clientName: config.clientName || 'ai-sdk-mcp-client',
+    hasHeaders: !!config.headers // Log headers presence as part of metadata
+  });
 
+  try {
     const mcpClient = await createMCPClient({
       transport: {
         type: 'sse',
@@ -1335,34 +1677,35 @@ export async function createEnhancedSSEMCPClient(
     // Get tools with optional schema validation
     const tools = await mcpClient.tools()
     
-    // Wrap tools with abort signal support
-    const enhancedTools = await wrapToolsWithAbortSignal(tools, config.abortSignal)
+    // Wrap tools with metrics collection
+    const enhancedTools = await wrapToolsWithMetrics(tools)
     
-    console.log('[Enhanced MCP] Successfully connected to SSE MCP server')
-    
+    logger.info(`[Enhanced MCP] Successfully connected to SSE MCP server at ${config.url}`);
+
     return {
       tools: enhancedTools,
       close: async () => {
+        logger.info(`[Enhanced MCP] Closing SSE client for URL: ${config.url}`);
         try {
-          await mcpClient.close()
-          console.log('[Enhanced MCP] SSE client closed successfully')
+          await mcpClient.close();
+          logger.info(`[Enhanced MCP] SSE client for ${config.url} closed successfully`);
         } catch (error) {
-          console.error('[Enhanced MCP] Error closing SSE client:', error)
-          throw new MCPClientError('Failed to close SSE MCP client', 'CLOSE_ERROR')
+          logger.error(`[Enhanced MCP] Error closing SSE client for ${config.url}:`, error as Error);
+          throw new MCPClientError(`Failed to close SSE MCP client for ${config.url}`, 'CLOSE_ERROR');
         }
       }
-    }
+    };
   } catch (error) {
-    console.error('[Enhanced MCP] Failed to create SSE client:', error)
-    
+    logger.error(`[Enhanced MCP] Failed to create SSE client for ${config.url}:`, error as Error);
+
     if (error instanceof Error) {
       throw new MCPClientError(
-        `Failed to initialize SSE MCP client: ${error.message}`,
+        `Failed to initialize SSE MCP client for ${config.url}: ${error.message}`,
         'INIT_ERROR'
       )
     }
     
-    throw new MCPClientError('Unknown error during SSE MCP client initialization')
+    throw new MCPClientError(`Unknown error during SSE MCP client initialization for ${config.url}`)
   }
 }
 
@@ -1372,14 +1715,14 @@ export async function createEnhancedSSEMCPClient(
 export async function createEnhancedStreamableHTTPMCPClient(
   config: EnhancedStreamableHTTPConfig
 ): Promise<MCPToolSet> {
-  try {
-    console.log('[Enhanced MCP] Creating StreamableHTTP client:', {
-      url: config.url,
-      sessionId: config.sessionId,
-      hasHeaders: !!config.headers,
-      clientName: config.clientName || 'ai-sdk-mcp-client'
-    })
+  const logger = config.logger || appLogger.mcp;
+  logger.info(`[Enhanced MCP] Creating StreamableHTTP client for URL: ${config.url}`, {
+    clientName: config.clientName || 'ai-sdk-mcp-client',
+    sessionId: config.sessionId,
+    hasHeaders: !!config.headers
+  });
 
+  try {
     // Import StreamableHTTPClientTransport dynamically using eval to avoid module resolution
     let StreamableHTTPClientTransport: StreamableHTTPClientTransportConstructor
     try {
@@ -1395,11 +1738,15 @@ export async function createEnhancedStreamableHTTPMCPClient(
         if (altModule && 'StreamableHTTPClientTransport' in altModule) {
           StreamableHTTPClientTransport = (altModule as Record<string, unknown>).StreamableHTTPClientTransport as StreamableHTTPClientTransportConstructor
         } else {
-          throw new Error('StreamableHTTPClientTransport not available in any known module path')
+          const errorMessage = '[Enhanced MCP] StreamableHTTPClientTransport not available in any known module path';
+          logger.error(errorMessage);
+          throw new Error(errorMessage.replace('[Enhanced MCP] ', '')); // Keep error message clean for user
         }
       }
-    } catch {
-      throw new Error('StreamableHTTPClientTransport not available - ensure @modelcontextprotocol/sdk is properly installed')
+    } catch (importError) {
+      const errorMessage = `[Enhanced MCP] StreamableHTTPClientTransport not available or import failed (URL: ${config.url}): ${importError instanceof Error ? importError.message : String(importError)}. Ensure @modelcontextprotocol/sdk is properly installed.`;
+      logger.error(errorMessage, importError as Error);
+      throw new MCPClientError(errorMessage.replace('[Enhanced MCP] ', ''), 'INIT_ERROR');
     }
     
     const transport = new StreamableHTTPClientTransport(new URL(config.url), {
@@ -1420,34 +1767,39 @@ export async function createEnhancedStreamableHTTPMCPClient(
     // Get tools from the StreamableHTTP server
     const tools = await mcpClient.tools()
     
-    // Wrap tools with abort signal support
-    const enhancedTools = await wrapToolsWithAbortSignal(tools, config.abortSignal)
+    // Wrap tools with metrics collection
+    const enhancedTools = await wrapToolsWithMetrics(tools)
     
-    console.log('[Enhanced MCP] Successfully connected to StreamableHTTP MCP server')
+    logger.info(`[Enhanced MCP] Successfully connected to StreamableHTTP MCP server at ${config.url}`);
     
     return {
       tools: enhancedTools,
       close: async () => {
+        logger.info(`[Enhanced MCP] Closing StreamableHTTP client for URL: ${config.url}`);
         try {
-          await mcpClient.close()
-          console.log('[Enhanced MCP] StreamableHTTP client closed successfully')
+          await mcpClient.close();
+          logger.info(`[Enhanced MCP] StreamableHTTP client for ${config.url} closed successfully`);
         } catch (error) {
-          console.error('[Enhanced MCP] Error closing StreamableHTTP client:', error)
-          throw new MCPClientError('Failed to close StreamableHTTP MCP client', 'CLOSE_ERROR')
+          logger.error(`[Enhanced MCP] Error closing StreamableHTTP client for ${config.url}:`, error as Error);
+          throw new MCPClientError(`Failed to close StreamableHTTP MCP client for ${config.url}`, 'CLOSE_ERROR');
         }
       }
-    }
+    };
   } catch (error) {
-    console.error('[Enhanced MCP] Failed to create StreamableHTTP client:', error)
-    
-    if (error instanceof Error) {
-      throw new MCPClientError(
-        `Failed to initialize StreamableHTTP MCP client: ${error.message}`,
-        'INIT_ERROR'
-      )
+    // Errors from dynamic import are caught above and re-thrown as MCPClientError
+    // This catch block now primarily handles errors from createMCPClient, mcpClient.tools(), or wrapToolsWithMetrics
+    if (!(error instanceof MCPClientError)) { // Avoid double wrapping if error is already MCPClientError from import stage
+      logger.error(`[Enhanced MCP] Failed to create or configure StreamableHTTP client for ${config.url} (post-import):`, error as Error);
+      if (error instanceof Error) {
+        throw new MCPClientError(
+          `Failed to initialize StreamableHTTP MCP client for ${config.url} (post-import): ${error.message}`,
+          'INIT_ERROR'
+        );
+      }
+      throw new MCPClientError(`Unknown error during StreamableHTTP MCP client initialization for ${config.url} (post-import)`);
+    } else {
+      throw error; // Re-throw MCPClientError from import stage
     }
-    
-    throw new MCPClientError('Unknown error during StreamableHTTP MCP client initialization')
   }
 }
 
@@ -1526,11 +1878,10 @@ async function validateToolsAgainstSchemas<T extends Record<string, z.ZodSchema>
 }
 
 /**
- * Connection pool for managing multiple MCP clients
+ * Connection pool for managing multiple MCP clients (abort functionality removed)
  */
 export class MCPConnectionPool {
   private clients = new Map<string, MCPToolSet>()
-  private abortControllers = new Map<string, AbortController>()
   private timeouts = new Map<string, NodeJS.Timeout>()
   private connectionCount = 0
 
@@ -1542,30 +1893,21 @@ export class MCPConnectionPool {
       throw new MCPClientError(`Client with id '${id}' already exists`)
     }
 
-    // Create abort controller for this client
-    const abortController = new AbortController()
-    this.abortControllers.set(id, abortController)
-
-    // Setup timeout if specified
+    // Setup timeout if specified (but without abort functionality)
     if (config.timeout) {
       const timeoutId = setTimeout(() => {
-        console.warn(`[MCP Pool] Client '${id}' timed out after ${config.timeout}ms`)
-        abortController.abort()
+        appLogger.mcp.warn(`[MCP Pool] Client '${id}' timed out after ${config.timeout}ms`)
+        // Just log timeout - no abort functionality
       }, config.timeout)
       this.timeouts.set(id, timeoutId)
     }
 
-    // Pass abort signal to config
-    const enhancedConfig = {
-      ...config,
-      abortSignal: abortController.signal
-    }
-
-    const client = await createEnhancedStdioMCPClient(enhancedConfig)
+    // Create client without abort signal
+    const client = await createEnhancedStdioMCPClient(config)
     this.clients.set(id, client)
     this.connectionCount++
     
-    console.log(`[MCP Pool] Added stdio client '${id}'. Total connections: ${this.connectionCount}`)
+    appLogger.mcp.info(`[MCP Pool] Added stdio client '${id}'. Total connections: ${this.connectionCount}`)
     return client
   }
 
@@ -1581,7 +1923,7 @@ export class MCPConnectionPool {
     this.clients.set(id, client)
     this.connectionCount++
     
-    console.log(`[MCP Pool] Added SSE client '${id}'. Total connections: ${this.connectionCount}`)
+    appLogger.mcp.info(`[MCP Pool] Added SSE client '${id}'. Total connections: ${this.connectionCount}`)
     return client
   }
 
@@ -1598,10 +1940,10 @@ export class MCPConnectionPool {
       this.clients.delete(id)
       this.connectionCount--
       
-      console.log(`[MCP Pool] Removed client '${id}'. Total connections: ${this.connectionCount}`)
+      appLogger.mcp.info(`[MCP Pool] Removed client '${id}'. Total connections: ${this.connectionCount}`)
       return true
     } catch (error) {
-      console.error(`[MCP Pool] Error removing client '${id}':`, error)
+      appLogger.mcp.error(`[MCP Pool] Error removing client '${id}'`, error as Error)
       throw new MCPClientError(`Failed to remove client '${id}'`)
     }
   }
@@ -1611,9 +1953,9 @@ export class MCPConnectionPool {
       async ([id, client]) => {
         try {
           await client.close()
-          console.log(`[MCP Pool] Closed client '${id}'`)
+          appLogger.mcp.info(`[MCP Pool] Closed client '${id}'`)
         } catch (error) {
-          console.error(`[MCP Pool] Error closing client '${id}':`, error)
+          appLogger.mcp.error(`[MCP Pool] Error closing client '${id}'`, error as Error)
         }
       }
     )
@@ -1622,7 +1964,7 @@ export class MCPConnectionPool {
     this.clients.clear()
     this.connectionCount = 0
     
-    console.log('[MCP Pool] All clients closed')
+    appLogger.mcp.info('[MCP Pool] All clients closed')
   }
 
   getStats() {
