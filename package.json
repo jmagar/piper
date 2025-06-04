@@ -84,6 +84,7 @@
   },
   "devDependencies": {
     "@21st-dev/magic": "github:21st-dev/magic-mcp",
+    "@sylphlab/pdf-reader-mcp": "^0.3.23",
     "@andredezzy/deep-directory-tree-mcp": "^1.0.1",
     "@eslint/eslintrc": "^3",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",

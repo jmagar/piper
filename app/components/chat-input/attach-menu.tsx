@@ -192,7 +192,7 @@ export function AttachMenu({
               onFilesAdded={onFileUpload}
               multiple
               disabled={!isUserAuthenticated}
-              accept=".txt,.md,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif"
+              accept=".txt,.md,application/pdf,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif"
             >
               <FileUploadTrigger asChild>
                 <DropdownMenuItem 

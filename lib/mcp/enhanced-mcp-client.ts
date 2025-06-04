@@ -1501,10 +1501,6 @@ function processLargeResponse(toolName: string, result: string): unknown {
   return result.substring(0, 3000) + (result.length > 3000 ? '\n\n[Content truncated for readability]' : '');
 }
 
-interface ToolExecutionOptions {
-  callId?: string
-}
-
 /**
  * Wraps MCP tools with metrics collection and large response processing
  */
@@ -1519,7 +1515,7 @@ async function wrapToolsWithMetrics(
     
     wrappedTools[toolName] = {
       ...originalTool,
-      execute: async (params: Record<string, unknown>, options?: ToolExecutionOptions) => {
+      execute: async (params: Record<string, unknown>) => {
         const startTime = Date.now()
 
         try {
@@ -1558,7 +1554,6 @@ async function wrapToolsWithMetrics(
             executionTime: Date.now() - startTime,
             success: true,
             aborted: false,
-            callId: options?.callId,
             outputSize: typeof processedResult === 'string' ? processedResult.length : undefined,
             outputType: typeof processedResult === 'object' && processedResult !== null && 'type' in processedResult 
               ? (processedResult as { type: string }).type 
@@ -1580,7 +1575,6 @@ async function wrapToolsWithMetrics(
             aborted: false,
             errorType: 'execution_error',
             errorMessage: error instanceof Error ? error.message : String(error),
-            callId: options?.callId
           })
 
           throw error

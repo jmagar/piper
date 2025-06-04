@@ -424,7 +424,85 @@
     - **Environment Isolation**: Container provides consistent development environment
     - **Deployment Pattern**: Self-contained containerized application ready for production
 
-### 23. Documentation Consolidation & MECE Analysis Methodology - **ESTABLISHED PATTERN**
+### 23. TypeScript Type Compatibility Patterns - **ESTABLISHED PATTERN**
+    - **Complex Union Type Handling**: Strategic use of type assertions for runtime-compatible but TypeScript-incompatible types
+        ```typescript
+        // ✅ Pattern for AI SDK tool compatibility
+        // When multiple tool sources (MCP, agent, built-in) need to be unified
+        const finalConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
+          ? { ...streamConfig, tools: toolsToUse as any, maxSteps: 10 }
+          : streamConfig;
+        
+        // Use with selectRelevantTools that expects strict ToolSet type
+        toolsToUse = selectRelevantTools(toolsToUse as any, messageCount)
+        ```
+    - **Interface Naming Conflict Resolution**: Avoid conflicts with external library types
+        ```typescript
+        // ✅ Pattern: Prefix internal interfaces to avoid AI SDK conflicts
+        interface MCPToolExecutionOptions {  // Was: ToolExecutionOptions
+          callId?: string
+        }
+        ```
+    - **Type Assertion Strategy**:
+        - Use `as any` sparingly, only at integration boundaries between different tool ecosystems
+        - Maintain runtime type safety through existing validation patterns
+        - Document rationale: "Runtime compatible but TypeScript incompatible union types"
+        - Apply at the latest possible point before strict type enforcement
+    - **AI SDK Integration Pattern**: Handle cases where AI SDK expects `Record<string, Tool<any, any>>` but application provides `Record<string, unknown>`
+
+### 24. PWA Offline Indicator Logic Patterns - **ESTABLISHED PATTERN**
+    - **Online Status Validation**: Always check connectivity status before showing offline-specific UI
+        ```typescript
+        // ✅ Correct offline indicator logic
+        // Don't show anything if online and no notification to show
+        if (isOnline && !showFullNotification) {
+          return null
+        }
+        
+        // Minimal offline indicator (only when offline)
+        if (!isOnline && (!showDetails || !showFullNotification)) {
+          return <OfflineBadge />
+        }
+        
+        // Full offline notification (only when offline)
+        if (!isOnline && showFullNotification) {
+          return <FullOfflineNotification />
+        }
+        ```
+    - **Conditional Rendering Anti-Pattern**: Avoid showing connectivity-related UI without checking actual status
+        ```typescript
+        // ❌ Wrong: Shows offline indicator regardless of connectivity
+        if (!showDetails || !showFullNotification) {
+          return <OfflineBadge />  // This shows even when online!
+        }
+        ```
+    - **PWA State Management**: Separate concerns between display state and connectivity state
+    - **User Experience Priority**: Immediate feedback for connectivity changes without artificial delays
+
+### 25. Enhanced Error Handling Patterns - **ESTABLISHED PATTERN**
+    - **API Error Response Enhancement**: Provide specific error context instead of generic messages
+        ```typescript
+        // ✅ Enhanced error handling pattern
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+          throw new Error(`Failed to create chat: ${errorData.error || "Unknown error"}`)
+        }
+        
+        if (!data.chat) {
+          throw new Error("Failed to create chat: No chat returned")
+        }
+        ```
+    - **Graceful Error Parsing**: Handle malformed API error responses safely
+    - **Debugging Enhancement**: Include operation context in error messages for better troubleshooting
+    - **Content-Type Headers**: Ensure proper response headers for better error parsing
+        ```typescript
+        return new Response(JSON.stringify({ chat }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+        ```
+
+### 26. Documentation Consolidation & MECE Analysis Methodology - **ESTABLISHED PATTERN**
     - **MECE (Mutually Exclusive, Collectively Exhaustive) Investigation**: Systematic approach to technical analysis
         - **Problem Identification**: Use MECE to categorize overlapping or contradictory information
         - **Feature Analysis**: Categorize features as "Documented but NOT Implemented" vs "Working but Under-documented"

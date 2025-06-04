@@ -2,8 +2,7 @@
 import { readFromIndexedDB, writeToIndexedDB } from "@/lib/chat-store/persist"
 import type { Chat } from "@/lib/chat-store/types"
 import { prisma } from "@/lib/prisma" // Keep for other functions, will address them later if needed
-import { fetchClient } from "../../fetch"
-import { serverFetch, serverFetchJson } from "../../server-fetch"
+import { serverFetch } from "../../server-fetch"
 import {
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "../../routes"
@@ -238,11 +237,18 @@ export async function createNewChat(
   })
 
   if (!response.ok) {
-    throw new Error("Failed to create chat")
+    const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(`Failed to create chat: ${errorData.error || "Unknown error"}`)
   }
 
   const data = await response.json()
+  
+  if (!data.chat) {
+    throw new Error("Failed to create chat: No chat returned")
+  }
+  
   const newChat = data.chat as Chat
+  
   const currentChats = await getCachedChats()
   currentChats.unshift(newChat)
   await writeToIndexedDB("chats", currentChats)

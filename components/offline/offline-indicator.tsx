@@ -185,8 +185,13 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
     )
   }
 
-  // Minimal offline indicator
-  if (!showDetails || !showFullNotification) {
+  // Don't show anything if online and no notification to show
+  if (isOnline && !showFullNotification) {
+    return null
+  }
+
+  // Minimal offline indicator (only when offline)
+  if (!isOnline && (!showDetails || !showFullNotification)) {
     return (
       <div className={`fixed top-4 right-4 z-50 ${className}`}>
         <Badge 
@@ -201,8 +206,9 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
     )
   }
 
-  // Full offline notification
-  return (
+  // Full offline notification (only when offline)
+  if (!isOnline && showFullNotification) {
+    return (
     <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 ${className}`}>
       <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 shadow-lg max-w-md">
         <CardContent className="p-4">
@@ -280,7 +286,11 @@ export function OfflineIndicator({ className = '', showDetails = true }: Offline
         </CardContent>
       </Card>
     </div>
-  )
+    )
+  }
+
+  // Don't show anything if we get here (should not happen)
+  return null
 }
 
 // Hook for checking online status in other components

@@ -48,9 +48,9 @@ const MessageAssistantComponent = ({
 
   // Accessibility announcements
   const getAriaLabel = () => {
-    if (isError) return "AI response failed"
-    if (isLastStreaming) return "AI is currently responding"
-    return "AI response complete"
+    if (isError) return "Piper's response failed"
+    if (isLastStreaming) return "Piper is currently pondering"
+    return "Piper's response complete"
   }
 
   // Calculate response stats for streaming
@@ -87,7 +87,7 @@ const MessageAssistantComponent = ({
             <div className="flex-1">
               <p className="font-medium text-destructive">Response failed to generate</p>
               <p className="text-muted-foreground mt-1">
-                {children || "The AI response encountered an error. Please try again."}
+                {children || "Piper encountered an error. Please try again."}
               </p>
             </div>
             <button
@@ -122,7 +122,7 @@ const MessageAssistantComponent = ({
                     <div className="animate-pulse rounded-full bg-current w-1.5 h-1.5" style={{ animationDelay: '150ms' }}></div>
                     <div className="animate-pulse rounded-full bg-current w-1.5 h-1.5" style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <span className="font-medium">AI is responding...</span>
+                  <span className="font-medium">Pondering...</span>
                 </div>
                 
                 {/* Response progress stats */}

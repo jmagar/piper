@@ -2,6 +2,7 @@
 
 services:
   piper-app:
+    container_name: piper-app-dev
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -38,22 +39,27 @@ services:
     restart: unless-stopped # Or 'no' for development if you prefer manual restarts
 
   piper-db:
+    container_name: piper-db-dev
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: piper
       POSTGRES_USER: piper
       POSTGRES_PASSWORD: piper # Consider using a secret or .env for password
     volumes:
-      - piper_db_data:/var/lib/postgresql/data
+      - piper-db-dev:/var/lib/postgresql/data
     ports:
       - "8631:5432" # Expose DB port to host, consistent with main docker-compose.yml
     restart: unless-stopped
 
   piper-cache:
+    container_name: piper-cache-dev
     image: redis:7-alpine
     ports:
       - "8632:6379" # Expose Redis port to host, consistent with main docker-compose.yml
     restart: unless-stopped
+    volumes:
+      - piper-cache-dev:/data
 
 volumes:
-  piper_db_data: # Defines the named volume for PostgreSQL data persistence
+  piper-db-dev: # Defines the named volume for PostgreSQL data persistence
+  piper-cache-dev: # Defines the named volume for Redis data persistence

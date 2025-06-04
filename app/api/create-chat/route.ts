@@ -14,8 +14,13 @@ export async function POST(request: Request) {
       title,
       model,
     })
-
-    return new Response(JSON.stringify({ chat }), { status: 200 })
+    
+    return new Response(JSON.stringify({ chat }), { 
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
   } catch (err: unknown) {
     console.error("Error in create-chat endpoint:", err)
 

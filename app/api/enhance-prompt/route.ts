@@ -8,7 +8,7 @@ const ENHANCEMENT_TEMPLATE = `You are a prompt enhancement assistant. Your job i
 Rules for enhancement:
 1. Preserve the original intent and meaning
 2. Add clarity and specificity where needed
-3. Include relevant context that would help the AI understand better
+3. Include relevant context that would help Piper understand better
 4. Make the prompt more actionable and clear
 5. Don't change the fundamental request, just improve it
 6. Keep the enhanced prompt concise but comprehensive

@@ -433,20 +433,20 @@ export async function POST(req: Request) {
 
     const effectiveSystemPrompt = enhancedSystemPrompt
 
-    let toolsToUse = undefined
+    let toolsToUse: ToolSet | undefined = undefined
 
     if (agentConfig?.mcpConfig) {
       const mcpConfig = agentConfig.mcpConfig as { server?: string }
       if (mcpConfig.server) {
         const { tools } = await loadMCPToolsFromURL(mcpConfig.server)
-        toolsToUse = tools
+        toolsToUse = tools as ToolSet
       }
     } else if (agentConfig?.tools) {
-      toolsToUse = agentConfig.tools
+      toolsToUse = agentConfig.tools as unknown as ToolSet
       await trackSpecialAgentUsage()
     } else {
       // If no agent-specific tools, use general MCP tools
-      const generalMcpTools = await getCombinedMCPToolsForAISDK();
+      const generalMcpTools = await getCombinedMCPToolsForAISDK() as unknown as ToolSet;
       if (Object.keys(generalMcpTools).length > 0) {
         toolsToUse = generalMcpTools;
       }
@@ -501,8 +501,7 @@ export async function POST(req: Request) {
       : streamConfig;
 
     const result = streamText({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...(finalConfig as any),
+      ...finalConfig,
       onError: (event: { error: unknown }) => {
         appLogger.aiSdk.error("🛑 streamText error (raw event.error):", event.error as Error, { correlationId });
 
