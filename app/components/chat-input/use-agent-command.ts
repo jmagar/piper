@@ -13,11 +13,18 @@ import { debounce } from "@/lib/utils"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-type MCPTool = {
+export type MCPTool = {
   name: string
   description?: string
   serverId: string
   serverLabel: string
+}
+
+// Defines the structure for an attached URL, used for UI display
+export interface AttachedUrl {
+  id: string; // Unique identifier, can be the rawMention itself
+  url: string; // The actual URL string
+  rawMention: string; // The full mention string, e.g., "@url/http://example.com"
 }
 
 export type DatabasePrompt = {
@@ -67,6 +74,7 @@ export function useAgentCommand({
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<DatabasePrompt | null>(null);
   const [pendingTool, setPendingTool] = useState<MCPTool | null>(null); // For tools requiring params
+  const [attachedUrls, setAttachedUrls] = useState<AttachedUrl[]>([]);
   
   const mentionStartPosRef = useRef<number | null>(null);
 
@@ -178,6 +186,21 @@ export function useAgentCommand({
       if (textareaRef.current) textareaRef.current.focus();
     }
   }, [selectedPrompt, value, onValueChangeAction, textareaRef]);
+
+  const removeAttachedUrl = useCallback((rawMentionToRemove: string) => {
+    setAttachedUrls(prev => prev.filter(au => au.rawMention !== rawMentionToRemove));
+    
+    if (textareaRef.current) {
+      const escapedMention = rawMentionToRemove.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+      const urlMentionPattern = new RegExp(`${escapedMention}\\s?`, 'g');
+      const currentText = textareaRef.current.value;
+      const newText = currentText.replace(urlMentionPattern, "").trimStart();
+      
+      textareaRef.current.value = newText;
+      onValueChangeAction(newText);
+      textareaRef.current.focus();
+    }
+  }, [textareaRef, onValueChangeAction]);
 
   useEffect(() => {
     if (pathname === "/") setSelectedAgent(null);
@@ -437,6 +460,16 @@ export function useAgentCommand({
     setActiveCommandType(null);
     setCurrentSearchTerm('');
     setActiveSelectionIndex(0);
+    // Add to attachedUrls state
+    setAttachedUrls(prev => {
+      if (prev.find(au => au.rawMention === fullMention)) return prev; // Avoid duplicates
+      return [...prev, { id: fullMention, url, rawMention: fullMention }];
+    });
+
+    setShowSelectionModal(false);
+    setActiveCommandType(null);
+    // setCurrentSearchTerm(""); // Decide if searchTerm should be cleared
+    setActiveSelectionIndex(0);
     mentionStartPosRef.current = null;
     textareaRef.current.focus();
 
@@ -463,6 +496,8 @@ export function useAgentCommand({
     removeSelectedAgent,
     removeSelectedTool,
     removeSelectedPrompt,
+    attachedUrls,
+    removeAttachedUrl,
     closeSelectionModal: closeSelectionModal,
     setActiveSelectionIndex,
     setCurrentSearchTerm,

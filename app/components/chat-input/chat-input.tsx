@@ -17,6 +17,9 @@ import { PromptSystem } from "../suggestions/prompt-system"
 import { FileList } from "./file-list"
 import { SelectedAgent } from "./selected-agent"
 import { SelectedPromptDisplay } from './selected-prompt-display';
+import { SelectedToolDisplay } from './selected-tool-display';
+import { SelectedUrlDisplay } from './selected-url-display';
+// Note: AttachedUrl type is provided by the useAgentCommand hook for agentCommand.attachedUrls
 import { ToolParameterInput } from "./tool-parameter-input";
 import { UnifiedSelectionModal } from "./unified-selection-modal";
 import { AttachMenu } from "./attach-menu"
@@ -96,8 +99,12 @@ export function ChatInput({
     activeSelectionIndex,
     handleModalSearchChange,
     handleUrlSubmit,
-    selectedPrompt, // Add this
-    removeSelectedPrompt, // Add this
+    selectedPrompt,
+    removeSelectedPrompt,
+    selectedTool, // Added for tool display
+    removeSelectedTool, // Added for tool display
+    attachedUrls, // Added for URL display
+    removeAttachedUrl, // Added for URL display
   } = agentCommand;
 
   const handleTriggerMention = useCallback((prefix: string) => {
@@ -327,6 +334,14 @@ export function ChatInput({
           <SelectedPromptDisplay 
             selectedPrompt={selectedPrompt}
             removeSelectedPrompt={removeSelectedPrompt}
+          />
+          <SelectedToolDisplay
+            selectedTool={selectedTool}
+            removeSelectedTool={removeSelectedTool}
+          />
+          <SelectedUrlDisplay
+            attachedUrls={attachedUrls}
+            removeAttachedUrl={removeAttachedUrl}
           />
           {/* Removed duplicate UnifiedSelectionModal call that was here */}
           {agentCommand.pendingTool && (
