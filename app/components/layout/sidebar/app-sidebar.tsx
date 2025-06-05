@@ -22,6 +22,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { HistoryTrigger } from "../../history/history-trigger"
+import { ButtonNewChat } from "@/app/components/layout/button-new-chat"
 import { SidebarList } from "./sidebar-list"
 
 export function AppSidebar() {
@@ -63,8 +64,10 @@ export function AppSidebar() {
           ) : (
             <div className="h-full" />
           )}
-          <AnimatePresence mode="sync" initial={false}>
-            {open && (
+          <div className="flex items-center gap-2">
+            <ButtonNewChat />
+            <AnimatePresence mode="sync" initial={false}>
+              {open && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -80,6 +83,7 @@ export function AppSidebar() {
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent className="mask-t-from-98% mask-t-to-100% mask-b-from-98% mask-b-to-100% px-3">

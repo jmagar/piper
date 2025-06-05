@@ -31,7 +31,7 @@ type AgentFormData = {
   systemPrompt: string
   mcp: string[]
   repository?: string
-  tools: string[]
+  prompts: string[]
 }
 
 type DialogCreateAgentTrigger = {
@@ -47,7 +47,7 @@ export function DialogCreateAgentTrigger({
     description: "",
     systemPrompt: "",
     mcp: [],
-    tools: [],
+    prompts: [],
   })
   const [repository, setRepository] = useState("")
   const [error, setError] = useState<{ [key: string]: string }>({})
@@ -120,9 +120,9 @@ Never invent answers. Use tools and return what you find.`
     }
   }
 
-  const handleToolsChange = (selectedTools: string[]) => {
-    setFormData({ ...formData, tools: selectedTools })
-  }
+  const handlePromptsChange = (selectedPromptIds: string[]) => {
+    setFormData({ ...formData, prompts: selectedPromptIds });
+  };
 
   const validateRepository = (repo: string) => {
     // Simple validation for owner/repo format
@@ -203,9 +203,9 @@ Never invent answers. Use tools and return what you find.`
           systemPrompt: formData.systemPrompt,
           mcp_config: formData.mcp.length === 0 ? null : formData.mcp,
           repository: formData.mcp.includes("git-mcp") ? formData.repository : null,
-          tools: formData.tools,
           owner: owner,
           repo: repo,
+          prompts: formData.prompts, // Add selected prompts
         }),
       })
 
@@ -217,7 +217,7 @@ Never invent answers. Use tools and return what you find.`
       const result = await apiResponse.json()
       toast({ title: "Agent created successfully!", status: "success" })
       setOpen(false) // Close dialog on success
-      router.push(`/a/${result.agent.slug}`) // Changed from result.slug to result.agent.slug
+      router.push(`/agents/${result.agent.slug}`) // Changed from result.slug to result.agent.slug
     } catch (err: unknown) {
       let errorMessage = "An unexpected error occurred."
       if (err instanceof Error) {
@@ -242,7 +242,7 @@ Never invent answers. Use tools and return what you find.`
       isLoading={isLoading}
       handleInputChange={handleInputChange}
       handleSelectChange={handleSelectChange}
-      handleToolsChange={handleToolsChange}
+      handlePromptsChange={handlePromptsChange} // Pass down the new handler
       handleSubmit={handleSubmit}
       onClose={() => setOpen(false)}
       isDrawer={isMobile}

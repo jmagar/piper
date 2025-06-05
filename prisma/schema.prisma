@@ -59,7 +59,7 @@ model Agent {
   chats          Chat[]
 }
 
-model Rule {
+model Prompt {
   id            String   @id @default(uuid())
   name          String
   description   String

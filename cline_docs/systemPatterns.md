@@ -425,30 +425,56 @@
     - **Deployment Pattern**: Self-contained containerized application ready for production
 
 ### 23. TypeScript Type Compatibility Patterns - **ESTABLISHED PATTERN**
-    - **Complex Union Type Handling**: Strategic use of type assertions for runtime-compatible but TypeScript-incompatible types
+    - **AI SDK ToolSet Integration**: Strategic type handling for multiple tool source compatibility
         ```typescript
-        // ✅ Pattern for AI SDK tool compatibility
-        // When multiple tool sources (MCP, agent, built-in) need to be unified
-        const finalConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
-          ? { ...streamConfig, tools: toolsToUse as any, maxSteps: 10 }
-          : streamConfig;
+        // ✅ Pattern for AI SDK tool compatibility across different ecosystems
+        // Problem: Multiple tool sources (MCP, agent, built-in) have different type signatures
+        // Solution: Explicit variable typing + strategic casting at integration boundaries
         
-        // Use with selectRelevantTools that expects strict ToolSet type
-        toolsToUse = selectRelevantTools(toolsToUse as any, messageCount)
+        // 1. Declare with explicit AI SDK-compatible type
+        let toolsToUse: ToolSet | undefined = undefined
+        
+        // 2. Cast at assignment points, not usage points
+        if (mcpConfig.server) {
+          const { tools } = await loadMCPToolsFromURL(mcpConfig.server)
+          toolsToUse = tools as ToolSet
+        } else if (agentConfig?.tools) {
+          toolsToUse = agentConfig.tools as unknown as ToolSet
+        } else {
+          const generalMcpTools = await getCombinedMCPToolsForAISDK() as unknown as ToolSet
+          toolsToUse = generalMcpTools
+        }
+        
+        // 3. Use directly without additional casting
+        const finalConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
+          ? { ...streamConfig, tools: toolsToUse, maxSteps: 10 }
+          : streamConfig
         ```
-    - **Interface Naming Conflict Resolution**: Avoid conflicts with external library types
+    - **Type Assertion Strategy for Union Types**:
+        - Use double casting (`as unknown as TargetType`) for complex union types that are runtime-compatible but TypeScript-incompatible
+        - Apply type assertions at assignment points rather than usage points for better type safety
+        - Maintain explicit type declarations on variables that need AI SDK compatibility
+        - Document rationale: "Runtime compatible but TypeScript incompatible union types"
+    - **Import Optimization Pattern**:
         ```typescript
-        // ✅ Pattern: Prefix internal interfaces to avoid AI SDK conflicts
+        // ✅ Clean import pattern - only import what's used
+        import { experimental_createMCPClient as createMCPClient, generateObject } from "ai"
+        
+        // ❌ Avoid unused imports that cause linter errors
+        // import { experimental_createMCPClient as createMCPClient, generateObject, ToolSet } from "ai"
+        ```
+    - **Interface Naming Conflict Resolution**: Prefix internal interfaces to avoid conflicts with external library types
+        ```typescript
+        // ✅ Pattern: Prefix to avoid AI SDK type conflicts
         interface MCPToolExecutionOptions {  // Was: ToolExecutionOptions
           callId?: string
         }
         ```
-    - **Type Assertion Strategy**:
-        - Use `as any` sparingly, only at integration boundaries between different tool ecosystems
-        - Maintain runtime type safety through existing validation patterns
-        - Document rationale: "Runtime compatible but TypeScript incompatible union types"
-        - Apply at the latest possible point before strict type enforcement
-    - **AI SDK Integration Pattern**: Handle cases where AI SDK expects `Record<string, Tool<any, any>>` but application provides `Record<string, unknown>`
+    - **Error Resolution Process**:
+        - Use RAG queries against crawled documentation to understand external library type requirements
+        - Apply systematic debugging to identify root causes of type incompatibility
+        - Test type assertions with actual use cases to ensure runtime compatibility
+        - Verify fixes with linter checks and TypeScript compilation
 
 ### 24. PWA Offline Indicator Logic Patterns - **ESTABLISHED PATTERN**
     - **Online Status Validation**: Always check connectivity status before showing offline-specific UI
@@ -751,3 +777,41 @@ All enhancements are **non-breaking**:
 - Analytics and advanced monitoring hooks prepared
 
 This architecture provides **enterprise-grade MCP tooling** while maintaining simplicity and reliability for standard use cases.
+
+### 27. TypeScript Error Resolution & Linter Fix Patterns - **ESTABLISHED METHODOLOGY**
+    - **Systematic Linter Error Resolution Process**:
+        1. **Error Categorization**: Group errors by type (TypeScript compilation, unused imports, ESLint directive issues)
+        2. **Root Cause Analysis**: Use tools like RAG queries to understand external library type requirements
+        3. **Strategic Fixing**: Address type compatibility at variable declaration level rather than usage level
+        4. **Import Cleanup**: Remove unused imports and ESLint directives that are no longer needed
+        5. **Verification**: Run linter checks and TypeScript compilation to confirm all errors resolved
+    - **AI SDK Integration Debugging Pattern**:
+        ```typescript
+        // ✅ Step-by-step debugging approach for AI SDK tool compatibility
+        
+        // 1. Identify the type mismatch (AISDKToolCollection vs ToolSet)
+        // 2. Research the target type requirements via RAG queries
+        // 3. Implement explicit typing at variable level
+        let toolsToUse: ToolSet | undefined = undefined
+        
+        // 4. Apply strategic casting at assignment boundaries
+        toolsToUse = agentConfig.tools as unknown as ToolSet
+        
+        // 5. Use without additional casting in AI SDK calls
+        const result = streamText({ tools: toolsToUse })
+        ```
+    - **RAG-Driven Development Pattern**:
+        - Use RAG queries against crawled documentation to understand complex external library types
+        - Query format: "ToolSet type definition AI SDK tools parameter streamText"
+        - Validate solutions against official documentation rather than guessing
+        - Apply learned patterns consistently across similar integration points
+    - **Version Control Integration Pattern**:
+        - Stage all related changes together: `git add .`
+        - Use descriptive commit messages that explain the problem and solution
+        - Include affected files and error types in commit message
+        - Push immediately after verification to preserve working state
+    - **Multi-File Error Resolution Strategy**:
+        - Address all errors in a single session to avoid partial fixes
+        - Group related changes (type fixes, import cleanup) for atomic commits
+        - Maintain focus on clean compilation and zero linter errors
+        - Test incrementally but commit atomically

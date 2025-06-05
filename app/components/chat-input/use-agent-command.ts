@@ -1,7 +1,12 @@
 "use client"
 
+// New multi-character prefixes
+const AGENT_PREFIX = "@agents/";
+const TOOL_PREFIX = "@tools/";
+const PROMPT_PREFIX = "@prompts/";
+const URL_PREFIX = "@url/";
+
 import { useChatSession } from "@/app/providers/chat-session-provider"
-// import { useUser } from "@/app/providers/user-provider"
 import { Agent } from "@/app/types/agent"
 import { useChats } from "@/lib/chat-store/chats/provider"
 import { debounce } from "@/lib/utils"
@@ -15,7 +20,7 @@ type MCPTool = {
   serverLabel: string
 }
 
-type DatabaseRule = {
+export type DatabasePrompt = {
   id: string
   name: string
   description: string
@@ -23,420 +28,458 @@ type DatabaseRule = {
   systemPrompt: string
 }
 
+type UseAgentCommandProps = {
+  value: string;
+  onValueChangeAction: (value: string) => void;
+  agents: Agent[];
+  defaultAgent?: Agent | null;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  // agentCommandSlash, toolCommandSlash, promptCommandSlash are deprecated
+};
+
+const MENTION_PREFIXES_CONFIG = [
+  { type: 'agents' as const, prefix: AGENT_PREFIX },
+  { type: 'tools' as const, prefix: TOOL_PREFIX },
+  { type: 'prompts' as const, prefix: PROMPT_PREFIX },
+  { type: 'url' as const, prefix: URL_PREFIX },
+];
+
 export function useAgentCommand({
-  value,
-  onValueChange,
+  onValueChangeAction,
   agents,
   defaultAgent = null,
-}: {
-  value: string
-  onValueChange: (value: string) => void
-  agents: Agent[]
-  defaultAgent?: Agent | null
-}) {
-  const searchParams = useSearchParams()
-  const { chatId } = useChatSession()
-  // const { user } = useUser() // Not needed in admin-only mode
-  const { updateChatAgent } = useChats()
+  textareaRef,
+  value, // The current input value from props
+}: UseAgentCommandProps) {
+  const searchParams = useSearchParams();
+  const { chatId } = useChatSession();
+  const { updateChatAgent } = useChats();
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const pathname = usePathname()
-  const router = useRouter()
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(defaultAgent);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [activeCommandType, setActiveCommandType] = useState<'agents' | 'tools' | 'prompts' | 'url' | null>(null);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState("");
+  const [activeSelectionIndex, setActiveSelectionIndex] = useState(0);
+  const [mcpTools, setMcpTools] = useState<MCPTool[]>([]);
+  const [databasePrompts, setDatabasePrompts] = useState<DatabasePrompt[]>([]);
+  const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<DatabasePrompt | null>(null);
+  const [pendingTool, setPendingTool] = useState<MCPTool | null>(null); // For tools requiring params
+  
+  const mentionStartPosRef = useRef<number | null>(null);
 
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(defaultAgent)
-  const [showAgentCommand, setShowAgentCommand] = useState(false)
-  const [showToolCommand, setShowToolCommand] = useState(false)
-  const [showRuleCommand, setShowRuleCommand] = useState(false)
-  const [agentSearchTerm, setAgentSearchTerm] = useState("")
-  const [toolSearchTerm, setToolSearchTerm] = useState("")
-  const [ruleSearchTerm, setRuleSearchTerm] = useState("")
-  const [activeAgentIndex, setActiveAgentIndex] = useState(0)
-  const [activeToolIndex, setActiveToolIndex] = useState(0)
-  const [activeRuleIndex, setActiveRuleIndex] = useState(0)
-  const [mcpTools, setMcpTools] = useState<MCPTool[]>([])
-  const [databaseRules, setDatabaseRules] = useState<DatabaseRule[]>([])
-  const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null)
-  const [selectedRule, setSelectedRule] = useState<DatabaseRule | null>(null)
-  const [pendingTool, setPendingTool] = useState<MCPTool | null>(null) // Tool waiting for parameters
+  useEffect(() => {
+    setActiveSelectionIndex(0);
+  }, [currentSearchTerm]);
 
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const mentionStartPosRef = useRef<number | null>(null)
-
-  // Fetch MCP tools on mount
   useEffect(() => {
     const fetchMCPTools = async () => {
       try {
-        const response = await fetch('/api/mcp-tools-available')
-        const data = await response.json()
-        setMcpTools(data.tools || [])
+        const response = await fetch('/api/mcp-tools-available');
+        const data = await response.json();
+        setMcpTools(data.tools || []);
       } catch (error) {
-        console.error('Failed to fetch MCP tools:', error)
-        setMcpTools([])
+        console.error('Failed to fetch MCP tools:', error);
+        setMcpTools([]);
       }
-    }
-    fetchMCPTools()
-  }, [])
+    };
+    fetchMCPTools();
+  }, []);
 
-  // Fetch database rules on mount
   useEffect(() => {
-    const fetchDatabaseRules = async () => {
+    const fetchDatabasePrompts = async () => {
       try {
-        const response = await fetch('/api/rules-available')
-        const data = await response.json()
-        console.log('Fetched database rules:', data.rules)
-        setDatabaseRules(data.rules || [])
+        const response = await fetch('/api/prompts-available');
+        const data = await response.json();
+        setDatabasePrompts(data.prompts || []);
       } catch (error) {
-        console.error('Failed to fetch database rules:', error)
+        console.error('Failed to fetch database prompts:', error);
       }
-    }
-    fetchDatabaseRules()
-  }, [])
+    };
+    fetchDatabasePrompts();
+  }, []);
 
-  // Fuzzy matching function
   const fuzzyMatch = useCallback((term: string, target: string): number => {
-    const termLower = term.toLowerCase()
-    const targetLower = target.toLowerCase()
-    
-    // Exact match gets highest score
+    const termLower = term.toLowerCase();
+    const targetLower = target.toLowerCase();
     if (targetLower.includes(termLower)) {
-      return targetLower.indexOf(termLower) === 0 ? 100 : 80
+      return targetLower.indexOf(termLower) === 0 ? 100 : 80;
     }
-    
-    // Character sequence matching
-    let termIndex = 0
-    let score = 0
+    let termIndex = 0;
+    let score = 0;
     for (let i = 0; i < targetLower.length && termIndex < termLower.length; i++) {
       if (targetLower[i] === termLower[termIndex]) {
-        score += 1
-        termIndex++
+        score += 1;
+        termIndex++;
       }
     }
-    
-    return termIndex === termLower.length ? score * (50 / target.length) : 0
-  }, [])
+    return termIndex === termLower.length ? score * (50 / target.length) : 0;
+  }, []);
 
-  const filteredAgents = agentSearchTerm
+  const filteredAgents = currentSearchTerm
     ? agents
-        .map(agent => ({
-          agent,
-          score: Math.max(
-            fuzzyMatch(agentSearchTerm, agent.name),
-            fuzzyMatch(agentSearchTerm, agent.description || '')
-          )
-        }))
+        .map(agent => ({ agent, score: Math.max(fuzzyMatch(currentSearchTerm, agent.name), fuzzyMatch(currentSearchTerm, agent.description || '')) }))
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(item => item.agent)
-    : agents
+    : agents;
 
-  const filteredTools = toolSearchTerm
+  const filteredTools = currentSearchTerm
     ? mcpTools
-        .map(tool => ({
-          tool,
-          score: Math.max(
-            fuzzyMatch(toolSearchTerm, tool.name),
-            fuzzyMatch(toolSearchTerm, tool.description || ''),
-            fuzzyMatch(toolSearchTerm, tool.serverLabel)
-          )
-        }))
+        .map(tool => ({ tool, score: Math.max(fuzzyMatch(currentSearchTerm, tool.name), fuzzyMatch(currentSearchTerm, tool.description || ''), fuzzyMatch(currentSearchTerm, tool.serverLabel)) }))
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(item => item.tool)
-    : mcpTools
+    : mcpTools;
 
-  // Reduced logging: only show when search term changes or significant state change
-  if (process.env.NODE_ENV === 'development' && toolSearchTerm && filteredTools.length !== mcpTools.length) {
-    console.log('🔧 [useAgentCommand] filtered tools:', {
-      search: toolSearchTerm,
-      found: filteredTools.length,
-      total: mcpTools.length
-    })
-  }
-
-  const filteredRules = ruleSearchTerm
-    ? databaseRules
-        .map(rule => ({
-          rule,
-          score: Math.max(
-            fuzzyMatch(ruleSearchTerm, rule.name),
-            fuzzyMatch(ruleSearchTerm, rule.description || ''),
-            fuzzyMatch(ruleSearchTerm, rule.slug)
-          )
-        }))
+  const filteredPrompts = currentSearchTerm
+    ? databasePrompts
+        .map(prompt => ({ prompt, score: Math.max(fuzzyMatch(currentSearchTerm, prompt.name), fuzzyMatch(currentSearchTerm, prompt.description || ''), fuzzyMatch(currentSearchTerm, prompt.slug)) }))
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
-        .map(item => item.rule)
-    : databaseRules
+        .map(item => item.prompt)
+    : databasePrompts;
 
-  // Sync with defaultAgent always (no localOverride anymore)
   useEffect(() => {
-    setSelectedAgent(defaultAgent ?? null)
-  }, [defaultAgent])
+    setSelectedAgent(defaultAgent ?? null);
+  }, [defaultAgent]);
 
-  // Remove selected agent on root
+  const removeSelectedAgent = useCallback(() => {
+    if (selectedAgent) {
+      const agentMentionPattern = new RegExp(`${AGENT_PREFIX}${selectedAgent.id}\s?`, 'g');
+      const newText = value.replace(agentMentionPattern, "").trimStart();
+      onValueChangeAction(newText);
+      setSelectedAgent(null);
+      if (chatId && defaultAgent?.id !== selectedAgent.id) {
+        updateChatAgent(chatId, null);
+      }
+      if (textareaRef.current) textareaRef.current.focus();
+    }
+  }, [selectedAgent, value, onValueChangeAction, textareaRef, chatId, updateChatAgent, defaultAgent]);
+
+  const removeSelectedTool = useCallback(() => {
+    if (selectedTool) {
+      const toolMentionPattern = new RegExp(`${TOOL_PREFIX}${selectedTool.name}\s?`, 'g');
+      const newText = value.replace(toolMentionPattern, "").trimStart();
+      onValueChangeAction(newText);
+      setSelectedTool(null);
+      if (textareaRef.current) textareaRef.current.focus();
+    }
+  }, [selectedTool, value, onValueChangeAction, textareaRef]);
+
+  const removeSelectedPrompt = useCallback(() => {
+    if (selectedPrompt) {
+      const promptMentionPattern = new RegExp(`${PROMPT_PREFIX}${selectedPrompt.slug}\s?`, 'g');
+      const newText = value.replace(promptMentionPattern, "").trimStart();
+      onValueChangeAction(newText);
+      setSelectedPrompt(null);
+      if (textareaRef.current) textareaRef.current.focus();
+    }
+  }, [selectedPrompt, value, onValueChangeAction, textareaRef]);
+
   useEffect(() => {
-    if (pathname === "/") setSelectedAgent(null)
-  }, [pathname])
+    if (pathname === "/") setSelectedAgent(null);
+  }, [pathname]);
 
   const updateAgentInUrl = useCallback(
     (agent: Agent | null) => {
-      if (!searchParams) return
-
-      const params = new URLSearchParams(searchParams.toString())
-      if (agent) {
-        params.set("agent", agent.slug)
-      } else {
-        params.delete("agent")
-      }
-      router.push(`${pathname}?${params.toString()}`, { scroll: false })
+      const params = new URLSearchParams(searchParams.toString());
+      if (agent) params.set("agent", agent.slug);
+      else params.delete("agent");
+      router.replace(`${pathname}?${params.toString()}`);
     },
     [pathname, router, searchParams]
-  )
+  );
 
   const updateChatAgentDebounced = useMemo(
-    () => debounce((agent: Agent | null) => {
-      if (!chatId) return
-      updateChatAgent(chatId, agent?.id ?? null)
-    }, 500),
+    () => debounce((agent: Agent) => {
+      if (chatId) updateChatAgent(chatId, agent.id);
+    }, 300),
     [chatId, updateChatAgent]
-  )
+  );
 
-  const handleValueChange = useCallback(
-    (newValue: string) => {
-      onValueChange(newValue)
-      const match = newValue.match(/@([^@\s]*)$/)
-      if (match) {
-        const searchTerm = match[1]
-        // 3-way fuzzy matching: agents, tools, and rules
-        const agentScores = agents.map(agent => fuzzyMatch(searchTerm, agent.name))
-        const toolScores = mcpTools.map(tool => fuzzyMatch(searchTerm, tool.name))
-        const ruleScores = databaseRules.map(rule => fuzzyMatch(searchTerm, rule.name))
-        
-        const bestAgentScore = Math.max(0, ...agentScores)
-        const bestToolScore = Math.max(0, ...toolScores)
-        const bestRuleScore = Math.max(0, ...ruleScores)
-        
-        // Check for direct matches to make it easier to trigger
-        const hasToolMatch = searchTerm.length > 0 && mcpTools.some(tool => tool.name.toLowerCase().includes(searchTerm.toLowerCase()))
-        const hasRuleMatch = searchTerm.length > 0 && databaseRules.some(rule => rule.name.toLowerCase().includes(searchTerm.toLowerCase()) || rule.slug.toLowerCase().includes(searchTerm.toLowerCase()))
-        
-        if ((bestRuleScore > 5 && bestRuleScore >= bestAgentScore && bestRuleScore >= bestToolScore) || hasRuleMatch) {
-          setShowRuleCommand(true)
-          setShowAgentCommand(false)
-          setShowToolCommand(false)
-          setRuleSearchTerm(searchTerm)
-          setAgentSearchTerm("")
-          setToolSearchTerm("")
-        } else if ((bestToolScore > 5 && bestToolScore >= bestAgentScore) || hasToolMatch) {
-          setShowToolCommand(true)
-          setShowAgentCommand(false)
-          setShowRuleCommand(false)
-          setToolSearchTerm(searchTerm)
-          setAgentSearchTerm("")
-          setRuleSearchTerm("")
-        } else {
-          setShowAgentCommand(true)
-          setShowToolCommand(false)
-          setShowRuleCommand(false)
-          setAgentSearchTerm(searchTerm)
-          setToolSearchTerm("")
-          setRuleSearchTerm("")
+  const closeSelectionModal = useCallback(() => {
+    setShowSelectionModal(false);
+    setActiveCommandType(null);
+    setCurrentSearchTerm("");
+    setActiveSelectionIndex(0);
+    mentionStartPosRef.current = null;
+    if (textareaRef.current && document.activeElement !== textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [textareaRef]);
+
+  const insertMention = useCallback((prefix: string, slugOrName: string, extraSpace = true) => {
+    if (!textareaRef.current || mentionStartPosRef.current === null) return;
+    const text = textareaRef.current.value;
+    const mention = `${prefix}${slugOrName}${extraSpace ? ' ' : ''}`;
+    const textBeforeMention = text.substring(0, mentionStartPosRef.current);
+    let textAfterMentionStart = mentionStartPosRef.current + (currentSearchTerm.length + prefix.length);
+    if (currentSearchTerm === "") {
+      textAfterMentionStart = mentionStartPosRef.current + prefix.length;
+    }
+    textAfterMentionStart = Math.min(textAfterMentionStart, text.length);
+    const textAfterMention = text.substring(textAfterMentionStart);
+    const newValue = `${textBeforeMention}${mention}${textAfterMention}`.trimStart();
+    onValueChangeAction(newValue);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        const newCursorPos = (mentionStartPosRef.current ?? 0) + mention.length;
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    });
+    closeSelectionModal();
+  }, [textareaRef, onValueChangeAction, closeSelectionModal, currentSearchTerm]);
+
+  const confirmSelection = useCallback(() => {
+    if (!activeCommandType || !showSelectionModal) return;
+    let selectedItem: Agent | MCPTool | DatabasePrompt | string | null = null;
+    let prefix = "";
+    let slugOrName = "";
+    switch (activeCommandType) {
+      case 'agents':
+        selectedItem = filteredAgents[activeSelectionIndex];
+        if (selectedItem && 'slug' in selectedItem) {
+          prefix = AGENT_PREFIX;
+          slugOrName = selectedItem.slug;
+          setSelectedAgent(selectedItem as Agent);
+          updateAgentInUrl(selectedItem as Agent);
+          updateChatAgentDebounced(selectedItem as Agent);
         }
-        
-        if (mentionStartPosRef.current === null && textareaRef.current) {
-          const atIndex = newValue.lastIndexOf("@" + searchTerm)
-          mentionStartPosRef.current = atIndex
+        break;
+      case 'tools':
+        selectedItem = filteredTools[activeSelectionIndex];
+        if (selectedItem && 'name' in selectedItem) {
+          prefix = TOOL_PREFIX;
+          slugOrName = selectedItem.name;
+          setSelectedTool(selectedItem as MCPTool);
         }
-      } else {
-        setShowAgentCommand(false)
-        setShowToolCommand(false)
-        setShowRuleCommand(false)
-        setAgentSearchTerm("")
-        setToolSearchTerm("")
-        setRuleSearchTerm("")
-        mentionStartPosRef.current = null
-      }
-    },
-    [onValueChange, agents, mcpTools, databaseRules, fuzzyMatch]
-  )
-
-  const handleAgentSelect = useCallback(
-    (agent: Agent) => {
-      setSelectedAgent(agent)
-      updateAgentInUrl(agent)
-      updateChatAgentDebounced(agent)
-
-      const start = mentionStartPosRef.current
-      const text = value.replace(/@([^@\s]*)$/, "")
-      onValueChange(
-        start !== null ? value.slice(0, start) + text.slice(start) : text
-      )
-
-      setShowAgentCommand(false)
-      setShowToolCommand(false)
-      mentionStartPosRef.current = null
-      textareaRef.current?.focus()
-    },
-    [value, onValueChange, updateAgentInUrl, updateChatAgentDebounced]
-  )
-
-  const handleToolSelect = useCallback(
-    (tool: MCPTool) => {
-      // Set tool as pending parameters instead of immediately adding to input
-      setPendingTool(tool)
-      setShowToolCommand(false)
-      setShowAgentCommand(false)
-      mentionStartPosRef.current = null
-    },
-    []
-  )
-
-  const handleToolParametersSubmit = useCallback(
-    (tool: MCPTool, parameters: Record<string, unknown>) => {
-      setSelectedTool(tool)
-      
-      // Add tool mention with parameters to the input using just the tool name
-      const start = mentionStartPosRef.current
-      const toolMention = `@${tool.name}(${JSON.stringify(parameters)})`
-      
-      if (start !== null) {
-        const beforeMention = value.slice(0, start)
-        const afterMention = value.slice(start).replace(/@([^@\s]*)$/, toolMention)
-        onValueChange(beforeMention + afterMention)
-      } else {
-        onValueChange(value.replace(/@([^@\s]*)$/, toolMention))
-      }
-
-      setPendingTool(null)
-      textareaRef.current?.focus()
-    },
-    [value, onValueChange]
-  )
-
-  const handleToolParametersCancel = useCallback(() => {
-    setPendingTool(null)
-    textareaRef.current?.focus()
-  }, [])
-
-  const handleRuleSelect = useCallback(
-    (rule: DatabaseRule) => {
-      setSelectedRule(rule)
-      
-      // Add rule mention to the input using rule slug
-      const start = mentionStartPosRef.current
-      const ruleMention = `@${rule.slug}`
-      
-      if (start !== null) {
-        const beforeMention = value.slice(0, start)
-        const afterMention = value.slice(start).replace(/@([^@\s]*)$/, ruleMention)
-        onValueChange(beforeMention + afterMention)
-      } else {
-        onValueChange(value.replace(/@([^@\s]*)$/, ruleMention))
-      }
-
-      setShowRuleCommand(false)
-      setShowAgentCommand(false)
-      setShowToolCommand(false)
-      mentionStartPosRef.current = null
-      textareaRef.current?.focus()
-    },
-    [value, onValueChange]
-  )
+        break;
+      case 'prompts':
+        selectedItem = filteredPrompts[activeSelectionIndex];
+        if (selectedItem && 'slug' in selectedItem) {
+          prefix = PROMPT_PREFIX;
+          slugOrName = selectedItem.slug;
+          setSelectedPrompt(selectedItem as DatabasePrompt);
+        }
+        break;
+      case 'url':
+        if (currentSearchTerm) {
+          prefix = URL_PREFIX;
+          slugOrName = currentSearchTerm;
+        }
+        break;
+    }
+    if (selectedItem || (activeCommandType === 'url' && currentSearchTerm)) {
+      insertMention(prefix, slugOrName);
+    } else {
+      closeSelectionModal();
+    }
+  }, [
+    activeCommandType, showSelectionModal, filteredAgents, filteredTools, filteredPrompts,
+    activeSelectionIndex, setSelectedAgent, setSelectedTool, setSelectedPrompt, insertMention,
+    updateAgentInUrl, updateChatAgentDebounced, currentSearchTerm, closeSelectionModal
+  ]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const isAgentCommand = showAgentCommand && filteredAgents.length > 0
-      const isToolCommand = showToolCommand && filteredTools.length > 0
-      const isRuleCommand = showRuleCommand && filteredRules.length > 0
-      
-      if (!isAgentCommand && !isToolCommand && !isRuleCommand) return
-
-      if (["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"].includes(e.key))
-        e.preventDefault()
-
-      if (isAgentCommand) {
-        if (e.key === "ArrowDown")
-          setActiveAgentIndex((i) => (i + 1) % filteredAgents.length)
-        if (e.key === "ArrowUp")
-          setActiveAgentIndex(
-            (i) => (i - 1 + filteredAgents.length) % filteredAgents.length
-          )
-        if (e.key === "Enter") handleAgentSelect(filteredAgents[activeAgentIndex])
-        if (e.key === "Escape") setShowAgentCommand(false)
-      } else if (isToolCommand) {
-        if (e.key === "ArrowDown")
-          setActiveToolIndex((i) => (i + 1) % filteredTools.length)
-        if (e.key === "ArrowUp")
-          setActiveToolIndex(
-            (i) => (i - 1 + filteredTools.length) % filteredTools.length
-          )
-        if (e.key === "Enter") handleToolSelect(filteredTools[activeToolIndex])
-        if (e.key === "Escape") setShowToolCommand(false)
-      } else if (isRuleCommand) {
-        if (e.key === "ArrowDown")
-          setActiveRuleIndex((i) => (i + 1) % filteredRules.length)
-        if (e.key === "ArrowUp")
-          setActiveRuleIndex(
-            (i) => (i - 1 + filteredRules.length) % filteredRules.length
-          )
-        if (e.key === "Enter") handleRuleSelect(filteredRules[activeRuleIndex])
-        if (e.key === "Escape") setShowRuleCommand(false)
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!showSelectionModal || !activeCommandType) return;
+      const itemsCount =
+        activeCommandType === 'agents' ? filteredAgents.length :
+        activeCommandType === 'tools' ? filteredTools.length :
+        activeCommandType === 'prompts' ? filteredPrompts.length : 0;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveSelectionIndex(prev => (prev + 1) % (itemsCount || 1)); // Ensure modulo is not with 0
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveSelectionIndex(prev => (prev - 1 + (itemsCount || 1)) % (itemsCount || 1)); // Ensure modulo is not with 0
+      } else if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        confirmSelection();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelectionModal();
       }
     },
-    [showAgentCommand, showToolCommand, showRuleCommand, filteredAgents, filteredTools, filteredRules, activeAgentIndex, activeToolIndex, activeRuleIndex, handleAgentSelect, handleToolSelect, handleRuleSelect]
-  )
+    [showSelectionModal, activeCommandType, filteredAgents, filteredTools, filteredPrompts, confirmSelection, closeSelectionModal, setActiveSelectionIndex]
+  );
 
-  const removeSelectedAgent = useCallback(() => {
-    setSelectedAgent(null)
-    updateAgentInUrl(null)
-    if (chatId) {
-      updateChatAgent(chatId, null).catch(console.error)
-    }
-    textareaRef.current?.focus()
-  }, [updateAgentInUrl, chatId, updateChatAgent])
+  const handleInputChange = useCallback(
+    (currentVal: string) => {
+      onValueChangeAction(currentVal);
+      if (!textareaRef.current) return;
+      const cursorPos = textareaRef.current.selectionStart;
+      let detectedPrefixConfig = null;
+      let term = "";
+      for (const config of MENTION_PREFIXES_CONFIG) {
+        const prefixIndex = currentVal.lastIndexOf(config.prefix, cursorPos - 1);
+        if (prefixIndex !== -1) {
+          if (prefixIndex === 0 || currentVal[prefixIndex - 1] === ' ' || currentVal[prefixIndex - 1] === '\n') {
+            const potentialTerm = currentVal.substring(prefixIndex + config.prefix.length, cursorPos);
+            if (config.type !== 'url' && potentialTerm.includes(' ')) {
+              continue;
+            }
+            detectedPrefixConfig = config;
+            term = potentialTerm;
+            mentionStartPosRef.current = prefixIndex;
+            break;
+          }
+        }
+      }
+      if (detectedPrefixConfig) {
+        setActiveCommandType(detectedPrefixConfig.type);
+        setCurrentSearchTerm(term);
+        setShowSelectionModal(true);
+        setActiveSelectionIndex(0);
+      } else {
+        // If no full prefix, check for standalone "@"
+        if (cursorPos > 0 && textareaRef.current) { // Ensure cursorPos and textareaRef are valid
+          const charBeforeCursor = currentVal[cursorPos - 1];
+          const atPosition = cursorPos - 1;
+          // Check if it's a standalone '@' and not part of a longer known prefix that was somehow missed
+          if (charBeforeCursor === '@' && 
+              (atPosition === 0 || currentVal[atPosition - 1] === ' ' || currentVal[atPosition - 1] === '\n') &&
+              !MENTION_PREFIXES_CONFIG.some(config => {
+                const prefixEndingAtIndex = currentVal.substring(0, atPosition + 1);
+                return prefixEndingAtIndex.endsWith(config.prefix);
+              })
+            ) {
+            // It's a standalone @
+            setActiveCommandType(null); // UnifiedSelectionModal should handle null to show all categories
+            setCurrentSearchTerm('');
+            setShowSelectionModal(true);
+            setActiveSelectionIndex(0);
+            mentionStartPosRef.current = atPosition;
+          } else {
+            closeSelectionModal(); // Close if no recognized prefix and not a valid standalone @
+          }
+        } else {
+          closeSelectionModal(); // Close if no input or other edge cases
+        }
+      }
+    },
+    [onValueChangeAction, textareaRef, closeSelectionModal, setActiveCommandType, setCurrentSearchTerm, setShowSelectionModal, setActiveSelectionIndex, mentionStartPosRef]
+  );
 
-  useEffect(() => setActiveAgentIndex(0), [filteredAgents.length])
-  useEffect(() => setActiveToolIndex(0), [filteredTools.length])
-  useEffect(() => setActiveRuleIndex(0), [filteredRules.length])
+  const removeSelected = useCallback(() => {
+    setSelectedAgent(null);
+    setSelectedTool(null);
+    setSelectedPrompt(null);
+  }, [setSelectedAgent, setSelectedTool, setSelectedPrompt]);
 
-      return {
-      // Agent-related state and handlers
-      showAgentCommand,
-      agentSearchTerm,
-      selectedAgent,
-      activeAgentIndex,
-      filteredAgents,
-      handleAgentSelect,
-      removeSelectedAgent,
-      closeAgentCommand: () => setShowAgentCommand(false),
-      setActiveAgentIndex,
-      
-      // Tool-related state and handlers  
-      showToolCommand,
-      toolSearchTerm,
-      selectedTool,
-      activeToolIndex,
-      filteredTools,
-      handleToolSelect,
-      closeToolCommand: () => setShowToolCommand(false),
-      setActiveToolIndex,
-      pendingTool,
-      handleToolParametersSubmit,
-      handleToolParametersCancel,
-      
-      // Rule-related state and handlers
-      showRuleCommand,
-      ruleSearchTerm,
-      selectedRule,
-      activeRuleIndex,
-      filteredRules,
-      handleRuleSelect,
-      closeRuleCommand: () => setShowRuleCommand(false),
-      setActiveRuleIndex,
-      
-      // Shared state and handlers
-      mentionStartPos: mentionStartPosRef.current,
-      textareaRef,
-      handleKeyDown,
-      handleValueChange,
-    }
+  // Placeholder for submitting tool parameters
+  // const handleToolParametersSubmitAction = useCallback( // Commenting out as it's unused for now(params: Record<string, unknown>) => {
+    // if (pendingTool) {
+    //   insertMention(TOOL_PREFIX, `${pendingTool.name} ${JSON.stringify(params)}`);
+    //   setPendingTool(null);
+    // }
+  // }, [pendingTool, insertMention, setPendingTool]);
+
+  // Placeholder for canceling tool parameter entry
+  // const handleToolParametersCancelAction = useCallback(() => { // Commenting out as it's unused for now
+    // setPendingTool(null);
+    // closeSelectionModalAction();
+  // }, [setPendingTool, closeSelectionModalAction]);
+
+  const handleAgentSelectAction = useCallback(
+    (agent: Agent) => {
+      setSelectedAgent(agent);
+      updateAgentInUrl(agent);
+      updateChatAgentDebounced(agent);
+      insertMention(AGENT_PREFIX, agent.slug);
+    },
+    [setSelectedAgent, updateAgentInUrl, updateChatAgentDebounced, insertMention]
+  );
+
+  const handleToolSelectAction = useCallback(
+    (tool: MCPTool) => {
+      // For tools that require parameters, set as pendingTool and show params modal (future)
+      // For now, directly insert.
+      setSelectedTool(tool);
+      // setPendingTool(tool); // Future: This could trigger a parameter modal
+      insertMention(TOOL_PREFIX, tool.name);
+    },
+    [setSelectedTool, insertMention]
+  );
+
+  const handlePromptSelectAction = useCallback(
+    (prompt: DatabasePrompt) => {
+      setSelectedPrompt(prompt);
+      insertMention(PROMPT_PREFIX, prompt.slug);
+    },
+    [setSelectedPrompt, insertMention]
+  );
+
+  const handleUrlSubmit = useCallback((url: string) => {
+    if (!textareaRef.current || mentionStartPosRef.current === null) return;
+
+    const currentValue = textareaRef.current.value;
+    const prefix = MENTION_PREFIXES_CONFIG.find(p => p.type === 'url')?.prefix || '@url/'; // Default just in case
+    const fullMention = `${prefix}${url}`;
+
+    const textBeforeMention = currentValue.substring(0, mentionStartPosRef.current);
+    // Find the end of the current mention/search term to replace it entirely
+    // This assumes the cursor might be somewhere after the prefix if the user was typing directly
+    // For modal submission, selectionStart is likely at the end of the prefix.
+    const selectionStart = textareaRef.current.selectionStart;
+    const textAfterMention = currentValue.substring(selectionStart);
+
+    const newValue = `${textBeforeMention}${fullMention} ${textAfterMention}`.trimStart(); // Add a space after for better UX
+    textareaRef.current.value = newValue;
+    const newCursorPos = mentionStartPosRef.current + fullMention.length + 1; // +1 for the trailing space
+    textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+
+    setShowSelectionModal(false);
+    setActiveCommandType(null);
+    setCurrentSearchTerm('');
+    setActiveSelectionIndex(0);
+    mentionStartPosRef.current = null;
+    textareaRef.current.focus();
+
+    // Ensure the main input state is updated through the proper channel
+    handleInputChange(newValue);
+  }, [textareaRef, setShowSelectionModal, setActiveCommandType, setCurrentSearchTerm, setActiveSelectionIndex, handleInputChange]);
+
+  return {
+    selectedAgent,
+    selectedTool,
+    selectedPrompt,
+    pendingTool,
+    setPendingTool,
+    filteredAgents,
+    filteredTools,
+    filteredPrompts,
+    showSelectionModal,
+    activeCommandType,
+    currentSearchTerm,
+    activeSelectionIndex,
+    handleInputChange,
+    handleKeyDown,
+    removeSelected,
+    removeSelectedAgent,
+    removeSelectedTool,
+    removeSelectedPrompt,
+    closeSelectionModal: closeSelectionModal,
+    setActiveSelectionIndex,
+    setCurrentSearchTerm,
+    setSelectedAgent,
+    setSelectedTool,
+    setSelectedPrompt,
+    mentionStartPos: mentionStartPosRef.current,
+    handleModalSearchChange: (newSearchTerm: string) => {
+      setCurrentSearchTerm(newSearchTerm);
+      setActiveSelectionIndex(0); // Reset index on new search
+    },
+    confirmSelection,
+    handleAgentSelectAction,
+    handleToolSelectAction,
+    handlePromptSelectAction,
+    handleUrlSubmit
+    // Expose the original onValueChangeAction if needed by the parent for other purposes
+    // onValueChangeAction: onValueChangeAction 
+  };
 }

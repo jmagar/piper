@@ -160,7 +160,7 @@ const claudeModels: ModelConfig[] = [
     apiSdk: () => openproviders("anthropic/claude-3.7-sonnet-20250219" as AnthropicModel),
   },
   {
-    id: "anthropic/claude-4-sonnet-20250514",
+    id: "anthropic/claude-sonnet-4", // Updated to match UI usage
     name: "Claude 4 Sonnet",
     provider: "Anthropic",
     providerId: "openrouter",

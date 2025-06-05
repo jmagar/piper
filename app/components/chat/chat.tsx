@@ -472,20 +472,20 @@ export function Chat() {
       >
         <ChatInput
           value={input}
-          onSuggestion={handleSuggestion}
-          onValueChange={handleInputChange}
-          onSend={submit}
+          onSuggestionAction={handleSuggestion}
+          onValueChangeAction={handleInputChange}
+          onSendAction={submit}
           isSubmitting={isSubmitting}
           files={files}
-          onFileUpload={handleFileUpload}
-          onFileRemove={handleFileRemove}
+          onFileUploadAction={handleFileUpload}
+          onFileRemoveAction={handleFileRemove}
           hasSuggestions={!chatId && messages.length === 0}
-          onSelectModel={handleModelChange}
+          onSelectModelAction={handleModelChange}
           selectedModel={selectedModel}
           availableModels={modelsWithStarredStatus}
-          onStarModel={handleStarModel}
+          onStarModelAction={handleStarModel}
           isUserAuthenticated={isAuthenticated}
-          stop={stop}
+          stopAction={stop}
           status={status}
         />
       </motion.div>

@@ -23,7 +23,6 @@ import {
   FileArrowUp, 
   Paperclip, 
   Robot,
-  BookOpen,
   Wrench,
   File,
   Link,
@@ -32,11 +31,11 @@ import {
 import React, { useState } from "react"
 
 type AttachMenuProps = {
-  onFileUpload: (files: File[]) => void
+  onFileUploadAction: (files: File[]) => void
   isUserAuthenticated: boolean
   model: string
   // Callbacks to simulate @mention behavior
-  onTriggerMention: (prefix: string) => void
+  onTriggerMentionAction: (prefix: string) => void
 }
 
 // Clean vision detection function
@@ -66,35 +65,38 @@ function hasVisionSupport(modelId: string): boolean {
 }
 
 export function AttachMenu({
-  onFileUpload,
+  onFileUploadAction,
   isUserAuthenticated,
   model,
-  onTriggerMention,
+  onTriggerMentionAction,
 }: AttachMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const isFileUploadAvailable = hasVisionSupport(model)
 
   const handleSectionSelect = (section: string) => {
+    console.log('[AttachMenu] handleSectionSelect called with section:', section);
     setIsOpen(false) // Close the dropdown
     
     switch (section) {
       case 'agents':
-        onTriggerMention('@') // Trigger @mention for agents
+        console.log('[AttachMenu] Selecting agents');
+        onTriggerMentionAction('@agents/')
         break
       case 'tools':
-        onTriggerMention('@') // Trigger @mention for tools  
-        break
-      case 'rules':
-        onTriggerMention('@') // Trigger @mention for rules
-        break
-      case 'files':
-        // File upload is handled by FileUpload component itself
+        console.log('[AttachMenu] Selecting tools');
+        onTriggerMentionAction('@tools/')
         break
       case 'prompts':
-        console.log('Prompts section selected - feature coming soon!')
+        console.log('[AttachMenu] Selecting prompts');
+        onTriggerMentionAction('@prompts/')
         break
       case 'urls':
-        console.log('URLs section selected - feature coming soon!')
+        console.log('[AttachMenu] Selecting urls');
+        onTriggerMentionAction('@url/')
+        break
+      case 'files':
+        console.log('[AttachMenu] Selecting files (handled by FileUpload component)');
+        // File upload is handled by FileUpload component itself
         break
     }
   }
@@ -141,17 +143,7 @@ export function AttachMenu({
         </Tooltip>
         
         <DropdownMenuContent align="start" className="w-48 sm:w-52">
-          <DropdownMenuItem 
-            onClick={() => handleSectionSelect('rules')}
-            className="flex items-center gap-2 min-h-[48px] py-3 px-3"
-          >
-            <BookOpen className="size-4 text-green-600 flex-shrink-0" />
-            <div className="flex flex-col">
-              <span className="font-medium">Rules</span>
-              <span className="text-xs text-muted-foreground">Apply database rules</span>
-            </div>
-          </DropdownMenuItem>
-          
+
           <DropdownMenuItem 
             onClick={() => handleSectionSelect('prompts')}
             className="flex items-center gap-2 min-h-[48px] py-3 px-3"
@@ -184,12 +176,23 @@ export function AttachMenu({
               <span className="text-xs text-muted-foreground">Execute MCP tools</span>
             </div>
           </DropdownMenuItem>
+
+          <DropdownMenuItem 
+            onClick={() => handleSectionSelect('urls')}
+            className="flex items-center gap-2 min-h-[48px] py-3 px-3"
+          >
+            <Link className="size-4 text-green-600 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-medium">URLs</span>
+              <span className="text-xs text-muted-foreground">Attach web content</span>
+            </div>
+          </DropdownMenuItem>
           
           <DropdownMenuSeparator />
           
           {isFileUploadAvailable ? (
             <FileUpload
-              onFilesAdded={onFileUpload}
+              onFilesAdded={onFileUploadAction}
               multiple
               disabled={!isUserAuthenticated}
               accept=".txt,.md,application/pdf,image/jpeg,image/png,image/gif,image/webp,image/svg,image/heic,image/heif"
@@ -226,16 +229,7 @@ export function AttachMenu({
             </DropdownMenuItem>
           )}
           
-          <DropdownMenuItem 
-            onClick={() => handleSectionSelect('urls')}
-            className="flex items-center gap-2 min-h-[48px] py-3 px-3"
-          >
-            <Link className="size-4 text-cyan-600 flex-shrink-0" />
-            <div className="flex flex-col">
-              <span className="font-medium">URLs</span>
-              <span className="text-xs text-muted-foreground">Fetch web content</span>
-            </div>
-          </DropdownMenuItem>
+
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

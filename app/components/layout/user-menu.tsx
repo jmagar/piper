@@ -14,14 +14,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { AppInfoTrigger } from "./app-info/app-info-trigger"
-import { FeedbackTrigger } from "./feedback/feedback-trigger"
 import { SettingsTrigger } from "./settings/settings-trigger"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 
 export function UserMenu() {
+  const { setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const { user } = useUser()
 
-  if (!user) return null
+  if (!user || !mounted) return null
 
   return (
     // fix shadcn/ui / radix bug when dialog into dropdown menu
@@ -48,8 +56,21 @@ export function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <SettingsTrigger />
-        <FeedbackTrigger />
-        <AppInfoTrigger />
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          <Sun className="mr-2 h-4 w-4" />
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          <Moon className="mr-2 h-4 w-4" />
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          <div className="mr-2 h-4 w-4 rounded-sm border border-foreground/25 flex items-center justify-center">
+            <div className="h-2 w-2 rounded-sm bg-foreground/50" />
+          </div>
+          System
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

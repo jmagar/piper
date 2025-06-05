@@ -9,7 +9,7 @@ type AgentCardProps = {
   avatar_url?: string | null
   className?: string
   isAvailable: boolean
-  onClick?: () => void
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
   system_prompt?: string
   tools?: string[] | null
   mcp_config?: Tables<"agents">["mcp_config"] | null
@@ -42,7 +42,7 @@ export function AgentCard({
 
         if (!isAvailable) return
 
-        onClick?.()
+        onClick?.(e)
       }}
     >
       <div className="flex flex-col items-start space-y-2">

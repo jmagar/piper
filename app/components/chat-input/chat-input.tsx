@@ -12,14 +12,13 @@ import { Button } from "@/components/ui/button"
 import { useAgent } from "@/lib/agent-store/provider"
 import { MODELS } from "@/lib/models"
 import { ArrowUp, Stop, Warning, Sparkle } from "@phosphor-icons/react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState, useRef } from "react"
 import { PromptSystem } from "../suggestions/prompt-system"
-import { AgentCommand } from "./agent-command"
 import { FileList } from "./file-list"
 import { SelectedAgent } from "./selected-agent"
-import { ToolCommand } from "./tool-command"
-import { ToolParameterInput } from "./tool-parameter-input"
-import { RuleCommand } from "./rule-command"
+import { SelectedPromptDisplay } from './selected-prompt-display';
+import { ToolParameterInput } from "./tool-parameter-input";
+import { UnifiedSelectionModal } from "./unified-selection-modal";
 import { AttachMenu } from "./attach-menu"
 import { validateFile } from "@/lib/file-handling"
 import { toast } from "@/components/ui/toast"
@@ -35,55 +34,139 @@ type AvailableModelData = {
 
 type ChatInputProps = {
   value: string
-  onValueChange: (value: string) => void
-  onSend: () => void
+  onValueChangeAction: (value: string) => void
+  onSendAction: () => void
   isSubmitting?: boolean
   hasMessages?: boolean
   files: File[]
-  onFileUpload: (files: File[]) => void
-  onFileRemove: (file: File) => void
-  onSuggestion: (suggestion: string) => void
+  onFileUploadAction: (files: File[]) => void
+  onFileRemoveAction?: (file: File) => void
+  onSuggestionAction?: (suggestion: string) => Promise<void>
   hasSuggestions?: boolean
-  onSelectModel: (model: string) => void
+  onSelectModelAction: (model: string) => void
   selectedModel: string
   availableModels: AvailableModelData[]
-  onStarModel: (modelId: string) => void;
+  onStarModelAction: (modelId: string) => void;
   isUserAuthenticated: boolean
-  stop: () => void
+  stopAction: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
 }
 
 export function ChatInput({
   value,
-  onValueChange,
-  onSend,
+  onValueChangeAction,
+  onSendAction,
   isSubmitting,
   files,
-  onFileUpload,
-  onFileRemove,
-  onSuggestion,
+  onFileUploadAction,
+  onFileRemoveAction,
+  onSuggestionAction,
   hasSuggestions,
-  onSelectModel,
+  onSelectModelAction,
   selectedModel,
   availableModels,
-  onStarModel,
+  onStarModelAction,
   isUserAuthenticated,
-  stop,
+  stopAction,
   status,
 }: ChatInputProps) {
   const { currentAgent, curatedAgents, userAgents } = useAgent()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isEnhancing, setIsEnhancing] = useState(false)
 
   const agentCommand = useAgentCommand({
     value,
-    onValueChange,
+    onValueChangeAction,
     agents: [...(curatedAgents || []), ...(userAgents || [])],
     defaultAgent: currentAgent,
-  })
+    textareaRef,
+  });
+
+  const { 
+    showSelectionModal, 
+    activeCommandType, 
+    currentSearchTerm, 
+    filteredAgents, 
+    filteredTools, 
+    filteredPrompts, 
+    handleAgentSelectAction, 
+    handleToolSelectAction, 
+    handlePromptSelectAction, 
+    closeSelectionModal, 
+    activeSelectionIndex,
+    handleModalSearchChange,
+    handleUrlSubmit,
+    selectedPrompt, // Add this
+    removeSelectedPrompt, // Add this
+  } = agentCommand;
+
+  const handleTriggerMention = useCallback((prefix: string) => {
+    console.log('[ChatInput] handleTriggerMention called with prefix:', prefix);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const currentValue = textarea.value;
+    const selectionStart = textarea.selectionStart;
+    const selectionEnd = textarea.selectionEnd;
+
+    // Insert the prefix at the current cursor position or replace selection
+    const newValue = currentValue.substring(0, selectionStart) + prefix + currentValue.substring(selectionEnd);
+    
+    // Directly call the hook's comprehensive value change handler.
+    // This will update parent state, internal ref, and call processInputForMentions.
+    console.log('[ChatInput] Calling agentCommand.handleInputChange with newValue:', newValue);
+    const newCursorPos = selectionStart + prefix.length;
+
+    // Directly update the textarea's value
+    textarea.value = newValue;
+    // Set the cursor position
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+    // Now, trigger the value change handler that useAgentCommand listens to.
+    agentCommand.handleInputChange(newValue);
+    
+  }, [textareaRef, agentCommand]);
+
+  const handleToolParametersCancel = useCallback(() => {
+    agentCommand.setPendingTool(null);
+    // Optionally, if a modal is always open with parameter input:
+    // agentCommand.closeSelectionModal(); 
+  }, [agentCommand]);
+
+  const handleToolParametersSubmit = useCallback((submittedParams: Record<string, unknown>) => {
+    const tool = agentCommand.pendingTool;
+    if (!tool) {
+      console.error("handleToolParametersSubmit called without a pending tool");
+      return;
+    }
+
+    let toolMentionString = `@tools/${tool.name}`;
+    for (const [key, value] of Object.entries(submittedParams)) {
+      // Simple serialization; consider more robust query string style if needed
+      toolMentionString += ` ${key}=${JSON.stringify(value)}`;
+    }
+
+    // Update the main input with the full tool call string
+    agentCommand.handleInputChange(toolMentionString);
+    
+    // Confirm the tool selection (might be redundant if already selected, but good for state consistency)
+    agentCommand.setSelectedTool(tool); 
+
+    // Clear the pending tool state
+    agentCommand.setPendingTool(null);
+
+    // Ensure any modals are closed
+    agentCommand.closeSelectionModal();
+
+    // Focus the main input textarea
+    textareaRef.current?.focus();
+
+  }, [agentCommand, textareaRef]);
 
   const noToolSupport =
     currentAgent &&
-    !MODELS.find((model) => model.id === selectedModel)?.tools
+    !MODELS.find((model) => model.id === selectedModel)?.tools;
 
   const handleFileUpload = useCallback(
     async (newFiles: File[]) => {
@@ -104,10 +187,10 @@ export function ChatInput({
       }
       
       if (validFiles.length > 0) {
-        onFileUpload(validFiles)
+        onFileUploadAction(validFiles)
       }
     },
-    [onFileUpload]
+    [onFileUploadAction]
   )
 
   const handlePaste = useCallback(
@@ -156,35 +239,12 @@ export function ChatInput({
     }
 
     if (status === "streaming") {
-      stop()
+      stopAction()
       return
     }
 
-    onSend()
-  }, [isSubmitting, onSend, status, stop])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // First process agent command related key handling
-      agentCommand.handleKeyDown(e)
-
-      if (isSubmitting) {
-        e.preventDefault()
-        return
-      }
-
-      if (e.key === "Enter" && status === "streaming") {
-        e.preventDefault()
-        return
-      }
-
-      if (e.key === "Enter" && !e.shiftKey && !agentCommand.showAgentCommand && !agentCommand.showToolCommand) {
-        e.preventDefault()
-        onSend()
-      }
-    },
-    [agentCommand, isSubmitting, onSend, status]
-  )
+    onSendAction()
+  }, [isSubmitting, onSendAction, status, stopAction])
 
   const handleEnhance = useCallback(async () => {
     if (!value?.trim() || isEnhancing || isSubmitting) return
@@ -199,7 +259,7 @@ export function ChatInput({
       
       if (response.ok) {
         const { enhancedPrompt } = await response.json()
-        onValueChange(enhancedPrompt)
+        onValueChangeAction(enhancedPrompt)
       } else {
         toast({
           title: "Enhancement failed",
@@ -217,21 +277,21 @@ export function ChatInput({
     } finally {
       setIsEnhancing(false)
     }
-  }, [value, isEnhancing, isSubmitting, onValueChange])
+  }, [value, isEnhancing, isSubmitting, onValueChangeAction])
 
   useEffect(() => {
-    const el = agentCommand.textareaRef.current
+    const el = textareaRef.current
     if (!el) return
     el.addEventListener("paste", handlePaste)
     return () => el.removeEventListener("paste", handlePaste)
-  }, [agentCommand.textareaRef, handlePaste])
+  }, [handlePaste])
 
   return (
     <div className="relative flex w-full flex-col gap-4">
       {hasSuggestions && (
         <PromptSystem
-          onValueChange={onValueChange}
-          onSuggestion={onSuggestion}
+          onValueChange={onValueChangeAction} 
+          onSuggestion={suggestion => { void onSuggestionAction?.(suggestion); }} 
           value={value}
         />
       )}
@@ -240,92 +300,65 @@ export function ChatInput({
           className="bg-popover relative z-10 p-0 pt-1 shadow-xs backdrop-blur-xl"
           maxHeight={200}
           value={value}
-          onValueChange={agentCommand.handleValueChange}
+          onValueChange={agentCommand.handleInputChange} // This is for the main textarea input
         >
-          {agentCommand.showAgentCommand && (
-            <div className="absolute bottom-full left-0 w-full">
-              <AgentCommand
-                isOpen={agentCommand.showAgentCommand}
-                searchTerm={agentCommand.agentSearchTerm}
-                onSelect={agentCommand.handleAgentSelect}
-                onClose={agentCommand.closeAgentCommand}
-                activeIndex={agentCommand.activeAgentIndex}
-                onActiveIndexChange={agentCommand.setActiveAgentIndex}
-                curatedAgents={curatedAgents || []}
-                userAgents={userAgents || []}
-              />
-            </div>
+          {showSelectionModal && (
+            <UnifiedSelectionModal
+              isOpen={showSelectionModal}
+              activeCommandType={activeCommandType}
+              searchTerm={currentSearchTerm}
+              agents={filteredAgents}
+              tools={filteredTools}
+              prompts={filteredPrompts}
+              onSelectAgent={handleAgentSelectAction}
+              onSelectTool={handleToolSelectAction}
+              onSelectPrompt={handlePromptSelectAction}
+              onClose={closeSelectionModal}
+              activeIndex={activeSelectionIndex}
+              onModalSearchChange={handleModalSearchChange}
+              onUrlSubmit={handleUrlSubmit}
+            />
           )}
-          {agentCommand.showToolCommand && (
-            <div className="absolute bottom-full left-0 w-full">
-              <ToolCommand
-                isOpen={agentCommand.showToolCommand}
-                onSelect={agentCommand.handleToolSelect}
-                onClose={agentCommand.closeToolCommand}
-                activeIndex={agentCommand.activeToolIndex}
-                onActiveIndexChange={agentCommand.setActiveToolIndex}
-                filteredTools={agentCommand.filteredTools}
-              />
-            </div>
-          )}
-          {agentCommand.showRuleCommand && (
-            <div className="absolute bottom-full left-0 w-full">
-              <RuleCommand
-                isOpen={agentCommand.showRuleCommand}
-                onSelect={agentCommand.handleRuleSelect}
-                onClose={agentCommand.closeRuleCommand}
-                activeIndex={agentCommand.activeRuleIndex}
-                onActiveIndexChange={agentCommand.setActiveRuleIndex}
-                filteredRules={agentCommand.filteredRules}
-              />
-            </div>
-          )}
+          {/* All old placeholder logic and duplicate UnifiedSelectionModal calls are removed. */}
           <SelectedAgent
             selectedAgent={agentCommand.selectedAgent}
-            removeSelectedAgent={agentCommand.removeSelectedAgent}
+            removeSelectedAgent={() => agentCommand.setSelectedAgent(null)}
           />
+          <SelectedPromptDisplay 
+            selectedPrompt={selectedPrompt}
+            removeSelectedPrompt={removeSelectedPrompt}
+          />
+          {/* Removed duplicate UnifiedSelectionModal call that was here */}
           {agentCommand.pendingTool && (
             <ToolParameterInput
               tool={agentCommand.pendingTool}
-              onSubmit={agentCommand.handleToolParametersSubmit}
-              onCancel={agentCommand.handleToolParametersCancel}
+              onSubmit={handleToolParametersSubmit}
+              onCancel={handleToolParametersCancel}
             />
           )}
-          <FileList files={files} onFileRemove={onFileRemove} />
+          <FileList files={files} onFileRemove={onFileRemoveAction || (() => { /* no-op */ })} />
           <PromptInputTextarea
             placeholder={
               "Ask Piper, @mention an agent, or @mention a tool"
             }
-            onKeyDown={handleKeyDown}
+            onKeyDown={agentCommand.handleKeyDown} // Correct: useAgentCommand returns handleKeyDown
             className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
-            ref={agentCommand.textareaRef}
+            ref={textareaRef} // Use the local textareaRef
+            disabled={isSubmitting || agentCommand.pendingTool !== null}
           />
           <PromptInputActions className="mt-5 w-full justify-between px-3 pb-3">
             <div className="flex gap-2">
               <AttachMenu
-                onFileUpload={handleFileUpload}
+                onFileUploadAction={onFileUploadAction} // Ensure this uses the prop passed to ChatInput
+                onTriggerMentionAction={handleTriggerMention} // Use the new local handler
                 isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
-                onTriggerMention={(prefix) => {
-                  // Simulate @mention behavior: add @ and focus input
-                  const newValue = value + prefix
-                  onValueChange(newValue)
-                  // Focus the input after a brief delay to let state update
-                  setTimeout(() => {
-                    agentCommand.textareaRef.current?.focus()
-                  }, 10)
-                }}
               />
               <ModelSelector
-                availableModels={availableModels}
+                availableModels={availableModels} // Correct prop name for ModelSelector
                 selectedModelId={selectedModel}
-                setSelectedModelId={(modelId) => {
-                  console.log(`🔄 ChatInput ModelSelector: Model changed to "${modelId}"`);
-                  console.log(`📊 Available models source: OpenRouter API (${availableModels.length} models)`);
-                  console.log(`📋 Internal MODELS array: ${MODELS.length} models from lib/models`);
-                  onSelectModel(modelId);
-                }}
-                onStarModel={onStarModel}
+                setSelectedModelId={onSelectModelAction} // Correct: ModelSelector expects setSelectedModelId
+                onStarModel={onStarModelAction}
                 isUserAuthenticated={isUserAuthenticated}
               />
               {currentAgent && noToolSupport && (

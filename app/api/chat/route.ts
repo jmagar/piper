@@ -12,6 +12,7 @@ import {
   Message as MessageAISDK,
   streamText,
   ToolSet,
+  CoreMessage,
 } from "ai"
 import { prisma } from "@/lib/prisma"; 
 import {
@@ -20,7 +21,7 @@ import {
   trackSpecialAgentUsage,
 } from "./api"
 import { saveFinalAssistantMessage } from "./db"
-import { parseToolMentions, stripToolMentions, parseRuleMentions, stripRuleMentions } from "@/app/types/tool-mention"
+import { parseToolMentions, stripToolMentions, parsePromptMentions, stripPromptMentions, parseUrlMentions, stripUrlMentions } from "@/app/types/tool-mention";
 
 // Import our logging system
 import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger'
@@ -149,31 +150,162 @@ async function processToolMentions(messages: MessageAISDK[]): Promise<MessageAIS
   return [...processedMessages.slice(0, -1), ...toolResults, processedMessages[processedMessages.length - 1]]
 }
 
+// Helper function to fetch content for URL mentions
+async function processUrlMentions(messages: MessageAISDK[]): Promise<MessageAISDK[]> {
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage || lastMessage.role !== 'user' || typeof lastMessage.content !== 'string') {
+    return messages;
+  }
+
+  const urlMentions = parseUrlMentions(lastMessage.content);
+  if (urlMentions.length === 0) {
+    return messages;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Chat API] Found ${urlMentions.length} URL mentions to process`);
+  }
+
+  const allTools = await getCombinedMCPToolsForAISDK();
+  const fetchTool: ToolSet[string] | undefined = allTools['fetch_fetch']; // Assuming serverKey 'fetch' and toolName 'fetch'
+
+  if (!fetchTool) {
+    appLogger.error(`[ChatAPI] processUrlMentions: fetch_fetch tool not available. URL processing will be skipped.`, { correlationId: getCurrentCorrelationId() });
+    // Optionally, add a single message to inform the user the service is down, if desired.
+    return messages; // Early return if the tool isn't found
+  }
+
+  const fetchedContents: MessageAISDK[] = [];
+
+  for (const mention of urlMentions) {
+    try {
+      if (fetchTool && typeof fetchTool.execute === 'function') {
+        const toolCallId = `url-fetch-${encodeURIComponent(mention.url)}-${Date.now()}`;
+        const fetchResultUntyped: unknown = await fetchTool.execute(
+          { url: mention.url, max_length: 2000 },
+          { toolCallId, messages: messages as CoreMessage[] }
+        );
+
+        let contentToInject = "Could not extract content.";
+
+        if (typeof fetchResultUntyped === 'string') {
+          contentToInject = fetchResultUntyped;
+        } else if (fetchResultUntyped && typeof fetchResultUntyped === 'object') {
+          // Check for ChunkedResponse structure
+          if ('type' in fetchResultUntyped && fetchResultUntyped.type === 'chunked_response' &&
+              'summary' in fetchResultUntyped && typeof fetchResultUntyped.summary === 'string' &&
+              'sections' in fetchResultUntyped && Array.isArray(fetchResultUntyped.sections)) {
+            
+            const sectionsArray = fetchResultUntyped.sections as Array<unknown>; // Cast to Array<unknown> first
+
+            // Filter for sections that are objects and have string 'title' and 'content' properties
+            const validSections = sectionsArray.filter(
+              (s): s is { title: string; content: string } => // Type predicate for clarity
+                typeof s === 'object' && s !== null &&
+                'title' in s && typeof (s as { title: unknown }).title === 'string' &&
+                'content' in s && typeof (s as { content: unknown }).content === 'string'
+            );
+
+            const summaryText = (fetchResultUntyped as { summary: string }).summary;
+
+            if (validSections.length > 0) {
+              contentToInject = `${summaryText}\n\n${validSections.map((s) => `${s.title}: ${s.content}`).join('\n\n')}`;
+            } else if (sectionsArray.length > 0) { // Sections array existed but items were not valid
+              contentToInject = `${summaryText}\n\n(Content sections found but were not in the expected format or were empty.)`;
+              appLogger.warn(`[ChatAPI] processUrlMentions: Chunked response for ${mention.url} had sections, but they were not in the expected {title: string, content: string} format.`, { correlationId: getCurrentCorrelationId() });
+            } else { // No sections array or it was empty
+              contentToInject = summaryText; // Just use summary if no valid sections
+            }
+          } 
+          // Check for TruncatedResponse structure
+          else if ('type' in fetchResultUntyped && fetchResultUntyped.type === 'truncated_response' &&
+                   'content' in fetchResultUntyped && typeof fetchResultUntyped.content === 'string') {
+            const truncatedData = fetchResultUntyped as { content: string };
+            contentToInject = truncatedData.content;
+          } 
+          // Fallback for other object structures that don't match known types
+          else {
+            contentToInject = JSON.stringify(fetchResultUntyped);
+          }
+        }
+
+        if (contentToInject.length > 2000) {
+          contentToInject = contentToInject.substring(0, 2000) + "... (content truncated)";
+        }
+        fetchedContents.push({
+          id: `url-fetch-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          role: 'assistant',
+          content: `Content fetched from ${mention.url}:\n${contentToInject}`,
+        });
+        appLogger.info(`[ChatAPI] processUrlMentions: Successfully fetched and processed ${mention.url}`, { correlationId: getCurrentCorrelationId() });
+      } else if (fetchTool) {
+        // This case means fetchTool exists, but fetchTool.execute is not a function.
+        appLogger.error(`[ChatAPI] processUrlMentions: fetch_fetch tool found, but 'execute' method is missing or not a function. URL processing will be skipped for ${mention.url}.`, { correlationId: getCurrentCorrelationId(), toolName: 'fetch_fetch' });
+        fetchedContents.push({
+          id: `assistant-url-error-${Date.now()}`,
+          role: 'assistant',
+          content: `[System: Could not process URL ${mention.url} as the fetch tool's execute method is currently unavailable.]`,
+        });
+      } else {
+        // This case should ideally not be reached due to the check for !fetchTool at the start of the function
+        appLogger.error(`[ChatAPI] processUrlMentions: fetch_fetch tool became undefined unexpectedly for ${mention.url}`, { correlationId: getCurrentCorrelationId() });
+        fetchedContents.push({
+          id: `url-fetch-error-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          role: 'assistant',
+          content: `Error: URL fetching service became unavailable for ${mention.url}.`,
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      appLogger.error(`[Chat API] Error fetching URL ${mention.url}: ${errorMessage}`, { 
+        correlationId: getCurrentCorrelationId(), 
+        error 
+      });
+      // reportMCPError could be used here if 'fetch' was a registered MCP server in the same way other tools are managed
+      // For now, just add an error message to the chat.
+      fetchedContents.push({
+        id: `url-fetch-error-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        role: 'assistant',
+        content: `Failed to fetch content from ${mention.url}: ${errorMessage}`,
+      });
+    }
+  }
+
+  const strippedContent = stripUrlMentions(lastMessage.content);
+  const updatedLastUserMessage: MessageAISDK = {
+    ...lastMessage,
+    content: strippedContent || "(URL mention processed)", // Fallback if only URL was present
+  };
+
+  // Insert fetched contents before the (now stripped) user message
+  return [...messages.slice(0, -1), ...fetchedContents, updatedLastUserMessage];
+}
+
 // Helper function to process rule mentions and inject rule content
-async function processRuleMentions(messages: MessageAISDK[], currentSystemPrompt: string): Promise<{ processedMessages: MessageAISDK[], enhancedSystemPrompt: string }> {
+async function processPromptMentions(messages: MessageAISDK[], currentSystemPrompt: string): Promise<{ processedMessages: MessageAISDK[], enhancedSystemPrompt: string }> {
   const lastMessage = messages[messages.length - 1]
   if (!lastMessage || lastMessage.role !== 'user' || typeof lastMessage.content !== 'string') {
     return { processedMessages: messages, enhancedSystemPrompt: currentSystemPrompt }
   }
 
-  const ruleMentions = parseRuleMentions(lastMessage.content)
-  if (ruleMentions.length === 0) {
+  const promptMentions = parsePromptMentions(lastMessage.content)
+  if (promptMentions.length === 0) {
     return { processedMessages: messages, enhancedSystemPrompt: currentSystemPrompt }
   }
 
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[Chat API] Found ${ruleMentions.length} rule mentions to process`)
+    console.log(`[Chat API] Found ${promptMentions.length} prompt mentions to process`)
   }
 
   // Fetch rules from database
-  const ruleContents: string[] = []
-  for (const mention of ruleMentions) {
+  const promptContents: string[] = []
+  for (const mention of promptMentions) {
     try {
-      console.log(`[Chat API] Looking up rule: ${mention.ruleSlug}`)
+      console.log(`[Chat API] Looking up prompt: ${mention.promptSlug}`)
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rule = await (prisma as any).rule.findUnique({
-        where: { slug: mention.ruleSlug },
+      const prompt = await (prisma as any).prompt.findUnique({
+        where: { slug: mention.promptSlug },
         select: {
           id: true,
           name: true,
@@ -182,27 +314,27 @@ async function processRuleMentions(messages: MessageAISDK[], currentSystemPrompt
         }
       })
 
-      if (rule) {
-        console.log(`[Chat API] Found rule: ${rule.name}`)
-        ruleContents.push(`\n--- Rule: ${rule.name} ---\n${rule.system_prompt}\n`)
+      if (prompt) {
+        console.log(`[Chat API] Found prompt: ${prompt.name}`)
+        promptContents.push(`\n--- Prompt: ${prompt.name} ---\n${prompt.system_prompt}\n`)
       } else {
-        console.warn(`[Chat API] Rule not found: ${mention.ruleSlug}`)
-        ruleContents.push(`\n[Note: Rule @${mention.ruleSlug} was mentioned but not found]\n`)
+        console.warn(`[Chat API] Prompt not found: ${mention.promptSlug}`)
+        promptContents.push(`\n[Note: Prompt @${mention.promptSlug} was mentioned but not found]\n`)
       }
     } catch (error) {
-      console.error(`[Chat API] Error fetching rule ${mention.ruleSlug}:`, error)
-      ruleContents.push(`\n[Note: Error loading rule @${mention.ruleSlug}]\n`)
+      console.error(`[Chat API] Error fetching prompt ${mention.promptSlug}:`, error)
+      promptContents.push(`\n[Note: Error loading prompt @${mention.promptSlug}]\n`)
     }
   }
 
   // Enhance system prompt with rule content
-  const enhancedSystemPrompt = ruleContents.length > 0 
-    ? currentSystemPrompt + '\n\n--- Applied Rules ---' + ruleContents.join('')
+  const enhancedSystemPrompt = promptContents.length > 0 
+    ? currentSystemPrompt + '\n\n--- Applied Prompts ---' + promptContents.join('')
     : currentSystemPrompt
 
   // Clean rule mentions from the last user message
   const processedMessages = [...messages]
-  const cleanedContent = stripRuleMentions(lastMessage.content)
+  const cleanedContent = stripPromptMentions(lastMessage.content)
   
   if (cleanedContent.trim()) {
     processedMessages[processedMessages.length - 1] = {
@@ -217,7 +349,7 @@ async function processRuleMentions(messages: MessageAISDK[], currentSystemPrompt
     }
   }
 
-  console.log(`[Chat API] Enhanced system prompt with ${ruleContents.length} rule(s)`)
+  console.log(`[Chat API] Enhanced system prompt with ${promptContents.length} prompt(s)`)
   return { processedMessages, enhancedSystemPrompt }
 }
 
@@ -407,11 +539,14 @@ export async function POST(req: Request) {
 
     const initialSystemPrompt = agentConfig?.systemPrompt || systemPrompt || SYSTEM_PROMPT_DEFAULT
 
-    // Process rule mentions and enhance system prompt
-    const { processedMessages, enhancedSystemPrompt } = await processRuleMentions(processedMessagesAfterTools, initialSystemPrompt)
+    // Process prompt mentions and enhance system prompt
+    const { processedMessages: messagesWithPrompts, enhancedSystemPrompt: systemPromptWithPrompts } = await processPromptMentions(processedMessagesAfterTools, initialSystemPrompt);
+
+    // Process URL mentions
+    const messagesWithUrlsProcessed = await processUrlMentions(messagesWithPrompts);
 
     // Convert relative attachment URLs to absolute URLs for AI model access
-    const messagesWithAbsoluteUrls = processedMessages.map((message) => {
+    const messagesWithAbsoluteUrls = messagesWithUrlsProcessed.map((message) => {
       // ✅ AI SDK PATTERN: Files are already handled by AI SDK, just pass through
       return message
     })
@@ -431,7 +566,7 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENROUTER_API_KEY, // Reverted to use environment variable
     });
 
-    const effectiveSystemPrompt = enhancedSystemPrompt
+    const effectiveSystemPrompt = systemPromptWithPrompts
 
     let toolsToUse: ToolSet | undefined = undefined
 

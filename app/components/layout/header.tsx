@@ -1,7 +1,7 @@
 "use client"
 
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
-import { ButtonNewChat } from "@/app/components/layout/button-new-chat"
+
 import { UserMenu } from "@/app/components/layout/user-menu"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,10 +22,11 @@ import { useAgent } from "@/lib/agent-store/provider"
 import { APP_NAME } from "@/lib/config"
 import Link from "next/link"
 import { AgentLink } from "./agent-link"
-import { RuleLink } from "./rule-link"
+
+import { PromptLink } from "./prompt-link"
 import { DialogPublish } from "./dialog-publish"
 import { HeaderSidebarTrigger } from "./header-sidebar-trigger"
-import { ThemeToggle } from "./theme-toggle"
+
 
 export type AgentHeader = Pick<
   Agent,
@@ -57,7 +58,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
           <div />
           <div className="pointer-events-auto flex flex-1 items-center justify-end gap-2">
             {currentAgent && <DialogPublish />}
-            <ButtonNewChat />
+
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="MCP Servers">
@@ -77,9 +78,9 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
                 </DialogFooter> */}
               </DialogContent>
             </Dialog>
-            <ThemeToggle />
+
             <AgentLink />
-            <RuleLink />
+            <PromptLink />
             {!isSidebarOpen && <HistoryTrigger hasSidebar={hasSidebar} />}
             <UserMenu />
           </div>

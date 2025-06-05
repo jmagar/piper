@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       example_inputs,
       avatar_url,
       tools = [],
+      prompts = [], // Add prompts, default to empty array
     } = await request.json()
 
     if (!name || !description || !systemPrompt) {
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
         tools,
         system_prompt: systemPrompt,
         creator_id: "admin", // Hardcoded admin user in single-user mode
+        ...(prompts && prompts.length > 0 && { 
+          prompts: { 
+            connect: prompts.map((promptId: string) => ({ id: promptId })) 
+          } 
+        }),
       },
     })
 

@@ -3,7 +3,7 @@
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { AgentSummary } from "@/app/types/agent"
 import type { Tables } from "@/app/types/database.types"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer"
 import { AgentCard } from "./agent-card"
 import { AgentDetail } from "./agent-detail"
@@ -108,6 +108,7 @@ export function DialogAgent({
         className="[&>button:last-child]:bg-background flex gap-0 overflow-hidden rounded-3xl p-0 shadow-xs [&>button:last-child]:rounded-full [&>button:last-child]:p-1"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">{name}</DialogTitle>
         {renderContent()}
       </DialogContent>
     </Dialog>
