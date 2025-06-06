@@ -15,27 +15,29 @@ import {
 } from "./api"
 
 interface ChatsContextType {
-  chats: Chats[]
-  refresh: () => Promise<void>
-  isLoading: boolean
-  updateTitle: (id: string, title: string) => Promise<void>
+  chats: Chats[];
+  refresh: () => Promise<void>;
+  isLoading: boolean;
+  updateTitle: (id: string, title: string) => Promise<void>;
   deleteChat: (
     id: string,
     currentChatId?: string,
     redirect?: () => void
-  ) => Promise<void>
-  setChats: React.Dispatch<React.SetStateAction<Chats[]>>
+  ) => Promise<void>;
+  setChats: React.Dispatch<React.SetStateAction<Chats[]>>;
   createNewChat: (
     title?: string,
     model?: string
-  ) => Promise<Chats | undefined>
-  resetChats: () => Promise<void>
-  getChatById: (id: string) => Chats | undefined
-  updateChatModel: (id: string, model: string) => Promise<void>
+  ) => Promise<Chats | undefined>;
+  resetChats: () => Promise<void>;
+  getChatById: (id: string) => Chats | undefined;
+  updateChatModel: (id: string, model: string) => Promise<void>;
   updateChatAgent: (
     chatId: string,
     agentId: string | null
-  ) => Promise<void>
+  ) => Promise<void>;
+  activeChatId: string | null;
+  setActiveChatId: (id: string | null) => void;
 }
 const ChatsContext = createContext<ChatsContextType | null>(null)
 
@@ -50,8 +52,9 @@ export function ChatsProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [isLoading, setIsLoading] = useState(true) // Start with loading true
-  const [chats, setChats] = useState<Chats[]>([]) // Always initialize as empty array
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [chats, setChats] = useState<Chats[]>([]); // Always initialize as empty array
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -191,6 +194,8 @@ export function ChatsProvider({
         updateChatModel,
         updateChatAgent,
         isLoading,
+        activeChatId,
+        setActiveChatId,
       }}
     >
       {children}

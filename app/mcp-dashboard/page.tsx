@@ -1,0 +1,41 @@
+"use client"
+
+import { LayoutApp } from "@/app/components/layout/layout-app";
+import { McpServersDashboard } from "@/app/components/mcp-servers/mcp-servers-dashboard";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogViewerPlaceholder } from "@/app/components/mcp-dashboard/log-viewer-placeholder";
+import { MonitoringPlaceholder } from "@/app/components/mcp-dashboard/monitoring-placeholder";
+
+export default function McpDashboardPage() {
+  return (
+    <LayoutApp>
+      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex flex-col flex-grow">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">MCP Server Dashboard</h1>
+        <p className="text-muted-foreground mt-1">
+          View status and tools of connected MCP servers. Hover over a server for more details.
+        </p>
+      </div>
+      {/* Separator can be removed or kept depending on desired styling with tabs */}
+      {/* <Separator className="my-6" /> */}
+      <Tabs defaultValue="servers" className="w-full flex-grow flex flex-col">
+        <TabsList className="mb-4 self-start">
+          <TabsTrigger value="servers">Servers</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+        </TabsList>
+        <TabsContent value="servers" className="flex-grow">
+          <McpServersDashboard />
+        </TabsContent>
+        <TabsContent value="logs" className="flex-grow">
+          <LogViewerPlaceholder />
+        </TabsContent>
+        <TabsContent value="monitoring" className="flex-grow">
+          <MonitoringPlaceholder />
+        </TabsContent>
+      </Tabs>
+    </div>
+    </LayoutApp>
+  );
+}

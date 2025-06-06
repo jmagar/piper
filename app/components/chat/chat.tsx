@@ -63,6 +63,7 @@ export function Chat() {
     getChatById,
     updateChatModel,
     isLoading: isChatsLoading,
+    setActiveChatId,
   } = useChats()
   const currentChat = chatId ? getChatById(chatId) : null
   const { messages: initialMessages, cacheAndAddMessage } = useMessages()
@@ -124,6 +125,10 @@ export function Chat() {
     selectedModel,
     createNewChat: createNewChatForUtils, // Pass the wrapper function
   })
+
+  useEffect(() => {
+    setActiveChatId(chatId ?? null);
+  }, [chatId, setActiveChatId]);
 
   const { handleInputChange, handleModelChange, handleDelete, handleEdit } =
     useChatHandlers({

@@ -352,7 +352,7 @@ export function McpServersDashboard() {
       setError(errorMessage);
       toast.error(`Failed to save configurations: ${errorMessage}`);
     }
-    setIsSaving(false);
+      setIsSaving(false);
   };
 
   // Form validation helper
@@ -455,7 +455,7 @@ export function McpServersDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full p-1">
       {/* Header Controls */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
@@ -624,7 +624,7 @@ export function McpServersDashboard() {
           </p>
         </div>
       ) : (
-        <ScrollArea className="h-[400px] w-full">
+        <ScrollArea className="flex-grow w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-1">
             {filteredServerData.map((server) => (
               <HoverCard key={server.key} openDelay={300} closeDelay={100}>

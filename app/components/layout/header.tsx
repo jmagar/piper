@@ -4,21 +4,17 @@ import { HistoryTrigger } from "@/app/components/history/history-trigger"
 
 import { UserMenu } from "@/app/components/layout/user-menu"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Server } from 'lucide-react'
+
+import { Server } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePathname, useRouter } from 'next/navigation';
 import { McpServersDashboard } from '@/app/components/mcp-servers/mcp-servers-dashboard';
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 // import { useUser } from "@/app/providers/user-provider"
 import type { Agent } from "@/app/types/agent"
 import { useSidebar } from "@/components/ui/sidebar"
-import { useAgent } from "@/lib/agent-store/provider"
+import { useAgent } from "@/lib/agent-store/provider";
+import { useChats } from "@/lib/chat-store/chats/provider";
 import { APP_NAME } from "@/lib/config"
 import Link from "next/link"
 import { AgentLink } from "./agent-link"
@@ -35,8 +31,32 @@ export type AgentHeader = Pick<
 
 export function Header({ hasSidebar }: { hasSidebar: boolean }) {
   const isMobile = useBreakpoint(768)
-  const { open: isSidebarOpen } = useSidebar()
-  const { currentAgent } = useAgent()
+  const { open: isSidebarOpen } = useSidebar();
+  const { currentAgent } = useAgent();
+  const { activeChatId } = useChats(); // Get activeChatId
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const getActiveTab = () => {
+    if (pathname.startsWith('/mcp-dashboard')) return 'mcp';
+    if (pathname.startsWith('/agents')) return 'agents';
+    if (pathname.startsWith('/prompts')) return 'prompts';
+    if (pathname === '/' || pathname.startsWith('/c/')) return 'chat'; // Added Chat
+    return ''; // Default or no active tab
+  };
+
+  const handleTabChange = (value: string) => {
+    if (value === 'chat') {
+      if (activeChatId) {
+        router.push(`/c/${activeChatId}`);
+      } else {
+        router.push('/');
+      }
+    }
+    if (value === 'mcp') router.push('/mcp-dashboard');
+    if (value === 'agents') router.push('/agents');
+    if (value === 'prompts') router.push('/prompts');
+  };
 
   return (
     <header className="h-app-header pointer-events-none fixed top-0 right-0 left-0 z-50">
@@ -56,31 +76,19 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
             )}
           </div>
           <div />
-          <div className="pointer-events-auto flex flex-1 items-center justify-end gap-2">
+          <div className="pointer-events-auto flex flex-1 items-center justify-center gap-2">
+            <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="">
+              <TabsList>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+                <TabsTrigger value="mcp">MCP</TabsTrigger>
+                <TabsTrigger value="agents">Agents</TabsTrigger>
+                <TabsTrigger value="prompts">Prompts</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className="pointer-events-auto flex items-center justify-end gap-2">
             {currentAgent && <DialogPublish />}
-
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="MCP Servers">
-                  <Server className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-6xl">
-                <DialogHeader>
-                  <DialogTitle>MCP Dashboard</DialogTitle>
-                  <DialogDescription>
-                    View status and tools of connected MCP servers. Hover over a server for more details.
-                  </DialogDescription>
-                </DialogHeader>
-                <McpServersDashboard />
-                {/* <DialogFooter>
-                  <Button type="submit">Save changes</Button>
-                </DialogFooter> */}
-              </DialogContent>
-            </Dialog>
-
-            <AgentLink />
-            <PromptLink />
+            {/* Removed individual links, HistoryTrigger and UserMenu remain right-aligned */}
             {!isSidebarOpen && <HistoryTrigger hasSidebar={hasSidebar} />}
             <UserMenu />
           </div>
