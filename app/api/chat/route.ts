@@ -9,11 +9,19 @@ import { reportMCPError } from "@/lib/mcp/enhanced-integration";
 import { Attachment } from "@ai-sdk/ui-utils"
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import {
-  Message as MessageAISDK,
-  streamText,
-  ToolSet,
   CoreMessage,
-} from "ai"
+  Message as MessageAISDK,
+  ToolCallPart,
+  // ToolResultPart removed as it's unused and structural typing via LanguageModelV1StreamPart is preferred
+  ToolSet,
+  streamText,
+  LanguageModelV1StreamPart, 
+  TextPart,
+  FinishReason,
+  LanguageModelUsage
+  // StreamData removed as unused
+  // ToolDefinition removed as it's not exported / used directly here
+} from "ai";
 import { prisma } from "@/lib/prisma"; 
 import {
   logUserMessage,
@@ -26,9 +34,33 @@ import { parseToolMentions, stripToolMentions, parsePromptMentions, stripPromptM
 // Import our logging system
 import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger'
 import { appLogger } from '@/lib/logger'
-import { getCurrentCorrelationId } from '@/lib/logger/correlation'
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 
-export const maxDuration = 60
+import { get_encoding, Tiktoken } from 'tiktoken'; // Corrected: Use only get_encoding as getEncoding is not exported
+import { JSONSchema7 } from 'json-schema'; // Added for tool parameter typing
+
+export const maxDuration = 60;
+
+// Initialize tiktoken encoder
+// Using "cl100k_base" as it's common for GPT-3.5/4 and a good general default
+let enc: Tiktoken;
+try {
+  enc = get_encoding("cl100k_base");
+} catch (e) {
+  // Fallback or handle error if model encoding is not found
+  // For robustness, you might load a specific encoding file if needed
+  appLogger.error("[ChatAPI] Failed to load tiktoken encoder cl100k_base, attempting fallback.", e);
+  // As a last resort, if encoding_for_model fails, you might need to handle this case,
+  // perhaps by disabling token-based features or using a very rough char-based estimate.
+  // For now, we'll assume it loads or log the error.
+  // A more robust solution might involve bundling the .tiktoken file.
+  // If this fails, subsequent calls to enc.encode will throw.
+}
+
+// Configurable thresholds from environment variables
+// const PRUNING_TARGET_TOKEN_LIMIT = parseInt(process.env.PRUNING_TARGET_TOKEN_LIMIT || "3000", 10); // Replaced by dynamic calculation
+const MAX_TOOL_OUTPUT_TOKENS = parseInt(process.env.MAX_TOOL_OUTPUT_TOKENS || "750", 10);
+const APPROX_CHARS_PER_TOKEN = 3; // A rough estimate for character-based truncation fallback if needed
 
 type ChatRequest = {
   messages: MessageAISDK[]
@@ -36,6 +68,25 @@ type ChatRequest = {
   model: string
   systemPrompt: string
   agentId?: string
+}
+
+// Helper function to count tokens for a message
+function countTokens(message: MessageAISDK | { role: string; content: string }): number {
+  if (!enc) {
+    appLogger.warn("[countTokens] Tiktoken encoder not initialized. Falling back to character count / N for token estimation.");
+    // Fallback: estimate tokens based on character count if encoder failed to load
+    const charCount = typeof message.content === 'string' ? message.content.length : JSON.stringify(message.content).length;
+    return Math.ceil(charCount / APPROX_CHARS_PER_TOKEN) + 4; // +4 for role/overhead
+  }
+  let tokenCount = 4; // Base tokens for message structure (role, etc.)
+  if (typeof message.content === 'string') {
+    tokenCount += enc.encode(message.content).length;
+  } else if (Array.isArray(message.content)) { // Handle tool calls if they are in CoreMessage format
+    // This part is an estimation. For Vercel AI SDK `Message` type, content is string.
+    // If `CoreMessage` with tool calls/results parts were to be pruned, this would need refinement.
+    tokenCount += enc.encode(JSON.stringify(message.content)).length;
+  }
+  return tokenCount;
 }
 
 // Helper function to process tool mentions and execute tools
@@ -107,7 +158,58 @@ async function processToolMentions(messages: MessageAISDK[]): Promise<MessageAIS
       toolResults.push({
         id: `tool-result-${Date.now()}-${Math.random()}`,
         role: 'assistant',
-        content: `Tool ${mention.toolName} executed successfully:\n\n${JSON.stringify(result, null, 2)}`
+        content: (() => {
+        const correlationId = getCurrentCorrelationId();
+        const fullContent = JSON.stringify(result, null, 2);
+        let processedContentString = `Tool ${mention.toolName} executed successfully:\n\n${fullContent}`;
+
+        // Log the full, untruncated tool output
+        appLogger.info(`[processToolMentions] Full tool output for '${mention.toolName}'`, {
+          correlationId,
+          toolName: mention.toolName,
+          outputLength: fullContent.length,
+          // Storing full output in logs can be verbose, consider if this is always needed or only for dev/debug
+          // output: fullContent, // Uncomment if full output logging is desired here
+        });
+
+        const toolOutputTokens = countTokens({ role: 'assistant', content: processedContentString });
+
+        if (toolOutputTokens > MAX_TOOL_OUTPUT_TOKENS) {
+          appLogger.warn(
+            `[processToolMentions] Tool output for '${mention.toolName}' exceeds token limit. Original tokens: ${toolOutputTokens}, Max: ${MAX_TOOL_OUTPUT_TOKENS}. Truncating.`, 
+            { correlationId, toolName: mention.toolName, originalTokens: toolOutputTokens }
+          );
+          // Truncate the JSON part of the content string
+          // We need to be careful to truncate `fullContent` then reconstruct `processedContentString`
+          let truncatedJsonContent = fullContent;
+          if (enc) {
+            const encodedJson = enc.encode(fullContent);
+            if (encodedJson.length > (MAX_TOOL_OUTPUT_TOKENS - countTokens({role: 'assistant', content: `Tool ${mention.toolName} executed successfully:\n\n`}) - 10)) { // -10 for truncation message
+              const slicedEncodedJson = encodedJson.slice(0, MAX_TOOL_OUTPUT_TOKENS - countTokens({role: 'assistant', content: `Tool ${mention.toolName} executed successfully:\n\n`}) - 10);
+              truncatedJsonContent = new TextDecoder().decode(enc.decode(slicedEncodedJson));
+            } else {
+              // This case should ideally not be hit if toolOutputTokens > MAX_TOOL_OUTPUT_TOKENS
+              // but as a fallback, use character based if somehow token calculation is off for the parts
+              const approxCharsToKeep = (MAX_TOOL_OUTPUT_TOKENS - countTokens({role: 'assistant', content: `Tool ${mention.toolName} executed successfully:\n\n`}) - 10) * APPROX_CHARS_PER_TOKEN;
+              truncatedJsonContent = fullContent.substring(0, approxCharsToKeep);
+            }
+          } else {
+            // Fallback to character-based truncation if tiktoken is not available
+            const headerLength = `Tool ${mention.toolName} executed successfully:\n\n`.length;
+            const truncationMessageLength = `\n\n[Output truncated due to length. Original token count: ${toolOutputTokens}. Full output logged server-side.]`.length;
+            const targetChars = (MAX_TOOL_OUTPUT_TOKENS * APPROX_CHARS_PER_TOKEN) - headerLength - truncationMessageLength;
+            truncatedJsonContent = fullContent.substring(0, Math.max(0, targetChars));
+          }
+          
+          processedContentString = `Tool ${mention.toolName} executed successfully:\n\n${truncatedJsonContent}\n\n[Output truncated due to length. Original token count: ${toolOutputTokens}. Full output logged server-side.]`;
+          
+          appLogger.info(
+            `[processToolMentions] Tool output for '${mention.toolName}' was truncated. New token count: ${countTokens({role: 'assistant', content: processedContentString})}`,
+            { correlationId, toolName: mention.toolName }
+          );
+        }
+        return processedContentString;
+      })()
       })
       
       console.log(`[Chat API] Tool ${matchingTool.fullId} executed successfully`)
@@ -124,7 +226,7 @@ async function processToolMentions(messages: MessageAISDK[]): Promise<MessageAIS
       }
       
       toolResults.push({
-        id: `tool-error-${Date.now()}-${Math.random()}`,
+        id: `tool-error-${Date.now()}`,
         role: 'assistant', 
         content: `Tool ${mention.toolName} failed: ${error instanceof Error ? error.message : String(error)}`
       })
@@ -353,45 +455,77 @@ async function processPromptMentions(messages: MessageAISDK[], currentSystemProm
   return { processedMessages, enhancedSystemPrompt }
 }
 
-// Helper function to prune messages for large conversations  
-function pruneMessagesForPayloadSize(messages: MessageAISDK[], hasTools: boolean): MessageAISDK[] {
-  // Conservative limits to prevent OpenRouter payload issues
-  const MAX_MESSAGES_WITH_TOOLS = 12
-  const MAX_MESSAGES_WITHOUT_TOOLS = 20
-
-  const limit = hasTools ? MAX_MESSAGES_WITH_TOOLS : MAX_MESSAGES_WITHOUT_TOOLS
-  
-  if (messages.length <= limit) {
-    return messages
+// Helper function to prune messages based on token limits
+function pruneMessagesForPayloadSize(
+  initialMessages: MessageAISDK[], 
+  dynamicPruningLimit: number, 
+  correlationId?: string // Allow correlationId to be optional
+): MessageAISDK[] {
+  // Ensure enc is available or fallback logic is robust
+  if (!enc && typeof get_encoding === 'function') {
+    try {
+      enc = get_encoding("cl100k_base");
+    } catch (e) {
+      appLogger.error("[pruneMessages] Critical: Tiktoken encoder (enc) not initialized and fallback get_encoding failed.", e, { correlationId });
+      // If encoding is absolutely critical and fails, might need to throw or return error response earlier.
+      // For now, countTokens will use its char-based fallback.
+    }
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[Chat API] Pruning messages: ${messages.length} → ${limit} (hasTools: ${hasTools})`)
+  const definiteCorrelationId = correlationId || getCurrentCorrelationId(); // Ensure we have a correlationId
+  const initialTokenCount = initialMessages.reduce((sum, msg) => sum + countTokens(msg), 0);
+  const initialMessageCount = initialMessages.length;
+
+  appLogger.info(
+    `[pruneMessages] Before pruning: ${initialMessageCount} messages, ~${initialTokenCount} tokens. Target limit: ${dynamicPruningLimit} tokens.`, 
+    { correlationId: definiteCorrelationId, initialMessageCount, initialTokenCount, limit: dynamicPruningLimit }
+  );
+
+
+  if (initialTokenCount <= dynamicPruningLimit && initialMessageCount <= 50) { // Added a general message count cap as well
+    appLogger.info(`[pruneMessages] No pruning needed. Token count (${initialTokenCount}) is within limit (${dynamicPruningLimit}).`, { correlationId: definiteCorrelationId });
+    return initialMessages;
   }
 
-  // Keep system messages separate
-  const systemMessages = messages.filter(m => m.role === 'system')
-  const nonSystemMessages = messages.filter(m => m.role !== 'system')
-  
-  if (nonSystemMessages.length <= limit) {
-    return messages
-  }
+  const systemMessages = initialMessages.filter(msg => msg.role === 'system');
+  const nonSystemMessages = initialMessages.filter(msg => msg.role !== 'system');
 
-  // Keep first exchange (important context) + recent messages
-  const firstExchange = nonSystemMessages.slice(0, 2) // First user + assistant
-  const recentMessages = nonSystemMessages.slice(-(limit - 2))
+  let currentTokenCount = systemMessages.reduce((sum, msg) => sum + countTokens(msg), 0);
+  const prunedNonSystemMessages: MessageAISDK[] = [];
+
+  // Iterate from most recent non-system messages backwards
+  for (let i = nonSystemMessages.length - 1; i >= 0; i--) {
+    const message = nonSystemMessages[i];
+    const messageTokens = countTokens(message);
+
+    if (currentTokenCount + messageTokens <= dynamicPruningLimit) { 
+
+      prunedNonSystemMessages.unshift(message); // Add to the beginning to maintain order
+      currentTokenCount += messageTokens;
+    } else {
+      appLogger.info(
+        `[pruneMessages] Token limit reached while adding older messages. Pruning ${i + 1} older non-system messages. Current tokens: ${currentTokenCount}`, 
+        { correlationId: definiteCorrelationId, prunedCount: i + 1, currentTokenCount }
+      );
+
+      break; 
+    }
+  }
   
-  const prunedMessages = [...systemMessages, ...firstExchange, ...recentMessages]
-  
-  appLogger.aiSdk.info(`Pruned conversation: ${messages.length} → ${prunedMessages.length} messages`, {
-    correlationId: getCurrentCorrelationId(),
-    hasTools,
-    originalCount: messages.length,
-    prunedCount: prunedMessages.length
-  })
-  
-  return prunedMessages
+  // Combine system messages (always included) with the pruned non-system messages
+  const finalMessages = [...systemMessages, ...prunedNonSystemMessages];
+  const finalTokenCount = currentTokenCount; // This is the sum of system and pruned non-system messages
+
+  appLogger.info(
+    `[pruneMessages] After pruning: ${finalMessages.length} messages, ~${finalTokenCount} tokens. Removed: ${initialMessageCount - finalMessages.length} messages.`, 
+    { correlationId: definiteCorrelationId, finalMessageCount: finalMessages.length, finalTokenCount, removedCount: initialMessageCount - finalMessages.length }
+  );
+
+  return finalMessages;
 }
+
+// The `selectRelevantTools` function still uses messageCount, which is fine for its purpose.
+
 
 // Helper function to select relevant tools for large conversations
 function selectRelevantTools(allTools: ToolSet, messageCount: number): ToolSet {
@@ -587,19 +721,171 @@ export async function POST(req: Request) {
       }
     }
 
-    // Apply smart conversation orchestration to prevent payload size issues
-    const messageCount = messagesWithAbsoluteUrls.length
-    
-    // Prune messages for large conversations to prevent OpenRouter payload errors
-    const prunedMessages = pruneMessagesForPayloadSize(messagesWithAbsoluteUrls, !!toolsToUse)
-    
+    appLogger.info(`[ChatAPI] Tools selected for LLM: ${Object.keys(toolsToUse || {}).length} tools.`, { correlationId, toolCount: Object.keys(toolsToUse || {}).length });
+
+    // --- Tool Definition Truncation --- 
+    const MAX_TOKENS_PER_TOOL_DEFINITION = parseInt(process.env.MAX_TOKENS_PER_TOOL_DEFINITION || "150");
+    if (toolsToUse && Object.keys(toolsToUse).length > 0) {
+      for (const toolName in toolsToUse) {
+        const tool = toolsToUse[toolName];
+        const toolRepresentation = JSON.stringify({ 
+          name: toolName, // Corrected: Use toolName (the key) instead of tool.name
+          description: tool.description, 
+          parameters: tool.parameters 
+        });
+        // Use a temporary object for countTokens to match its expected signature
+        const currentToolTokens = countTokens({role: "system", content: toolRepresentation });
+
+        let currentToolTokensAfterMainDescTruncation = currentToolTokens;
+        if (currentToolTokens > MAX_TOKENS_PER_TOOL_DEFINITION) {
+          const tokensToShed = currentToolTokens - MAX_TOKENS_PER_TOOL_DEFINITION;
+          if (tool.description) {
+            const descriptionTokens = countTokens({role: "system", content: tool.description});
+            if (descriptionTokens > tokensToShed + 5) {
+              try {
+                const encoder = get_encoding("cl100k_base");
+                const encodedDescription = encoder.encode(tool.description);
+                const targetDescriptionTokens = descriptionTokens - tokensToShed - 5; 
+                const truncatedEncodedDesc = encodedDescription.slice(0, Math.max(0, targetDescriptionTokens));
+                tool.description = encoder.decode(truncatedEncodedDesc) + " [...]";
+                if (typeof encoder.free === 'function') encoder.free();
+                appLogger.info(`[Chat API] Truncated main description for tool '${toolName}'. Original desc tokens: ${descriptionTokens}, New length: ${tool.description.length} chars.`, { correlationId });
+              } catch (e) {
+                appLogger.error(`[Chat API] Error truncating main description for tool '${toolName}'`, e as Error, { correlationId });
+              }
+            } else {
+              appLogger.warn(`[Chat API] Tool '${toolName}' (tokens: ${currentToolTokens}) main description (tokens: ${descriptionTokens}) too short to shed ${tokensToShed} tokens. Will try params.`, { correlationId });
+            }
+          } else {
+            appLogger.warn(`[Chat API] Tool '${toolName}' (tokens: ${currentToolTokens}) has no main description to truncate. Will try params.`, { correlationId });
+          }
+
+          // Recalculate token count after potential main description truncation
+          const toolRepresentationAfterMainDesc = JSON.stringify({ name: toolName, description: tool.description, parameters: tool.parameters });
+          currentToolTokensAfterMainDescTruncation = countTokens({role: "system", content: toolRepresentationAfterMainDesc });
+
+          if (currentToolTokensAfterMainDescTruncation > MAX_TOKENS_PER_TOOL_DEFINITION) {
+            appLogger.info(`[Chat API] Tool '${toolName}' still too long (tokens: ${currentToolTokensAfterMainDescTruncation}) after main desc truncation. Attempting to truncate parameter descriptions.`, { correlationId });
+            let tokensStillToShed = currentToolTokensAfterMainDescTruncation - MAX_TOKENS_PER_TOOL_DEFINITION;
+            
+            if (tool.parameters && tool.parameters.properties) {
+              const encoder = get_encoding("cl100k_base"); // Initialize encoder once for params
+              try {
+                for (const paramName in tool.parameters.properties) {
+                  const param = tool.parameters.properties[paramName];
+                  if (param && typeof param === 'object' && 'description' in param && typeof param.description === 'string' && param.description.length > 0) {
+                    const paramDescriptionTokens = countTokens({role: "system", content: param.description});
+                    if (paramDescriptionTokens > tokensStillToShed + 5) { // Can we shed enough from this param's desc?
+                      const targetParamDescTokens = paramDescriptionTokens - tokensStillToShed - 5;
+                      const encodedParamDesc = encoder.encode(param.description);
+                      const truncatedEncodedParamDesc = encodedParamDesc.slice(0, Math.max(0, targetParamDescTokens));
+                      param.description = encoder.decode(truncatedEncodedParamDesc) + " [...]";
+                      appLogger.info(`[Chat API] Truncated param '${paramName}' description for tool '${toolName}'. Original tokens: ${paramDescriptionTokens}, New length: ${param.description.length} chars.`, { correlationId });
+                      // Recalculate total tool tokens and check if we are done
+                      const finalToolRepresentation = JSON.stringify({ name: toolName, description: tool.description, parameters: tool.parameters });
+                      currentToolTokensAfterMainDescTruncation = countTokens({role: "system", content: finalToolRepresentation });
+                      tokensStillToShed = currentToolTokensAfterMainDescTruncation - MAX_TOKENS_PER_TOOL_DEFINITION;
+                      if (currentToolTokensAfterMainDescTruncation <= MAX_TOKENS_PER_TOOL_DEFINITION) break; // Done shedding tokens
+                    } else if (paramDescriptionTokens > 5) { // Can we shed at least something meaningful?
+                        // Truncate significantly if it's not enough to meet the full target, but still helps
+                        const encodedParamDesc = encoder.encode(param.description);
+                        const truncatedEncodedParamDesc = encodedParamDesc.slice(0, Math.max(0, Math.floor(paramDescriptionTokens / 2) - 5)); // Example: Halve it, less ellipsis
+                        param.description = encoder.decode(truncatedEncodedParamDesc) + " [...]";
+                        appLogger.info(`[Chat API] Partially truncated param '${paramName}' description for tool '${toolName}'. Original tokens: ${paramDescriptionTokens}, New length: ${param.description.length} chars.`, { correlationId });
+                        const finalToolRepresentation = JSON.stringify({ name: toolName, description: tool.description, parameters: tool.parameters });
+                        currentToolTokensAfterMainDescTruncation = countTokens({role: "system", content: finalToolRepresentation });
+                        tokensStillToShed = currentToolTokensAfterMainDescTruncation - MAX_TOKENS_PER_TOOL_DEFINITION;
+                        // No break here, continue to other params if still over limit
+                    }
+                  }
+                  if (currentToolTokensAfterMainDescTruncation <= MAX_TOKENS_PER_TOOL_DEFINITION) break; // Check again after processing a param
+                }
+              } finally {
+                 if (typeof encoder.free === 'function') encoder.free();
+              }
+            }
+            if (currentToolTokensAfterMainDescTruncation > MAX_TOKENS_PER_TOOL_DEFINITION) {
+                 appLogger.warn(`[Chat API] Tool '${toolName}' definition (tokens: ${currentToolTokensAfterMainDescTruncation}) still exceeds limit (${MAX_TOKENS_PER_TOOL_DEFINITION}) after attempting to truncate main and parameter descriptions.`, { correlationId });
+            }
+          }
+        }
+      }
+    }
+    // --- End Tool Definition Truncation ---
+
+    // --- Token Budgeting for Pruning --- 
+    let toolDefinitionTokens = 0;
+    if (toolsToUse && Object.keys(toolsToUse).length > 0) {
+      try {
+        const toolDefinitionsForTokenization = Object.entries(toolsToUse).map(
+          ([name, tool]) => {
+            const typedTool = tool as { description?: string; parameters: JSONSchema7 }; // Assert tool structure
+            return {
+              name,
+              description: typedTool.description,
+              parameters: typedTool.parameters,
+            };
+          }
+        );
+        const toolDefinitionsString = JSON.stringify(toolDefinitionsForTokenization);
+        const encoder = get_encoding("cl100k_base"); // Corrected: Use get_encoding consistently
+        toolDefinitionTokens = encoder.encode(toolDefinitionsString).length;
+        if (typeof encoder.free === 'function') encoder.free(); // free if it's a non-global encoder
+
+        appLogger.info(
+          `[Chat API] Estimated tool definitions token count: ${toolDefinitionTokens} for ${Object.keys(toolsToUse).length} tools.`,
+          {
+            correlationId,
+            toolCount: Object.keys(toolsToUse).length,
+            estimatedTokens: toolDefinitionTokens,
+          },
+        );
+      } catch (e) {
+        appLogger.error(
+          "[Chat API] Error calculating tool definition tokens",
+          e as Error,
+          { correlationId },
+        );
+        toolDefinitionTokens = 200 * (Object.keys(toolsToUse || {}).length || 0); 
+        appLogger.warn(
+          `[Chat API] Using fallback tool token estimate: ${toolDefinitionTokens}`,
+          { correlationId },
+        );
+      }
+    }
+
+    const MODEL_CONTEXT_LIMIT = parseInt(process.env.MODEL_CONTEXT_LIMIT || "8192");
+    const RESPONSE_RESERVATION_TOKENS = parseInt(process.env.RESPONSE_RESERVATION_TOKENS || "1500");
+    const MINIMUM_MESSAGE_TOKEN_ALLOWANCE = parseInt(process.env.MINIMUM_MESSAGE_TOKEN_ALLOWANCE || "500");
+
+    const calculatedEffectiveMessageTokenLimit = MODEL_CONTEXT_LIMIT - toolDefinitionTokens - RESPONSE_RESERVATION_TOKENS;
+    const finalEffectiveMessageTokenLimit = Math.max(calculatedEffectiveMessageTokenLimit, MINIMUM_MESSAGE_TOKEN_ALLOWANCE);
+
+    appLogger.info(
+      `[Chat API] Effective message token limit for pruning: ${finalEffectiveMessageTokenLimit}. ` +
+      `(ModelLimit: ${MODEL_CONTEXT_LIMIT}, ToolTokens: ${toolDefinitionTokens}, ResponseReservation: ${RESPONSE_RESERVATION_TOKENS}, MinAllowance: ${MINIMUM_MESSAGE_TOKEN_ALLOWANCE}, CalculatedLimit: ${calculatedEffectiveMessageTokenLimit})`,
+      {
+        correlationId,
+        finalEffectiveMessageTokenLimit,
+        MODEL_CONTEXT_LIMIT,
+        toolDefinitionTokens,
+        RESPONSE_RESERVATION_TOKENS,
+        MINIMUM_MESSAGE_TOKEN_ALLOWANCE,
+        calculatedEffectiveMessageTokenLimit
+      },
+    );
+    // --- End Token Budgeting --- 
+
+    // Prune messages if necessary, now using the dynamic limit
+    const finalMessages = pruneMessagesForPayloadSize(messagesWithAbsoluteUrls, finalEffectiveMessageTokenLimit, correlationId);
+
     // Select relevant tools for large conversations
     if (toolsToUse && Object.keys(toolsToUse).length > 0) {
-      toolsToUse = selectRelevantTools(toolsToUse, messageCount)
+      toolsToUse = selectRelevantTools(toolsToUse, messagesWithAbsoluteUrls.length)
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Chat API] Conversation orchestration: ${messageCount} messages → ${prunedMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
+      console.log(`[Chat API] Conversation orchestration: ${messagesWithAbsoluteUrls.length} messages → ${finalMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
     }
 
     // Start AI SDK operation logging
@@ -616,116 +902,185 @@ export async function POST(req: Request) {
       }
     );
 
-    let streamError: Error | null = null
+    let streamError: Error | null = null;
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Chat API] Streaming with ${model}, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
     }
-    
+
     // Build streamText configuration conditionally
-    const streamConfig = {
+    const baseStreamConfig = {
       model: openrouter.chat(model || 'anthropic/claude-3.5-sonnet'),
       system: effectiveSystemPrompt,
-      messages: prunedMessages,
-      maxTokens: 8096,
+      messages: finalMessages, // finalMessages are already CoreMessage[]
+      maxTokens: 8096, // Default max tokens, can be overridden by agent settings
     } as const;
 
     // Only add tools and maxSteps if tools are available
-    const finalConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
-      ? { ...streamConfig, tools: toolsToUse, maxSteps: 10 }
-      : streamConfig;
+    const streamTextConfig = toolsToUse && Object.keys(toolsToUse).length > 0 
+      ? { ...baseStreamConfig, tools: toolsToUse, maxSteps: 10, experimental_streamData: true }
+      : { ...baseStreamConfig, experimental_streamData: true, tools: {} as ToolSet }; // Ensure tools is defined even if empty
 
-    const result = streamText({
-      ...finalConfig,
-      onError: (event: { error: unknown }) => {
-        appLogger.aiSdk.error("🛑 streamText error (raw event.error):", event.error as Error, { correlationId });
+    // streamError is already declared in the outer scope
 
-        // Attempt to get more details from event.error
-        let errorMessage = "AI generation failed. Please check your model or API key.";
-        if (event.error instanceof Error) {
-          errorMessage = event.error.message;
-          appLogger.aiSdk.error("🛑 streamText error (event.error.message):", new Error(event.error.message), { correlationId });
-          if (event.error.stack) {
-            appLogger.aiSdk.error("🛑 streamText error (event.error.stack):", new Error(event.error.stack), { correlationId });
+    const result = await streamText({
+      ...streamTextConfig, // Use the derived config, which already includes a well-defined 'tools' property
+
+      onChunk: (event) => { // Let TypeScript infer the type of 'event'
+        const { chunk } = event;
+        let chunkSize: number | undefined = undefined;
+
+        // Assert chunk to the comprehensive LanguageModelV1StreamPart type
+        const currentChunk = chunk as LanguageModelV1StreamPart;
+
+        // @ts-expect-error TS believes 'tool-result' is not a valid type here due to SDK limitations
+        if (currentChunk.type === 'tool-result' && 
+            // @ts-expect-error TS infers 'never' for currentChunk here due to the above line
+            'toolCallId' in currentChunk && typeof currentChunk.toolCallId === 'string' &&
+            // @ts-expect-error TS infers 'never' for currentChunk here
+            'toolName' in currentChunk && typeof currentChunk.toolName === 'string' &&
+            'result' in currentChunk
+           ) {
+            const toolResultChunk = currentChunk as {
+              type: 'tool-result';
+              toolCallId: string;
+              toolName: string;
+              result: unknown;
+            };
+            appLogger.info(`[ChatAPI] Tool result received: ${toolResultChunk.toolName}`, {
+              correlationId,
+              toolCallId: toolResultChunk.toolCallId,
+              toolName: toolResultChunk.toolName,
+              result: toolResultChunk.result,
+            });
+            aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, {
+              chunkData: toolResultChunk,
+            });
+        } else if (currentChunk.type === 'text-delta' && 
+                   'textDelta' in currentChunk && 
+                   typeof currentChunk.textDelta === 'string') {
+          chunkSize = currentChunk.textDelta.length;
+          appLogger.info(`[ChatAPI] Text delta received: ${currentChunk.textDelta.substring(0, 50)}...`, { correlationId });
+          aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, { 
+            chunkData: currentChunk, 
+            chunkSize 
+          });
+        } else if (currentChunk.type === 'tool-call' && 
+                   'toolCallId' in currentChunk && typeof currentChunk.toolCallId === 'string' &&
+                   'toolName' in currentChunk && typeof currentChunk.toolName === 'string' &&
+                   'args' in currentChunk) {
+            appLogger.info(`[ChatAPI] Tool call received: ${currentChunk.toolName}`, { 
+              correlationId, 
+              toolCallId: currentChunk.toolCallId,
+              toolName: currentChunk.toolName,
+              args: currentChunk.args 
+            });
+            aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, { 
+              chunkData: currentChunk 
+            });
+        // @ts-expect-error TS believes 'tool-call-streaming-start' is not a valid type here
+        } else if (currentChunk.type === 'tool-call-streaming-start' && 
+                   // @ts-expect-error TS infers 'never' for currentChunk here
+                   'toolCallId' in currentChunk && typeof currentChunk.toolCallId === 'string' &&
+                   // @ts-expect-error TS infers 'never' for currentChunk here
+                   'toolName' in currentChunk && typeof currentChunk.toolName === 'string') {
+            const toolCallStreamingStartChunk = currentChunk as {
+              type: 'tool-call-streaming-start';
+              toolCallId: string;
+              toolName: string;
+            };
+            appLogger.info(`[ChatAPI] Tool call streaming start: ${toolCallStreamingStartChunk.toolName}`, { 
+              correlationId, 
+              toolCallId: toolCallStreamingStartChunk.toolCallId, 
+              toolName: toolCallStreamingStartChunk.toolName 
+            });
+            aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, { 
+              chunkData: toolCallStreamingStartChunk 
+            });
+        } else if (currentChunk.type === 'tool-call-delta' && 
+                   'toolCallId' in currentChunk && typeof currentChunk.toolCallId === 'string' &&
+                   'toolName' in currentChunk && typeof currentChunk.toolName === 'string' &&
+                   'argsTextDelta' in currentChunk && typeof currentChunk.argsTextDelta === 'string') {
+            appLogger.info(`[ChatAPI] Tool call delta: ${currentChunk.toolName}, delta: ${currentChunk.argsTextDelta.substring(0,30)}...`, { 
+              correlationId, 
+              toolCallId: currentChunk.toolCallId, 
+              toolName: currentChunk.toolName, 
+              argsTextDelta: currentChunk.argsTextDelta 
+            });
+            aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, { 
+              chunkData: currentChunk 
+            });
+        } else {
+          // Default case for any other unhandled chunk types
+          let chunkType = 'unknown';
+          if (typeof currentChunk === 'object' && currentChunk !== null && 'type' in currentChunk && typeof (currentChunk as { type?: unknown }).type === 'string') {
+            chunkType = (currentChunk as { type: string }).type;
+          } else if (typeof currentChunk === 'object' && currentChunk !== null && 'type' in currentChunk) {
+            appLogger.warn(`[ChatAPI] Chunk has a 'type' property but it's not a string.`, { correlationId, typeValue: (currentChunk as {type: unknown}).type });
           }
-        } else if (typeof event.error === 'object' && event.error !== null) {
-          appLogger.aiSdk.error("🛑 streamText error (event.error as stringified object):", new Error(JSON.stringify(event.error, null, 2)), { correlationId });
-          // Try to find a message property, or just stringify
-          const errorObj = event.error as Record<string, unknown>;
-          errorMessage = (typeof errorObj.message === 'string' ? errorObj.message : JSON.stringify(event.error));
-        } else if (event.error !== undefined && event.error !== null) {
-          errorMessage = String(event.error);
-          appLogger.aiSdk.error("🛑 streamText error (event.error as string):", new Error(errorMessage), { correlationId });
+          appLogger.info(`[ChatAPI] Received chunk of unhandled type: ${chunkType}`, { correlationId, chunkData: currentChunk });
+          aiSdkLogger.logStreamingEvent(operationId, StreamingState.CHUNK_RECEIVED, { 
+            chunkData: currentChunk 
+          });
         }
-        
-        streamError = new Error(errorMessage);
-        
-        // Log streaming error with AI SDK logger
-        aiSdkLogger.logStreamingEvent(operationId, StreamingState.ERROR, {
-          error: streamError,
-          chunkSize: 0
-        });
       },
-
-      onFinish: async ({ response }) => {
+      // onToolCall: ({ toolCall }: { toolCall: ToolCallPart }) => {
+      //   appLogger.info(`[ChatAPI] Tool call received in stream: ${toolCall.toolName}`, { correlationId, toolCall });
+      // },
+      // // The structure of 'result' can vary; using 'unknown' is safer than 'any'.
+      // // Consider adding type guards or more specific typing if the structure of toolResult.result is known and consistent.
+      // onToolResult: ({ toolResult }: { toolResult: { toolCallId: string, toolName: string, result: unknown } }) => {
+      //   appLogger.info(`[ChatAPI] Tool result received in stream: ${toolResult.toolName}`, { correlationId, toolResult });
+      // },
+      onFinish: async (event: { finishReason: FinishReason; usage: LanguageModelUsage; text?: string; toolCalls?: ToolCallPart[]; toolResults?: Array<{ toolCallId: string; toolName: string; args: Record<string, unknown>; result: unknown; }>; rawResponse?: { text?: string; toolCalls?: ToolCallPart[]; }; }) => {
         try {
-          // Extract token usage from response metadata
-          const usage = (response as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage || {};
-          const tokenUsage = {
-            promptTokens: usage.promptTokens || 0,
-            completionTokens: usage.completionTokens || 0,
-            totalTokens: usage.totalTokens || 0
-          };
-
-          appLogger.aiSdk.info('AI SDK completion finished', {
-            correlationId,
-            tokenUsage,
-            responseMessageCount: response.messages.length
+          appLogger.info('[ChatAPI] Stream finished.', { correlationId, usage: event.usage, finishReason: event.finishReason });
+          aiSdkLogger.endOperation(operationId, { 
+            response: event.text, 
+            tokenUsage: event.usage ? { 
+              promptTokens: event.usage.promptTokens, 
+              completionTokens: event.usage.completionTokens, 
+              totalTokens: event.usage.totalTokens 
+            } : undefined 
           });
-
-          // End AI operation with token usage
-          aiSdkLogger.endOperation(operationId, {
-            tokenUsage,
-            response: response.messages
-          });
-
-          // Save the complete assistant messages with parts preserved
-          await saveFinalAssistantMessage(chatId, response.messages)
           
-          appLogger.aiSdk.info('Assistant messages stored successfully with parts', { correlationId, chatId });
-        } catch (error) {
-          appLogger.aiSdk.error('Error in onFinish callback:', error as Error, { correlationId });
-          // End operation with error
-          aiSdkLogger.endOperation(operationId, {
-            error: error instanceof Error ? error : new Error(String(error))
-          });
+          const finalContentForSdk: (TextPart | ToolCallPart)[] = [];
+            const finalText = event.text ?? event.rawResponse?.text;
+            const finalToolCalls = event.toolCalls ?? event.rawResponse?.toolCalls;
+
+            if (finalText) finalContentForSdk.push({ type: 'text', text: finalText });
+            if (finalToolCalls) finalContentForSdk.push(...finalToolCalls);
+
+            if (finalContentForSdk.length > 0) {
+                await saveFinalAssistantMessage(chatId, [{ role: 'assistant', content: finalContentForSdk }]);
+                appLogger.aiSdk.info('Assistant messages stored successfully.', { correlationId, chatId });
+            } else {
+                appLogger.aiSdk.info('No text or tool calls from assistant to save.', { correlationId, chatId });
+            }
+        } catch (error) { 
+          const err = error instanceof Error ? error : new Error(String(error));
+          appLogger.aiSdk.error('Error in onFinish callback:', err, { correlationId });
+          aiSdkLogger.endOperation(operationId, { error: err });
         }
       },
-    })
+      onError: (errorEvent: { error: unknown }) => { 
+        const errorForCallback = errorEvent.error instanceof Error ? errorEvent.error : new Error(String(errorEvent.error));
+        streamError = errorForCallback; 
+        aiSdkLogger.endOperation(operationId, { error: errorForCallback });
+        appLogger.error('[ChatAPI] Stream error:', { correlationId, error: errorForCallback.message, stack: errorForCallback.stack });
+      }
+    });
 
     // Log streaming start
     aiSdkLogger.logStreamingEvent(operationId, StreamingState.STARTED);
 
-    // Note: Removed consumeStream() call to enable proper streaming
-    // The stream will be consumed by the client as chunks arrive
-
     if (streamError) {
-      appLogger.aiSdk.error('Stream error occurred during consumption', streamError, { correlationId });
-      throw streamError
+      appLogger.aiSdk.error('Stream error occurred before client response', streamError, { correlationId });
+      // If an error occurred synchronously or was set in onError, throw it to be caught by the main try/catch
+      throw streamError;
     }
 
-    // Log streaming completion (will be called by onFinish callback)
-    // aiSdkLogger.logStreamingEvent(operationId, StreamingState.COMPLETED, {
-    //   totalChunks: chunkCount,
-    //   chunkSize: totalStreamSize
-    // });
-
-    const originalResponse = result.toDataStreamResponse({
-      getErrorMessage: (error) => {
-        console.error('[Chat API] Error in data stream:', error);
-        return error instanceof Error ? error.message : String(error);
-      }
-    })
+    const originalResponse = result.toDataStreamResponse();
     
     // Optionally attach chatId in a custom header.
     const headers = new Headers(originalResponse.headers)

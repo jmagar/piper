@@ -22,7 +22,8 @@ import { SelectedUrlDisplay } from './selected-url-display';
 // Note: AttachedUrl type is provided by the useAgentCommand hook for agentCommand.attachedUrls
 import { ToolParameterInput } from "./tool-parameter-input";
 import { UnifiedSelectionModal } from "./unified-selection-modal";
-import { AttachMenu } from "./attach-menu"
+import { AttachMenu } from "./attach-menu";
+import { FileExplorerModal } from '../files/file-explorer-modal';
 import { validateFile } from "@/lib/file-handling"
 import { toast } from "@/components/ui/toast"
 
@@ -75,6 +76,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const { currentAgent, curatedAgents, userAgents } = useAgent()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null); // Added for triggering file upload
   const [isEnhancing, setIsEnhancing] = useState(false)
 
   const agentCommand = useAgentCommand({
@@ -105,6 +107,10 @@ export function ChatInput({
     removeSelectedTool, // Added for tool display
     attachedUrls, // Added for URL display
     removeAttachedUrl, // Added for URL display
+    // File Explorer Modal props
+    isFileExplorerModalOpen,
+    setIsFileExplorerModalOpen, // Or a dedicated close handler if preferred
+    handleFileMentionSelectedFromModal,
   } = agentCommand;
 
   const handleTriggerMention = useCallback((prefix: string) => {
@@ -134,6 +140,44 @@ export function ChatInput({
     agentCommand.handleInputChange(newValue);
     
   }, [textareaRef, agentCommand]);
+
+  // handleFileUpload must be defined before handleHiddenInputChange
+  const handleFileUpload = useCallback(
+    async (newFiles: File[]) => {
+      const validFiles: File[] = []
+      for (const file of newFiles) {
+        const validation = await validateFile(file)
+        if (validation.isValid) {
+          validFiles.push(file)
+        } else {
+          toast({
+            title: `File "${file.name}" rejected`,
+            description: validation.error,
+            status: "error",
+          })
+        }
+      }
+      if (validFiles.length > 0) {
+        onFileUploadAction(validFiles)
+      }
+    },
+    [onFileUploadAction] // Ensure all dependencies like onFileUploadAction are included
+  );
+
+  const handleHiddenInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      handleFileUpload(Array.from(event.target.files));
+    }
+  }, [handleFileUpload]);
+
+  const handleTriggerFileUpload = useCallback(() => {
+    hiddenFileInputRef.current?.click();
+  }, []);
+
+  const handleTriggerFileBrowse = useCallback(() => {
+    agentCommand.setIsFileExplorerModalOpen(true);
+    agentCommand.closeSelectionModal(); // Close UnifiedSelectionModal
+  }, [agentCommand]);
 
   const handleToolParametersCancel = useCallback(() => {
     agentCommand.setPendingTool(null);
@@ -174,31 +218,6 @@ export function ChatInput({
   const noToolSupport =
     currentAgent &&
     !MODELS.find((model) => model.id === selectedModel)?.tools;
-
-  const handleFileUpload = useCallback(
-    async (newFiles: File[]) => {
-      // ✅ AI SDK PATTERN: Validate files before adding to state
-      const validFiles: File[] = []
-      
-      for (const file of newFiles) {
-        const validation = await validateFile(file)
-        if (validation.isValid) {
-          validFiles.push(file)
-        } else {
-          toast({
-            title: `File "${file.name}" rejected`,
-            description: validation.error,
-            status: "error",
-          })
-        }
-      }
-      
-      if (validFiles.length > 0) {
-        onFileUploadAction(validFiles)
-      }
-    },
-    [onFileUploadAction]
-  )
 
   const handlePaste = useCallback(
     async (e: ClipboardEvent) => {
@@ -302,6 +321,15 @@ export function ChatInput({
           value={value}
         />
       )}
+
+      {/* File Explorer Modal for @files/ mentions */}
+      {isFileExplorerModalOpen && (
+        <FileExplorerModal
+          isOpen={isFileExplorerModalOpen}
+          onClose={() => setIsFileExplorerModalOpen(false)}
+          onFileSelectForMention={handleFileMentionSelectedFromModal}
+        />
+      )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
         <PromptInput
           className="bg-popover relative z-10 p-0 pt-1 shadow-xs backdrop-blur-xl"
@@ -317,15 +345,25 @@ export function ChatInput({
               agents={filteredAgents}
               tools={filteredTools}
               prompts={filteredPrompts}
-              onSelectAgent={handleAgentSelectAction}
-              onSelectTool={handleToolSelectAction}
-              onSelectPrompt={handlePromptSelectAction}
-              onClose={closeSelectionModal}
+              onSelectAgent={agentCommand.handleAgentSelectAction}
+              onSelectTool={agentCommand.handleToolSelectAction}
+              onSelectPrompt={agentCommand.handlePromptSelectAction}
+              onUrlSubmit={(url) => agentCommand.handleUrlSubmit(url, `@url/${url}`)} // Adapted for expected signature
+              onClose={agentCommand.closeSelectionModal}
               activeIndex={activeSelectionIndex}
-              onModalSearchChange={handleModalSearchChange}
-              onUrlSubmit={handleUrlSubmit}
+              onModalSearchChange={agentCommand.handleModalSearchChange}
+              onTriggerFileUpload={handleTriggerFileUpload} // Added prop
+              onTriggerFileBrowse={handleTriggerFileBrowse} // Added prop
             />
           )}
+          {/* Hidden File Input */}
+          <input 
+            type="file" 
+            ref={hiddenFileInputRef} 
+            onChange={handleHiddenInputChange} 
+            style={{ display: 'none' }} 
+            multiple 
+          />
           {/* All old placeholder logic and duplicate UnifiedSelectionModal calls are removed. */}
           <SelectedAgent
             selectedAgent={agentCommand.selectedAgent}

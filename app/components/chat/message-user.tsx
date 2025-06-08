@@ -161,7 +161,35 @@ export function MessageUser({
             h4: ({ children }) => <p>{children}</p>,
             h5: ({ children }) => <p>{children}</p>,
             h6: ({ children }) => <p>{children}</p>,
-            p: ({ children }) => <p>{children}</p>,
+            p: ({ children }) => {
+              if (typeof children !== 'string') {
+                return <p>{children}</p>;
+              }
+              const parts = children.split(/(@files\/[^\s]+)/g);
+              return (
+                <p>
+                  {parts.map((part, index) => {
+                    if (part.startsWith('@files/')) {
+                      const filePath = part.substring(7); // Remove '@files/'
+                      // For now, link to a placeholder or the file itself if directly accessible
+                      // Later, this could open a file preview or trigger a download
+                      return (
+                        <a 
+                          key={index} 
+                          href={`/uploads/${filePath}`} // Adjust this URL as needed based on actual file serving
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline"
+                        >
+                          {part}
+                        </a>
+                      );
+                    }
+                    return part;
+                  })}
+                </p>
+              );
+            },
             li: ({ children }) => <p>- {children}</p>,
             ul: ({ children }) => <>{children}</>,
             ol: ({ children }) => <>{children}</>,

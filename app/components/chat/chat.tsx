@@ -5,7 +5,7 @@ import { Conversation } from "@/app/components/chat/conversation"
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { useChatSession } from "@/app/providers/chat-session-provider"
 import { useUser } from "@/app/providers/user-provider"
-import { toast } from "@/components/ui/toast"
+
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
@@ -17,7 +17,8 @@ import {
 
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
-import { useChat } from "@ai-sdk/react"
+import { useChat } from "@ai-sdk/react";
+import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
@@ -101,7 +102,16 @@ export function Chat() {
       // store the assistant message in the cache
       await cacheAndAddMessage(message)
     },
-  })
+  });
+
+  // Display chat errors using toast notifications
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message);
+      // Consider if the error object needs to be 'cleared' from useChat's state
+      // or if it automatically clears. For now, just displaying.
+    }
+  }, [error]);
 
   // Wrapper for createNewChat to match the signature expected by useChatUtils
   const createNewChatForUtils = useCallback(

@@ -41,6 +41,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
     if (pathname.startsWith('/mcp-dashboard')) return 'mcp';
     if (pathname.startsWith('/agents')) return 'agents';
     if (pathname.startsWith('/prompts')) return 'prompts';
+    if (pathname.startsWith('/files')) return 'files';
     if (pathname === '/' || pathname.startsWith('/c/')) return 'chat'; // Added Chat
     return ''; // Default or no active tab
   };
@@ -56,6 +57,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
     if (value === 'mcp') router.push('/mcp-dashboard');
     if (value === 'agents') router.push('/agents');
     if (value === 'prompts') router.push('/prompts');
+    if (value === 'files') router.push('/files');
   };
 
   return (
@@ -83,6 +85,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
                 <TabsTrigger value="mcp">MCP</TabsTrigger>
                 <TabsTrigger value="agents">Agents</TabsTrigger>
                 <TabsTrigger value="prompts">Prompts</TabsTrigger>
+                <TabsTrigger value="files">Files</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>

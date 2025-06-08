@@ -3,6 +3,8 @@
 services:
   piper-app:
     container_name: piper-app-dev
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
     build:
       context: .
       dockerfile: Dockerfile.dev

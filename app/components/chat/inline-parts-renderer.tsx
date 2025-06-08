@@ -33,6 +33,35 @@ export function InlinePartsRenderer({
             className
           )}
           markdown={true}
+          components={{
+            p: ({ children: pChildren }) => {
+              if (typeof pChildren !== 'string') {
+                return <p>{pChildren}</p>;
+              }
+              const textParts = pChildren.split(/(@files\/[^\s]+)/g);
+              return (
+                <p>
+                  {textParts.map((textPart, i) => {
+                    if (textPart.startsWith('@files/')) {
+                      const filePath = textPart.substring(7);
+                      return (
+                        <a 
+                          key={i} 
+                          href={`/uploads/${filePath}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline"
+                        >
+                          {textPart}
+                        </a>
+                      );
+                    }
+                    return textPart;
+                  })}
+                </p>
+              );
+            }
+          }}
         >
           {textContent}
         </MessageContent>
@@ -60,6 +89,35 @@ export function InlinePartsRenderer({
             isStreaming && "streaming-content"
           )}
           markdown={true}
+          components={{
+            p: ({ children: pChildren }) => {
+              if (typeof pChildren !== 'string') {
+                return <p>{pChildren}</p>;
+              }
+              const textParts = pChildren.split(/(@files\/[^\s]+)/g);
+              return (
+                <p>
+                  {textParts.map((textPart, i) => {
+                    if (textPart.startsWith('@files/')) {
+                      const filePath = textPart.substring(7);
+                      return (
+                        <a 
+                          key={i} 
+                          href={`/uploads/${filePath}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline"
+                        >
+                          {textPart}
+                        </a>
+                      );
+                    }
+                    return textPart;
+                  })}
+                </p>
+              );
+            }
+          }}
         >
           {textContent}
         </MessageContent>
@@ -79,6 +137,35 @@ function PartRenderer({ part }: PartRendererProps) {
         <MessageContent
           className="prose dark:prose-invert relative min-w-full bg-transparent p-0 prose-h1:scroll-m-20 prose-h1:text-2xl prose-h1:font-semibold prose-h2:mt-8 prose-h2:scroll-m-20 prose-h2:text-xl prose-h2:mb-3 prose-h2:font-medium prose-h3:scroll-m-20 prose-h3:text-base prose-h3:font-medium prose-h4:scroll-m-20 prose-h5:scroll-m-20 prose-h6:scroll-m-20 prose-strong:font-medium prose-table:block prose-table:overflow-y-auto"
           markdown={true}
+          components={{
+            p: ({ children: pChildren }) => {
+              if (typeof pChildren !== 'string') {
+                return <p>{pChildren}</p>;
+              }
+              const textParts = pChildren.split(/(@files\/[^\s]+)/g);
+              return (
+                <p>
+                  {textParts.map((textPart, i) => {
+                    if (textPart.startsWith('@files/')) {
+                      const filePath = textPart.substring(7);
+                      return (
+                        <a 
+                          key={i} 
+                          href={`/uploads/${filePath}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:underline"
+                        >
+                          {textPart}
+                        </a>
+                      );
+                    }
+                    return textPart;
+                  })}
+                </p>
+              );
+            }
+          }}
         >
           {part.text || ""}
         </MessageContent>

@@ -24,16 +24,23 @@ interface EnhancedServerMetrics {
  */
 export async function getEnhancedMCPMetrics() {
   try {
-    const serversInfo = await getManagedServersInfo()
+    const serversInfo = await getManagedServersInfo();
+    const globalSummary = await globalMetricsCollector.getGlobalSummaryMetrics(); // Fetch new global metrics
+
     const metrics = {
       servers: [] as EnhancedServerMetrics[],
       summary: {
         totalServers: 0,
         connectedServers: 0,
         totalTools: 0,
-        errorServers: 0
+        errorServers: 0,
+        // Integrate new global summary metrics
+        totalRequests: globalSummary.totalRequests,
+        errorRate: globalSummary.errorRate,
+        avgResponseTime: globalSummary.avgResponseTime,
+        activeUsers: globalSummary.activeUsers,
       }
-    }
+    };
 
     for (const server of serversInfo) {
       // Get server-specific metrics

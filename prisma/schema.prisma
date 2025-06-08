@@ -102,6 +102,8 @@ model MCPServerMetric {
   errorCount        Int       @default(0)
   totalRequests     Int       @default(0)
   averageLatency    Float     @default(0) // in milliseconds
+  totalFailures     Int       @default(0) // Total failed requests for this server
+  totalExecutionTime Float    @default(0) // Sum of all execution times for this server in ms
   toolsCount        Int       @default(0) // Number of tools provided
   metadata          Json?     // Additional server-specific data
   createdAt         DateTime  @default(now())
@@ -113,6 +115,7 @@ model MCPServerMetric {
   @@index([serverId])
   @@index([status])
   @@index([transportType])
+  @@index([totalFailures])
 }
 
 model MCPToolExecution {

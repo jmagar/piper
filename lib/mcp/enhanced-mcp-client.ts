@@ -38,6 +38,14 @@ type ServerMetrics = {
 }
 
 // Import type for StreamableHTTP transport (with fallback)
+
+export interface GlobalMCPSummary {
+  totalRequests: number;
+  errorRate: number;
+  avgResponseTime: number;
+  activeUsers: number; // Placeholder, requires further implementation
+}
+
 interface StreamableHTTPClientTransportConstructor {
   new (url: URL, options?: { sessionId?: string; requestInit?: RequestInit }): unknown
 }
@@ -288,8 +296,7 @@ mcpLogger.logServerLifecycle(
 
     switch (transportConfig.type) {
       case 'stdio':
-        clientPromise = createEnhancedStdioMCPClient({
-          ...commonConfig,
+        clientPromise = createEnhancedStdioMCPClient(this.serverKey, { ...commonConfig,
           command: transportConfig.command,
           args: transportConfig.args,
           env: transportConfig.env,
@@ -298,14 +305,13 @@ mcpLogger.logServerLifecycle(
         });
         break;
       case 'sse':
-        clientPromise = createEnhancedSSEMCPClient({
-          ...commonConfig,
+        clientPromise = createEnhancedSSEMCPClient(this.serverKey, { ...commonConfig,
           url: transportConfig.url,
           headers: transportConfig.headers,
         });
         break;
       case 'streamable-http':
-         clientPromise = createEnhancedStreamableHTTPMCPClient({
+         clientPromise = createEnhancedStreamableHTTPMCPClient(this.serverKey, {
             ...commonConfig,
             url: transportConfig.url,
             headers: transportConfig.headers,
@@ -1088,7 +1094,7 @@ export class MCPMetricsCollector {
       })
 
       // Update server metrics
-      await this.updateServerAggregates(serverId, execution.executionTime)
+      await this.updateServerAggregates(serverId, execution.executionTime, execution.success)
 
       console.log(`[Metrics] Recorded tool execution: ${toolName} (${execution.success ? 'success' : 'failure'})`)
     } catch (error) {
@@ -1098,7 +1104,8 @@ export class MCPMetricsCollector {
 
   private async updateServerAggregates(
     serverId: string,
-    executionTime: number
+    executionTime: number,
+    success: boolean
   ): Promise<void> {
     try {
       const server = await this.prisma.mCPServerMetric.findFirst({
@@ -1117,6 +1124,8 @@ export class MCPMetricsCollector {
           data: {
             totalRequests: newRequestCount,
             averageLatency: newAverageLatency,
+            totalExecutionTime: (server.totalExecutionTime || 0) + executionTime,
+            totalFailures: success ? server.totalFailures : (server.totalFailures || 0) + 1,
             lastActiveAt: new Date()
           }
         })
@@ -1126,8 +1135,52 @@ export class MCPMetricsCollector {
     }
   }
 
+  public async getGlobalSummaryMetrics(): Promise<GlobalMCPSummary> {
+    if (!this.enableMetrics) {
+      return {
+        totalRequests: 0,
+        errorRate: 0,
+        avgResponseTime: 0,
+        activeUsers: 0,
+      };
+    }
+
+    try {
+      // Query to get sum of totalRequests, totalFailures, and totalExecutionTime from all mCPServerMetric records
+      const aggregateMetrics = await this.prisma.mCPServerMetric.aggregate({
+        _sum: {
+          totalRequests: true,      // Field in mCPServerMetric for total executions
+          totalFailures: true,      // Field in mCPServerMetric for failure count
+          totalExecutionTime: true, // Field in mCPServerMetric for sum of exec times in ms
+        },
+      });
+
+      const totalRequests = aggregateMetrics._sum.totalRequests || 0;
+      const totalFailedRequests = aggregateMetrics._sum.totalFailures || 0;
+      const totalExecutionTimeSum = Number(aggregateMetrics._sum.totalExecutionTime) || 0;
+
+      const errorRate = totalRequests > 0 ? totalFailedRequests / totalRequests : 0;
+      const avgResponseTime = totalRequests > 0 ? totalExecutionTimeSum / totalRequests : 0;
+
+      return {
+        totalRequests,
+        errorRate,
+        avgResponseTime,
+        activeUsers: 0, // Placeholder: Active user tracking requires further design and implementation
+      };
+    } catch (error) {
+      appLogger.mcp.error('Failed to calculate global summary metrics:', error as Error);
+      return {
+        totalRequests: 0,
+        errorRate: 0,
+        avgResponseTime: 0,
+        activeUsers: 0,
+      };
+    }
+  }
+
   async getServerMetrics(serverId?: string): Promise<unknown> {
-    if (!this.enableMetrics) return null
+    if (!this.enableMetrics) return null;
 
     try {
       if (serverId) {
@@ -1136,23 +1189,24 @@ export class MCPMetricsCollector {
           include: {
             toolExecutions: {
               take: 10,
-              orderBy: { executedAt: 'desc' }
-            }
-          }
-        })
+              orderBy: { executedAt: 'desc' },
+            },
+          },
+        });
       } else {
+        // Return all server metrics if no specific serverId is provided
         return await this.prisma.mCPServerMetric.findMany({
           include: {
             _count: {
-              select: { toolExecutions: true }
-            }
+              select: { toolExecutions: true },
+            },
           },
-          orderBy: { lastActiveAt: 'desc' }
-        })
+          orderBy: { lastActiveAt: 'desc' },
+        });
       }
     } catch (error) {
-      console.error('[Metrics] Failed to get server metrics:', error)
-      return null
+      console.error('[Metrics] Failed to get server metrics:', error);
+      return null;
     }
   }
 
@@ -1161,57 +1215,56 @@ export class MCPMetricsCollector {
     toolName?: string,
     timeRange?: { start: Date; end: Date }
   ): Promise<ServerMetrics | null> {
-    if (!this.enableMetrics) return null
+    if (!this.enableMetrics) return null;
 
     try {
-      const where: Prisma.MCPToolExecutionWhereInput = {}
+      const where: Prisma.MCPToolExecutionWhereInput = {};
       
-      if (serverId) where.serverId = serverId
-      if (toolName) where.toolName = toolName
+      if (serverId) where.serverId = serverId;
+      if (toolName) where.toolName = toolName;
       if (timeRange) {
         where.executedAt = {
           gte: timeRange.start,
-          lte: timeRange.end
-        }
+          lte: timeRange.end,
+        };
       }
 
-      const [executions, stats] = await Promise.all([
-        this.prisma.mCPToolExecution.findMany({
-          where,
-          orderBy: { executedAt: 'desc' },
-          take: 100
-        }),
-        this.prisma.mCPToolExecution.aggregate({
-          where,
-          _count: {
-            id: true
-          },
-          _avg: {
-            executionTime: true
-          },
-          _sum: {
-            repairAttempts: true,
-            retryCount: true
-          }
-        })
-      ])
+      const executions = await this.prisma.mCPToolExecution.findMany({
+        where,
+        orderBy: { executedAt: 'desc' },
+        // Consider limiting 'take' if not already handled or if performance is an issue
+      });
 
-      const successCount = executions.filter(e => e.success).length
-      const failureCount = executions.length - successCount
+      const stats = await this.prisma.mCPToolExecution.aggregate({
+        where,
+        _count: {
+          id: true,
+        },
+        _avg: {
+          executionTime: true,
+        },
+        _sum: {
+          repairAttempts: true,
+          retryCount: true,
+        },
+      });
+      
+      const successCount = executions.filter((e: { success: boolean }) => e.success).length;
+      const failureCount = executions.length - successCount;
 
       return {
-        totalExecutions: stats._count.id,
+        totalExecutions: stats._count.id || 0,
         successCount,
         failureCount,
-        successRate: stats._count.id > 0 ? successCount / stats._count.id : 0,
+        successRate: (stats._count.id || 0) > 0 ? successCount / (stats._count.id || 1) : 0, // Avoid division by zero
         averageExecutionTime: stats._avg.executionTime || 0,
         totalRepairAttempts: stats._sum.repairAttempts || 0,
         totalRetryCount: stats._sum.retryCount || 0,
-        recentExecutions: executions
-      }
+        recentExecutions: executions.slice(0, 10), // Return only a slice for recentExecutions
+      };
     } catch (error) {
-      console.error('[Metrics] Failed to get tool execution stats:', error)
-      return null
+      console.error('[Metrics] Failed to get tool execution stats:', error);
+      return null;
     }
   }
 
@@ -1505,6 +1558,7 @@ function processLargeResponse(toolName: string, result: string): unknown {
  * Wraps MCP tools with metrics collection and large response processing
  */
 async function wrapToolsWithMetrics(
+  serverId: string,
   tools: AISDKToolCollection
 ): Promise<AISDKToolCollection> {
   const wrappedTools: AISDKToolCollection = {}
@@ -1550,7 +1604,7 @@ async function wrapToolsWithMetrics(
           }
           
           // Record successful execution with processing metrics
-          await globalMetricsCollector.recordToolExecution('enhanced-mcp', toolName, {
+          await globalMetricsCollector.recordToolExecution(serverId, toolName, {
             executionTime: Date.now() - startTime,
             success: true,
             aborted: false,
@@ -1569,7 +1623,7 @@ async function wrapToolsWithMetrics(
           return processedResult
         } catch (error) {
           // Record failed execution
-          await globalMetricsCollector.recordToolExecution('enhanced-mcp', toolName, {
+          await globalMetricsCollector.recordToolExecution(serverId, toolName, {
             executionTime: Date.now() - startTime,
             success: false,
             aborted: false,
@@ -1590,6 +1644,7 @@ async function wrapToolsWithMetrics(
  * Enhanced MCP Client for stdio transport with robust error handling
  */
 export async function createEnhancedStdioMCPClient(
+  serverId: string,
   config: EnhancedStdioConfig
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
@@ -1613,7 +1668,7 @@ export async function createEnhancedStdioMCPClient(
     const tools = await mcpClient.tools()
     
     // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(tools)
+    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
     
     logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
 
@@ -1648,6 +1703,7 @@ export async function createEnhancedStdioMCPClient(
  * Enhanced MCP Client for SSE transport with additional configuration
  */
 export async function createEnhancedSSEMCPClient(
+  serverId: string,
   config: EnhancedSSEConfig
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
@@ -1672,7 +1728,7 @@ export async function createEnhancedSSEMCPClient(
     const tools = await mcpClient.tools()
     
     // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(tools)
+    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
     
     logger.info(`[Enhanced MCP] Successfully connected to SSE MCP server at ${config.url}`);
 
@@ -1707,6 +1763,7 @@ export async function createEnhancedSSEMCPClient(
  * Enhanced MCP Client for StreamableHTTP transport
  */
 export async function createEnhancedStreamableHTTPMCPClient(
+  serverId: string,
   config: EnhancedStreamableHTTPConfig
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
@@ -1762,7 +1819,7 @@ export async function createEnhancedStreamableHTTPMCPClient(
     const tools = await mcpClient.tools()
     
     // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(tools)
+    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
     
     logger.info(`[Enhanced MCP] Successfully connected to StreamableHTTP MCP server at ${config.url}`);
     
@@ -1811,12 +1868,12 @@ export async function createTypedMCPClient<T extends Record<string, z.ZodSchema>
     if ('url' in config) {
       // Determine if it's SSE or StreamableHTTP by checking for sessionId
       if ('sessionId' in config) {
-        client = await createEnhancedStreamableHTTPMCPClient(config as EnhancedStreamableHTTPConfig)
+        client = await createEnhancedStreamableHTTPMCPClient((config as EnhancedStreamableHTTPConfig).clientName || 'typed-streamable-http-client', config as EnhancedStreamableHTTPConfig)
       } else {
-        client = await createEnhancedSSEMCPClient(config as EnhancedSSEConfig)
+        client = await createEnhancedSSEMCPClient((config as EnhancedSSEConfig).clientName || 'typed-sse-client', config as EnhancedSSEConfig)
       }
     } else {
-      client = await createEnhancedStdioMCPClient(config as EnhancedStdioConfig)
+      client = await createEnhancedStdioMCPClient((config as EnhancedStdioConfig).clientName || 'typed-stdio-client', config as EnhancedStdioConfig)
     }
 
     // If schemas provided, validate tools against them
@@ -1897,7 +1954,7 @@ export class MCPConnectionPool {
     }
 
     // Create client without abort signal
-    const client = await createEnhancedStdioMCPClient(config)
+    const client = await createEnhancedStdioMCPClient(id, config)
     this.clients.set(id, client)
     this.connectionCount++
     
@@ -1913,7 +1970,7 @@ export class MCPConnectionPool {
       throw new MCPClientError(`Client with id '${id}' already exists`)
     }
 
-    const client = await createEnhancedSSEMCPClient(config)
+    const client = await createEnhancedSSEMCPClient(id, config)
     this.clients.set(id, client)
     this.connectionCount++
     
@@ -1980,12 +2037,14 @@ export async function loadMCPToolsFromLocalEnhanced(
   env: Record<string, string> = {},
   options: Partial<EnhancedStdioConfig> = {}
 ) {
-  return await createEnhancedStdioMCPClient({
+  const config = {
     command,
     env,
     clientName: 'piper-mcp-client',
     ...options
-  })
+  };
+  return await createEnhancedStdioMCPClient(config.clientName, config);
+
 }
 
 /**
@@ -1995,9 +2054,10 @@ export async function loadMCPToolsFromURLEnhanced(
   url: string,
   options: Partial<EnhancedSSEConfig> = {}
 ) {
-  return await createEnhancedSSEMCPClient({
+  const config = {
     url,
     clientName: 'piper-mcp-client',
     ...options
-  })
+  };
+  return await createEnhancedSSEMCPClient(config.clientName, config)
 } 

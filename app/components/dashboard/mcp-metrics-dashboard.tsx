@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Server, Activity, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react'
+import { RefreshCw, Server, Activity, AlertTriangle, CheckCircle, Clock, Zap, Users, TrendingUp, TrendingDown } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface MCPMetrics {
@@ -20,8 +20,12 @@ interface MCPMetrics {
   summary: {
     totalServers: number
     connectedServers: number
-    totalTools: number
-    errorServers: number
+    totalTools: number;
+    errorServers: number;
+    totalRequests?: number;
+    errorRate?: number;
+    avgResponseTime?: number;
+    activeUsers?: number;
   }
 }
 
@@ -173,10 +177,63 @@ export default function MCPMetricsDashboard() {
   }
 
   const { metrics, health, pool } = data.data
-  const summary = metrics?.summary || { totalServers: 0, connectedServers: 0, totalTools: 0, errorServers: 0 }
+  const summary = metrics?.summary || {
+    totalServers: 0,
+    connectedServers: 0,
+    totalTools: 0,
+    errorServers: 0,
+    totalRequests: 0,
+    errorRate: 0,
+    avgResponseTime: 0,
+    activeUsers: 0,
+  };
 
   return (
     <div className="space-y-6">
+      {/* Summary Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalRequests?.toLocaleString() || '0'}</div>
+            {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(summary.errorRate === undefined ? 0 : summary.errorRate * 100).toFixed(2)}%</div>
+            {/* <p className="text-xs text-muted-foreground">+1.0% from last month</p> */}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.avgResponseTime?.toLocaleString() || '0'}ms</div>
+            {/* <p className="text-xs text-muted-foreground">-5.2% from last month</p> */}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.activeUsers?.toLocaleString() || '0'}</div>
+            {/* <p className="text-xs text-muted-foreground">+10 since last hour</p> */}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

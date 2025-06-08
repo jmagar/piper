@@ -1,215 +1,86 @@
-# Technical Context & Stack
+# Technical Context: Piper Chat Application
 
-## Core Technology Stack
+**Last Updated**: Current Session (File Mention Integration)
 
-### **Frontend Architecture**
-- **Framework**: Next.js 14+ with App Router
-- **Language**: TypeScript with strict type checking
-- **UI Components**: shadcn/ui component library
-- **Styling**: Tailwind CSS for responsive design
-- **State Management**: React hooks with local storage persistence
-- **Real-time Updates**: Polling-based with useEffect cleanup
+## Core Technologies
 
-### **Backend Infrastructure**
-- **API Routes**: Next.js API routes with TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Authelia 2FA integration (CSRF removed in favor of Authelia)
-- **Logging**: Winston-based structured logging system
+- **Frontend**: 
+    - **Next.js 13+ (App Router)**: React framework for UI, routing, SSR/SSG.
+    - **React 18**: Core UI library.
+    - **TypeScript**: For static typing and improved code quality.
+    - **Tailwind CSS**: Utility-first CSS framework for styling.
+    - **Shadcn/ui**: Re-usable UI components built with Radix UI and Tailwind CSS.
+    - **Zustand**: State management.
+    - **Lucide React**: Icon library.
+    - **Sonner**: Toast notifications.
+    - **`path-browserify`**: Client-side path manipulation for file explorer features.
 
-### **Enhanced MCP Client Stack**
-- **Core SDK**: AI SDK v4 (`ai`, `@ai-sdk/openai`)
-- **MCP Integration**: AI SDK MCP client with enhanced wrappers. **NOTE**: Currently, `lib/mcp/client.ts` (with `MCPService`) and `lib/mcp/enhanced-mcp-client.ts` coexist. A major refactor is planned to consolidate all logic into `enhanced-mcp-client.ts` and remove `client.ts`.
-- **Transport Support**: stdio, SSE, StreamableHTTP
-- **Abort Signals**: Native Web API AbortController/AbortSignal
-- **Metrics Collection**: Custom Prisma-based metrics system
+- **Backend (Primarily Next.js API Routes)**:
+    - **Node.js**: JavaScript runtime.
+    - **TypeScript**: For backend logic.
+    - **Prisma**: ORM for database interaction (PostgreSQL).
+    - **AI SDK (Vercel AI SDK)**: For streaming LLM responses and tool handling.
 
-## Development Environment
+- **Database**:
+    - **PostgreSQL**: Relational database for storing application data (chats, prompts, agents, metrics, etc.).
 
-### **Package Management**
-- **Runtime**: Node.js (containerized)
-- **Package Manager**: npm with package-lock.json
-- **Development**: Docker Compose for local development
+- **MCP (Model Context Protocol) Ecosystem**:
+    - **Custom MCP Servers**: Separate services providing tools (e.g., SABnzbd, Overseerr integration).
+    - **`enhanced-mcp-client.ts`**: Custom client within Piper for interacting with MCP servers, featuring tool repair and dynamic loading.
 
-### **Container Architecture**
-```yaml
-services:
-  piper: # Main application
-    - Next.js application with Enhanced MCP Client
-    - Volume-mounted config at /config
-    - Environment variables from .env
-  
-  piper-db: # PostgreSQL database
-    - Persistent data storage
-    - Prisma schema with MCP metrics tables
-    - Real-time metrics collection active
-```
+## Key Components & Modules (Focus on Current Session's Impact)
 
-### **Configuration Management**
-- **Environment**: `/config/config.json` (volume-mounted)
-- **MCP Servers**: JSON configuration with validation
-- **Database**: `DATABASE_URL` environment variable
-- **Uploads**: `/uploads` directory for file storage
+1.  **Chat Input & Mention System**:
+    - **`chat-input.tsx`**: 
+        - Main component for user text input, sending messages, and displaying selected entities (agent, tool, prompt, URL, files).
+        - **Current Session**: Heavily modified to integrate the new file mention workflow. Manages a hidden file input for uploads triggered from `UnifiedSelectionModal`. Renders `FileExplorerModal` conditionally. Provides new callbacks (`handleTriggerFileUpload`, `handleTriggerFileBrowse`) to `UnifiedSelectionModal`. Adapts `onUrlSubmit` prop for `UnifiedSelectionModal`.
+    - **`useAgentCommand.ts` (Custom Hook)**:
+        - Core logic for processing `@mentions` in the chat input.
+        - Manages active mention type, search terms, filtering of suggestions (agents, tools, prompts).
+        - Handles opening/closing of selection modals.
+        - **Current Session**: Significantly updated to support `@files/` mentions. Manages state for `FileExplorerModal` (`isFileExplorerModalOpen`, `setIsFileExplorerModalOpen`). Includes `handleFileMentionSelectedFromModal` to insert the selected file path. Its return object was refined to include necessary setters for `chat-input.tsx`.
+    - **`UnifiedSelectionModal.tsx`**: 
+        - Generic modal for displaying lists of agents, tools, or prompts based on the active mention type.
+        - **Current Session**: Modified to handle `activeCommandType: 'files'`. Instead of a list, it now shows two options: "Upload Files" (triggers a callback to `chat-input.tsx` to click a hidden file input) and "Browse Files" (triggers a callback to open `FileExplorerModal`).
+    - **`FileExplorerModal.tsx` (New Component)**:
+        - A modal dialog that wraps the `FileExplorer` component.
+        - Launched when user selects "Browse Files" from `UnifiedSelectionModal` (for `@files/` mentions).
+        - Allows navigation and selection of files/folders from Piper's file system.
+        - Uses the `onFileSelectForMention` prop (passed from `chat-input.tsx` via `useAgentCommand.ts`) to communicate the selected path back for insertion into the chat input.
 
-## Enhanced MCP Client Technical Details
+2.  **File Management System**:
+    - **`file-explorer.tsx`**: 
+        - UI component for displaying directory listings, handling navigation (breadcrumbs), and integrating file uploads.
+        - **Current Session (related to overall feature)**: Enhanced with item selection state (`selectedItemPath`), UI highlighting for selection, and an "Attach Selected File" button that uses the `onFileSelectForMention` prop (provided when used within `FileExplorerModal`).
+    - **`file-uploader.tsx`**: Component for handling file uploads with progress.
+    - **Backend APIs**:
+        - `/api/files/list/route.ts`: Lists files and directories.
+        - `/api/files/upload/route.ts`: Handles file uploads.
+        - These APIs use `UPLOADS_DIR` environment variable.
 
-**Note**: The MCP client architecture is undergoing a significant refactoring. The goal is to consolidate all client logic into `lib/mcp/enhanced-mcp-client.ts` and remove the legacy `lib/mcp/client.ts`. The details below reflect the current state, but will be streamlined post-refactor. See `CLIENT-REFACTOR.md` for the full plan.
+3.  **UI Component Library (`@/components/ui`)**:
+    - Based on Shadcn/ui (Dialog, Button, Table, Input, etc.).
+    - Used extensively for building modals, forms, and other UI elements.
 
-### **Core Dependencies**
-```json
-{
-  "ai": "Latest - experimental_createMCPClient",
-  "ai/mcp-stdio": "StdioMCPTransport support", 
-  "@ai-sdk/openai": "GPT-4o-mini for tool repair",
-  "zod": "Schema validation and type safety",
-  "prisma": "Database ORM with PostgreSQL",
-  "file-type": "MIME type detection for multi-modal"
-}
-```
+## Development & Build Tools
 
-### **Database Schema (Prisma)**
-```prisma
-model MCPServerMetric {
-  id                String    @id @default(uuid())
-  serverId          String    // Unique MCP server identifier
-  serverName        String    // Human-readable name
-  transportType     String    // 'stdio', 'sse', 'streamable-http'
-  status            String    // 'connected', 'disconnected', 'error'
-  connectionTime    DateTime
-  lastActiveAt      DateTime?
-  toolsCount        Int       @default(0)
-  totalRequests     Int       @default(0)
-  averageLatency    Float     @default(0)
-  metadata          Json?
-  
-  toolExecutions    MCPToolExecution[]
-}
+- **npm/pnpm/yarn**: Package management.
+- **ESLint**: JavaScript/TypeScript linter.
+- **Prettier**: Code formatter.
+- **Docker**: For containerization and deployment.
 
-model MCPToolExecution {
-  id               String  @id @default(uuid())
-  serverId         String
-  toolName         String
-  callId           String?
-  executionTime    Float   // milliseconds
-  success          Boolean
-  errorType        String? // 'aborted', 'execution_error', etc.
-  errorMessage     String?
-  aborted          Boolean @default(false) // ✅ Abort tracking
-  repairAttempts   Int     @default(0)
-  retryCount       Int     @default(0)
-  metadata         Json?
-  executedAt       DateTime @default(now())
-}
-```
+## Key Libraries & Their Roles
 
-### **API Endpoints Architecture**
+- **`react`**: Core UI library.
+- **`next`**: Framework for React applications.
+- **`typescript`**: Language for static typing.
+- **`tailwindcss`**: CSS framework.
+- **`@radix-ui/react-dialog` (via Shadcn)**: For accessible modal components (used by `FileExplorerModal` and `UnifiedSelectionModal`).
+- **`lucide-react`**: Icons.
+- **`zustand`**: Global state management.
+- **`prisma`**: Database ORM.
+- **`sonner`**: Toast notifications.
+- **`path-browserify`**: Client-side path manipulation (used in `FileExplorer` and related components).
+- **Vercel AI SDK**: For LLM interaction, including tool definition and response streaming.
 
-**Enhanced MCP Endpoints:**
-- `GET /api/mcp-metrics` - Live server metrics and health data
-- `GET /api/mcp-tool-executions` - Tool execution history with abort status
-- `GET /api/mcp-abort-tool` - List active tool executions  
-- `POST /api/mcp-abort-tool` - Abort control (individual/bulk/server-specific)
-
-**Standard Endpoints:**
-- `/api/mcp-config` - Server configuration management
-- `/api/mcp-servers` - Server status and management
-- `/api/chat` - Enhanced with abort error reporting
-
-## Abort Signals Implementation
-
-### **Technical Architecture**
-```typescript
-// Global abort controller tracking
-const activeAbortControllers = new Map<string, AbortController>()
-
-// Tool wrapper with abort signal support
-async function wrapToolsWithAbortSignal(
-  tools: AISDKToolCollection,
-  globalAbortSignal?: AbortSignal
-): Promise<AISDKToolCollection>
-
-// Promise-based abort execution
-async function executeWithAbort(
-  tool: Record<string, unknown>,
-  params: Record<string, unknown>,
-  abortSignal: AbortSignal
-): Promise<unknown>
-```
-
-### **Resource Management**
-- **Auto-cleanup**: 5-minute timeout for stale abort controllers
-- **Event listeners**: Proper cleanup on abort signal completion
-- **Memory management**: Map-based tracking with automatic removal
-- **Database persistence**: All abort actions recorded for analytics
-
-## Real-time Dashboard Infrastructure
-
-### **Component Architecture**
-```typescript
-// Real-time polling with cleanup
-useEffect(() => {
-  fetchActiveExecutions()
-  const interval = setInterval(fetchActiveExecutions, 2000)
-  return () => clearInterval(interval)
-}, [])
-
-// State management for abort operations
-const [aborting, setAborting] = useState<Set<string>>(new Set())
-```
-
-### **UI Libraries & Patterns**
-- **lucide-react**: Icon library for visual indicators
-- **sonner**: Toast notifications for user feedback
-- **Responsive design**: Mobile-first with desktop enhancements
-- **Loading states**: Skeleton screens and progress indicators
-
-## Development & Deployment
-
-### **Build Process**
-- **TypeScript**: Strict compilation with full type checking
-- **ESLint**: Code quality and consistency checking
-- **Prisma**: Database migration and type generation
-- **Docker**: Multi-stage builds for production deployment
-
-### **Environment Configuration**
-```bash
-# Core application
-DATABASE_URL="postgresql://..."
-CONFIG_DIR="/config"  # Volume-mounted configuration
-UPLOADS_DIR="./uploads"  # File storage directory
-
-# MCP Enhancement
-OPENAI_API_KEY="sk-..."  # For tool repair functionality
-```
-
-### **Logging & Monitoring**
-- **Winston logging**: Structured logs with correlation IDs
-- **MCP logger**: Specialized logging for MCP operations
-- **Real-time metrics**: Live collection to PostgreSQL
-- **Performance tracking**: Execution times, success rates, abort patterns
-
-## Security Considerations
-
-### **Authentication & Authorization**
-- **Authelia 2FA**: External authentication system
-- **Session management**: Proper session handling and cleanup
-- **API security**: Request validation and error handling
-
-### **Resource Protection**
-- **Abort controller limits**: Automatic cleanup prevents memory leaks
-- **Database connections**: Prisma connection pooling
-- **File upload validation**: MIME type checking and size limits
-- **Error handling**: Graceful degradation and user feedback
-
-## Performance Optimizations
-
-### **Database Efficiency**
-- **Indexed fields**: Strategic indexing for query performance
-- **Aggregated metrics**: Real-time calculations with caching
-- **Connection pooling**: Efficient database connection management
-
-### **Frontend Performance**
-- **Component optimization**: React.memo for expensive re-renders
-- **Polling optimization**: Smart intervals with cleanup
-- **State management**: Efficient state updates and batch operations
-
-This technical stack provides **enterprise-grade reliability** while maintaining **developer productivity** and **system performance**.
+This technical context provides an overview of the stack and key modules involved in Piper, with emphasis on those touched by the recent file mention integration work.

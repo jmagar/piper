@@ -13,7 +13,7 @@ interface MCPTool {
 
 interface UnifiedSelectionModalProps {
   isOpen: boolean;
-  activeCommandType: 'agents' | 'tools' | 'prompts' | 'url' | null;
+  activeCommandType: 'agents' | 'tools' | 'prompts' | 'url' | 'files' | null;
   searchTerm: string;
   agents: Agent[];
   tools: MCPTool[];
@@ -25,6 +25,8 @@ interface UnifiedSelectionModalProps {
   onClose: () => void;
   activeIndex: number;
   onModalSearchChange: (newSearchTerm: string) => void;
+  onTriggerFileUpload?: () => void;
+  onTriggerFileBrowse?: () => void;
 }
 
 export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
@@ -41,6 +43,8 @@ export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
   onClose,
   activeIndex,
   onModalSearchChange,
+  onTriggerFileUpload,
+  onTriggerFileBrowse,
 }: UnifiedSelectionModalProps) => {
   const [urlInputValue, setUrlInputValue] = useState('');
 
@@ -99,7 +103,7 @@ export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
         <span aria-hidden="true">&times;</span>
       </button>
       {/* Search Input for agents, tools, prompts */}
-      {['agents', 'tools', 'prompts'].includes(activeCommandType || '') && (
+      {['agents', 'tools', 'prompts'].includes(activeCommandType || '') && activeCommandType !== 'files' && (
         <div className="p-1 mb-2">
           <input
             type="text"
@@ -223,11 +227,53 @@ export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
         </ul>
       )}
       
+      {/* File Options (Upload/Browse) */}
+      {activeCommandType === 'files' && (
+        <ul role="listbox" aria-label="File actions" className="max-h-[calc(60vh-120px)] overflow-y-auto">
+          <li
+            role="option"
+            className={`p-3 cursor-pointer rounded-md hover:bg-muted`}
+            onClick={() => {
+              if (onTriggerFileUpload) onTriggerFileUpload();
+              onClose();
+            }}
+          >
+            <div className="font-medium">Upload Files</div>
+            <div className="text-xs text-gray-500">Select files from your device</div>
+          </li>
+          <li
+            role="option"
+            className={`p-3 cursor-pointer rounded-md hover:bg-muted`}
+            onClick={() => {
+              if (onTriggerFileBrowse) onTriggerFileBrowse();
+              onClose(); // Close this modal, FileExplorerModal will open
+            }}
+          >
+            <div className="font-medium">Browse Files</div>
+            <div className="text-xs text-gray-500">Select from already uploaded files</div>
+          </li>
+        </ul>
+      )}
+
       {activeCommandType === 'url' && (
         <div className="p-2">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            Type or paste a URL. Press Enter to submit.
-          </p>
+          {/* URL Input Field was here, but it's better handled by the input at the top when activeCommandType is 'url' */}
+          {/* Retaining the descriptive text or using the main input for URL entry */}
+          <input
+            type="text"
+            value={urlInputValue} 
+            onChange={(e) => setUrlInputValue(e.target.value)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && urlInputValue.trim() && onUrlSubmit) {
+                e.preventDefault();
+                onUrlSubmit(urlInputValue.trim());
+              }
+            }}
+            placeholder="Enter or paste URL and press Enter"
+            className="w-full p-2 border rounded bg-background text-foreground placeholder-muted-foreground focus:ring-1 focus:ring-ring"
+            autoFocus
+          />
+          <p className="text-xs text-muted-foreground mt-1.5">Submit a URL to include its content as context.</p>
         </div>
       )}
     </div>

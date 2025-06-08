@@ -4,8 +4,8 @@ import { LayoutApp } from "@/app/components/layout/layout-app";
 import { McpServersDashboard } from "@/app/components/mcp-servers/mcp-servers-dashboard";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogViewerPlaceholder } from "@/app/components/mcp-dashboard/log-viewer-placeholder";
-import { MonitoringPlaceholder } from "@/app/components/mcp-dashboard/monitoring-placeholder";
+import LogViewer from "@/app/components/log-viewer";
+import McpMetricsDashboard from "@/app/components/dashboard/mcp-metrics-dashboard";
 
 export default function McpDashboardPage() {
   return (
@@ -29,10 +29,10 @@ export default function McpDashboardPage() {
           <McpServersDashboard />
         </TabsContent>
         <TabsContent value="logs" className="flex-grow">
-          <LogViewerPlaceholder />
+          <LogViewer />
         </TabsContent>
         <TabsContent value="monitoring" className="flex-grow">
-          <MonitoringPlaceholder />
+          <McpMetricsDashboard />
         </TabsContent>
       </Tabs>
     </div>
