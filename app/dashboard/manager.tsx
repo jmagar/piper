@@ -30,7 +30,7 @@ import { Switch } from '@/components/ui/switch'; // Assuming path
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, FileText, Server, Activity } from 'lucide-react';
-import { toast } from 'sonner'; // Assuming you use sonner for toasts, common with Shadcn
+import { toast } from '@/components/ui/toast';
 
 // Import the log viewer component
 import LogViewer from '@/app/components/log-viewer';
@@ -95,7 +95,7 @@ export default function McpServersManager() {
       console.error('Failed to fetch MCP servers:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
       setError(errorMessage);
-      toast.error(`Failed to load configurations: ${errorMessage}`);
+      toast({ title: 'Failed to load configurations', description: errorMessage, status: 'error' });
     }
     setIsLoading(false);
   }, []);
@@ -127,7 +127,7 @@ export default function McpServersManager() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to save configuration');
       }
-      toast.success('Configuration saved successfully!');
+      toast({ title: 'Configuration saved successfully!', status: 'success' });
       setInitialServers(JSON.parse(JSON.stringify(servers))); // Update initial state after save
       // Optionally, re-fetch to ensure consistency if server-side transformations are complex
       // await fetchServers(); 
@@ -135,7 +135,7 @@ export default function McpServersManager() {
       console.error('Failed to save MCP servers:', e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
       setError(errorMessage);
-      toast.error(`Failed to save configurations: ${errorMessage}`);
+      toast({ title: 'Failed to save configurations', description: errorMessage, status: 'error' });
     }
     setIsSaving(false);
   };
@@ -174,11 +174,11 @@ export default function McpServersManager() {
     e.preventDefault();
     // Basic validation (e.g., name is required)
     if (!newServerForm.name.trim()) {
-      toast.error('Server Key Name is required.');
+      toast({ title: 'Server Key Name is required.', status: 'error' });
       return;
     }
     if (servers.some(s => s.name === newServerForm.name.trim())) {
-      toast.error('Server Key Name must be unique.');
+      toast({ title: 'Server Key Name must be unique.', status: 'error' });
       return;
     }
 
@@ -189,12 +189,12 @@ export default function McpServersManager() {
     };
 
     setServers(prevServers => [...prevServers, serverToAdd]);
-    toast.success(`${serverToAdd.displayName || serverToAdd.name} added to the list. Save configuration to persist.`);
+    toast({ title: `${serverToAdd.displayName || serverToAdd.name} added to the list. Save configuration to persist.`, status: 'success' });
     setIsAddModalOpen(false);
   };
 
   const handleEditServer = (server: MCPServerConfigFromUI) => {
-    toast.info(`Edit server ${server.name} functionality not yet implemented.`);
+    toast({ title: `Edit server ${server.name} functionality not yet implemented.`, status: 'info' });
     // Logic to open a modal/form pre-filled with server data
   };
 
@@ -202,7 +202,7 @@ export default function McpServersManager() {
     // Immediate optimistic update, or confirm first then update
     // For now, just a placeholder
     const serverToDelete = servers.find(s => s.id === serverId);
-    toast.warning(`Delete server ${serverToDelete?.name} functionality requires confirmation and is not yet fully implemented.`);
+    toast({ title: `Delete server ${serverToDelete?.name} functionality requires confirmation and is not yet fully implemented.`, status: 'warning' });
     // setServers(prevServers => prevServers.filter(s => s.id !== serverId));
   };
 

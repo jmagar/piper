@@ -1,6 +1,5 @@
 import { CoreMessage, Message as MessageAISDK, TextPart, ToolCallPart } from 'ai';
 import { appLogger } from '@/lib/logger'; // Assuming appLogger is accessible
-import { getCurrentCorrelationId } from '@/lib/logger/correlation'; // Assuming this is accessible
 
 // Interfaces for structured 'parts' field in Prisma Message model
 // These should ideally be shared if used elsewhere, or defined here if scoped to transformation
@@ -11,7 +10,7 @@ interface PrismaMessagePartsTool {
   tool_call_id?: string;
   tool_name?: string;
   result?: string | Record<string, unknown> | unknown[]; // Result can be complex
-  error?: { message?: string; stack?: string; [key: string]: any };
+  error?: { message?: string; stack?: string; [key: string]: unknown };
 }
 
 export function transformMessagesToCoreMessages(messages: MessageAISDK[], correlationId?: string): CoreMessage[] {
@@ -26,8 +25,8 @@ export function transformMessagesToCoreMessages(messages: MessageAISDK[], correl
       // For array content (like tool results or complex assistant messages from DB),
       // try to serialize or extract primary text for logging/debugging.
       // The specific role handlers below will properly structure the CoreMessage content.
-      originalContentString = m.content.map(part => 
-        typeof part === 'string' ? part : (part.type === 'text' ? part.text : JSON.stringify(part))
+      originalContentString = (m.content as unknown[]).map(part => 
+        typeof part === 'string' ? part : (typeof part === 'object' && part !== null && 'type' in part && (part as { type: string; text?: string }).type === 'text' ? (part as { type: string; text?: string }).text || '' : JSON.stringify(part))
       ).join('');
     }
 
@@ -65,7 +64,7 @@ export function transformMessagesToCoreMessages(messages: MessageAISDK[], correl
     } else if (role === 'tool') {
       let toolCallIdFromParts = `tc-result-${Date.now()}`;
       let toolNameFromParts = 'unknown_tool_from_db';
-      let toolResultContent: any = originalContentString; // Default to string content
+      let toolResultContent: unknown = originalContentString; // Default to string content
 
       if (m.parts) {
         const partsData = m.parts as PrismaMessagePartsTool | null;

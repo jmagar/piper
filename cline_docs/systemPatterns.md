@@ -70,7 +70,16 @@ This document outlines key system design patterns, architectural choices, and UI
 1.  **TypeScript for Type Safety**: Strict type checking throughout the codebase.
 2.  **Custom Hooks (`useSomething`)**: Encapsulating complex UI logic and state management (e.g., `useAgentCommand`, `useFileUploader`). This promotes reusability and separation of concerns.
 3.  **Component-Based Architecture (React)**: Building UI from reusable, composable components.
-4.  **Environment Variables**: For configuration (database URLs, API keys, directory paths like `UPLOADS_DIR`).
-5.  **Linting & Formatting (ESLint, Prettier)**: Maintaining code quality and consistency.
+4.  **Modular Architecture Pattern (New)**: 
+    - **Pattern**: Breaking large monolithic files into focused, single-responsibility modules
+    - **Example**: The Enhanced MCP Client refactoring (2,062-line file → 9 focused modules)
+    - **Benefits**: Improved maintainability, better testing capabilities, enhanced reusability, tree-shaking optimization
+    - **Implementation**: Each module handles specific concerns (types, config, metrics, tool repair, etc.) with unified exports maintaining backward compatibility
+5.  **Environment Variables**: For configuration (database URLs, API keys, directory paths like `UPLOADS_DIR`).
+6.  **Linting & Formatting (ESLint, Prettier)**: Maintaining code quality and consistency.
+7.  **Backward Compatibility Preservation**: 
+    - **Pattern**: When refactoring large modules, maintain existing public APIs through unified export files
+    - **Benefit**: Allows major internal restructuring without breaking existing consumers
+    - **Implementation**: Central `index.ts` files that re-export all public interfaces from specialized modules
 
 These patterns aim to create a robust, maintainable, and user-friendly application.

@@ -57,7 +57,7 @@ const INITIAL_COMPONENTS: Partial<Components> = {
 
     return (
       <CodeBlock className={className}>
-        <CodeBlockGroup className="flex h-12 items-center justify-between px-5">
+        <CodeBlockGroup className="code-block-header flex h-12 items-center justify-between px-5">
           {/* Language badge */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">

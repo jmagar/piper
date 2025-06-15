@@ -28,6 +28,15 @@
       background-position: 200% 0;
     }
   }
+
+  @keyframes code-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+    }
+  }
 }
 
 @theme inline {
@@ -162,46 +171,56 @@
 /* Enhanced scrollbar styles for code blocks */
 .scrollbar-thin {
   scrollbar-width: thin;
+  scrollbar-color: oklch(0.705 0.015 286.067 / 0.4) transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: oklch(0.705 0.015 286.067 / 0.3);
-  border-radius: 3px;
-  transition: background 0.2s ease;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background-clip: padding-box;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: oklch(0.705 0.015 286.067 / 0.5);
+  transform: scale(1.1);
 }
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb {
   background: oklch(0.705 0.015 286.067 / 0.4);
+  border: 1px solid oklch(0.274 0.006 286.033 / 0.3);
 }
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: oklch(0.705 0.015 286.067 / 0.6);
+  border-color: oklch(0.274 0.006 286.033 / 0.5);
 }
 
-/* Code block specific enhancements */
+/* Enhanced code block hover effects */
 .group:hover .code-shimmer {
   animation: code-shimmer 3s ease-in-out infinite;
   background: linear-gradient(
     90deg,
     transparent,
-    oklch(0.705 0.015 286.067 / 0.1),
+    oklch(0.705 0.015 286.067 / 0.08),
     transparent
   );
   background-size: 200% 100%;
+}
+
+.group:hover {
+  animation: code-glow 2s ease-in-out infinite;
 }
 
 /* Enhanced Code Typography */
@@ -245,27 +264,99 @@ code {
   text-rendering: optimizeLegibility;
 }
 
-/* Specific styles for code blocks vs inline code */
-pre code {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  letter-spacing: 0.01em;
-  font-weight: 400;
+/* High specificity code block styles to override prose */
+div[class*="not-prose"] pre code,
+.group pre code,
+[class*="CodeBlock"] pre code,
+div:not(.prose) pre code {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 400 !important;
+  color: oklch(0.15 0.005 285.823) !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* Inline code gets slightly smaller and tighter */
-:not(pre) > code {
-  font-size: 0.85em;
-  letter-spacing: 0.01em;
-  font-weight: 500;
+.dark div[class*="not-prose"] pre code,
+.dark .group pre code,
+.dark [class*="CodeBlock"] pre code,
+.dark div:not(.prose) pre code {
+  color: oklch(0.92 0.004 286.32) !important;
 }
 
-/* Language-specific font optimizations */
-pre code.language-bash,
-pre code.language-sh,
-pre code.language-shell,
-pre code.language-zsh,
-pre code.language-fish {
+/* Specific styles for code blocks vs inline code with higher specificity */
+div[class*="not-prose"] pre,
+.group pre,
+[class*="CodeBlock"] pre {
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 1.25rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Enhanced prose code overrides with higher specificity */
+.prose code,
+div.prose code {
+  font-size: 0.85em !important;
+  font-weight: 500 !important;
+  color: oklch(0.21 0.006 285.885) !important;
+  background-color: oklch(0.96 0.001 286.375) !important;
+  padding: 0.125rem 0.375rem !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid oklch(0.92 0.004 286.32) !important;
+  box-shadow: 0 1px 2px oklch(0.92 0.004 286.32 / 0.1) !important;
+}
+
+.dark .prose code,
+.dark div.prose code {
+  background-color: oklch(0.274 0.006 286.033) !important;
+  color: oklch(0.985 0 0) !important;
+  border-color: oklch(0.35 0.006 286.033) !important;
+  box-shadow: 0 1px 2px oklch(0.21 0.006 285.885 / 0.2) !important;
+}
+
+/* Ensure prose pre code uses our enhanced styling */
+.prose pre code,
+div.prose pre code {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 400 !important;
+  color: oklch(0.15 0.005 285.823) !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.dark .prose pre code,
+.dark div.prose pre code {
+  color: oklch(0.92 0.004 286.32) !important;
+}
+
+/* Language-specific font optimizations with higher specificity */
+div[class*="not-prose"] pre code.language-bash,
+div[class*="not-prose"] pre code.language-sh,
+div[class*="not-prose"] pre code.language-shell,
+div[class*="not-prose"] pre code.language-zsh,
+div[class*="not-prose"] pre code.language-fish,
+.group pre code.language-bash,
+.group pre code.language-sh,
+.group pre code.language-shell,
+.group pre code.language-zsh,
+.group pre code.language-fish,
+.prose pre code.language-bash,
+.prose pre code.language-sh,
+.prose pre code.language-shell,
+.prose pre code.language-zsh,
+.prose pre code.language-fish {
   font-family: 'SF Mono', 
     'Monaco', 
     'Inconsolata', 
@@ -275,8 +366,8 @@ pre code.language-fish {
     'Liberation Mono', 
     'Menlo', 
     'Courier New',
-    monospace;
-  letter-spacing: 0.02em;
+    monospace !important;
+  letter-spacing: 0.02em !important;
 }
 
 /* Better font weight for different code contexts */
@@ -297,15 +388,47 @@ pre code.language-fish {
     monospace;
 }
 
-/* Enhanced typography for specific elements */
-.prose code {
-  font-size: 0.875em;
-  font-weight: 500;
-  color: oklch(0.141 0.005 285.823);
+/* Code block enhancements for better visual hierarchy */
+.group .code-block-header {
+  background: linear-gradient(135deg, 
+    oklch(0.97 0.001 286.375),
+    oklch(0.95 0.002 286.375)
+  );
+  border-bottom: 1px solid oklch(0.92 0.004 286.32);
 }
 
-.dark .prose code {
-  color: oklch(0.985 0 0);
+.dark .group .code-block-header {
+  background: linear-gradient(135deg,
+    oklch(0.274 0.006 286.033),
+    oklch(0.25 0.006 286.033)
+  );
+  border-bottom-color: oklch(0.35 0.006 286.033);
+}
+
+/* Copy button enhancements */
+.copy-button {
+  transition: all 0.2s ease;
+  background: oklch(0.985 0 0 / 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid oklch(0.92 0.004 286.32 / 0.5);
+}
+
+.dark .copy-button {
+  background: oklch(0.274 0.006 286.033 / 0.8);
+  border-color: oklch(0.35 0.006 286.033 / 0.5);
+}
+
+.copy-button:hover {
+  background: oklch(0.97 0.001 286.375);
+  border-color: oklch(0.92 0.004 286.32);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px oklch(0.21 0.006 285.885 / 0.1);
+}
+
+.dark .copy-button:hover {
+  background: oklch(0.35 0.006 286.033);
+  border-color: oklch(0.442 0.017 285.786);
+  box-shadow: 0 4px 8px oklch(0.21 0.006 285.885 / 0.3);
 }
 
 body {

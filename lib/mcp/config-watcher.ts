@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import { watch, FSWatcher } from 'fs'
 import { z } from 'zod'
-import { MCPConnectionPool } from './enhanced-mcp-client'
+import { MCPConnectionPool } from './enhanced/connection-pool'
 
 // Configuration schema for validation
 const MCPServerConfigSchema = z.object({

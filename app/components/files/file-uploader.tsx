@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner'; // Using sonner directly
+import { toast } from '@/components/ui/toast';
 import { UploadCloud, XCircle, CheckCircle2 } from 'lucide-react';
 
 interface FileUploaderProps {
@@ -36,9 +36,7 @@ export function FileUploader({ currentExplorerPath, onUploadSuccess }: FileUploa
     if (!selectedFile) {
       setUploadMessage('Please select a file first.');
       setUploadStatus('error');
-      toast.error('Upload Error', {
-        description: 'Please select a file first.',
-      });
+      toast({ title: 'Upload Error', description: 'Please select a file first.', status: 'error' });
       return;
     }
 
@@ -68,9 +66,7 @@ export function FileUploader({ currentExplorerPath, onUploadSuccess }: FileUploa
         const response = JSON.parse(xhr.responseText);
         setUploadStatus('success');
         setUploadMessage(`Successfully uploaded ${response.fileName || selectedFile.name}!`);
-        toast.success('Upload Successful', {
-          description: `${response.fileName || selectedFile.name} has been uploaded.`,
-        });
+        toast({ title: 'Upload Successful', description: `${response.fileName || selectedFile.name} has been uploaded.`, status: 'success' });
         setSelectedFile(null); // Clear selection
         if (fileInputRef.current) fileInputRef.current.value = ''; // Reset file input
         onUploadSuccess(); // Trigger refresh
@@ -84,9 +80,7 @@ export function FileUploader({ currentExplorerPath, onUploadSuccess }: FileUploa
         }
         setUploadStatus('error');
         setUploadMessage(errorMessage);
-        toast.error('Upload Failed', {
-          description: errorMessage,
-        });
+        toast({ title: 'Upload Failed', description: errorMessage, status: 'error' });
       }
     };
 
@@ -94,13 +88,11 @@ export function FileUploader({ currentExplorerPath, onUploadSuccess }: FileUploa
       setIsUploading(false);
       setUploadStatus('error');
       setUploadMessage('An network error occurred during upload. Please check your connection.');
-      toast.error('Network Error', {
-        description: 'Failed to connect to the server for upload.',
-      });
+      toast({ title: 'Network Error', description: 'Failed to connect to the server for upload.', status: 'error' });
     };
 
     xhr.send(formData);
-  }, [selectedFile, currentExplorerPath, onUploadSuccess, toast]);
+  }, [selectedFile, currentExplorerPath, onUploadSuccess]);
 
   return (
     <div className="p-4 border rounded-lg shadow-sm bg-card mt-6">

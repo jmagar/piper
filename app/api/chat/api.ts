@@ -18,10 +18,12 @@ export async function validateAndTrackUsage() {
  */
 export async function logUserMessage({
   chatId,
+  userId, // Added userId
   content,
   attachments,
 }: {
   chatId: string
+  userId?: string // Added userId as optional
   content: string
   attachments?: Attachment[]
 }) {
@@ -29,6 +31,7 @@ export async function logUserMessage({
     const message = await prisma.message.create({
       data: {
         chatId,
+        userId: userId, // Added userId
         role: "user",
         content: sanitizeUserInput(content),
       }

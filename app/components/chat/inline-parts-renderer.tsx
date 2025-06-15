@@ -34,6 +34,17 @@ export function InlinePartsRenderer({
           )}
           markdown={true}
           components={{
+            a: ({ href, children, ...props }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            ),
             p: ({ children: pChildren }) => {
               if (typeof pChildren !== 'string') {
                 return <p>{pChildren}</p>;
@@ -50,7 +61,7 @@ export function InlinePartsRenderer({
                           href={`/uploads/${filePath}`}
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
+                          className="text-primary hover:text-primary/80 hover:underline"
                         >
                           {textPart}
                         </a>
@@ -90,6 +101,17 @@ export function InlinePartsRenderer({
           )}
           markdown={true}
           components={{
+            a: ({ href, children, ...props }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            ),
             p: ({ children: pChildren }) => {
               if (typeof pChildren !== 'string') {
                 return <p>{pChildren}</p>;
@@ -106,7 +128,7 @@ export function InlinePartsRenderer({
                           href={`/uploads/${filePath}`}
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
+                          className="text-primary hover:text-primary/80 hover:underline"
                         >
                           {textPart}
                         </a>
@@ -138,6 +160,17 @@ function PartRenderer({ part }: PartRendererProps) {
           className="prose dark:prose-invert relative min-w-full bg-transparent p-0 prose-h1:scroll-m-20 prose-h1:text-2xl prose-h1:font-semibold prose-h2:mt-8 prose-h2:scroll-m-20 prose-h2:text-xl prose-h2:mb-3 prose-h2:font-medium prose-h3:scroll-m-20 prose-h3:text-base prose-h3:font-medium prose-h4:scroll-m-20 prose-h5:scroll-m-20 prose-h6:scroll-m-20 prose-strong:font-medium prose-table:block prose-table:overflow-y-auto"
           markdown={true}
           components={{
+            a: ({ href, children, ...props }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            ),
             p: ({ children: pChildren }) => {
               if (typeof pChildren !== 'string') {
                 return <p>{pChildren}</p>;
@@ -154,7 +187,7 @@ function PartRenderer({ part }: PartRendererProps) {
                           href={`/uploads/${filePath}`}
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
+                          className="text-primary hover:text-primary/80 hover:underline"
                         >
                           {textPart}
                         </a>
@@ -341,7 +374,7 @@ function InlineToolInvocation({ toolData }: InlineToolInvocationProps) {
         {/* Expand/collapse indicator */}
         <CaretDown
           className={cn(
-            "size-4 text-blue-500 dark:text-blue-400 transition-transform duration-200 flex-shrink-0",
+            "size-4 text-primary dark:text-primary transition-transform duration-200 flex-shrink-0",
             isExpanded ? "rotate-180" : ""
           )}
         />
@@ -376,7 +409,7 @@ function InlineToolInvocation({ toolData }: InlineToolInvocationProps) {
                     <div className="space-y-2">
                       {Object.entries(args).map(([key, value]) => (
                         <div key={key} className="flex items-start gap-3 group">
-                          <ArrowRight className="size-3 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                          <ArrowRight className="size-3 text-primary dark:text-primary mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-semibold text-xs text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-800/70 px-2 py-0.5 rounded">

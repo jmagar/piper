@@ -39,7 +39,7 @@ Piper is an advanced, context-aware AI chat application designed to streamline d
 ### 4. **Tool & MCP Integration**
 - **Extensive Tool Library**: Access to a wide range of MCP tools for interacting with services like SABnzbd, Overseerr, Unraid, Plex, etc.
 - **Tool Parameter Input**: UI for providing parameters to tools that require them.
-- **Enhanced MCP Client**: Robust client for communicating with MCP servers, including features like tool repair and dynamic tool loading.
+- **Enhanced MCP Client (Modular Architecture)**: Comprehensive modular system featuring tool repair, dynamic loading, performance metrics, multi-modal content processing, and robust connection management. Recently refactored into 9 focused modules for improved maintainability and testing capabilities.
 
 ### 5. **Agent Management**
 - **Curated & User Agents**: Access to pre-configured agents and the ability for users to define their own.

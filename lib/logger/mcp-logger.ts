@@ -178,6 +178,7 @@ export class McpLogger {
   ): void {
     const correlationId = getCurrentCorrelationId();
     const context = getCurrentContext();
+    const transport = (details.serverInfo as any)?.transport;
 
     // Update server registry
     if (details.serverInfo && operation === McpOperation.SERVER_STARTUP) {
@@ -187,7 +188,7 @@ export class McpLogger {
         version: details.serverInfo.version || '1.0.0',
         protocolVersion: details.protocolVersion || '2024-11-05',
         capabilities: details.capabilities,
-        transport: details.serverInfo.transport || McpTransportType.STDIO,
+        transport: transport?.type || McpTransportType.STDIO,
         status: 'initializing',
       });
     }
@@ -197,7 +198,12 @@ export class McpLogger {
       serverId,
       protocolVersion: details.protocolVersion,
       capabilities: details.capabilities,
-      metadata: details.metadata,
+      metadata: {
+        ...details.metadata,
+        transportType: transport?.type,
+        transportInfo: transport?.info,
+        httpSettings: transport?.httpSettings,
+      },
     };
 
     if (details.error) {

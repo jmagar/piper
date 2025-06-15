@@ -1,4 +1,5 @@
-import { MCPMetricsCollector, globalMCPPool } from './enhanced-mcp-client'
+import { MCPMetricsCollector } from './enhanced/metrics-collector'
+import { globalMCPPool } from './enhanced/connection-pool'
 import { getManagedServersInfo } from './mcpManager'
 
 /**

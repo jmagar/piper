@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, StopCircle, Activity, Zap } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/components/ui/toast'
 
 interface ActiveExecution {
   callId: string
@@ -29,7 +29,7 @@ export default function ActiveExecutions() {
       }
     } catch (error) {
       console.error('Failed to fetch active executions:', error)
-      toast.error('Failed to load active executions')
+      toast({ title: 'Failed to load active executions', status: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -47,15 +47,15 @@ export default function ActiveExecutions() {
 
       if (response.ok) {
         const data = await response.json()
-        toast.success(data.message)
+        toast({ title: data.message, status: 'success' })
         await fetchActiveExecutions() // Refresh the list
       } else {
         const error = await response.json()
-        toast.error(error.error || 'Failed to abort execution')
+        toast({ title: error.error || 'Failed to abort execution', status: 'error' })
       }
     } catch (error) {
       console.error('Failed to abort execution:', error)
-      toast.error('Failed to abort execution')
+      toast({ title: 'Failed to abort execution', status: 'error' })
     } finally {
       setAborting(prev => {
         const newSet = new Set(prev)
@@ -75,15 +75,15 @@ export default function ActiveExecutions() {
 
       if (response.ok) {
         const data = await response.json()
-        toast.success(data.message)
+        toast({ title: data.message, status: 'success' })
         await fetchActiveExecutions()
       } else {
         const error = await response.json()
-        toast.error(error.error || 'Failed to abort all executions')
+        toast({ title: error.error || 'Failed to abort all executions', status: 'error' })
       }
     } catch (error) {
       console.error('Failed to abort all executions:', error)
-      toast.error('Failed to abort all executions')
+      toast({ title: 'Failed to abort all executions', status: 'error' })
     }
   }
 

@@ -8,6 +8,9 @@ export async function getMessagesFromDb(
 ): Promise<MessageAISDK[]> {
   try {
     const messages = await prisma.message.findMany({
+        include: {
+            attachments: true,
+        },
       where: { chatId },
       orderBy: { createdAt: 'asc' }
     });

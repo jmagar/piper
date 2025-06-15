@@ -20,9 +20,16 @@ export type ChatMessageWithMentions = {
   toolMentions?: ToolMention[]
   promptMentions?: PromptMention[]
   urlMentions?: UrlMention[];
+  fileMentions?: FileMention[];
 }
 
 // Helper function to parse tool mentions from message text
+
+export type FileMention = {
+  type: 'file';
+  path: string; // The path extracted from the mention, e.g., "images/photo.jpg"
+  fullMention: string; // The full mention string, e.g., "@files/images/photo.jpg"
+};
 
 export type UrlMention = {
   type: 'url';
@@ -113,6 +120,35 @@ export function parsePromptMentions(text: string): PromptMention[] {
   return mentions
 }
 
+
+// Helper function to parse file mentions from message text
+export function parseFileMentions(text: string): FileMention[] {
+  const fileMentionRegex = /@files\/([^@\s]+)/g;
+  const mentions: FileMention[] = [];
+  let match;
+
+  while ((match = fileMentionRegex.exec(text)) !== null) {
+    const fullMention = match[0];
+    const path = match[1];
+    
+    if (path) {
+      mentions.push({
+        type: 'file',
+        path,
+        fullMention,
+      });
+    } else {
+      console.warn('Skipping invalid file mention:', fullMention);
+    }
+  }
+  return mentions;
+}
+
+// Helper function to remove file mentions from text
+export function stripFileMentions(text: string): string {
+  return text.replace(/@files\/([^@\s]+)/g, '').trim();
+}
+
 // Helper function to remove prompt mentions from text
 export function stripPromptMentions(text: string): string {
   return text.replace(/@[\w-]+(?!\()/g, '').trim()
@@ -120,5 +156,5 @@ export function stripPromptMentions(text: string): string {
 
 // Helper function to remove both tool and rule mentions from text
 export function stripAllMentions(text: string): string {
-  return stripPromptMentions(stripToolMentions(stripUrlMentions(text))); // Add stripUrlMentions
+  return stripFileMentions(stripPromptMentions(stripToolMentions(stripUrlMentions(text))));
 } 

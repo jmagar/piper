@@ -23,19 +23,23 @@ model Chat {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  chat      Chat     @relation(fields: [chatId], references: [id])
-  chatId    String
-  content   String
-  parts     Json?    // Store structured message parts (step badges, tool calls, etc.)
-  role      String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  chat        Chat     @relation(fields: [chatId], references: [id])
+  chatId      String
+  userId      String?
+  content     String
+  parts       Json?
+  role        String
+  createdAt   DateTime @default(now())
+  attachments Attachment[]
 }
 
 model Attachment {
   id        String   @id @default(uuid())
   chat      Chat     @relation(fields: [chatId], references: [id])
   chatId    String
+  message   Message  @relation(fields: [messageId], references: [id])
+  messageId String
   fileName  String
   fileType  String
   fileSize  Int

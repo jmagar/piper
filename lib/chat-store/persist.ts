@@ -11,7 +11,7 @@ import {
 
 let dbReady = false
 let dbInitPromise: Promise<void> | null = null
-let stores: Record<string, any> = {}
+const stores: Record<string, any> = {}
 
 const isClient = typeof window !== "undefined"
 const DB_NAME = "piper-db"

@@ -161,6 +161,17 @@ export function MessageUser({
             h4: ({ children }) => <p>{children}</p>,
             h5: ({ children }) => <p>{children}</p>,
             h6: ({ children }) => <p>{children}</p>,
+            a: ({ href, children, ...props }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            ),
             p: ({ children }) => {
               if (typeof children !== 'string') {
                 return <p>{children}</p>;
@@ -179,7 +190,7 @@ export function MessageUser({
                           href={`/uploads/${filePath}`} // Adjust this URL as needed based on actual file serving
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
+                          className="text-primary hover:text-primary/80 hover:underline"
                         >
                           {part}
                         </a>

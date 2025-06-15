@@ -100,7 +100,7 @@ export function ConnectionsSection() {
 
       {/* Tools List */}
       <div className="space-y-6">
-        {tools.map((tool, index) => (
+        {tools.map((tool) => (
           <div key={tool.id} className="border-border rounded-lg border p-3">
             <div className="space-y-4">
               {/* Tool Header */}

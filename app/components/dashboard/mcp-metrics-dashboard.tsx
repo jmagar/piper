@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Server, Activity, AlertTriangle, CheckCircle, Clock, Zap, Users, TrendingUp, TrendingDown } from 'lucide-react'
-import { toast } from 'sonner'
+import { RefreshCw, Server, Activity, AlertTriangle, CheckCircle, Clock, Zap, Users } from 'lucide-react'
+import { toast } from '@/components/ui/toast'
 
 interface MCPMetrics {
   servers: Array<{
@@ -75,7 +75,7 @@ export default function MCPMetricsDashboard() {
       setLastUpdated(new Date().toLocaleTimeString())
     } catch (error) {
       console.error('Failed to fetch MCP metrics:', error)
-      toast.error('Failed to load MCP metrics')
+      toast({ title: 'Failed to load MCP metrics', status: 'error' })
     } finally {
       setIsLoading(false)
     }
@@ -95,12 +95,12 @@ export default function MCPMetricsDashboard() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       await response.json()
-      toast.success('New server initialization triggered successfully')
+      toast({ title: 'New server initialization triggered successfully', status: 'success' })
       // Refresh metrics after initialization
       setTimeout(fetchMetrics, 1000)
     } catch (error) {
       console.error('Failed to initialize new servers:', error)
-      toast.error('Failed to initialize new servers')
+      toast({ title: 'Failed to initialize new servers', status: 'error' })
     } finally {
       setIsInitializing(false)
     }

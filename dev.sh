@@ -6,7 +6,7 @@
 cd "$(dirname "$0")"
 
 # Default Docker Compose command
-COMPOSE_CMD="docker-compose -f docker-compose.dev.yml"
+COMPOSE_CMD="docker compose -f docker-compose.dev.yml"
 
 # Function to print usage
 usage() {

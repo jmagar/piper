@@ -75,7 +75,9 @@ export enum McpOperation {
   PROMPT_TEMPLATE = 'prompt_template',
   SERVER_STARTUP = 'server_startup',
   SERVER_SHUTDOWN = 'server_shutdown',
-  ERROR_HANDLING = 'error_handling'
+  ERROR_HANDLING = 'error_handling',
+  HEALTH_CHECK_FAILURE = 'health_check_failure',
+  VALIDATE_CONFIG = 'validate_config'
 }
 
 export interface McpLogEntry extends LogEntry {
@@ -138,7 +140,7 @@ export interface AiSdkLogEntry extends LogEntry {
 
 // Context information for correlation
 export interface LogContext {
-  correlationId: string;
+  correlationId?: string; // Made optional
   userId?: string;
   requestId?: string;
   sessionId?: string;
@@ -146,6 +148,8 @@ export interface LogContext {
   ip?: string;
   route?: string;
   method?: string;
+  error?: Error | unknown; // Added optional error
+  source?: LogSourceValue; // Added optional source
 }
 
 // Logger configuration types
@@ -264,6 +268,30 @@ export interface LogMetrics {
 }
 
 // Export utility type helpers
+export type LogSourceValue = string;
+
+export interface IAppLogger {
+  // Base methods - these can remain as they might involve async operations in some theoretical logger
+  debug: (message: string, context?: LogContext) => void;
+  info: (message: string, context?: LogContext) => void;
+  warn: (message: string, context?: LogContext) => void;
+  error: (message: string, context?: LogContext) => void;
+
+  // Contextual logging method - this is the primary way to use the logger
+  logSource: (
+    source: LogSourceValue,
+    level: LogLevel,
+    message: string,
+    context?: LogContext,
+  ) => void;
+
+  // Method to create a logger instance with pre-filled context
+  withContext: (context: Partial<LogContext> | LogSourceValue) => LoggerInstance;
+
+  // Optional, source-specific loggers for convenience
+  mcp?: LoggerInstance;
+}
+
 export type LoggerInstance = {
   debug: (message: string, metadata?: Record<string, unknown>) => void;
   info: (message: string, metadata?: Record<string, unknown>) => void;
@@ -281,4 +309,4 @@ export type SourceSpecificLogger = {
 };
 
 // Re-export enums from constants
-export { LogLevel, LogSource } from './constants'; 
+export { LogLevel } from './constants';

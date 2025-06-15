@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: promptId } = params;
+  const { id: promptId } = await params;
 
   if (!promptId) {
     return NextResponse.json({ error: "Prompt ID is required" }, { status: 400 });

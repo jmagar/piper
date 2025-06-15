@@ -26,7 +26,16 @@
 
 - **MCP (Model Context Protocol) Ecosystem**:
     - **Custom MCP Servers**: Separate services providing tools (e.g., SABnzbd, Overseerr integration).
-    - **`enhanced-mcp-client.ts`**: Custom client within Piper for interacting with MCP servers, featuring tool repair and dynamic loading.
+    - **Enhanced MCP Client (Modular Architecture)**: Comprehensive modular system under `lib/mcp/enhanced/` featuring:
+        - **types.ts**: Core TypeScript interfaces and error classes
+        - **config.ts**: Configuration management and validation
+        - **metrics-collector.ts**: PostgreSQL-integrated performance tracking
+        - **tool-repair.ts**: AI-powered tool call repair using GPT-4o-mini
+        - **multimodal-handler.ts**: Multi-modal content processing (images, files, audio, video)
+        - **client-factory.ts**: Transport-specific client creation (stdio/SSE/HTTP)
+        - **managed-client.ts**: Lifecycle management with retry logic
+        - **connection-pool.ts**: Multi-client connection management and health monitoring
+        - **index.ts**: Unified exports maintaining backward compatibility
 
 ## Key Components & Modules (Focus on Current Session's Impact)
 

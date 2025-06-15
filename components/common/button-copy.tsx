@@ -27,15 +27,12 @@ export function ButtonCopy({ code, className }: ButtonCopyProps) {
       onClick={onCopy}
       type="button"
       className={cn(
-        "group relative inline-flex items-center justify-center gap-1.5",
-        "bg-slate-100/80 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80",
-        "border border-slate-200/60 dark:border-slate-700/60",
+        "copy-button group relative inline-flex items-center justify-center gap-1.5",
         "rounded-md px-2.5 py-1.5 text-xs font-medium",
         "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100",
         "transition-all duration-200 ease-out",
         "shadow-sm hover:shadow-md",
         "ring-1 ring-slate-900/5 dark:ring-slate-100/5",
-        "backdrop-blur-sm",
         hasCopyLabel && "text-emerald-600 dark:text-emerald-400",
         className
       )}

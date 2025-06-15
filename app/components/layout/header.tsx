@@ -3,12 +3,9 @@
 import { HistoryTrigger } from "@/app/components/history/history-trigger"
 
 import { UserMenu } from "@/app/components/layout/user-menu"
-import { Button } from "@/components/ui/button"
 
-import { Server } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePathname, useRouter } from 'next/navigation';
-import { McpServersDashboard } from '@/app/components/mcp-servers/mcp-servers-dashboard';
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 // import { useUser } from "@/app/providers/user-provider"
 import type { Agent } from "@/app/types/agent"
@@ -17,11 +14,9 @@ import { useAgent } from "@/lib/agent-store/provider";
 import { useChats } from "@/lib/chat-store/chats/provider";
 import { APP_NAME } from "@/lib/config"
 import Link from "next/link"
-import { AgentLink } from "./agent-link"
-
-import { PromptLink } from "./prompt-link"
 import { DialogPublish } from "./dialog-publish"
 import { HeaderSidebarTrigger } from "./header-sidebar-trigger"
+import { MessageSquare, ToyBrick, Users, TerminalSquare, FolderOpen } from 'lucide-react';
 
 
 export type AgentHeader = Pick<
@@ -81,11 +76,19 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
           <div className="pointer-events-auto flex flex-1 items-center justify-center gap-2">
             <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="">
               <TabsList>
-                <TabsTrigger value="chat">Chat</TabsTrigger>
-                <TabsTrigger value="mcp">MCP</TabsTrigger>
-                <TabsTrigger value="agents">Agents</TabsTrigger>
-                <TabsTrigger value="prompts">Prompts</TabsTrigger>
-                <TabsTrigger value="files">Files</TabsTrigger>
+                {[
+                  { value: 'chat', label: 'Chat', Icon: MessageSquare },
+                  { value: 'mcp', label: 'MCP', Icon: ToyBrick },
+                  { value: 'agents', label: 'Agents', Icon: Users },
+                  { value: 'prompts', label: 'Prompts', Icon: TerminalSquare },
+                  { value: 'files', label: 'Files', Icon: FolderOpen },
+                ].map(({ value, label, Icon }) => (
+                  <TabsTrigger key={value} value={value} className="px-2 md:px-3">
+                    <Icon className={`h-5 w-5 ${!isMobile ? 'md:mr-2' : ''}`} />
+                    {!isMobile && <span className="hidden md:inline">{label}</span>}
+                    {isMobile && <span className="sr-only">{label}</span>} {/* For accessibility on mobile */}
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </Tabs>
           </div>

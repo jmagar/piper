@@ -1,8 +1,7 @@
 "use client"
 
 import { LayoutApp } from "@/app/components/layout/layout-app";
-import { McpServersDashboard } from "@/app/components/mcp-servers/mcp-servers-dashboard";
-import { Separator } from "@/components/ui/separator";
+import { McpServersDashboard } from "@/app/components/mcp-servers/McpServersDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LogViewer from "@/app/components/log-viewer";
 import McpMetricsDashboard from "@/app/components/dashboard/mcp-metrics-dashboard";

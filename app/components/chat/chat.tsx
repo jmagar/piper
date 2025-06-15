@@ -18,7 +18,7 @@ import {
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useChat } from "@ai-sdk/react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
@@ -107,7 +107,7 @@ export function Chat() {
   // Display chat errors using toast notifications
   useEffect(() => {
     if (error) {
-      toast.error(error.message);
+      toast({ title: error.message, status: 'error' });
       // Consider if the error object needs to be 'cleared' from useChat's state
       // or if it automatically clears. For now, just displaying.
     }
@@ -311,7 +311,7 @@ export function Chat() {
     ) : undefined
 
     const options = {
-      body: {
+      data: {
         chatId: currentChatId,
         userId: uid,
         model: selectedModel,
@@ -330,6 +330,7 @@ export function Chat() {
       toast({ title: "Failed to send message", status: "error" })
       console.error("Error submitting message:", submitError)
     } finally {
+
       setIsSubmitting(false)
     }
   }
@@ -371,7 +372,7 @@ export function Chat() {
       }
 
       const options = {
-        body: {
+        data: {
           chatId: currentChatId,
           userId: uid,
           model: selectedModel,
@@ -399,7 +400,7 @@ export function Chat() {
     }
 
     const options = {
-      body: {
+      data: {
         chatId,
         userId: uid,
         model: selectedModel,

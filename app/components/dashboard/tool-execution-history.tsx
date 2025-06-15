@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { RefreshCw, CheckCircle, XCircle, Clock, Filter, TrendingUp } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toast } from 'sonner'
+import { toast } from '@/components/ui/toast'
 
 interface ToolExecution {
   id: string
@@ -58,7 +58,7 @@ export default function ToolExecutionHistory() {
       }
     } catch (error) {
       console.error('Failed to fetch tool execution history:', error)
-      toast.error('Failed to load tool execution history')
+      toast({ title: 'Failed to load tool execution history', status: 'error' })
     } finally {
       setIsLoading(false)
     }

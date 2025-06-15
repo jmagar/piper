@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input'; // For future path input
-import { Folder, File, ArrowUp, AlertCircle, Loader2 } from 'lucide-react';
+// import { Input } from '@/components/ui/input'; // For future path input - Removed unused import
+import { Folder, File, AlertCircle, Loader2 } from 'lucide-react'; // Removed unused ArrowUp
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import path from 'path-browserify'; // Using path-browserify for client-side path manipulation
 import { FileUploader } from './file-uploader'; // Added import
@@ -33,7 +33,7 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
   const [items, setItems] = useState<FileSystemItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [pathInput, setPathInput] = useState<string>('');
+  // const [pathInput, setPathInput] = useState<string>(''); // Removed unused state
   const [selectedItemPath, setSelectedItemPath] = useState<string | null>(null);
 
   const handleAttachSelectedFile = () => {
@@ -55,10 +55,14 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
       }
       setItems(data.items || []);
       setCurrentPath(data.path); // Update currentPath based on API response
-      setPathInput(data.path); // Sync path input with current path
-    } catch (err: any) {
+      // setPathInput(data.path); // Removed: Sync path input with current path
+    } catch (err: unknown) {
       console.error('Fetch error:', err);
-      setError(err.message || 'An unknown error occurred.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred.');
+      }
       setItems([]); // Clear items on error
     }
     setIsLoading(false);
@@ -70,7 +74,7 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
 
   useEffect(() => {
     fetchDirectoryContents(currentPath);
-  }, [fetchDirectoryContents]); // currentPath is managed by fetchDirectoryContents
+  }, [fetchDirectoryContents, currentPath]); // Added currentPath to dependency array
 
   const handleItemClick = (item: FileSystemItem) => {
     setSelectedItemPath(item.relativePath);
@@ -88,14 +92,9 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
     fetchDirectoryContents(cleanedPath);
   };
   
-  const handlePathInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPathInput(event.target.value);
-  };
+  // Removed unused handlePathInputChange
 
-  const handlePathInputSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    navigateToPath(pathInput);
-  };
+  // Removed unused handlePathInputSubmit
 
   const generateBreadcrumbs = () => {
     const pathSegments = currentPath.split('/').filter(segment => segment !== '');
