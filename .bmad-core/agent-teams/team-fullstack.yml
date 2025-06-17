@@ -1,0 +1,26 @@
+bundle:
+  name: Team Fullstack
+  icon: 🚀
+  description: >-
+    Comprehensive full-stack development team capable of handling both greenfield 
+    application development and brownfield enhancement projects. This team combines 
+    strategic planning, user experience design, and holistic system architecture 
+    to deliver complete solutions from concept to deployment. Specializes in 
+    full-stack applications, SaaS platforms, enterprise apps, feature additions, 
+    refactoring, and system modernization.
+
+agents:
+  - bmad-orchestrator
+  - analyst
+  - pm
+  - ux-expert
+  - architect
+  - po
+
+workflows:
+  - brownfield-fullstack
+  - brownfield-service
+  - brownfield-ui
+  - greenfield-fullstack
+  - greenfield-service
+  - greenfield-ui

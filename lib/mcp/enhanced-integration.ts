@@ -1,6 +1,22 @@
 import { MCPMetricsCollector } from './enhanced/metrics-collector'
 import { globalMCPPool } from './enhanced/connection-pool'
-import { getManagedServersInfo } from './mcpManager'
+// import { getManagedServersInfo } from './mcpManager';
+
+// Define minimal types for stubbing to satisfy downstream code
+// This should ideally be a shared type if used in multiple places, but defining locally for now.
+type MinimalServerToolStub = { name: string; [key: string]: unknown };
+type MinimalServerInfoStub = {
+  status: string;
+  tools: MinimalServerToolStub[];
+  key: string;
+  label: string;
+  transportType: string; // Added as it's used in EnhancedServerMetrics
+  [key: string]: unknown;
+};
+const getManagedServersInfo = async (): Promise<MinimalServerInfoStub[]> => { 
+  console.warn('[STUB] getManagedServersInfo in enhanced-integration called, returning empty array. Metrics & health check will be affected.');
+  return []; 
+}; // Stub
 
 /**
  * Enhanced MCP Integration Helper

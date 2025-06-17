@@ -81,7 +81,7 @@ export function Chat() {
   );
   const [availableModels, setAvailableModels] = useState<{ id: string; name: string; description: string; context_length: number | null; providerId: string; starred?: boolean }[]>([]);
   const [starredModelIds, setStarredModelIds] = useState<string[]>([]);
-  const { currentAgent } = useAgent()
+  const { currentAgent, curatedAgents } = useAgent()
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
 
@@ -296,6 +296,10 @@ export function Chat() {
     }
 
     // ✅ AI SDK PATTERN: Convert files to data URLs for AI model access
+    const agentId = currentAgent?.id || (curatedAgents && curatedAgents.length > 0 ? curatedAgents[0].id : "fallback-agent-id");
+
+    toast({ title: "Debug Info", description: `chatId: ${currentChatId}, userId: ${uid}, agentId: ${agentId}` });
+
     const attachments = files.length > 0 ? await Promise.all(
       files.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer()
@@ -311,12 +315,12 @@ export function Chat() {
     ) : undefined
 
     const options = {
-      data: {
+      body: {
         chatId: currentChatId,
         userId: uid,
         model: selectedModel,
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-        ...(currentAgent && { agentId: currentAgent.id }),
+        agentId: agentId,
       },
       experimental_attachments: attachments,
     }
@@ -330,7 +334,6 @@ export function Chat() {
       toast({ title: "Failed to send message", status: "error" })
       console.error("Error submitting message:", submitError)
     } finally {
-
       setIsSubmitting(false)
     }
   }
@@ -371,12 +374,16 @@ export function Chat() {
         return
       }
 
+      const agentId = currentAgent?.id || (curatedAgents && curatedAgents.length > 0 ? curatedAgents[0].id : "fallback-agent-id");
+      toast({ title: "Debug Info (Suggestion)", description: `chatId: ${currentChatId}, userId: ${uid}, agentId: ${agentId}` });
+
       const options = {
-        data: {
+        body: {
           chatId: currentChatId,
           userId: uid,
           model: selectedModel,
           systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+          agentId: agentId,
         },
       }
 
@@ -390,7 +397,7 @@ export function Chat() {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       setIsSubmitting(false)
     },
-    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages, systemPrompt] 
+    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages, systemPrompt, currentAgent?.id, curatedAgents] 
   )
 
   const handleReload = async () => {

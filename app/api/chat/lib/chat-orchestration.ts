@@ -1,15 +1,14 @@
 import { Message as MessageAISDK, ToolSet } from 'ai';
 import { loadAgent } from "@/lib/agents/load-agent";
-import { getCombinedMCPToolsForAISDK } from "@/lib/mcp/mcpManager";
+import { toolCollectionManager } from "@/lib/mcp/modules/tool-collection-manager";
 import { trackSpecialAgentUsage } from "../api";
 import { appLogger } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 
 import { processToolMentions, processUrlMentions, processPromptMentions, processFileMentions } from './message-processing';
 import { pruneMessagesForPayloadSize } from './message-pruning';
-import { truncateToolDefinitions, estimateToolDefinitionTokens, calculateTokenBudget } from './token-management';
+import { TOKEN_CONFIG, truncateToolDefinitions, estimateToolDefinitionTokens, calculateTokenBudget } from './token-management';
 import { selectRelevantTools, optimizeToolDefinitions } from './tool-management';
-
 
 // =============================================================================
 // TYPES
@@ -24,6 +23,7 @@ export type ChatRequest = {
 };
 
 export type ProcessedChatData = {
+  model: string;
   finalMessages: MessageAISDK[];
   effectiveSystemPrompt: string;
   toolsToUse: ToolSet | undefined;
@@ -39,21 +39,16 @@ export type ProcessedChatData = {
 // AGENT CONFIGURATION
 // =============================================================================
 
-/**
- * Load and configure agent settings
- */
 async function loadAgentConfiguration(agentId?: string): Promise<Record<string, unknown> | null> {
   if (!agentId) {
     return null;
   }
-
   const agentConfig = await loadAgent(agentId);
-  appLogger.aiSdk.debug('Loaded agent configuration', { 
-    correlationId: getCurrentCorrelationId(), 
-    agentId, 
-    hasSystemPrompt: !!agentConfig?.systemPrompt 
+  appLogger.aiSdk.debug('Loaded agent configuration', {
+    correlationId: getCurrentCorrelationId(),
+    agentId,
+    hasSystemPrompt: !!agentConfig?.systemPrompt
   });
-
   return agentConfig;
 }
 
@@ -61,16 +56,11 @@ async function loadAgentConfiguration(agentId?: string): Promise<Record<string, 
 // TOOL CONFIGURATION
 // =============================================================================
 
-/**
- * Configure tools based on agent settings
- */
 async function configureTools(agentConfig: Record<string, unknown> | null): Promise<ToolSet | undefined> {
-  const allTools = await getCombinedMCPToolsForAISDK() as unknown as ToolSet;
+  const allTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
 
   if (agentConfig?.tools) {
     await trackSpecialAgentUsage();
-    // If agent has specific tools defined, use them.
-    // This assumes agent.tools is a complete ToolSet.
     return agentConfig.tools as unknown as ToolSet;
   }
 
@@ -80,17 +70,19 @@ async function configureTools(agentConfig: Record<string, unknown> | null): Prom
       const serverKeys = Array.isArray(mcpConfig.server) ? mcpConfig.server : [mcpConfig.server];
       const filteredTools: ToolSet = {};
       for (const key of Object.keys(allTools)) {
-        // The tool key is prefixed with serverKey_
         if (serverKeys.some(serverKey => key.startsWith(`${serverKey}_`))) {
           filteredTools[key] = allTools[key];
         }
       }
-      appLogger.info(`[ChatOrchestration] Filtered MCP tools for agent. Found ${Object.keys(filteredTools).length} tools for servers: ${serverKeys.join(', ')}`);
+      appLogger.aiSdk.info(`Filtered MCP tools for agent.`, {
+          correlationId: getCurrentCorrelationId(),
+          toolCount: Object.keys(filteredTools).length,
+          servers: serverKeys.join(', ')
+      });
       return Object.keys(filteredTools).length > 0 ? filteredTools : undefined;
     }
   }
 
-  // If no agent-specific tools, use all available MCP tools
   if (Object.keys(allTools).length > 0) {
     return allTools;
   }
@@ -99,152 +91,98 @@ async function configureTools(agentConfig: Record<string, unknown> | null): Prom
 }
 
 // =============================================================================
-// MESSAGE PROCESSING PIPELINE
-// =============================================================================
-
-/**
- * Process messages through the complete pipeline
- */
-async function processMessagesPipeline(
-  messages: MessageAISDK[]
-): Promise<{ processedMessages: MessageAISDK[], enhancedSystemPrompt: string }> {
-  // Step 1: Process tool mentions
-  const messagesAfterTools = await processToolMentions(messages);
-  
-  // Step 2: Process prompt mentions and enhance system prompt  
-  const { processedMessages: messagesWithPrompts, enhancedSystemPrompt } = 
-    await processPromptMentions(messagesAfterTools);
-  
-  // Step 3: Process URL mentions
-  const messagesAfterUrls = await processUrlMentions(messagesWithPrompts);
-
-  // Step 4: Process File mentions
-  const finalProcessedMessages = await processFileMentions(messagesAfterUrls);
-
-  return {
-    processedMessages: finalProcessedMessages,
-    enhancedSystemPrompt
-  };
-}
-
-/**
- * Convert relative attachment URLs to absolute URLs for AI model access
- */
-function processAttachmentUrls(messages: MessageAISDK[]): MessageAISDK[] {
-  return messages.map((message) => {
-    // ✅ AI SDK PATTERN: Files are already handled by AI SDK, just pass through
-    return message;
-  });
-}
-
-// =============================================================================
 // MAIN ORCHESTRATION
 // =============================================================================
 
-/**
- * Orchestrate the complete chat processing pipeline
- */
-export async function orchestrateChatProcessing(request: ChatRequest): Promise<ProcessedChatData> {
+export async function orchestrateChatProcessing(
+  request: ChatRequest
+): Promise<ProcessedChatData> {
+  const { messages, agentId, systemPrompt, model } = request;
   const correlationId = getCurrentCorrelationId();
-  const { messages, agentId } = request;
 
   try {
-    // Step 1: Load agent configuration
+    // 1. Load Agent Configuration
     const agentConfig = await loadAgentConfiguration(agentId);
-    
-    // Step 2: Process messages through pipeline
-    const { processedMessages, enhancedSystemPrompt } = await processMessagesPipeline(messages);
-    // effectiveSystemPrompt will be the enhancedSystemPrompt from the pipeline
-    
-    // Step 4: Process attachment URLs
-    const messagesWithAbsoluteUrls = processAttachmentUrls(processedMessages);
-    
-    // Step 5: Configure tools
-    let toolsToUse = await configureTools(agentConfig);
-    
-    if (toolsToUse && Object.keys(toolsToUse).length > 0) {
-      // Optimize tool definitions to prevent context overflow
-      toolsToUse = optimizeToolDefinitions(toolsToUse, correlationId || 'unknown');
-      
-      // Select relevant tools for large conversations
-      toolsToUse = selectRelevantTools(toolsToUse, messagesWithAbsoluteUrls.length);
 
-      // Truncate individual tool definitions if they are too verbose
-      if (toolsToUse && Object.keys(toolsToUse).length > 0) {
-        toolsToUse = truncateToolDefinitions(toolsToUse);
-      }
-    }
+    // 2. Determine Effective Model and System Prompt
+    const effectiveModel = model || (agentConfig?.model as string) || TOKEN_CONFIG.defaultModel;
+    const effectiveSystemPrompt = systemPrompt || (agentConfig?.systemPrompt as string) || '';
 
-    appLogger.info(`[ChatOrchestration] Tools selected for LLM: ${Object.keys(toolsToUse || {}).length} tools.`, { 
-      correlationId, 
-      toolCount: Object.keys(toolsToUse || {}).length 
-    });
+    // 3. Configure Tools
+    let availableTools = await configureTools(agentConfig);
 
-    // Step 6: Calculate token budget
-    const toolDefinitionTokens = estimateToolDefinitionTokens(toolsToUse || {});
-    const tokenBudget = calculateTokenBudget(toolDefinitionTokens);
-
-    appLogger.info(
-      `[ChatOrchestration] Token budget calculated. Message limit: ${tokenBudget.messageLimit} tokens.`,
-      {
-        correlationId,
-        ...tokenBudget,
-        toolDefinitionTokens
-      }
+    // 4. Process messages for special mentions (@tools, @urls, etc.)
+    const processedMessages = await processUrlMentions(
+      await processToolMentions(
+        await processPromptMentions(
+          await processFileMentions(messages)
+        )
+      )
     );
 
-    // Step 7: Prune messages if necessary
+    // 5. Select relevant tools based on message content
+    if (availableTools && Object.keys(availableTools).length > 0) {
+      availableTools = selectRelevantTools(processedMessages, availableTools);
+    }
+
+    // 6. Estimate tool definition tokens
+    const toolDefinitionTokens = availableTools ? estimateToolDefinitionTokens(availableTools) : 0;
+    
+    appLogger.aiSdk.debug(`Estimated tool definition tokens.`, {
+        correlationId,
+        toolDefinitionTokens,
+    });
+
+    // 7. Calculate token budget
+    const tokenBudget = calculateTokenBudget(toolDefinitionTokens, effectiveModel);
+
+    appLogger.aiSdk.debug(`Token budget calculated.`, {
+        correlationId,
+        toolDefinitionTokens,
+        modelLimit: tokenBudget.modelLimit,
+        messageLimit: tokenBudget.messageLimit,
+        responseReservation: tokenBudget.responseReservation,
+        toolTokens: tokenBudget.toolTokens,
+    });
+
+    // 8. Optimize and truncate tool definitions
+    let finalTools: ToolSet | undefined = availableTools;
+    if (finalTools) {
+      const optimizedTools = optimizeToolDefinitions(finalTools);
+      finalTools = truncateToolDefinitions(optimizedTools, tokenBudget.toolTokens);
+    }
+
+    // 9. Prune messages to fit the token budget
     const finalMessages = pruneMessagesForPayloadSize(
-      messagesWithAbsoluteUrls, 
-      tokenBudget.messageLimit, 
+      processedMessages,
+      tokenBudget.messageLimit,
       correlationId
     );
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[ChatOrchestration] Pipeline complete: ${messagesWithAbsoluteUrls.length} messages → ${finalMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
-    }
+    
+    appLogger.aiSdk.info(`Chat orchestration complete`, {
+        correlationId,
+        inboundMessages: processedMessages.length,
+        outboundMessages: finalMessages.length,
+        toolCount: finalTools ? Object.keys(finalTools).length : 0
+    });
 
     return {
+      model: effectiveModel,
       finalMessages,
-      effectiveSystemPrompt: enhancedSystemPrompt,
-      toolsToUse,
-      tokenBudget
+      effectiveSystemPrompt,
+      toolsToUse: finalTools,
+      tokenBudget,
     };
-
   } catch (error) {
-    // Enhanced error logging with more context
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorName = error instanceof Error ? error.name : typeof error;
-    
-    appLogger.error('[ChatOrchestration] Error in chat processing pipeline:', error as Error, { 
-      correlationId,
-      errorMessage,
-      errorStack,
-      errorName,
-      requestContext: {
-        chatId: request.chatId,
-        model: request.model,
-        agentId: request.agentId,
-        messageCount: request.messages.length
-      }
-    });
-    
-    // Log additional debugging info in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[ChatOrchestration] Detailed error context:', {
-        error: error,
-        stack: errorStack,
+    appLogger.aiSdk.error('Error in chat processing pipeline', error as Error, {
         correlationId,
-        request: {
-          chatId: request.chatId,
-          model: request.model,
-          agentId: request.agentId,
-          messageCount: request.messages.length
+        requestContext: {
+            chatId: request.chatId,
+            model: request.model,
+            agentId: request.agentId,
+            messageCount: request.messages.length
         }
-      });
-    }
-    
+    });
     throw error;
   }
 }

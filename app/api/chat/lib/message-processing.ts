@@ -1,5 +1,25 @@
 import { Message as MessageAISDK, CoreMessage, ToolSet } from "ai";
-import { getCombinedMCPToolsForAISDK, getManagedServersInfo } from "@/lib/mcp/mcpManager";
+// import { getCombinedMCPToolsForAISDK, getManagedServersInfo } from "@/lib/mcp/mcpManager";
+
+// Define minimal types for stubbing to satisfy downstream code
+type MinimalServerTool = { name: string; [key: string]: unknown }; // Allow other properties for flexibility
+type MinimalServerInfo = {
+  status: string;
+  tools: MinimalServerTool[];
+  key: string;
+  label: string;
+  [key: string]: unknown; // Allow other properties for flexibility
+};
+const getManagedServersInfo = async (): Promise<MinimalServerInfo[]> => { 
+  appLogger.warn('[STUB] getManagedServersInfo called, returning empty array. Tool processing will be affected.', { correlationId: getCurrentCorrelationId() });
+  return []; 
+}; // Stub
+
+// ToolSet is imported from 'ai'
+const getCombinedMCPToolsForAISDK = async (): Promise<ToolSet> => { 
+  appLogger.warn('[STUB] getCombinedMCPToolsForAISDK called, returning empty ToolSet. Tool execution will be affected.', { correlationId: getCurrentCorrelationId() });
+  return {}; 
+}; // Stub
 import { reportMCPError } from "@/lib/mcp/enhanced-integration";
 import { prisma } from "@/lib/prisma";
 import { appLogger } from '@/lib/logger';

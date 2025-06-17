@@ -150,6 +150,19 @@ export interface LogContext {
   method?: string;
   error?: Error | unknown; // Added optional error
   source?: LogSourceValue; // Added optional source
+  url?: string;
+  toolCallId?: string;
+  messageId?: string;
+  role?: string;
+  messages?: unknown; // Consider a more specific type if possible
+  coreMessages?: unknown; // Consider a more specific type if possible
+  finalMessagesForAI?: unknown; // Consider a more specific type if possible
+  stack?: string; // Added optional source
+  args?: Record<string, unknown> | string; // For tool call arguments, etc.
+  originalToolCallId?: string;
+  chatId?: string;
+  operationId?: string;
+  originalToolName?: string;
 }
 
 // Logger configuration types
@@ -289,7 +302,12 @@ export interface IAppLogger {
   withContext: (context: Partial<LogContext> | LogSourceValue) => LoggerInstance;
 
   // Optional, source-specific loggers for convenience
+  http: LoggerInstance;
   mcp?: LoggerInstance;
+  tools?: LoggerInstance;
+  db: LoggerInstance;
+  aiSdk: LoggerInstance; // Added for AI SDK specific logging
+  // Add other namespaces here if they exist e.g. fs, api, etc.;
 }
 
 export type LoggerInstance = {

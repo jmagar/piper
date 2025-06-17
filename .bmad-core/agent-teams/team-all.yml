@@ -1,0 +1,16 @@
+bundle:
+  name: Team All
+  icon: 👥
+  description: This is a full organization of agents and includes every possible agent. This will produce the larges bundle but give the most options for discussion in a single session
+
+agents:
+  - bmad-orchestrator
+  - "*"
+
+workflows:
+  - brownfield-fullstack
+  - brownfield-service
+  - brownfield-ui
+  - greenfield-fullstack
+  - greenfield-service
+  - greenfield-ui

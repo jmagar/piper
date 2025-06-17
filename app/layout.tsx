@@ -17,7 +17,6 @@ import { ChatSessionProvider } from "./providers/chat-session-provider"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { UserPreferencesProvider } from "./providers/user-preferences-provider"
 import { UserProvider } from "./providers/user-provider"
-import '@/lib/mcp/mcpManager'; // Initialize MCP Manager on server start
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { ensureLoggerInitialization, appLogger } from '@/lib/logger';
 
 
 // Resolve the base directory for uploads. This should be an absolute path.
@@ -9,6 +10,7 @@ const configuredUploadsDir = process.env.UPLOADS_DIR || './uploads';
 const UPLOADS_BASE_DIR = path.resolve(configuredUploadsDir);
 
 export async function GET(request: Request) {
+  await ensureLoggerInitialization();
   const { searchParams } = new URL(request.url);
   const relativePathInput = searchParams.get('path') || '';
 
@@ -50,8 +52,8 @@ export async function GET(request: Request) {
             // Path for client-side navigation, relative to UPLOADS_BASE_DIR
             relativePath: path.join(normalizedClientPath, dirent.name),
           };
-        } catch (itemError: any) {
-          console.error(`Error stating item ${itemFullPath}: ${itemError.message}`);
+        } catch (itemError: unknown) {
+          appLogger.http.error('Error processing file/directory item: ' + dirent.name, itemError instanceof Error ? itemError : new Error(String(itemError)), { itemName: dirent.name });
           return {
             name: dirent.name,
             type: 'inaccessible',
@@ -67,14 +69,14 @@ export async function GET(request: Request) {
       items,
     });
 
-  } catch (error: any) {
-    console.error(`API files/list error for path "${targetPath}": ${error.message}`);
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    appLogger.http.error(`API files/list error for path "${targetPath}"`, error instanceof Error ? error : new Error(String(error)), { targetPath });
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
       return NextResponse.json({ error: `Path not found: /${normalizedClientPath}`.replace('//','/') }, { status: 404 });
     }
-    if (error.code === 'EACCES') {
+    if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'EACCES') {
       return NextResponse.json({ error: `Permission denied for: /${normalizedClientPath}`.replace('//','/') }, { status: 403 });
     }
-    return NextResponse.json({ error: 'Failed to list directory contents.' }, { status: 500 });
+    return NextResponse.json({ error: `An unexpected error occurred: ${error instanceof Error ? (error as Error).message : String(error)}` }, { status: 500 });
   }
 }
