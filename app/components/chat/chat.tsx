@@ -104,14 +104,7 @@ export function Chat() {
     },
   });
 
-  // Display chat errors using toast notifications
-  useEffect(() => {
-    if (error) {
-      toast({ title: error.message, status: 'error' });
-      // Consider if the error object needs to be 'cleared' from useChat's state
-      // or if it automatically clears. For now, just displaying.
-    }
-  }, [error]);
+
 
   // Wrapper for createNewChat to match the signature expected by useChatUtils
   const createNewChatForUtils = useCallback(

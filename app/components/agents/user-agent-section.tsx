@@ -7,6 +7,7 @@ import { DialogCreateAgentTrigger } from "./dialog-create-agent/dialog-trigger-c
 
 type UserAgentsSectionProps = {
   agents: Agent[] | null
+  onAgentCreate: () => void
   userId?: string | null
   handleAgentClick: (agentId: string | null) => void
   openAgentId: string | null
@@ -16,6 +17,7 @@ type UserAgentsSectionProps = {
 
 export function UserAgentsSection({
   agents,
+  onAgentCreate,
   userId,
   handleAgentClick,
   openAgentId,
@@ -24,7 +26,6 @@ export function UserAgentsSection({
 }: UserAgentsSectionProps) {
   const hasUserAgents = agents && agents.length > 0
 
-  // Not authenticated
   if (!userId) {
     return (
       <Card className="mt-8 border-dashed">
@@ -43,10 +44,9 @@ export function UserAgentsSection({
     )
   }
 
-  // Authenticated but no agents
-  if (userId && !hasUserAgents) {
+  if (!hasUserAgents) {
     return (
-      <div className="mt-8 border-dashed">
+      <Card className="mt-8 border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-6 text-center">
           <h3 className="mb-2 text-lg font-medium">
             You haven&apos;t created any agents yet
@@ -55,19 +55,19 @@ export function UserAgentsSection({
             Create your first custom agent to get started
           </p>
           <DialogCreateAgentTrigger
+            onAgentCreate={onAgentCreate}
             trigger={<Button>Create an agent</Button>}
           />
         </CardContent>
-      </div>
+      </Card>
     )
   }
 
-  // Authenticated with agents
   return (
     <div className="mt-12">
       <h2 className="text-foreground mb-4 text-lg font-medium">Your agents</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        {agents?.map((agent) => (
+        {agents?.map(agent => (
           <DialogAgent
             key={agent.id}
             id={agent.id}
@@ -76,9 +76,9 @@ export function UserAgentsSection({
             avatar_url={agent.avatar_url}
             example_inputs={agent.example_inputs || []}
             isAvailable={true}
-                                onAgentClickAction={handleAgentClick}
-                    isOpen={openAgentId === agent.id}
-                    onOpenChangeAction={(open) => setOpenAgentId(open ? agent.id : null)}
+            onAgentClickAction={handleAgentClick}
+            isOpen={openAgentId === agent.id}
+            onOpenChangeAction={open => setOpenAgentId(open ? agent.id : null)}
             randomAgents={moreAgents}
             slug={agent.slug}
             system_prompt={agent.system_prompt}

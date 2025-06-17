@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join as pathJoin } from 'path';
-import { appLogger } from '@/lib/logger';
+import { appLogger, LogLevel } from '@/lib/logger';
 import {
   AppConfig,
   ServerConfigEntry
@@ -18,14 +18,14 @@ export function getAppConfig(): AppConfig {
     const parsedConfig = JSON.parse(rawConfig);
     
     if (!parsedConfig.mcpServers) {
-      appLogger.logSource('MCP', 'error', 'config.json is missing the mcpServers property.');
+      appLogger.logSource('MCP', LogLevel.ERROR, 'config.json is missing the mcpServers property.');
       return { mcpServers: {} };
     }
 
     // Config is now used as-is - no normalization needed for new simplified format
     return parsedConfig;
   } catch (error) {
-    appLogger.logSource('MCP', 'error', `Failed to load or parse config.json from ${configPath}:`, error as Error);
+    appLogger.logSource('MCP', LogLevel.ERROR, `Failed to load or parse config.json from ${configPath}:`, error as Error);
     return { mcpServers: {} };
   }
 }
@@ -36,33 +36,49 @@ export function getAppConfig(): AppConfig {
 export function validateServerConfig(config: ServerConfigEntry): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!config.transport) {
-    errors.push('Missing transport configuration');
-    return { valid: false, errors };
-  }
-
-  const transport = config.transport;
-
-  switch (transport.type) {
+  // Validate based on the top-level 'type' discriminator
+  switch (config.type) {
     case 'stdio':
-      if (!transport.command) {
-        errors.push('stdio transport requires command');
+      if (!config.command) {
+        errors.push('stdio server config requires a command property.');
       }
+      // Add other stdio-specific validations if needed (e.g., args format)
       break;
     case 'sse':
-    case 'streamable-http':
-      if (!transport.url) {
-        errors.push(`${transport.type} transport requires url`);
+      if (!config.url) {
+        errors.push('sse server config requires a url property.');
       } else {
         try {
-          new URL(transport.url);
+          new URL(config.url);
         } catch {
-          errors.push(`Invalid URL format for ${transport.type} transport`);
+          errors.push(`Invalid URL format for sse server: ${config.url}`);
         }
       }
+      // Add other sse-specific validations if needed (e.g., headers format)
+      break;
+    case 'streamableHttp': // Matches the type definition 'streamableHttp'
+      if (!config.url) {
+        errors.push('streamableHttp server config requires a url property.');
+      } else {
+        try {
+          new URL(config.url);
+        } catch {
+          errors.push(`Invalid URL format for streamableHttp server: ${config.url}`);
+        }
+      }
+      // Add other streamableHttp-specific validations if needed
       break;
     default:
-      errors.push(`Unsupported transport type: ${(transport as { type: string }).type}`);
+      // This case should ideally not be reached if types are correct elsewhere,
+      // but it's good for robustness, especially if config comes from untyped JSON.
+      const exhaustiveCheck: never = config;
+      errors.push(`Unsupported server type: ${(exhaustiveCheck as ServerConfigEntry).type}`);
+      break;
+  }
+
+  // Common validations (can be added here if any apply to all types, e.g., label)
+  if (!config.label || typeof config.label !== 'string' || config.label.trim() === '') {
+    // errors.push('Server config requires a non-empty label.'); // Example, if label becomes mandatory
   }
 
   return { valid: errors.length === 0, errors };

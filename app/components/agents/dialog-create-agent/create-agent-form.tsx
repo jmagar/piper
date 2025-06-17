@@ -50,7 +50,7 @@ type CreateAgentFormProps = {
   handleInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void
-  handleSelectChange: (value: string) => void
+  handleMcpChange: (selection: string[]) => void
   handlePromptsChange: (selectedPromptIds: string[]) => void; // Add prop for prompt changes
   handleSubmit: (e: React.FormEvent) => Promise<void>
   onClose: () => void
@@ -64,7 +64,7 @@ export function CreateAgentForm({
   error,
   isLoading,
   handleInputChange,
-  handleSelectChange,
+  handleMcpChange,
   handlePromptsChange, // Destructure the new prop
   handleSubmit,
   onClose,
@@ -90,8 +90,7 @@ export function CreateAgentForm({
     } else {
       newSelection = formData.mcp.filter(key => key !== serverKey)
     }
-    // Convert array to string for compatibility with existing handleSelectChange
-    handleSelectChange(newSelection.join(','))
+    handleMcpChange(newSelection)
   }
 
   // Handle Prompt selection/deselection

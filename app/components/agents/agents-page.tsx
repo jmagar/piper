@@ -1,31 +1,29 @@
 "use client"
 
-import { Agent, AgentSummary } from "@/app/types/agent"
+import { Agent } from "@/app/types/agent"
 import { Button } from "@/components/ui/button"
-import { useMemo, useState } from "react"
-import { AgentFeaturedSection } from "./agent-featured-section"
+import { useCallback, useState } from "react"
 import { DialogCreateAgentTrigger } from "./dialog-create-agent/dialog-trigger-create-agent"
 import { UserAgentsSection } from "./user-agent-section"
 
-type AgentsPageProps = {
+interface AgentsPageProps {
   curatedAgents: Agent[]
   userAgents: Agent[] | null
   userId: string | null
+  mutateUserAgents: () => void
 }
 
 export function AgentsPage({
   curatedAgents,
   userAgents,
   userId,
+  mutateUserAgents,
 }: AgentsPageProps) {
   const [openAgentId, setOpenAgentId] = useState<string | null>(null)
 
-  const randomAgents = useMemo(() => {
-    return curatedAgents
-      .filter((agent) => agent.id !== openAgentId)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 4)
-  }, [curatedAgents, openAgentId])
+  const handleAgentCreate = useCallback(() => {
+    mutateUserAgents()
+  }, [mutateUserAgents])
 
   const handleAgentClick = (agentId: string | null) => {
     setOpenAgentId(agentId)
@@ -33,42 +31,26 @@ export function AgentsPage({
 
   return (
     <div className="bg-background min-h-screen px-4 pt-20 pb-20 sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-20 text-center">
-          <h1 className="text-foreground text-sm font-medium">
-            Agents (experimental)
-          </h1>
-          <div className="text-foreground mx-auto my-4 max-w-2xl text-3xl font-medium tracking-tight md:text-5xl">
-            Your every day AI assistant
-          </div>
-          <p className="text-muted-foreground mx-auto mb-4 max-w-2xl text-lg">
-            a growing set of personal AI agents, built for ideas, writing, and
-            product work.
-          </p>
+      <div className="mx-auto max-w-6xl">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Agents</h1>
           <DialogCreateAgentTrigger
-            trigger={
-              <Button variant="outline" className="rounded-full">
-                Create an agent
-              </Button>
-            }
+            onAgentCreate={handleAgentCreate}
+            trigger={<Button>Create Agent</Button>}
           />
         </div>
 
-        <AgentFeaturedSection
-          agents={curatedAgents}
-          moreAgents={randomAgents}
-          handleAgentClick={handleAgentClick}
-          openAgentId={openAgentId}
-          setOpenAgentId={setOpenAgentId}
-        />
-        <UserAgentsSection
-          agents={userAgents || null}
-          moreAgents={randomAgents}
-          userId={userId || null}
-          handleAgentClick={handleAgentClick}
-          openAgentId={openAgentId}
-          setOpenAgentId={setOpenAgentId}
-        />
+        <div className="mt-8">
+          <UserAgentsSection
+            agents={userAgents}
+            userId={userId}
+            handleAgentClick={handleAgentClick}
+            openAgentId={openAgentId}
+            setOpenAgentId={setOpenAgentId}
+            onAgentCreate={handleAgentCreate}
+            moreAgents={curatedAgents}
+          />
+        </div>
       </div>
     </div>
   )

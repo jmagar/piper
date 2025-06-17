@@ -27,7 +27,7 @@ export async function GET() {
           toolsCount: 0,
           displayName: serverConfig.label || serverKey,
           serverKey: serverKey,
-          transportType: serverConfig.transport.type,
+          transportType: serverConfig.type, // Use top-level type
           enabled: !serverConfig.disabled,
         });
       }

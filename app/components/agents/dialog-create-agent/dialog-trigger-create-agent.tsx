@@ -21,7 +21,7 @@ import { fetchClient } from "@/lib/fetch"
 import { API_ROUTE_CREATE_AGENT } from "@/lib/routes"
 import { useRouter } from "next/navigation"
 import type React from "react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useBreakpoint } from "../../../hooks/use-breakpoint"
 import { CreateAgentForm } from "./create-agent-form"
 
@@ -34,204 +34,111 @@ type AgentFormData = {
   prompts: string[]
 }
 
-type DialogCreateAgentTrigger = {
-  trigger: React.ReactNode
+interface DialogCreateAgentTriggerProps {
+  onAgentCreate: () => void
+  trigger?: React.ReactNode
+}
+
+const generateSystemPrompt = (owner: string, repo: string) => {
+  return `You are a helpful GitHub assistant focused on the repository: ${owner}/${repo}.\n  \nUse the available tools below to answer any questions. Always prefer using tools over guessing.\n      \nTools available for this repository:\n- \`fetch_${repo}_documentation\`: Fetch the entire documentation file. Use this first when asked about general concepts in ${owner}/${repo}.\n- \`search_${repo}_documentation\`: Semantically search the documentation. Use this for specific questions.\n- \`search_${repo}_code\`: Search code with exact matches using the GitHub API. Use when asked about file contents or code examples.\n- \`fetch_generic_url_content\`: Fetch absolute URLs when referenced in the docs or needed for context.\n    \nNever invent answers. Use tools and return what you find.`
+}
+
+const validateRepository = (repo: string) => {
+  const regex = /^[a-zA-Z0-9-]+\/[a-zA-Z0-9-._]+$/
+  return regex.test(repo)
 }
 
 export function DialogCreateAgentTrigger({
+  onAgentCreate,
   trigger,
-}: DialogCreateAgentTrigger) {
+}: DialogCreateAgentTriggerProps) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<AgentFormData>({
     name: "",
     description: "",
     systemPrompt: "",
     mcp: [],
+    repository: "",
     prompts: [],
   })
   const [repository, setRepository] = useState("")
-  const [error, setError] = useState<{ [key: string]: string }>({})
+  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const isMobile = useBreakpoint(768)
+  const { isMobile } = useBreakpoint("sm")
 
-  const generateSystemPrompt = (owner: string, repo: string) => {
-    return `You are a helpful GitHub assistant focused on the repository: ${owner}/${repo}.
-    
-Use the available tools below to answer any questions. Always prefer using tools over guessing.
-        
-Tools available for this repository:
-- \`fetch_${repo}_documentation\`: Fetch the entire documentation file. Use this first when asked about general concepts in ${owner}/${repo}.
-- \`search_${repo}_documentation\`: Semantically search the documentation. Use this for specific questions.
-- \`search_${repo}_code\`: Search code with exact matches using the GitHub API. Use when asked about file contents or code examples.
-- \`fetch_generic_url_content\`: Fetch absolute URLs when referenced in the docs or needed for context.
-      
-Never invent answers. Use tools and return what you find.`
-  }
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
-
-    // Clear error for this field if it exists
-    if (error[name]) {
-      setError({ ...error, [name]: "" })
+  const handleRepositoryChange = useCallback((value: string) => {
+    setRepository(value)
+    if (validateRepository(value)) {
+      const [owner, repo] = value.split("/")
+      const systemPrompt = generateSystemPrompt(owner, repo)
+      setFormData(prev => ({ ...prev, systemPrompt, repository: value }))
+      setError(null)
+    } else if (value) {
+      setError("Invalid repository format. Use 'owner/repo'.")
+    } else {
+      setError(null)
     }
-  }
+  }, [])
 
-  const handleRepositoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const repoValue = e.target.value
-    setRepository(repoValue)
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target
+      setFormData(prev => ({ ...prev, [name]: value }))
+    },
+    []
+  )
 
-    // Clear repository error if it exists
-    if (error.repository) {
-      setError({ ...error, repository: "" })
+  const handleMcpChange = useCallback((selectedServers: string[]) => {
+    setFormData(prev => ({ ...prev, mcp: selectedServers }))
+  }, [])
+
+  const handlePromptsChange = useCallback((selectedPrompts: string[]) => {
+    setFormData(prev => ({ ...prev, prompts: selectedPrompts }))
+  }, [])
+
+  const validateForm = useCallback(() => {
+    if (!formData.name || !formData.description) {
+      return "Name and description are required."
     }
-
-    // Update system prompt if git-mcp is selected and repository format is valid
-    if (formData.mcp.includes("git-mcp") && validateRepository(repoValue)) {
-      const [owner, repo] = repoValue.split("/")
-      setFormData((prev) => ({
-        ...prev,
-        systemPrompt: generateSystemPrompt(owner, repo),
-      }))
+    if (repository && !validateRepository(repository)) {
+      return "Invalid repository format. Use 'owner/repo'."
     }
-  }
+    return null
+  }, [formData, repository])
 
-  const handleSelectChange = (value: string) => {
-    // Handle comma-separated string from the collapsible component
-    const selectedServers = value === "" ? [] : value.split(',').filter(s => s.trim() !== '')
-    setFormData({ ...formData, mcp: selectedServers })
-
-    // Clear repository error if switching away from git-mcp
-    if (!selectedServers.includes("git-mcp") && error.repository) {
-      setError({ ...error, repository: "" })
-    }
-
-    // If switching to git-mcp and repository is already valid, update system prompt
-    if (selectedServers.includes("git-mcp") && validateRepository(repository)) {
-      const [owner, repo] = repository.split("/")
-      setFormData((prev) => ({
-        ...prev,
-        systemPrompt: generateSystemPrompt(owner, repo),
-      }))
-    }
-  }
-
-  const handlePromptsChange = (selectedPromptIds: string[]) => {
-    setFormData({ ...formData, prompts: selectedPromptIds });
-  };
-
-  const validateRepository = (repo: string) => {
-    // Simple validation for owner/repo format
-    const regex = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/
-    return regex.test(repo)
-  }
-
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Agent name is required"
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required"
-    }
-
-    if (!formData.systemPrompt.trim()) {
-      newErrors.systemPrompt = "System prompt is required"
-    }
-
-    if (formData.mcp.includes("git-mcp") && !validateRepository(repository)) {
-      newErrors.repository =
-        'Please enter a valid repository in the format "owner/repo"'
-    }
-
-    setError(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
+  const handleSubmit = useCallback(async () => {
+    const validationError = validateForm()
+    if (validationError) {
+      toast({ title: validationError, status: "error" })
       return
     }
 
     setIsLoading(true)
-
     try {
-      // If git-mcp is selected, validate the repository
-      if (formData.mcp.includes("git-mcp")) {
-        const response = await fetch(
-          `https://api.github.com/repos/${repository}`
-        )
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError({
-              ...error,
-              repository:
-                "Repository not found. Please check the repository name and try again.",
-            })
-          } else {
-            setError({
-              ...error,
-              repository: `GitHub API error: ${response.statusText}`,
-            })
-          }
-          setIsLoading(false)
-          return
-        }
-
-        // Add repository to form data
-        formData.repository = repository
-      }
-
-      const owner = repository ? repository.split("/")[0] : null
-      const repo = repository ? repository.split("/")[1] : null
-
-      const apiResponse = await fetchClient(API_ROUTE_CREATE_AGENT, {
+      const response = await fetchClient(API_ROUTE_CREATE_AGENT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          systemPrompt: formData.systemPrompt,
-          mcp_config: formData.mcp.length === 0 ? null : formData.mcp,
-          repository: formData.mcp.includes("git-mcp") ? formData.repository : null,
-          owner: owner,
-          repo: repo,
-          prompts: formData.prompts, // Add selected prompts
-        }),
+        body: JSON.stringify(formData),
       })
 
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json()
-        throw new Error(errorData.error || "Failed to create agent")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to create agent")
       }
 
-      const result = await apiResponse.json()
+      const result = await response.json()
       toast({ title: "Agent created successfully!", status: "success" })
-      setOpen(false) // Close dialog on success
-      router.push(`/agents/${result.agent.slug}`) // Changed from result.slug to result.agent.slug
+      onAgentCreate()
+      setOpen(false)
+      router.push(`/agents/${result.agent.slug}`)
     } catch (err: unknown) {
-      let errorMessage = "An unexpected error occurred."
-      if (err instanceof Error) {
-        errorMessage = err.message
-      } else if (typeof err === 'string') {
-        errorMessage = err
-      }
-      // Display error toast or update error state
-      toast({ title: "Error creating agent", description: errorMessage, status: "error" })
-      // Optionally, set specific form field errors if applicable from err
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+      toast({ title: "Error", description: errorMessage, status: "error" })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [formData, validateForm, router, onAgentCreate])
 
   const content = (
     <CreateAgentForm
@@ -241,8 +148,8 @@ Never invent answers. Use tools and return what you find.`
       error={error}
       isLoading={isLoading}
       handleInputChange={handleInputChange}
-      handleSelectChange={handleSelectChange}
-      handlePromptsChange={handlePromptsChange} // Pass down the new handler
+      handleMcpChange={handleMcpChange}
+      handlePromptsChange={handlePromptsChange}
       handleSubmit={handleSubmit}
       onClose={() => setOpen(false)}
       isDrawer={isMobile}
@@ -272,9 +179,8 @@ Never invent answers. Use tools and return what you find.`
       <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto p-0 sm:max-w-xl">
         <div
           className="h-full w-full"
-          // Prevent the dialog from closing when clicking on the content, needed because of the agent-command component
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
+          onMouseDown={e => e.stopPropagation()}
         >
           <DialogHeader className="border-border border-b px-6 py-4">
             <DialogTitle>Create agent (experimental)</DialogTitle>

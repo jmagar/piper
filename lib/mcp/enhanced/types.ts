@@ -48,42 +48,72 @@ export class CallToolError extends Error {
 }
 
 // Enhanced configuration interfaces
-export interface EnhancedStdioConfig {
-  command: string
-  args?: string[]
-  env?: Record<string, string>
-  cwd?: string
-  stderr?: 'inherit' | 'ignore' | 'pipe'
-  clientName?: string
-  logger?: ContextualLogMethods
-  timeout?: number
-  onUncaughtError?: (error: unknown) => void
+// --- MODIFIED/NEW INTERFACES START ---
+
+// Specific configuration for STDIO transport
+export interface StdioServerConfig {
+  type: 'stdio';
+  command: string; // Required for STDIO
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+  // Fields from original EnhancedStdioConfig that are common or can be here
+  stderr?: 'inherit' | 'ignore' | 'pipe';
+  clientName?: string;
+  logger?: ContextualLogMethods; // This might be runtime-only, not from config.json
+  onUncaughtError?: (error: unknown) => void; // Runtime-only
 }
 
-export interface EnhancedSSEConfig {
-  url: string
-  headers?: Record<string, string>
-  clientName?: string
-  logger?: ContextualLogMethods
-  timeout?: number
-  onUncaughtError?: (error: unknown) => void
+// Specific configuration for SSE transport
+export interface SseServerConfig {
+  type: 'sse';
+  url: string; // Required for SSE
+  Headers?: Record<string, string>;
+  // Fields from original EnhancedSSEConfig
+  clientName?: string;
+  logger?: ContextualLogMethods; // Runtime-only
+  onUncaughtError?: (error: unknown) => void; // Runtime-only
 }
 
-export interface EnhancedStreamableHTTPConfig {
-  url: string
-  sessionId?: string
-  headers?: Record<string, string>
-  clientName?: string
-  logger?: ContextualLogMethods
-  timeout?: number
-  onUncaughtError?: (error: unknown) => void
+// Specific configuration for Streamable HTTP transport
+export interface StreamableHttpServerConfig {
+  type: 'streamableHttp';
+  url: string; // Required for Streamable HTTP
+  Headers?: Record<string, string>;
+  sessionId?: string; // Specific to Streamable HTTP
+  // Fields from original EnhancedStreamableHTTPConfig
+  clientName?: string;
+  logger?: ContextualLogMethods; // Runtime-only
+  onUncaughtError?: (error: unknown) => void; // Runtime-only
 }
 
-// Union type for all transport configurations
-export type EnhancedTransportConfig = 
-  | ({ type: 'stdio' } & EnhancedStdioConfig)
-  | ({ type: 'sse' } & EnhancedSSEConfig)  
-  | ({ type: 'streamable-http' } & EnhancedStreamableHTTPConfig)
+// Common server configuration properties
+export interface BaseServerConfig {
+  label?: string;
+  name?: string; // Often the key of the server in mcpServers
+  disabled?: boolean; // As per schema: true if disabled, false or undefined if enabled.
+  timeout?: number; // As per schema (min: 30, default: 60)
+  autoApprove?: string[]; // As per schema
+  schemas?: Record<string, LocalMCPToolSchema>; // Retaining this as it seems useful for local schema definitions
+}
+
+// Discriminated union for ServerConfigEntry
+export type ServerConfigEntry = BaseServerConfig & (
+  | StdioServerConfig
+  | SseServerConfig
+  | StreamableHttpServerConfig
+);
+
+// --- MODIFIED/NEW INTERFACES END ---
+
+
+
+
+
+
+
+
+
 
 // Configuration types for config.json
 export type LocalMCPToolSchema = {
@@ -98,22 +128,7 @@ export interface FetchedToolInfo {
   [key: string]: unknown;
 }
 
-export interface ServerConfigEntry {
-  label?: string;
-  disabled?: boolean; // Legacy: will be converted to 'enabled'
-  enabled?: boolean;  // New: true if server is enabled, false or undefined if disabled
-  transportType?: 'stdio' | 'sse' | 'streamable-http'; // Legacy: for inferring transport
-  name?: string;
-  transport?: EnhancedTransportConfig; // Can be inferred from top-level command/url
-  schemas?: Record<string, LocalMCPToolSchema>;
-  // Fallback properties for transport inference
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  cwd?: string;
-  url?: string;
-  headers?: Record<string, string>;
-}
+
 
 export interface AppConfig {
   mcpServers: Record<string, ServerConfigEntry>;
