@@ -21,6 +21,7 @@ export type ChatRequest = {
   model: string;
   systemPrompt: string;
   agentId?: string;
+  userId?: string; // Added to match ChatRequestSchema in route.ts
 };
 
 export type ProcessedChatData = {

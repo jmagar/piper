@@ -9,7 +9,12 @@ import { useUser } from "@/app/providers/user-provider"
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
+import { type Prompt } from "@/app/components/chat-input/use-agent-command"
+import { type Prompt as ApiPrompt } from "@/app/types/prompt"
+import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
+import { getAllTools } from "@/lib/tool-utils";
 import { useMessages } from "@/lib/chat-store/messages/provider"
+import type { Session } from "next-auth"
 import {
   MESSAGE_MAX_LENGTH,
   SYSTEM_PROMPT_DEFAULT,
@@ -69,30 +74,41 @@ export function Chat() {
   const currentChat = chatId ? getChatById(chatId) : null
   const { messages: initialMessages, cacheAndAddMessage } = useMessages()
   const { user } = useUser()
+  const session: Session = {
+    user: {
+      id: user.id,
+      name: user.display_name,
+      image: user.profile_image,
+    },
+    expires: new Date(Date.now() + 86400 * 1000).toISOString(), // 24 hours from now
+  }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const {
     files,
     setFiles,
     handleFileUpload,
-    handleFileRemove,
   } = useFileUpload()
   const [selectedModel, setSelectedModel] = useState(
     currentChat?.model || ""
   );
   const [availableModels, setAvailableModels] = useState<{ id: string; name: string; description: string; context_length: number | null; providerId: string; starred?: boolean }[]>([]);
   const [starredModelIds, setStarredModelIds] = useState<string[]>([]);
-  const { currentAgent } = useAgent()
+  const { currentAgent, curatedAgents, userAgents } = useAgent()
+  const availableAgents = [...(curatedAgents || []), ...(userAgents || [])]
+  const [fetchedTools, setFetchedTools] = useState<FetchedToolInfo[]>([]);
+  const availableTools = fetchedTools;
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
 
   const [hydrated, setHydrated] = useState(false)
   const hasSentFirstMessageRef = useRef(false)
 
-  const isAuthenticated = true
+
 
   const { draftValue, clearDraft } = useChatDraft(chatId)
 
-  const { messages, input, handleSubmit, status, error, reload, stop, setMessages, setInput, append } = useChat({
+  const { messages, input, handleSubmit, status, error, reload, stop, setMessages, setInput } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
     initialInput: draftValue,
@@ -140,7 +156,7 @@ export function Chat() {
     setActiveChatId(chatId ?? null);
   }, [chatId, setActiveChatId]);
 
-  const { handleInputChange, handleModelChange, handleDelete, handleEdit } =
+  const { handleInputChange, handleDelete, handleEdit } =
     useChatHandlers({
       messages,
       setMessages,
@@ -193,6 +209,20 @@ export function Chat() {
     };
     fetchModels();
   }, [chatId, updateChatModel, hydrated, selectedModel, starredModelIds]);
+
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        const tools = await getAllTools();
+        setFetchedTools(tools);
+      } catch (error) {
+        console.error("Error fetching available tools:", error);
+        setFetchedTools([]); // Set to empty on error
+        toast({ title: "Failed to load tools", status: "error" });
+      }
+    };
+    fetchTools();
+  }, []); // Empty dependency array to run once on mount
 
   useEffect(() => {
     const storedStarredIds = localStorage.getItem('starredModelIds');
@@ -248,6 +278,29 @@ export function Chat() {
   }, [chatId, setMessages])
 
   useEffect(() => {
+    async function fetchPrompts() {
+      try {
+        const response = await fetch("/api/prompts-available")
+        if (!response.ok) {
+          throw new Error("Failed to fetch prompts")
+        }
+        const data = await response.json()
+        const transformedPrompts = data.prompts.map((p: ApiPrompt) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          content: p.system_prompt,
+        }))
+        setPrompts(transformedPrompts)
+      } catch (error) {
+        console.error("Error fetching prompts:", error)
+        setPrompts([])
+      }
+    }
+    fetchPrompts()
+  }, [])
+
+  useEffect(() => {
     setHydrated(true)
   }, [])
 
@@ -272,7 +325,10 @@ export function Chat() {
     setIsSubmitting(true)
 
     const uid = await getOrCreateGuestUserId()
-    if (!uid) return
+    if (!uid) {
+      setIsSubmitting(false)
+      return
+    }
 
     const allowed = await checkLimitsAndNotify(uid)
     if (!allowed) {
@@ -335,64 +391,6 @@ export function Chat() {
     }
   }
 
-  const handleSuggestion = useCallback(
-    async (suggestion: string) => {
-      setIsSubmitting(true)
-      const optimisticId = `optimistic-${Date.now().toString()}`
-      const optimisticMessage = {
-        id: optimisticId,
-        content: suggestion,
-        role: "user" as const,
-        createdAt: new Date(),
-      }
-
-      setMessages((prev) => [...prev, optimisticMessage])
-
-      const uid = await getOrCreateGuestUserId()
-
-      if (!uid) {
-        setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        setIsSubmitting(false)
-        return
-      }
-
-      const allowed = await checkLimitsAndNotify(uid)
-      if (!allowed) {
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-        setIsSubmitting(false)
-        return
-      }
-
-      const currentChatId = await ensureChatExists()
-
-      if (!currentChatId) {
-        setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        setIsSubmitting(false)
-        return
-      }
-
-      const options = {
-        data: {
-          chatId: currentChatId,
-          userId: uid,
-          model: selectedModel,
-          systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-        },
-      }
-
-      append(
-        {
-          role: "user",
-          content: suggestion,
-        },
-        options
-      )
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      setIsSubmitting(false)
-    },
-    [ensureChatExists, selectedModel, append, checkLimitsAndNotify, setMessages, systemPrompt] 
-  )
-
   const handleReload = async () => {
     const uid = await getOrCreateGuestUserId()
     if (!uid) {
@@ -411,23 +409,16 @@ export function Chat() {
     reload(options)
   }
 
-  const handleStarModel = (modelId: string) => {
-    setStarredModelIds(prevStarredIds => {
-      const newStarredIds = prevStarredIds.includes(modelId)
-        ? prevStarredIds.filter(id => id !== modelId)
-        : [...prevStarredIds, modelId];
-      return newStarredIds;
-    });
-  };
+  const handleFileSelect = (file: File) => {
+    handleFileUpload([file])
+  }
 
   // not user chatId and no messages
   if (hydrated && chatId && !isChatsLoading && !currentChat) {
     return redirect("/")
   }
 
-  const modelsWithStarredStatus = availableModels.map(model => (
-    { ...model, starred: starredModelIds.includes(model.id) }
-  ));
+
 
   return (
     <div
@@ -488,21 +479,18 @@ export function Chat() {
       >
         <ChatInput
           value={input}
-          onSuggestionAction={handleSuggestion}
-          onValueChangeAction={handleInputChange}
-          onSendAction={submit}
+          onValueChange={handleInputChange}
+          onSend={submit}
+          onStop={stop}
+          onFileSelect={handleFileSelect}
           isSubmitting={isSubmitting}
-          files={files}
-          onFileUploadAction={handleFileUpload}
-          onFileRemoveAction={handleFileRemove}
-          hasSuggestions={!chatId && messages.length === 0}
-          onSelectModelAction={handleModelChange}
-          selectedModel={selectedModel}
-          availableModels={modelsWithStarredStatus}
-          onStarModelAction={handleStarModel}
-          isUserAuthenticated={isAuthenticated}
-          stopAction={stop}
-          status={status}
+          isStreaming={status === "streaming"}
+          availableAgents={availableAgents}
+          availableTools={availableTools}
+          prompts={prompts}
+          currentAgent={currentAgent?.id || null}
+          currentModelId={selectedModel}
+          session={session}
         />
       </motion.div>
 
@@ -510,4 +498,3 @@ export function Chat() {
     </div>
   )
 }
-

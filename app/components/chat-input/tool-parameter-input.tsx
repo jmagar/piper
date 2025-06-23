@@ -2,20 +2,19 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { X } from "@phosphor-icons/react"
-import { useState } from "react"
+import { X } from "@phosphor-icons/react";
+import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
+import { useState } from "react";
 
-type MCPTool = {
-  name: string
-  description?: string
-  serverId: string
-  serverLabel: string
+interface ToolAnnotations {
+  server_id?: string;
+  server_label?: string;
 }
 
 type ToolParameterInputProps = {
-  tool: MCPTool
-  onSubmit: (tool: MCPTool, parameters: Record<string, unknown>) => void
-  onCancel: () => void
+  tool: FetchedToolInfo;
+  onSubmit: (tool: FetchedToolInfo, parameters: Record<string, unknown>) => void;
+  onCancel: () => void;
 }
 
 export function ToolParameterInput({
@@ -23,6 +22,8 @@ export function ToolParameterInput({
   onSubmit,
   onCancel,
 }: ToolParameterInputProps) {
+  const annotations = tool.annotations as ToolAnnotations | undefined;
+  const serverLabel = (annotations && typeof annotations.server_label === 'string') ? annotations.server_label : "Unknown Server";
   const [query, setQuery] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,7 +39,7 @@ export function ToolParameterInput({
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{tool.name}</span>
         <span className="bg-blue-500/10 text-blue-600 rounded-full px-1.5 py-0.5 text-xs">
-          {tool.serverLabel}
+          {serverLabel}
         </span>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-1 items-center gap-2">

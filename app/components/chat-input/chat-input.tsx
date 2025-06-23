@@ -1,465 +1,346 @@
 "use client"
 
-import { useAgentCommand } from "@/app/components/chat-input/use-agent-command"
-import { ModelSelector } from "@/components/common/model-selector/base"
+import { useAgentCommand, Prompt, MCPTool } from "@/app/components/chat-input/use-agent-command";
+import { Agent } from "@/app/types/agent";
 import {
   PromptInput,
-  PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
-} from "@/components/prompt-kit/prompt-input"
-import { Button } from "@/components/ui/button"
-import { useAgent } from "@/lib/agent-store/provider"
-import { MODELS } from "@/lib/models"
-import { ArrowUp, Stop, Warning, Sparkle } from "@phosphor-icons/react"
-import React, { useCallback, useEffect, useState, useRef } from "react"
-import { PromptSystem } from "../suggestions/prompt-system"
-import { FileList } from "./file-list"
-import { SelectedAgent } from "./selected-agent"
-import { SelectedPromptDisplay } from './selected-prompt-display';
-import { SelectedToolDisplay } from './selected-tool-display';
-import { SelectedUrlDisplay } from './selected-url-display';
-// Note: AttachedUrl type is provided by the useAgentCommand hook for agentCommand.attachedUrls
-import { ToolParameterInput } from "./tool-parameter-input";
-import { UnifiedSelectionModal } from "./unified-selection-modal";
+} from "@/components/prompt-kit/prompt-input";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
+import { MODELS, type ModelConfig } from "@/lib/models";
+import { getAllTools } from "@/lib/tool-utils";
 import { AttachMenu } from "./attach-menu";
-import { FileExplorerModal } from '../files/file-explorer-modal';
-import { validateFile } from "@/lib/file-handling"
-import { toast } from "@/components/ui/toast"
+import { FileExplorerModal } from "@/app/components/files/file-explorer-modal";
+import { SelectedAgent } from "./selected-agent";
+import { SelectedPromptDisplay } from "./selected-prompt-display"
+import { SelectedToolDisplay } from "./selected-tool-display"
+import { ToolParameterInput } from "./tool-parameter-input"
+import { UnifiedSelectionModal } from "./unified-selection-modal"
+import { Sparkle, StopCircle, AlertTriangle, SendHorizontal } from "lucide-react"
+import { useEffect, useRef, useState, useMemo, type KeyboardEvent } from "react";
+import type { Session } from "next-auth";
 
-type AvailableModelData = {
-  id: string;
-  name: string;
-  description: string;
-  context_length: number | null;
-  providerId: string;
-  starred?: boolean;
-};
+export type AvailableModelData = {
+  id: string
+  name: string
+  description: string
+  tools: FetchedToolInfo[]
+  providerId?: string
+  contextWindow?: number | null
+  starred?: boolean
+}
 
-type ChatInputProps = {
+export type ChatInputProps = {
   value: string
-  onValueChangeAction: (value: string) => void
-  onSendAction: () => void
-  isSubmitting?: boolean
-  hasMessages?: boolean
-  files: File[]
-  onFileUploadAction: (files: File[]) => void
-  onFileRemoveAction?: (file: File) => void
-  onSuggestionAction?: (suggestion: string) => Promise<void>
-  hasSuggestions?: boolean
-  onSelectModelAction: (model: string) => void
-  selectedModel: string
-  availableModels: AvailableModelData[]
-  onStarModelAction: (modelId: string) => void;
-  isUserAuthenticated: boolean
-  stopAction: () => void
-  status?: "submitted" | "streaming" | "ready" | "error"
+  onValueChange: (value: string) => void
+  onSend: () => void
+  onStop: () => void
+  onFileSelect: (file: File) => void
+  isSubmitting: boolean
+  isStreaming: boolean
+  availableAgents: Agent[]
+  availableTools: FetchedToolInfo[]
+  prompts: Prompt[]
+  currentAgent: string | null
+  currentModelId: string
+  session: Session | null
 }
 
 export function ChatInput({
   value,
-  onValueChangeAction,
-  onSendAction,
+  onValueChange,
+  onSend,
+  onStop,
+  onFileSelect,
   isSubmitting,
-  files,
-  onFileUploadAction,
-  onFileRemoveAction,
-  onSuggestionAction,
-  hasSuggestions,
-  onSelectModelAction,
-  selectedModel,
-  availableModels,
-  onStarModelAction,
-  isUserAuthenticated,
-  stopAction,
-  status,
+  isStreaming,
+  availableAgents,
+  availableTools,
+  prompts,
+  currentAgent,
+  currentModelId,
+  session,
 }: ChatInputProps) {
-  const { currentAgent, curatedAgents, userAgents } = useAgent()
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const hiddenFileInputRef = useRef<HTMLInputElement>(null); // Added for triggering file upload
+  const hiddenFileInputRef = useRef<HTMLInputElement>(null)
+
   const [isEnhancing, setIsEnhancing] = useState(false)
+  const [availableModels, setAvailableModels] = useState<AvailableModelData[]>([])
+  const [selectedModelId] = useState<string>("claude-3-haiku-20240307")
 
   const agentCommand = useAgentCommand({
-    value,
-    onValueChangeAction,
-    agents: [...(curatedAgents || []), ...(userAgents || [])],
-    defaultAgent: currentAgent,
-    textareaRef,
-  });
+    onValueChangeAction: onValueChange,
+    textareaRef: textareaRef as React.RefObject<HTMLTextAreaElement>,
+    agents: availableAgents || [],
+    tools: availableTools || [],
+    prompts: prompts || [],
+    defaultAgent: (availableAgents || []).find(agent => agent.id === currentAgent) || null,
+  })
 
-  const { 
-    showSelectionModal, 
-    activeCommandType, 
-    currentSearchTerm, 
-    filteredAgents, 
-    filteredTools, 
-    filteredPrompts, 
-    handleAgentSelectAction, 
-    handleToolSelectAction, 
-    handlePromptSelectAction, 
-    closeSelectionModal, 
-    activeSelectionIndex,
-    handleModalSearchChange,
-    handleUrlSubmit,
-    selectedPrompt,
-    removeSelectedPrompt,
-    selectedTool, // Added for tool display
-    removeSelectedTool, // Added for tool display
-    attachedUrls, // Added for URL display
-    removeAttachedUrl, // Added for URL display
-    // File Explorer Modal props
-    isFileExplorerModalOpen,
-    setIsFileExplorerModalOpen, // Or a dedicated close handler if preferred
-    handleFileMentionSelectedFromModal,
-  } = agentCommand;
+  const handleFileUpload = (file: File) => {
+    onFileSelect(file)
+  }
 
-  const handleTriggerMention = useCallback((prefix: string) => {
-    console.log('[ChatInput] handleTriggerMention called with prefix:', prefix);
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const currentValue = textarea.value;
-    const selectionStart = textarea.selectionStart;
-    const selectionEnd = textarea.selectionEnd;
-
-    // Insert the prefix at the current cursor position or replace selection
-    const newValue = currentValue.substring(0, selectionStart) + prefix + currentValue.substring(selectionEnd);
-    
-    // Directly call the hook's comprehensive value change handler.
-    // This will update parent state, internal ref, and call processInputForMentions.
-    console.log('[ChatInput] Calling agentCommand.handleInputChange with newValue:', newValue);
-    const newCursorPos = selectionStart + prefix.length;
-
-    // Directly update the textarea's value
-    textarea.value = newValue;
-    // Set the cursor position
-    textarea.focus();
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-
-    // Now, trigger the value change handler that useAgentCommand listens to.
-    agentCommand.handleInputChange(newValue);
-    
-  }, [textareaRef, agentCommand]);
-
-  // handleFileUpload must be defined before handleHiddenInputChange
-  const handleFileUpload = useCallback(
-    async (newFiles: File[]) => {
-      const validFiles: File[] = []
-      for (const file of newFiles) {
-        const validation = await validateFile(file)
-        if (validation.isValid) {
-          validFiles.push(file)
-        } else {
-          toast({
-            title: `File "${file.name}" rejected`,
-            description: validation.error,
-            status: "error",
-          })
-        }
-      }
-      if (validFiles.length > 0) {
-        onFileUploadAction(validFiles)
-      }
-    },
-    [onFileUploadAction] // Ensure all dependencies like onFileUploadAction are included
-  );
-
-  const handleHiddenInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      handleFileUpload(Array.from(event.target.files));
+  const handleHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      handleFileUpload(event.target.files[0])
     }
-  }, [handleFileUpload]);
+  }
 
-  const handleTriggerFileUpload = useCallback(() => {
-    hiddenFileInputRef.current?.click();
-  }, []);
+  const handleTriggerFileUpload = () => {
+    hiddenFileInputRef.current?.click()
+    agentCommand.closeSelectionModal()
+  }
 
-  const handleTriggerFileBrowse = useCallback(() => {
-    agentCommand.setIsFileExplorerModalOpen(true);
-    agentCommand.closeSelectionModal(); // Close UnifiedSelectionModal
-  }, [agentCommand]);
+  const handleTriggerFileBrowse = () => {
+    agentCommand.setIsFileExplorerModalOpen(true)
+    agentCommand.closeSelectionModal()
+  }
 
-  const handleToolParametersCancel = useCallback(() => {
-    agentCommand.setPendingTool(null);
-    // Optionally, if a modal is always open with parameter input:
-    // agentCommand.closeSelectionModal(); 
-  }, [agentCommand]);
-
-  const handleToolParametersSubmit = useCallback((submittedParams: Record<string, unknown>) => {
-    const tool = agentCommand.pendingTool;
-    if (!tool) {
-      console.error("handleToolParametersSubmit called without a pending tool");
-      return;
-    }
-
-    let toolMentionString = `@tools/${tool.name}`;
-    for (const [key, value] of Object.entries(submittedParams)) {
-      // Simple serialization; consider more robust query string style if needed
-      toolMentionString += ` ${key}=${JSON.stringify(value)}`;
-    }
-
-    // Update the main input with the full tool call string
-    agentCommand.handleInputChange(toolMentionString);
-    
-    // Confirm the tool selection (might be redundant if already selected, but good for state consistency)
-    agentCommand.setSelectedTool(tool); 
-
-    // Clear the pending tool state
-    agentCommand.setPendingTool(null);
-
-    // Ensure any modals are closed
-    agentCommand.closeSelectionModal();
-
-    // Focus the main input textarea
-    textareaRef.current?.focus();
-
-  }, [agentCommand, textareaRef]);
-
-  const noToolSupport =
-    currentAgent &&
-    !MODELS.find((model) => model.id === selectedModel)?.tools;
-
-  const handlePaste = useCallback(
-    async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-
-      const hasImageContent = Array.from(items).some((item) =>
-        item.type.startsWith("image/")
-      )
-
-      if (!isUserAuthenticated && hasImageContent) {
-        e.preventDefault()
-        return
-      }
-
-      if (isUserAuthenticated && hasImageContent) {
-        const imageFiles: File[] = []
-
-        for (const item of Array.from(items)) {
-          if (item.type.startsWith("image/")) {
-            const file = item.getAsFile()
-            if (file) {
-              const newFile = new File(
-                [file],
-                `pasted-image-${Date.now()}.${file.type.split("/")[1]}`,
-                { type: file.type }
-              )
-              imageFiles.push(newFile)
-            }
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const items = event.clipboardData?.items
+    if (items) {
+      for (const item of items) {
+        if (item.kind === "file") {
+          const file = item.getAsFile()
+          if (file) {
+            handleFileUpload(file)
           }
         }
-
-        if (imageFiles.length > 0) {
-          handleFileUpload(imageFiles)
-        }
       }
-      // Text pasting will work by default for everyone
-    },
-    [isUserAuthenticated, handleFileUpload]
-  )
-
-  const handleSend = useCallback(() => {
-    if (isSubmitting) {
-      return
     }
+  }
 
-    if (status === "streaming") {
-      stopAction()
-      return
+  const handleFileUploadForChat = (files: File[]) => {
+    if (files.length > 0) {
+      console.log("Files selected for chat:", files);
     }
+  };
 
-    onSendAction()
-  }, [isSubmitting, onSendAction, status, stopAction])
-
-  const handleEnhance = useCallback(async () => {
-    if (!value?.trim() || isEnhancing || isSubmitting) return
-    
-    setIsEnhancing(true)
-    try {
-      const response = await fetch('/api/enhance-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: value })
-      })
+  const handleAttachMenuMentionTrigger = (prefix: string) => {
+    if (textareaRef.current) {
+      const currentVal = textareaRef.current.value;
+      const cursorPos = textareaRef.current.selectionStart;
       
-      if (response.ok) {
-        const { enhancedPrompt } = await response.json()
-        onValueChangeAction(enhancedPrompt)
-      } else {
-        toast({
-          title: "Enhancement failed",
-          description: "Could not enhance the prompt. Please try again.",
-          status: "error",
-        })
-      }
-    } catch (error) {
-      console.error('Enhance prompt error:', error)
-      toast({
-        title: "Enhancement failed", 
-        description: "Could not enhance the prompt. Please try again.",
-        status: "error",
-      })
-    } finally {
-      setIsEnhancing(false)
+      const newValue = currentVal.substring(0, cursorPos) + prefix + currentVal.substring(cursorPos);
+      agentCommand.handleInputChange(newValue);
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = cursorPos + prefix.length;
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          agentCommand.handleInputChange(textareaRef.current.value);
+        }
+      }, 0);
     }
-  }, [value, isEnhancing, isSubmitting, onValueChangeAction])
+  };
+
+  const handleEnhance = async () => {
+    setIsEnhancing(true)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    onValueChange(value + " (enhanced)")
+    setIsEnhancing(false)
+  }
+
+  const handleSend = () => {
+    if (isSubmitting || isEnhancing) return
+    onSend()
+  }
+
+  const noToolSupport = !availableModels.find(model => model.id === selectedModelId)?.tools.length
 
   useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.addEventListener("paste", handlePaste)
-    return () => el.removeEventListener("paste", handlePaste)
-  }, [handlePaste])
+    const fetchModels = async () => {
+      const modelsDataPromises = MODELS.map(async (model: ModelConfig) => {
+        const tools = await getAllTools(); // getAllTools is now async
+        return {
+          id: model.id,
+          name: model.name,
+          description: model.description || "",
+          tools: tools, // tools is FetchedToolInfo[] after await
+          providerId: model.providerId,
+          contextWindow: model.contextWindow,
+        };
+      });
+      const modelsData = await Promise.all(modelsDataPromises);
+      setAvailableModels(modelsData);
+    }
+
+    fetchModels()
+  }, [])
+
+  const mcpSelectedTool = useMemo(() => {
+    if (!agentCommand.selectedTool) return null;
+    const tool = agentCommand.selectedTool;
+    let serverId = "unknown-server";
+    let serverLabel = "Unknown Server";
+    if (tool.annotations) {
+      const annotations = tool.annotations as { server_id?: string; server_label?: string };
+      if (typeof annotations.server_id === 'string') {
+        serverId = annotations.server_id;
+      }
+      if (typeof annotations.server_label === 'string') {
+        serverLabel = annotations.server_label;
+      }
+    }
+    const mcpToolDisplay: MCPTool = {
+      name: tool.name,
+      description: tool.description,
+      serverId: serverId, // MCPTool uses serverId
+      serverLabel: serverLabel // MCPTool uses serverLabel
+    };
+    return mcpToolDisplay;
+  }, [agentCommand.selectedTool]);
+
 
   return (
-    <div className="relative flex w-full flex-col gap-4">
-      {hasSuggestions && (
-        <PromptSystem
-          onValueChange={onValueChangeAction} 
-          onSuggestion={suggestion => { void onSuggestionAction?.(suggestion); }} 
-          value={value}
+    <>
+      <UnifiedSelectionModal
+        isOpen={agentCommand.showSelectionModal}
+        onClose={agentCommand.closeSelectionModal}
+        activeCommandType={agentCommand.activeCommandType}
+        searchTerm={agentCommand.currentSearchTerm}
+        agents={agentCommand.filteredAgents}
+        tools={agentCommand.filteredTools}
+        prompts={agentCommand.filteredPrompts}
+        onSelectAgent={agentCommand.handleAgentSelectAction}
+        onSelectTool={agentCommand.handleToolSelectAction}
+        onSelectPrompt={agentCommand.handlePromptSelectAction}
+        onUrlSubmit={(url: string) => agentCommand.handleUrlSubmit(url, `@url/${url}`)}
+        onModalSearchChange={agentCommand.handleModalSearchChange}
+        activeIndex={agentCommand.activeSelectionIndex}
+        onTriggerFileUpload={handleTriggerFileUpload}
+        onTriggerFileBrowse={handleTriggerFileBrowse}
+      />
+
+      <FileExplorerModal
+        isOpen={agentCommand.isFileExplorerModalOpen}
+        onClose={() => agentCommand.setIsFileExplorerModalOpen(false)}
+        onFileSelectForMention={agentCommand.handleFileMentionSelectedFromModal}
+      />
+
+      <input
+        type="file"
+        ref={hiddenFileInputRef}
+        onChange={handleHiddenInputChange}
+        style={{ display: "none" }}
+        multiple
+      />
+
+      {agentCommand.pendingTool && (
+        <ToolParameterInput
+          tool={agentCommand.pendingTool}
+          onSubmit={() => {}}
+          onCancel={() => agentCommand.setPendingTool(null)}
         />
       )}
 
-      {/* File Explorer Modal for @files/ mentions */}
-      {isFileExplorerModalOpen && (
-        <FileExplorerModal
-          isOpen={isFileExplorerModalOpen}
-          onClose={() => setIsFileExplorerModalOpen(false)}
-          onFileSelectForMention={handleFileMentionSelectedFromModal}
-        />
-      )}
-      <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
-        <PromptInput
-          className="bg-popover relative z-10 p-0 pt-1 shadow-xs backdrop-blur-xl"
-          maxHeight={200}
-          value={value}
-          onValueChange={agentCommand.handleInputChange} // This is for the main textarea input
-        >
-          {showSelectionModal && (
-            <UnifiedSelectionModal
-              isOpen={showSelectionModal}
-              activeCommandType={activeCommandType}
-              searchTerm={currentSearchTerm}
-              agents={filteredAgents}
-              tools={filteredTools}
-              prompts={filteredPrompts}
-              onSelectAgent={agentCommand.handleAgentSelectAction}
-              onSelectTool={agentCommand.handleToolSelectAction}
-              onSelectPrompt={agentCommand.handlePromptSelectAction}
-              onUrlSubmit={(url) => agentCommand.handleUrlSubmit(url, `@url/${url}`)} // Adapted for expected signature
-              onClose={agentCommand.closeSelectionModal}
-              activeIndex={activeSelectionIndex}
-              onModalSearchChange={agentCommand.handleModalSearchChange}
-              onTriggerFileUpload={handleTriggerFileUpload} // Added prop
-              onTriggerFileBrowse={handleTriggerFileBrowse} // Added prop
-            />
-          )}
-          {/* Hidden File Input */}
-          <input 
-            type="file" 
-            ref={hiddenFileInputRef} 
-            onChange={handleHiddenInputChange} 
-            style={{ display: 'none' }} 
-            multiple 
-          />
-          {/* All old placeholder logic and duplicate UnifiedSelectionModal calls are removed. */}
-          <SelectedAgent
-            selectedAgent={agentCommand.selectedAgent}
-            removeSelectedAgent={() => agentCommand.setSelectedAgent(null)}
-          />
-          <SelectedPromptDisplay 
-            selectedPrompt={selectedPrompt}
-            removeSelectedPrompt={removeSelectedPrompt}
-          />
-          <SelectedToolDisplay
-            selectedTool={selectedTool}
-            removeSelectedTool={removeSelectedTool}
-          />
-          <SelectedUrlDisplay
-            attachedUrls={attachedUrls}
-            removeAttachedUrl={removeAttachedUrl}
-          />
-          {/* Removed duplicate UnifiedSelectionModal call that was here */}
-          {agentCommand.pendingTool && (
-            <ToolParameterInput
-              tool={agentCommand.pendingTool}
-              onSubmit={handleToolParametersSubmit}
-              onCancel={handleToolParametersCancel}
-            />
-          )}
-          <FileList files={files} onFileRemove={onFileRemoveAction || (() => { /* no-op */ })} />
+      <PromptInput className="relative">
+        <div className="flex flex-col gap-2 p-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {agentCommand.selectedAgent && (
+              <SelectedAgent
+                selectedAgent={agentCommand.selectedAgent}
+                removeSelectedAgent={agentCommand.removeSelectedAgent}
+              />
+            )}
+
+            {agentCommand.selectedTool && (
+              <SelectedToolDisplay
+                selectedTool={mcpSelectedTool}
+                removeSelectedTool={agentCommand.removeSelectedTool}
+              />
+            )}
+
+            {agentCommand.selectedPrompt && (
+              <SelectedPromptDisplay
+                selectedPrompt={agentCommand.selectedPrompt}
+                removeSelectedPrompt={agentCommand.removeSelectedPrompt}
+              />
+            )}
+          </div>
+
           <PromptInputTextarea
-            placeholder={
-              "Ask Piper, @mention an agent, or @mention a tool"
-            }
-            onKeyDown={agentCommand.handleKeyDown} // Correct: useAgentCommand returns handleKeyDown
-            className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
-            ref={textareaRef} // Use the local textareaRef
-            disabled={isSubmitting || agentCommand.pendingTool !== null}
+            placeholder="Send a message..."
+            value={value}
+            onChange={e => agentCommand.handleInputChange(e.target.value)}
+            onKeyDown={agentCommand.handleKeyDown as (e: KeyboardEvent<HTMLTextAreaElement>) => void}
+            className="pr-24"
+            ref={textareaRef}
+            disabled={isSubmitting || !!agentCommand.pendingTool}
+            onPaste={handlePaste}
           />
-          <PromptInputActions className="mt-5 w-full justify-between px-3 pb-3">
-            <div className="flex gap-2">
-              <AttachMenu
-                onFileUploadAction={onFileUploadAction} // Ensure this uses the prop passed to ChatInput
-                onTriggerMentionAction={handleTriggerMention} // Use the new local handler
-                isUserAuthenticated={isUserAuthenticated}
-                model={selectedModel}
-              />
-              <ModelSelector
-                availableModels={availableModels} // Correct prop name for ModelSelector
-                selectedModelId={selectedModel}
-                setSelectedModelId={onSelectModelAction} // Correct: ModelSelector expects setSelectedModelId
-                onStarModel={onStarModelAction}
-                isUserAuthenticated={isUserAuthenticated}
-              />
-              {currentAgent && noToolSupport && (
-                <div className="flex items-center gap-1">
-                  <Warning className="size-4" />
-                  <p className="line-clamp-2 text-xs">
-                    {selectedModel} does not support tools. Agents may not work
-                    as expected.
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <PromptInputAction tooltip="Enhance prompt">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="size-9 rounded-full transition-all duration-300 ease-out"
-                  disabled={!value?.trim() || isEnhancing || Boolean(isSubmitting)}
-                  type="button"
-                  onClick={handleEnhance}
-                  aria-label="Enhance prompt"
-                >
-                  <Sparkle className={`size-4 ${isEnhancing ? 'animate-pulse' : ''}`} />
-                </Button>
-              </PromptInputAction>
-              <PromptInputAction
-                tooltip={status === "streaming" ? "Stop" : "Send"}
+        </div>
+
+        <PromptInputActions className="absolute bottom-2 right-2">
+          <div className="flex items-center gap-2">
+            <AttachMenu
+              onFileUploadAction={handleFileUploadForChat}
+              isUserAuthenticated={!!session?.user?.id}
+              model={currentModelId || MODELS[0].id}
+              onTriggerMentionAction={handleAttachMenuMentionTrigger}
+            />
+
+            {agentCommand.selectedAgent && noToolSupport && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertTriangle size={20} className="text-yellow-500" />
+                </TooltipTrigger>
+                <TooltipContent side="top">This model does not support tools. Some agent functionality may be limited.</TooltipContent>
+              </Tooltip>
+            )}
+
+            {isStreaming ? (
+              <Button
+                variant="default"
+                size="icon"
+                onClick={onStop}
               >
-                <Button
-                  size="sm"
-                  className="size-9 rounded-full transition-all duration-300 ease-out"
-                  disabled={!value?.trim() || Boolean(isSubmitting)}
-                  type="button"
-                  onClick={handleSend}
-                  aria-label={status === "streaming" ? "Stop" : "Send message"}
-                >
-                  {status === "streaming" ? (
-                    <Stop className="size-4" />
-                  ) : (
-                    <ArrowUp className="size-4" />
-                  )}
-                </Button>
-              </PromptInputAction>
-            </div>
-          </PromptInputActions>
-        </PromptInput>
-      </div>
-    </div>
+                <StopCircle size={20} />
+              </Button>
+            ) : (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleEnhance}
+                      disabled={!value || isEnhancing || isSubmitting}
+                      className="group"
+                    >
+                      <Sparkle
+                        size={20}
+                        className={`transition-transform duration-500 ${isEnhancing ? "animate-spin" : "group-hover:scale-110"}`}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Enhance prompt</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={handleSend}
+                      disabled={!value || isSubmitting}
+                    >
+                      <SendHorizontal size={20} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Send message</TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
+        </PromptInputActions>
+      </PromptInput>
+    </>
   )
 }

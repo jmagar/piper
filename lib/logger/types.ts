@@ -1,4 +1,5 @@
 import { LogLevel, LogSource } from './constants';
+import { CoreMessage } from 'ai';
 
 // Base log entry interface (re-exported from main logger)
 export interface LogEntry {
@@ -140,7 +141,7 @@ export interface AiSdkLogEntry extends LogEntry {
 
 // Context information for correlation
 export interface LogContext {
-  correlationId?: string; // Made optional
+  correlationId?: string;
   userId?: string;
   requestId?: string;
   sessionId?: string;
@@ -148,8 +149,29 @@ export interface LogContext {
   ip?: string;
   route?: string;
   method?: string;
-  error?: Error | unknown; // Added optional error
-  source?: LogSourceValue; // Added optional source
+  error?: Error | unknown;
+  source?: LogSourceValue;
+  url?: string;
+  toolCallId?: string;
+  messageId?: string;
+  role?: string;
+  messages?: Record<string, unknown>[]; // Consider importing PiperMessage[] | CoreMessage[] or specific log shapes
+  coreMessages?: Record<string, unknown>[]; // Consider importing CoreMessage[] or specific log shapes
+  finalMessagesForAI?: Record<string, unknown>[]; // Consider importing CoreMessage[] or specific log shapes
+  stack?: string;
+  chatId?: string;
+  operationId?: string;
+  args?: Record<string, unknown> | string;
+  originalToolCallId?: string;
+  model?: string;
+  status?: string | number;
+  originalToolName?: string;
+  messageCount?: number;
+  messageDetails?: Record<string, unknown>;
+  hasAgent?: boolean;
+  agentIdFromRequest?: string;
+  hasTools?: boolean;
+  coreMsg?: CoreMessage; // Added for detailed message logging
 }
 
 // Logger configuration types
@@ -290,6 +312,7 @@ export interface IAppLogger {
 
   // Optional, source-specific loggers for convenience
   mcp?: LoggerInstance;
+  aiSdk: LoggerInstance;
 }
 
 export type LoggerInstance = {

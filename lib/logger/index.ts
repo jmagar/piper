@@ -205,8 +205,10 @@ const clientLogger: IAppLogger = {
     };
   },
   mcp: null!, // Initialized immediately after object creation
+  aiSdk: null!, // Initialized immediately after object creation
 };
 clientLogger.mcp = clientLogger.withContext(LogSource.MCP);
+clientLogger.aiSdk = clientLogger.withContext(LogSource.AI_SDK);
 
 const _internalServerLog = async (level: LogLevel, message: string, context?: LogContext, source?: LogSourceValue): Promise<void> => {
   await ensureLoggerInitialization();
@@ -255,8 +257,10 @@ const serverLogger: IAppLogger = {
     };
   },
   mcp: null!, // Initialized immediately after object creation
+  aiSdk: null!, // Initialized immediately after object creation
 };
 serverLogger.mcp = serverLogger.withContext(LogSource.MCP);
+serverLogger.aiSdk = serverLogger.withContext(LogSource.AI_SDK);
 
 export const appLogger = IS_SERVER ? serverLogger : clientLogger; // Fallback to client logger for client-side compatibility
 

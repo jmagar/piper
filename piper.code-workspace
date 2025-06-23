@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../appdata/piper"
+		},
+		{
+			"path": "../../docs"
+		}
+	],
+	"settings": {
+		"typescript.tsdk": "piper/node_modules/typescript/lib"
+	}
+}

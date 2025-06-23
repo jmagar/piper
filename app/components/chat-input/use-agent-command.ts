@@ -1,109 +1,324 @@
 "use client"
 
-// New multi-character prefixes
-const FILE_PREFIX = "@file/"
+import { Agent } from "@/app/types/agent";
 
-import { useCallback, useRef, useState } from "react"
+// FetchedToolInfo is now imported directly and used for the tools prop.
+import { useCallback, useMemo, useRef, useState } from "react";
+import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types"; // Ensure FetchedToolInfo is explicitly available
 import { v4 as uuidv4 } from "uuid"
 
+// Mention prefixes
+const AGENT_PREFIX = "@agents/"
+const TOOL_PREFIX = "@tools/"
+const PROMPT_PREFIX = "@prompts/"
+
+const URL_PREFIX = "@url/"
+const FILE_PREFIX = "@files/"
+
+// Types
+export type CommandType = "agents" | "tools" | "prompts" | "url" | "files";
+
+// This should match the MCPTool interface in UnifiedSelectionModal
+export interface MCPTool {
+  name: string;
+  description?: string;
+  serverId: string;
+  serverLabel: string;
+}
+
 export interface AttachedFile {
-  id: string; // Unique ID, can be the full path for now
-  path: string; // Path relative to UPLOADS_DIR
-  name: string; // Filename extracted from the path
-  rawMention: string; // The full @files/... string
+  id: string
+  path: string
+  name: string
+  rawMention: string
+}
+
+export interface Prompt {
+  id: string;
+  name: string;
+  description?: string;
+  content: string; // Or whatever structure a prompt has
+}
+
+export interface AttachedUrl {
+  id: string
+  url: string
+  rawMention: string
 }
 
 type UseAgentCommandProps = {
-  value: string;
   onValueChangeAction: (value: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  agents: Agent[];
+  tools: FetchedToolInfo[]; // Explicitly use FetchedToolInfo[]
+  prompts: Prompt[];
+  defaultAgent: Agent | null;
 };
 
 export function useAgentCommand({
   onValueChangeAction,
   textareaRef,
-  value, // The current input value from props
+  agents,
+  tools,
+  prompts,
+  defaultAgent
 }: UseAgentCommandProps) {
-  // File and URL attachment states
+  // State
+  const [showSelectionModal, setShowSelectionModal] = useState(false)
+  const [isFileExplorerModalOpen, setIsFileExplorerModalOpen] = useState(false)
+  const [activeCommandType, setActiveCommandType] = useState<CommandType | null>(null)
+  const [currentSearchTerm, setCurrentSearchTerm] = useState("")
+  const [activeSelectionIndex, setActiveSelectionIndex] = useState(0)
+
+  // Attached/Selected entities state
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(defaultAgent)
+  const [selectedTool, setSelectedTool] = useState<FetchedToolInfo | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+
+  const [pendingTool, setPendingTool] = useState<FetchedToolInfo | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+  const [attachedUrls, setAttachedUrls] = useState<AttachedUrl[]>([])
 
   // Refs
   const mentionStartPosRef = useRef<number | null>(null)
 
-  // Utility function to reset mention states
-  const resetMentionState = useCallback(() => {
-    mentionStartPosRef.current = null
-  }, [])
+  // Memoized filtered lists
+  const filteredAgents = useMemo(() => agents.filter(agent => agent.name.toLowerCase().includes(currentSearchTerm.toLowerCase())), [agents, currentSearchTerm])
+  const filteredTools = useMemo((): MCPTool[] => {
+    if (activeCommandType !== "tools") return [];
 
-  // Generate a unique ID for attachments
-  const generateId = useCallback(() => {
-    try {
-      return uuidv4();
-    } catch {
-      return Date.now().toString() + Math.random().toString(36).substr(2, 5);
+    // Determine which tools to display based on the search term
+    const toolsToDisplay = !currentSearchTerm
+      ? tools // If no search term, use all available tools
+      : tools.filter( // Otherwise, filter by the search term
+          (tool: FetchedToolInfo) => 
+            tool.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+            (tool.description &&
+              tool.description.toLowerCase().includes(currentSearchTerm.toLowerCase()))
+        );
+
+    // Map the tools to display to the MCPTool format required by the modal
+    return toolsToDisplay
+      .map((tool: FetchedToolInfo): MCPTool => {
+        let serverId = "unknown-server";
+        let serverLabel = "Unknown Server";
+        if (tool.annotations) {
+          const annotations = tool.annotations as { server_id?: string; server_label?: string };
+          if (typeof annotations.server_id === 'string') {
+            serverId = annotations.server_id;
+          }
+          if (typeof annotations.server_label === 'string') {
+            serverLabel = annotations.server_label;
+          }
+        }
+        return {
+          name: tool.name,
+          description: tool.description,
+          serverId: serverId,
+          serverLabel: serverLabel,
+        };
+      }); // Closes .map() and the return statement of the factory function
+  }, [tools, activeCommandType, currentSearchTerm]); // Dependency array for filteredTools
+
+  const filteredPrompts = useMemo(() => 
+    prompts.filter(prompt => 
+      prompt.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) || 
+      (prompt.description && prompt.description.toLowerCase().includes(currentSearchTerm.toLowerCase()))
+    ), 
+    [prompts, currentSearchTerm]
+  );
+
+  // Utility functions
+  const generateId = useCallback(() => uuidv4(), [])
+  const resetMentionState = useCallback(() => { mentionStartPosRef.current = null }, [])
+
+  const closeSelectionModal = useCallback(() => {
+    setShowSelectionModal(false)
+    setActiveCommandType(null)
+    setCurrentSearchTerm("")
+    setActiveSelectionIndex(0)
+    resetMentionState()
+  }, [resetMentionState])
+
+  const handleInputChange = useCallback((newValue: string) => {
+    onValueChangeAction(newValue)
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const cursorPos = textarea.selectionStart
+    const textBeforeCursor = newValue.substring(0, cursorPos)
+
+    const findLastMention = (prefix: string) => textBeforeCursor.lastIndexOf(prefix)
+    const mentionPositions = [
+      { pos: findLastMention(AGENT_PREFIX), type: "agents", prefix: AGENT_PREFIX },
+      { pos: findLastMention(TOOL_PREFIX), type: "tools", prefix: TOOL_PREFIX },
+      { pos: findLastMention(URL_PREFIX), type: "url", prefix: URL_PREFIX },
+      { pos: findLastMention(PROMPT_PREFIX), type: "prompts", prefix: PROMPT_PREFIX },
+      { pos: findLastMention(FILE_PREFIX), type: "files", prefix: FILE_PREFIX },
+    ].sort((a, b) => b.pos - a.pos)
+
+    const lastMention = mentionPositions[0]
+
+    if (lastMention.pos === -1) {
+      closeSelectionModal()
+      return
     }
-  }, []);
 
-  // File submission handler
+    const textAfterMention = textBeforeCursor.substring(lastMention.pos)
+    if (textAfterMention.includes(" ")) {
+      closeSelectionModal()
+      return
+    }
+
+    setShowSelectionModal(true)
+    setActiveCommandType(lastMention.type as CommandType)
+    setCurrentSearchTerm(textBeforeCursor.substring(lastMention.pos + lastMention.prefix.length))
+    mentionStartPosRef.current = lastMention.pos
+    setActiveSelectionIndex(0)
+  }, [onValueChangeAction, textareaRef, closeSelectionModal])
+
+  const insertMention = useCallback((prefix: string, slugOrName: string) => {
+    if (!textareaRef.current || mentionStartPosRef.current === null) return
+
+    const currentVal = textareaRef.current.value
+    const textToReplace = `${prefix}${currentSearchTerm}`
+    const mentionText = `${prefix}${slugOrName} `
+
+    const textBeforeMention = currentVal.substring(0, mentionStartPosRef.current)
+    const textAfterMention = currentVal.substring(mentionStartPosRef.current + textToReplace.length)
+
+    const newValue = `${textBeforeMention}${mentionText}${textAfterMention}`
+
+    onValueChangeAction(newValue)
+
+    const newCursorPos = mentionStartPosRef.current + mentionText.length
+    setTimeout(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+
+    closeSelectionModal()
+  }, [textareaRef, onValueChangeAction, closeSelectionModal, currentSearchTerm])
+
+  // Action handlers
+  const handleAgentSelectAction = useCallback((agent: Agent) => {
+    setSelectedAgent(agent)
+    insertMention(AGENT_PREFIX, agent.name)
+  }, [insertMention, setSelectedAgent]) // Added setSelectedAgent to dependencies
+
+  const handlePromptSelectAction = useCallback((prompt: Prompt) => {
+    setSelectedPrompt(prompt);
+    insertMention(PROMPT_PREFIX, prompt.name);
+  }, [insertMention, setSelectedPrompt]);
+
+  const handleToolSelectAction = useCallback((selectedMCPTool: MCPTool) => {
+    const originalTool = tools.find((t: FetchedToolInfo) => t.name === selectedMCPTool.name);
+    if (originalTool) {
+      setSelectedTool(originalTool);
+      setPendingTool(originalTool); // Set pending tool for parameter input
+      insertMention(TOOL_PREFIX, originalTool.name);
+    } else {
+      console.error("Original tool not found for selected MCPTool:", selectedMCPTool);
+      closeSelectionModal(); // Close modal to prevent further issues
+    }
+  }, [tools, insertMention, setSelectedTool, setPendingTool, closeSelectionModal]);
+
+  const handleUrlSubmit = useCallback((url: string, rawMention: string) => {
+    const newUrl: AttachedUrl = { id: uuidv4(), url, rawMention }
+    setAttachedUrls(prev => [...prev, newUrl])
+    if (textareaRef.current && mentionStartPosRef.current !== null) {
+      const currentVal = textareaRef.current.value
+      const textBefore = currentVal.substring(0, mentionStartPosRef.current)
+      const textAfter = currentVal.substring(mentionStartPosRef.current + rawMention.length)
+      const newValue = (textBefore + textAfter).trimStart()
+      onValueChangeAction(newValue)
+    }
+    closeSelectionModal()
+  }, [closeSelectionModal, onValueChangeAction, textareaRef])
+
   const handleFileSubmit = useCallback((filePath: string, rawMention: string) => {
     const fileName = filePath.split('/').pop() || filePath;
-    const newFileAttachment: AttachedFile = { 
-      id: generateId(), 
-      path: filePath, 
-      name: fileName, 
-      rawMention 
-    };
-    setAttachedFiles(prev => prev.find(f => f.rawMention === rawMention) ? prev : [...prev, newFileAttachment]);
-    
-    if (textareaRef.current && mentionStartPosRef.current !== null) {
-      const currentVal = textareaRef.current.value;
-      const textBefore = currentVal.substring(0, mentionStartPosRef.current);
-      const textAfter = currentVal.substring(mentionStartPosRef.current + rawMention.length + (currentVal[mentionStartPosRef.current + rawMention.length] === ' ' ? 1 : 0));
-      const newValue = (textBefore + textAfter).trimStart();
-      onValueChangeAction(newValue);
-      if (textareaRef.current) textareaRef.current.value = newValue;
-      const newCursorPos = mentionStartPosRef.current;
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    }
-    resetMentionState();
-  }, [setAttachedFiles, onValueChangeAction, textareaRef, resetMentionState, generateId]);
+    // generateId() is stable, no need to list as dependency if generateId itself is memoized correctly.
+    const newFile: AttachedFile = { id: generateId(), path: filePath, name: fileName, rawMention };
+    setAttachedFiles(prev => (prev.find(f => f.rawMention === rawMention) ? prev : [...prev, newFile]));
+  }, [generateId]); // Keeping generateId here as it's directly called. If generateId is `useCallback(() => uuidv4(), [])`, it's fine.
 
-  // Mention insertion utility
-  const insertMention = useCallback((prefixToInsert: string, slugOrName: string, textToReplaceLength: number) => {
-    if (!textareaRef.current || mentionStartPosRef.current === null) return;
-    const currentVal = textareaRef.current.value;
-    const mentionText = `${prefixToInsert}${slugOrName} `;
-    const textBeforeMention = currentVal.substring(0, mentionStartPosRef.current);
-    const textAfterMention = currentVal.substring(mentionStartPosRef.current + textToReplaceLength);
-    const newValue = `${textBeforeMention}${mentionText}${textAfterMention}`;
-    onValueChangeAction(newValue);
-    if (textareaRef.current) textareaRef.current.value = newValue;
-    const newCursorPos = mentionStartPosRef.current + mentionText.length;
-    setTimeout(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-    resetMentionState();
-  }, [textareaRef, onValueChangeAction, resetMentionState]);
-
-  // File mention selection from modal
   const handleFileMentionSelectedFromModal = useCallback((filePath: string) => {
-    if (textareaRef.current && mentionStartPosRef.current !== null) {
-      insertMention(FILE_PREFIX, filePath, filePath.length);
-    } else {
-      const newText = `${value.substring(0, mentionStartPosRef.current ?? 0)}${FILE_PREFIX}${filePath} ${value.substring(textareaRef.current?.selectionEnd ?? 0)}`.trimStart();
-      onValueChangeAction(newText);
-    }
-    resetMentionState();
-    setTimeout(() => textareaRef.current?.focus(), 0);
-  }, [insertMention, resetMentionState, textareaRef, onValueChangeAction, value]);
+    insertMention(FILE_PREFIX, filePath)
+  }, [insertMention])
 
+  const handleModalSearchChange = useCallback((term: string) => setCurrentSearchTerm(term), [])
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showSelectionModal) return
+
+    const items = activeCommandType === 'agents' ? filteredAgents 
+                  : activeCommandType === 'tools' ? filteredTools 
+                  : activeCommandType === 'prompts' ? filteredPrompts 
+                  : [];
+
+    if (!items || items.length === 0) return
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setActiveSelectionIndex(prev => (prev + 1) % items.length)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setActiveSelectionIndex(prev => (prev - 1 + items.length) % items.length)
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      const item = items[activeSelectionIndex]
+      if (item) {
+        if (activeCommandType === 'agents') handleAgentSelectAction(item as Agent);
+        if (activeCommandType === 'prompts') handlePromptSelectAction(item as Prompt);
+        if (activeCommandType === 'tools') handleToolSelectAction(item as MCPTool); // Correct cast to MCPTool
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      closeSelectionModal()
+    }
+  }, [showSelectionModal, activeCommandType, filteredAgents, filteredTools, filteredPrompts, activeSelectionIndex, handleAgentSelectAction, handleToolSelectAction, handlePromptSelectAction, closeSelectionModal])
+
+  // Return all state and handlers
   return {
+    handleInputChange,
+    handleKeyDown,
+    showSelectionModal,
+    closeSelectionModal,
+    activeCommandType,
+    currentSearchTerm,
+    handleModalSearchChange,
+    activeSelectionIndex,
+    // Agents
+    filteredAgents,
+    selectedAgent,
+    setSelectedAgent, // Added setSelectedAgent
+    removeSelectedAgent: () => setSelectedAgent(null),
+    handleAgentSelectAction,
+    // Tools
+    filteredTools,
+    selectedTool,
+    setSelectedTool,
+    removeSelectedTool: () => setSelectedTool(null),
+    pendingTool,
+    setPendingTool,
+    handleToolSelectAction,
+    // URLs
+    attachedUrls,
+    setAttachedUrls, // Added setAttachedUrls
+    removeAttachedUrl: (id: string) => setAttachedUrls(prev => prev.filter(u => u.id !== id)),
+    handleUrlSubmit,
+    // Files
     attachedFiles,
     handleFileSubmit,
+    isFileExplorerModalOpen,
+    setIsFileExplorerModalOpen,
     handleFileMentionSelectedFromModal,
-  };
+    // Prompts
+    filteredPrompts,
+    selectedPrompt,
+    removeSelectedPrompt: () => setSelectedPrompt(null),
+    handlePromptSelectAction,
+  }
 }
