@@ -1,5 +1,5 @@
-# Use Node.js LTS as base image
-FROM node:20-ubuntu
+# Use Node.js LTS as base image (Debian-based)
+FROM node:20
 
 # Set timezone and locale
 ENV TZ=UTC
