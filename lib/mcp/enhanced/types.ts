@@ -13,6 +13,28 @@ export interface MCPLogger {
   error: (message: string, error?: Error | unknown, metadata?: Record<string, unknown>) => void;
 }
 
+// Circuit breaker state types for resilient connections
+export type CircuitBreakerState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+
+// Retry configuration for enhanced error handling
+export interface RetryConfig {
+  maxRetries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  backoffMultiplier?: number;
+}
+
+// Schema definition for type-safe tool validation
+export interface SchemaDefinition {
+  name?: string;
+  parameters?: z.ZodSchema;
+  description?: string;
+  examples?: Array<{
+    input: Record<string, unknown>;
+    output?: unknown;
+  }>;
+}
+
 // Define proper types for Prisma operations
 export type ServerMetrics = {
   totalExecutions: number
@@ -312,4 +334,5 @@ export interface MCPToolSet {
   close: () => Promise<void>
   healthCheck?: () => Promise<boolean>; // Added for proactive health checking
   typedTools?: Record<string, z.ZodSchema>
+  circuitBreakerState?: () => CircuitBreakerState; // Added for enhanced clients
 } 

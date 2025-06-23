@@ -8,68 +8,209 @@ import {
   MCPClientError,
   EnhancedStdioConfig,
   EnhancedSSEConfig,
-  EnhancedStreamableHTTPConfig
+  EnhancedStreamableHTTPConfig,
+  CircuitBreakerState,
+  RetryConfig,
+  SchemaDefinition
 } from './types';
 import { globalMetricsCollector } from './metrics-collector';
 
-// Simple large response processor to avoid circular imports
-function processLargeResponse(toolName: string, result: string): unknown {
-  // Simple truncation strategy to avoid circular import issues
-  if (result.length < 5000) return result;
-  
-  // Basic processing for common tool types
-  if (toolName.includes('fetch') || toolName.includes('crawl') || toolName.includes('search')) {
-    return {
-      type: 'large_response_summary',
-      tool: toolName,
-      summary: `${toolName} returned ${result.length} characters`,
-      preview: result.substring(0, 1500) + (result.length > 1500 ? '...\n\n[Content truncated for readability]' : ''),
-      metadata: {
-        original_length: result.length,
-        truncated: true
-      }
-    };
+// Enhanced error types for better categorization
+export class MCPConnectionError extends MCPClientError {
+  constructor(message: string, public readonly transport: string) {
+    super(message, 'CONNECTION_ERROR');
+    this.name = 'MCPConnectionError';
   }
-  
-  // For other tools, just truncate
-  return result.substring(0, 3000) + (result.length > 3000 ? '\n\n[Content truncated for readability]' : '');
 }
 
-/**
- * Wraps MCP tools with metrics collection and large response processing
- */
-async function wrapToolsWithMetrics(
+export class MCPTimeoutError extends MCPClientError {
+  constructor(message: string, public readonly timeoutMs: number) {
+    super(message, 'TIMEOUT_ERROR');
+    this.name = 'MCPTimeoutError';
+  }
+}
+
+export class MCPSchemaValidationError extends MCPClientError {
+  constructor(message: string, public readonly toolName: string) {
+    super(message, 'SCHEMA_VALIDATION_ERROR');
+    this.name = 'MCPSchemaValidationError';
+  }
+}
+
+// Circuit breaker implementation for resilient MCP connections
+class CircuitBreaker {
+  private state: CircuitBreakerState = 'CLOSED';
+  private failureCount = 0;
+  private lastFailureTime = 0;
+  private readonly failureThreshold: number;
+  private readonly resetTimeoutMs: number;
+
+  constructor(
+    failureThreshold = 5,
+    resetTimeoutMs = 30000 // 30 seconds
+  ) {
+    this.failureThreshold = failureThreshold;
+    this.resetTimeoutMs = resetTimeoutMs;
+  }
+
+  async execute<T>(operation: () => Promise<T>, context: string): Promise<T> {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.resetTimeoutMs) {
+        this.state = 'HALF_OPEN';
+        appLogger.mcp.info(`[Circuit Breaker] ${context}: Attempting reset (HALF_OPEN)`);
+      } else {
+        throw new MCPClientError(`Circuit breaker OPEN for ${context}`, 'CIRCUIT_BREAKER_OPEN');
+      }
+    }
+
+    try {
+      const result = await operation();
+      
+      if (this.state === 'HALF_OPEN') {
+        this.reset();
+        (appLogger.mcp || appLogger).info(`[Circuit Breaker] ${context}: Reset successful (CLOSED)`);
+      }
+      
+      return result;
+    } catch (error) {
+      this.recordFailure();
+             (appLogger.mcp || appLogger).warn(`[Circuit Breaker] ${context}: Failure recorded (${this.failureCount}/${this.failureThreshold})`);
+       throw error;
+    }
+  }
+
+  private recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    
+         if (this.failureCount >= this.failureThreshold) {
+       this.state = 'OPEN';
+       (appLogger.mcp || appLogger).error(`[Circuit Breaker] OPENED after ${this.failureCount} failures`);
+     }
+  }
+
+  private reset(): void {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+
+  getState(): CircuitBreakerState {
+    return this.state;
+  }
+}
+
+// Retry mechanism with exponential backoff
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  config: RetryConfig = {},
+  context: string
+): Promise<T> {
+  const {
+    maxRetries = 3,
+    baseDelayMs = 1000,
+    maxDelayMs = 10000,
+    backoffMultiplier = 2
+  } = config;
+
+  let lastError: Error = new Error('No attempts made');
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (attempt === maxRetries) {
+        appLogger.mcp.error(`[Retry] ${context}: Final attempt failed`, lastError);
+        break;
+      }
+
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        baseDelayMs * Math.pow(backoffMultiplier, attempt),
+        maxDelayMs
+      );
+
+      appLogger.mcp.warn(`[Retry] ${context}: Attempt ${attempt + 1}/${maxRetries + 1} failed, retrying in ${delay}ms`, lastError);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+// Enhanced timeout wrapper
+async function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  context: string
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new MCPTimeoutError(`Operation timed out after ${timeoutMs}ms: ${context}`, timeoutMs));
+    }, timeoutMs);
+  });
+
+  return Promise.race([operation, timeoutPromise]);
+}
+
+// Enhanced tool wrapper with improved metrics and error handling
+async function wrapToolsWithEnhancedMetrics(
   serverId: string,
-  tools: AISDKToolCollection
+  tools: AISDKToolCollection,
+  schemas?: Record<string, SchemaDefinition>
 ): Promise<AISDKToolCollection> {
   const wrappedTools: AISDKToolCollection = {}
 
   for (const [toolName, tool] of Object.entries(tools)) {
-    // Ensure tool is an object with proper structure
     const originalTool = tool && typeof tool === 'object' ? tool as Record<string, unknown> : { execute: tool }
+    const toolSchema = schemas?.[toolName];
     
     wrappedTools[toolName] = {
       ...originalTool,
       execute: async (params: Record<string, unknown>) => {
-        const startTime = Date.now()
+        const startTime = Date.now();
+        const executionId = `${serverId}-${toolName}-${Date.now()}`;
 
         try {
-          // Execute the original tool directly without abort handling
-          const executeFunction = originalTool.execute as ((params: Record<string, unknown>) => unknown) | undefined
+          // Schema validation if available
+          if (toolSchema?.parameters) {
+            try {
+              toolSchema.parameters.parse(params);
+                             (appLogger.mcp || appLogger).debug(`[Enhanced MCP] Schema validation passed for ${toolName}`);
+             } catch (validationError) {
+               const error = new MCPSchemaValidationError(
+                 `Schema validation failed for tool ${toolName}: ${validationError instanceof Error ? validationError.message : 'Unknown validation error'}`,
+                 toolName
+               );
+              
+                             await globalMetricsCollector.recordToolExecution(serverId, toolName, {
+                executionTime: Date.now() - startTime,
+                success: false,
+                aborted: false,
+                errorType: 'schema_validation_error',
+                errorMessage: error.message,
+                callId: executionId
+              });
+
+              throw error;
+            }
+          }
+
+          const executeFunction = originalTool.execute as ((params: Record<string, unknown>) => unknown) | undefined;
           const rawResult = await Promise.resolve(
             executeFunction ? executeFunction(params) : (originalTool as unknown as (params: Record<string, unknown>) => unknown)(params)
-          )
+          );
           
-          // Process large responses automatically (simple check to avoid circular imports)
+          // Enhanced response processing
           let processedResult = rawResult;
           let wasProcessed = false;
           let processingTime = 0;
           
-          // Only process if result is a large string (>5000 chars)
           if (typeof rawResult === 'string' && rawResult.length >= 5000) {
             const processingStartTime = Date.now();
             try {
-              // Simple processing to avoid circular import issues
               processedResult = processLargeResponse(toolName, rawResult);
               processingTime = Date.now() - processingStartTime;
               wasProcessed = processedResult !== rawResult;
@@ -84,7 +225,7 @@ async function wrapToolsWithMetrics(
             }
           }
           
-          // Record successful execution with processing metrics
+          // Enhanced metrics collection
           await globalMetricsCollector.recordToolExecution(serverId, toolName, {
             executionTime: Date.now() - startTime,
             success: true,
@@ -93,72 +234,129 @@ async function wrapToolsWithMetrics(
             outputType: typeof processedResult === 'object' && processedResult !== null && 'type' in processedResult 
               ? (processedResult as { type: string }).type 
               : typeof processedResult,
+            callId: executionId,
             metadata: {
               largeResponseProcessed: wasProcessed,
               processingTime: wasProcessed ? processingTime : undefined,
               originalSize: typeof rawResult === 'string' ? rawResult.length : undefined,
-              processedSize: typeof processedResult === 'string' ? processedResult.length : undefined
-            }
-          })
+              processedSize: typeof processedResult === 'string' ? processedResult.length : undefined,
+              schemaValidated: !!toolSchema?.parameters,
+              toolSchema: toolSchema?.name
+            } as Record<string, unknown>
+          });
 
-          return processedResult
+          return processedResult;
         } catch (error) {
-          // Record failed execution
           await globalMetricsCollector.recordToolExecution(serverId, toolName, {
             executionTime: Date.now() - startTime,
             success: false,
             aborted: false,
-            errorType: 'execution_error',
+            errorType: error instanceof MCPSchemaValidationError ? 'schema_validation_error' : 'execution_error',
             errorMessage: error instanceof Error ? error.message : String(error),
-          })
+            callId: executionId
+          });
 
-          throw error
+          throw error;
         }
       }
     }
   }
 
-  return wrappedTools
+  return wrappedTools;
+}
+
+// Simple large response processor
+function processLargeResponse(toolName: string, result: string): unknown {
+  if (result.length < 5000) return result;
+  
+  if (toolName.includes('fetch') || toolName.includes('crawl') || toolName.includes('search')) {
+    return {
+      type: 'large_response_summary',
+      tool: toolName,
+      summary: `${toolName} returned ${result.length} characters`,
+      preview: result.substring(0, 1500) + (result.length > 1500 ? '...\n\n[Content truncated for readability]' : ''),
+      metadata: {
+        original_length: result.length,
+        truncated: true
+      }
+    };
+  }
+  
+  return result.substring(0, 3000) + (result.length > 3000 ? '\n\n[Content truncated for readability]' : '');
 }
 
 /**
- * Enhanced MCP Client for stdio transport with robust error handling
+ * Enhanced MCP Client for stdio transport with circuit breaker, retry, and schema support
  */
 export async function createEnhancedStdioMCPClient(
   serverId: string,
-  config: EnhancedStdioConfig
+  config: EnhancedStdioConfig & { 
+    schemas?: Record<string, SchemaDefinition>;
+    retryConfig?: RetryConfig;
+    timeoutMs?: number;
+  }
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
+  const circuitBreaker = new CircuitBreaker();
+  const retryConfig = config.retryConfig || { maxRetries: 3, baseDelayMs: 1000 };
+  const timeoutMs = config.timeoutMs || 30000; // 30 second default timeout
+
   logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
     clientName: config.clientName || 'ai-sdk-mcp-client',
-    args: config.args, // Log arguments as part of the metadata object
+    args: config.args,
+    hasSchemas: !!config.schemas,
+    timeout: timeoutMs
   });
 
-  try {
-    const mcpClient = await createMCPClient({
-      transport: new StdioMCPTransport({
-        command: config.command,
-        args: config.args || [],
-        env: config.env || {},
-        cwd: config.cwd,
-        stderr: config.stderr || 'pipe' // Default to 'pipe' for better diagnostics
-      })
-    })
+  const createClient = async (): Promise<{ client: any; tools: AISDKToolCollection }> => {
+    const mcpClient = await withTimeout(
+      createMCPClient({
+        transport: new StdioMCPTransport({
+          command: config.command,
+          args: config.args || [],
+          env: config.env || {},
+          cwd: config.cwd,
+          stderr: config.stderr || 'pipe'
+        }),
+        onUncaughtError: (error) => {
+          logger.error(`[Enhanced MCP] Uncaught error in stdio client:`, error);
+          globalMetricsCollector.recordError(serverId, 'uncaught_error', String(error));
+        }
+      }),
+      timeoutMs,
+      `stdio client creation for ${config.command}`
+    );
 
-    // Get tools with optional schema validation
-    const tools = await mcpClient.tools()
+    // Get tools with optional schema-first approach
+    const toolOptions = config.schemas ? { schemas: config.schemas } : undefined;
+    const tools = await withTimeout(
+      mcpClient.tools(toolOptions),
+      timeoutMs,
+      `tools discovery for ${config.command}`
+    );
     
-    // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
+    return { client: mcpClient, tools };
+  };
+
+  try {
+    const { client: mcpClient, tools } = await circuitBreaker.execute(
+      () => withRetry(createClient, retryConfig, `stdio client for ${config.command}`),
+      `stdio-${serverId}`
+    );
     
-    logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+    const enhancedTools = await wrapToolsWithEnhancedMetrics(serverId, tools, config.schemas);
+    
+    logger.info('[Enhanced MCP] Successfully connected to stdio MCP server', {
+      toolCount: Object.keys(tools).length,
+      schemaCount: config.schemas ? Object.keys(config.schemas).length : 0
+    });
 
     return {
       tools: enhancedTools,
       close: async () => {
         logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
         try {
-          await mcpClient.close();
+          await withTimeout(mcpClient.close(), 5000, `stdio client close for ${config.command}`);
           logger.info(`[Enhanced MCP] Stdio client for command ${config.command} closed successfully`);
         } catch (error) {
           logger.error(`[Enhanced MCP] Error closing stdio client for command ${config.command}:`, error as Error);
@@ -168,73 +366,107 @@ export async function createEnhancedStdioMCPClient(
       healthCheck: async () => {
         logger.debug(`[Enhanced MCP] Performing health check for stdio client: ${config.command}`);
         try {
-          const currentTools = await mcpClient.tools();
-          // A basic check: if tools() doesn't throw and returns an object (even empty), consider it healthy.
-          // MCP servers should always return at least an empty object for capabilities.
-          const isHealthy = typeof currentTools === 'object' && currentTools !== null;
-          if (!isHealthy) {
-             logger.warn(`[Enhanced MCP] Stdio health check failed for ${config.command}: mcpClient.tools() returned non-object or null.`);
-          }
-          return isHealthy;
-        } catch (hcError) {
-          logger.error(`[Enhanced MCP] Stdio health check failed for ${config.command}:`, hcError as Error);
+          return await circuitBreaker.execute(async () => {
+            const currentTools = await withTimeout(mcpClient.tools(), 5000, `health check for ${config.command}`);
+            return typeof currentTools === 'object' && currentTools !== null;
+          }, `health-check-stdio-${serverId}`);
+        } catch (error) {
+          logger.error(`[Enhanced MCP] Stdio health check failed for ${config.command}:`, error as Error);
           return false;
         }
-      }
+      },
+      circuitBreakerState: circuitBreaker.getState.bind(circuitBreaker)
     };
   } catch (error) {
     logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
 
+    if (error instanceof MCPTimeoutError || error instanceof MCPConnectionError) {
+      throw error;
+    }
+
     if (error instanceof Error) {
-      throw new MCPClientError(
+      throw new MCPConnectionError(
         `Failed to initialize stdio MCP client: ${error.message}`,
-        'INIT_ERROR'
-      )
+        'stdio'
+      );
     }
     
-    throw new MCPClientError('Unknown error during stdio MCP client initialization')
+    throw new MCPClientError('Unknown error during stdio MCP client initialization');
   }
 }
 
 /**
- * Enhanced MCP Client for SSE transport with additional configuration
+ * Enhanced MCP Client for SSE transport with circuit breaker, retry, and schema support
  */
 export async function createEnhancedSSEMCPClient(
   serverId: string,
-  config: EnhancedSSEConfig
+  config: EnhancedSSEConfig & { 
+    schemas?: Record<string, SchemaDefinition>;
+    retryConfig?: RetryConfig;
+    timeoutMs?: number;
+  }
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
+  const circuitBreaker = new CircuitBreaker();
+  const retryConfig = config.retryConfig || { maxRetries: 3, baseDelayMs: 1000 };
+  const timeoutMs = config.timeoutMs || 30000;
+
   logger.info(`[Enhanced MCP] Creating SSE client for URL: ${config.url}`, {
     clientName: config.clientName || 'ai-sdk-mcp-client',
-    hasHeaders: !!config.headers // Log headers presence as part of metadata
+    hasHeaders: !!config.headers,
+    hasSchemas: !!config.schemas,
+    timeout: timeoutMs
   });
 
-  try {
-    const mcpClient = await createMCPClient({
-      transport: {
-        type: 'sse',
-        url: config.url,
-        headers: {
-          'User-Agent': config.clientName || 'ai-sdk-mcp-client',
-          ...config.headers
+  const createClient = async (): Promise<{ client: any; tools: AISDKToolCollection }> => {
+    const mcpClient = await withTimeout(
+      createMCPClient({
+        transport: {
+          type: 'sse',
+          url: config.url,
+          headers: {
+            'User-Agent': config.clientName || 'ai-sdk-mcp-client',
+            ...config.headers
+          }
+        },
+        onUncaughtError: (error) => {
+          logger.error(`[Enhanced MCP] Uncaught error in SSE client:`, error);
+          globalMetricsCollector.recordError(serverId, 'uncaught_error', String(error));
         }
-      }
-    })
+      }),
+      timeoutMs,
+      `SSE client creation for ${config.url}`
+    );
 
-    // Get tools with optional schema validation
-    const tools = await mcpClient.tools()
+    const toolOptions = config.schemas ? { schemas: config.schemas } : undefined;
+    const tools = await withTimeout(
+      mcpClient.tools(toolOptions),
+      timeoutMs,
+      `tools discovery for ${config.url}`
+    );
     
-    // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
+    return { client: mcpClient, tools };
+  };
+
+  try {
+    const { client: mcpClient, tools } = await circuitBreaker.execute(
+      () => withRetry(createClient, retryConfig, `SSE client for ${config.url}`),
+      `sse-${serverId}`
+    );
     
-    logger.info(`[Enhanced MCP] Successfully connected to SSE MCP server at ${config.url}`);
+    const enhancedTools = await wrapToolsWithEnhancedMetrics(serverId, tools, config.schemas);
+    
+    logger.info(`[Enhanced MCP] Successfully connected to SSE MCP server at ${config.url}`, {
+      toolCount: Object.keys(tools).length,
+      schemaCount: config.schemas ? Object.keys(config.schemas).length : 0
+    });
 
     return {
       tools: enhancedTools,
       close: async () => {
         logger.info(`[Enhanced MCP] Closing SSE client for URL: ${config.url}`);
         try {
-          await mcpClient.close();
+          await withTimeout(mcpClient.close(), 5000, `SSE client close for ${config.url}`);
           logger.info(`[Enhanced MCP] SSE client for ${config.url} closed successfully`);
         } catch (error) {
           logger.error(`[Enhanced MCP] Error closing SSE client for ${config.url}:`, error as Error);
@@ -244,75 +476,95 @@ export async function createEnhancedSSEMCPClient(
       healthCheck: async () => {
         logger.debug(`[Enhanced MCP] Performing health check for SSE client: ${config.url}`);
         try {
-          const currentTools = await mcpClient.tools();
-          const isHealthy = typeof currentTools === 'object' && currentTools !== null;
-          if (!isHealthy) {
-             logger.warn(`[Enhanced MCP] SSE health check failed for ${config.url}: mcpClient.tools() returned non-object or null.`);
-          }
-          return isHealthy;
-        } catch (hcError) {
-          logger.error(`[Enhanced MCP] SSE health check failed for ${config.url}:`, hcError as Error);
+          return await circuitBreaker.execute(async () => {
+            const currentTools = await withTimeout(mcpClient.tools(), 5000, `health check for ${config.url}`);
+            return typeof currentTools === 'object' && currentTools !== null;
+          }, `health-check-sse-${serverId}`);
+        } catch (error) {
+          logger.error(`[Enhanced MCP] SSE health check failed for ${config.url}:`, error as Error);
           return false;
         }
-      }
+      },
+      circuitBreakerState: circuitBreaker.getState.bind(circuitBreaker)
     };
   } catch (error) {
     logger.error(`[Enhanced MCP] Failed to create SSE client for ${config.url}:`, error as Error);
 
+    if (error instanceof MCPTimeoutError || error instanceof MCPConnectionError) {
+      throw error;
+    }
+
     if (error instanceof Error) {
-      throw new MCPClientError(
+      throw new MCPConnectionError(
         `Failed to initialize SSE MCP client for ${config.url}: ${error.message}`,
-        'INIT_ERROR'
-      )
+        'sse'
+      );
     }
     
-    throw new MCPClientError(`Unknown error during SSE MCP client initialization for ${config.url}`)
+    throw new MCPClientError(`Unknown error during SSE MCP client initialization for ${config.url}`);
   }
 }
 
 /**
- * Enhanced MCP Client for StreamableHTTP transport
+ * Enhanced MCP Client for StreamableHTTP transport with circuit breaker, retry, and schema support
  */
 export async function createEnhancedStreamableHTTPMCPClient(
   serverId: string,
-  config: EnhancedStreamableHTTPConfig
+  config: EnhancedStreamableHTTPConfig & { 
+    schemas?: Record<string, SchemaDefinition>;
+    retryConfig?: RetryConfig;
+    timeoutMs?: number;
+  }
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
+  const circuitBreaker = new CircuitBreaker();
+  const retryConfig = config.retryConfig || { maxRetries: 3, baseDelayMs: 1000 };
+  const timeoutMs = config.timeoutMs || 30000;
+
   logger.info(`[Enhanced MCP] Creating StreamableHTTP client for URL: ${config.url}`, {
     clientName: config.clientName || 'ai-sdk-mcp-client',
     sessionId: config.sessionId,
-    hasHeaders: !!config.headers
+    hasHeaders: !!config.headers,
+    hasSchemas: !!config.schemas,
+    timeout: timeoutMs
   });
 
-  try {
-    // Import StreamableHTTPClientTransport dynamically using eval to avoid module resolution
+  const createClient = async (): Promise<{ client: any; tools: AISDKToolCollection }> => {
+    // Enhanced dynamic import handling
     interface StreamableHTTPClientTransportConstructor {
       new (url: URL, options?: { sessionId?: string; requestInit?: RequestInit }): unknown
     }
     
-    let StreamableHTTPClientTransport: StreamableHTTPClientTransportConstructor
+    let StreamableHTTPClientTransport: StreamableHTTPClientTransportConstructor;
+    
     try {
-      // Try primary import path using eval to avoid TypeScript module resolution
-      const importPath1 = '@modelcontextprotocol/sdk/client/streamableHttp'
-      const mcpModule = await eval(`import('${importPath1}')`).catch(() => null)
-      if (mcpModule?.StreamableHTTPClientTransport) {
-        StreamableHTTPClientTransport = mcpModule.StreamableHTTPClientTransport
-      } else {
-        // Try alternative import path
-        const importPath2 = '@modelcontextprotocol/sdk/client/stdio' 
-        const altModule = await eval(`import('${importPath2}')`).catch(() => null)
-        if (altModule && 'StreamableHTTPClientTransport' in altModule) {
-          StreamableHTTPClientTransport = (altModule as Record<string, unknown>).StreamableHTTPClientTransport as StreamableHTTPClientTransportConstructor
-        } else {
-          const errorMessage = '[Enhanced MCP] StreamableHTTPClientTransport not available in any known module path';
-          logger.error(errorMessage);
-          throw new Error(errorMessage.replace('[Enhanced MCP] ', '')); // Keep error message clean for user
+      const importPaths = [
+        '@modelcontextprotocol/sdk/client/streamableHttp',
+        '@modelcontextprotocol/sdk/client/stdio',
+        '@modelcontextprotocol/sdk'
+      ];
+      
+      let imported = false;
+      for (const importPath of importPaths) {
+        try {
+          const module = await eval(`import('${importPath}')`);
+          if (module?.StreamableHTTPClientTransport) {
+            StreamableHTTPClientTransport = module.StreamableHTTPClientTransport;
+            imported = true;
+            break;
+          }
+        } catch {
+          // Try next import path
         }
       }
+      
+      if (!imported) {
+        throw new Error('StreamableHTTPClientTransport not available in any known module path');
+      }
     } catch (importError) {
-      const errorMessage = `[Enhanced MCP] StreamableHTTPClientTransport not available or import failed (URL: ${config.url}): ${importError instanceof Error ? importError.message : String(importError)}. Ensure @modelcontextprotocol/sdk is properly installed.`;
-      logger.error(errorMessage, importError as Error);
-      throw new MCPClientError(errorMessage.replace('[Enhanced MCP] ', ''), 'INIT_ERROR');
+      const errorMessage = `StreamableHTTPClientTransport not available or import failed: ${importError instanceof Error ? importError.message : String(importError)}. Ensure @modelcontextprotocol/sdk is properly installed.`;
+      logger.error(`[Enhanced MCP] ${errorMessage}`, importError as Error);
+      throw new MCPClientError(errorMessage, 'IMPORT_ERROR');
     }
     
     const transport = new StreamableHTTPClientTransport(new URL(config.url), {
@@ -323,27 +575,49 @@ export async function createEnhancedStreamableHTTPMCPClient(
           ...config.headers
         }
       }
-    })
+    });
 
-    const mcpClient = await createMCPClient({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      transport: transport as any
-    })
+    const mcpClient = await withTimeout(
+      createMCPClient({
+        transport: transport as any,
+        onUncaughtError: (error) => {
+          logger.error(`[Enhanced MCP] Uncaught error in StreamableHTTP client:`, error);
+          globalMetricsCollector.recordError(serverId, 'uncaught_error', String(error));
+        }
+      }),
+      timeoutMs,
+      `StreamableHTTP client creation for ${config.url}`
+    );
 
-    // Get tools from the StreamableHTTP server
-    const tools = await mcpClient.tools()
+    const toolOptions = config.schemas ? { schemas: config.schemas } : undefined;
+    const tools = await withTimeout(
+      mcpClient.tools(toolOptions),
+      timeoutMs,
+      `tools discovery for ${config.url}`
+    );
     
-    // Wrap tools with metrics collection
-    const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
+    return { client: mcpClient, tools };
+  };
+
+  try {
+    const { client: mcpClient, tools } = await circuitBreaker.execute(
+      () => withRetry(createClient, retryConfig, `StreamableHTTP client for ${config.url}`),
+      `streamable-http-${serverId}`
+    );
     
-    logger.info(`[Enhanced MCP] Successfully connected to StreamableHTTP MCP server at ${config.url}`);
+    const enhancedTools = await wrapToolsWithEnhancedMetrics(serverId, tools, config.schemas);
+    
+    logger.info(`[Enhanced MCP] Successfully connected to StreamableHTTP MCP server at ${config.url}`, {
+      toolCount: Object.keys(tools).length,
+      schemaCount: config.schemas ? Object.keys(config.schemas).length : 0
+    });
     
     return {
       tools: enhancedTools,
       close: async () => {
         logger.info(`[Enhanced MCP] Closing StreamableHTTP client for URL: ${config.url}`);
         try {
-          await mcpClient.close();
+          await withTimeout(mcpClient.close(), 5000, `StreamableHTTP client close for ${config.url}`);
           logger.info(`[Enhanced MCP] StreamableHTTP client for ${config.url} closed successfully`);
         } catch (error) {
           logger.error(`[Enhanced MCP] Error closing StreamableHTTP client for ${config.url}:`, error as Error);
@@ -353,33 +627,32 @@ export async function createEnhancedStreamableHTTPMCPClient(
       healthCheck: async () => {
         logger.debug(`[Enhanced MCP] Performing health check for StreamableHTTP client: ${config.url}`);
         try {
-          const currentTools = await mcpClient.tools();
-          const isHealthy = typeof currentTools === 'object' && currentTools !== null;
-           if (!isHealthy) {
-             logger.warn(`[Enhanced MCP] StreamableHTTP health check failed for ${config.url}: mcpClient.tools() returned non-object or null.`);
-          }
-          return isHealthy;
-        } catch (hcError) {
-          logger.error(`[Enhanced MCP] StreamableHTTP health check failed for ${config.url}:`, hcError as Error);
+          return await circuitBreaker.execute(async () => {
+            const currentTools = await withTimeout(mcpClient.tools(), 5000, `health check for ${config.url}`);
+            return typeof currentTools === 'object' && currentTools !== null;
+          }, `health-check-streamable-http-${serverId}`);
+        } catch (error) {
+          logger.error(`[Enhanced MCP] StreamableHTTP health check failed for ${config.url}:`, error as Error);
           return false;
         }
-      }
+      },
+      circuitBreakerState: circuitBreaker.getState.bind(circuitBreaker)
     };
   } catch (error) {
-    // Errors from dynamic import are caught above and re-thrown as MCPClientError
-    // This catch block now primarily handles errors from createMCPClient, mcpClient.tools(), or wrapToolsWithMetrics
-    if (!(error instanceof MCPClientError)) { // Avoid double wrapping if error is already MCPClientError from import stage
-      logger.error(`[Enhanced MCP] Failed to create or configure StreamableHTTP client for ${config.url} (post-import):`, error as Error);
-      if (error instanceof Error) {
-        throw new MCPClientError(
-          `Failed to initialize StreamableHTTP MCP client for ${config.url} (post-import): ${error.message}`,
-          'INIT_ERROR'
-        );
-      }
-      throw new MCPClientError(`Unknown error during StreamableHTTP MCP client initialization for ${config.url} (post-import)`);
-    } else {
-      throw error; // Re-throw MCPClientError from import stage
+    if (error instanceof MCPClientError) {
+      throw error;
     }
+
+    logger.error(`[Enhanced MCP] Failed to create or configure StreamableHTTP client for ${config.url}:`, error as Error);
+    
+    if (error instanceof Error) {
+      throw new MCPConnectionError(
+        `Failed to initialize StreamableHTTP MCP client for ${config.url}: ${error.message}`,
+        'streamable-http'
+      );
+    }
+    
+    throw new MCPClientError(`Unknown error during StreamableHTTP MCP client initialization for ${config.url}`);
   }
 }
 
@@ -395,7 +668,6 @@ export async function createTypedMCPClient<T extends Record<string, z.ZodSchema>
     let client: MCPToolSet
     
     if ('url' in config) {
-      // Determine if it's SSE or StreamableHTTP by checking for sessionId
       if ('sessionId' in config) {
         client = await createEnhancedStreamableHTTPMCPClient((config as EnhancedStreamableHTTPConfig).clientName || 'typed-streamable-http-client', config as EnhancedStreamableHTTPConfig)
       } else {
@@ -405,12 +677,8 @@ export async function createTypedMCPClient<T extends Record<string, z.ZodSchema>
       client = await createEnhancedStdioMCPClient((config as EnhancedStdioConfig).clientName || 'typed-stdio-client', config as EnhancedStdioConfig)
     }
 
-    // If schemas provided, validate tools against them
     if (schemas) {
-      console.log('[Enhanced MCP] Validating tools against provided schemas')
-      
-      // This would validate the tools against the schemas
-      // Implementation depends on the actual tool format from MCP server
+      appLogger.mcp.info('[Enhanced MCP] Validating tools against provided schemas')
       const validatedTools = await validateToolsAgainstSchemas(client.tools, schemas)
       
       return {
@@ -433,21 +701,16 @@ export async function createTypedMCPClient<T extends Record<string, z.ZodSchema>
   }
 }
 
-/**
- * Validate MCP tools against Zod schemas
- */
 async function validateToolsAgainstSchemas<T extends Record<string, z.ZodSchema>>(
   tools: AISDKToolCollection,
   schemas: T
 ): Promise<AISDKToolCollection> {
   try {
-    // Validate each tool against its corresponding schema if available
-    console.log('[Enhanced MCP] Tool validation completed for', Object.keys(tools).length, 'tools')
+    appLogger.mcp.info('[Enhanced MCP] Tool validation completed for', Object.keys(tools).length, 'tools')
     
-    // For now, just log schema availability - actual validation would depend on tool structure
     for (const toolName of Object.keys(tools)) {
       if (schemas[toolName]) {
-        console.log(`[Enhanced MCP] Schema available for tool: ${toolName}`)
+        appLogger.mcp.debug(`[Enhanced MCP] Schema available for tool: ${toolName}`)
       }
     }
     
@@ -457,9 +720,6 @@ async function validateToolsAgainstSchemas<T extends Record<string, z.ZodSchema>
   }
 }
 
-/**
- * Factory function to create the appropriate client based on configuration
- */
 export async function createMCPClientFromConfig(
   serverId: string,
   config: EnhancedStdioConfig | EnhancedSSEConfig | EnhancedStreamableHTTPConfig
@@ -473,9 +733,6 @@ export async function createMCPClientFromConfig(
   }
 }
 
-/**
- * Helper function for backward compatibility with existing code
- */
 export async function loadMCPToolsFromLocalEnhanced(
   command: string,
   env: Record<string, string> = {},
@@ -487,12 +744,9 @@ export async function loadMCPToolsFromLocalEnhanced(
     clientName: 'piper-mcp-client',
     ...options
   };
-  return await createEnhancedStdioMCPClient(config.clientName, config);
+  return await createEnhancedStdioMCPClient(config.clientName || 'local-enhanced-client', config);
 }
 
-/**
- * Helper function for backward compatibility with existing code
- */
 export async function loadMCPToolsFromURLEnhanced(
   url: string,
   options: Partial<EnhancedSSEConfig> = {}
@@ -502,5 +756,5 @@ export async function loadMCPToolsFromURLEnhanced(
     clientName: 'piper-mcp-client',
     ...options
   };
-  return await createEnhancedSSEMCPClient(config.clientName, config)
+  return await createEnhancedSSEMCPClient(config.clientName || 'url-enhanced-client', config)
 } 
