@@ -167,13 +167,17 @@ export function ModelSelector({
   const trigger = (
     <Button
       variant="outline"
-      className={cn("dark:bg-secondary justify-between", className)}
+      size="sm"
+      className={cn(
+        "h-7 bg-background/50 hover:bg-background/80 border-border/40 text-xs font-medium justify-between min-w-[180px] transition-all duration-200",
+        className
+      )}
     >
       <div className="flex items-center gap-2">
-        {CurrentProviderIcon && <CurrentProviderIcon className="size-5" />} 
-        <span>{currentModel?.name || "Select Model"}</span>
+        {CurrentProviderIcon && <CurrentProviderIcon className="size-3" />} 
+        <span className="truncate">{currentModel?.name || "Select Model"}</span>
       </div>
-      <CaretDown className="size-4 opacity-50" />
+      <CaretDown className="size-3 opacity-50" />
     </Button>
   )
 

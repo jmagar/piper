@@ -75,7 +75,7 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
           <div />
           <div className="pointer-events-auto flex flex-1 items-center justify-center gap-2">
             <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="">
-              <TabsList>
+              <TabsList className="bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 h-12 p-1.5">
                 {[
                   { value: 'chat', label: 'Chat', Icon: MessageSquare },
                   { value: 'mcp', label: 'MCP', Icon: ToyBrick },
@@ -83,9 +83,13 @@ export function Header({ hasSidebar }: { hasSidebar: boolean }) {
                   { value: 'prompts', label: 'Prompts', Icon: TerminalSquare },
                   { value: 'files', label: 'Files', Icon: FolderOpen },
                 ].map(({ value, label, Icon }) => (
-                  <TabsTrigger key={value} value={value} className="px-2 md:px-3">
-                    <Icon className={`h-5 w-5 ${!isMobile ? 'md:mr-2' : ''}`} />
-                    {!isMobile && <span className="hidden md:inline">{label}</span>}
+                  <TabsTrigger 
+                    key={value} 
+                    value={value} 
+                    className="px-3 md:px-4 py-2 h-9 rounded-lg font-medium transition-all duration-200 hover:bg-accent/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:scale-[1.02] relative group"
+                  >
+                    <Icon className={`h-4 w-4 ${!isMobile ? 'md:mr-2' : ''} transition-transform group-data-[state=active]:scale-110`} />
+                    {!isMobile && <span className="hidden md:inline font-medium">{label}</span>}
                     {isMobile && <span className="sr-only">{label}</span>} {/* For accessibility on mobile */}
                   </TabsTrigger>
                 ))}

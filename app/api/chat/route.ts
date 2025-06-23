@@ -8,13 +8,11 @@ import {
   TextPart,
   CoreMessage,
   ImagePart,
-  ToolCallPart,
-  CoreAssistantMessage
+  ToolCallPart
 } from 'ai';
 import { prisma } from "@/lib/prisma";
 import { logUserMessage, validateAndTrackUsage } from "./api";
-import { saveFinalAssistantMessage } from "./db";
-import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger';
+import { aiSdkLogger, AiProvider, AiSdkOperation } from '@/lib/logger/ai-sdk-logger';
 import { appLogger, LogSource, LogLevel } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { orchestrateChatProcessing, ChatRequest } from './lib/chat-orchestration';
@@ -173,101 +171,7 @@ function transformPiperMessagesToCoreMessages(piperMessages: PiperMessage[]): Co
   });
 }
 
-function transformCoreMessagesToPiperMessages(
-  coreMessages: CoreMessage[],
-  finalAssistantMessageText?: string, // Optional: may be used to reconstruct the final assistant message
-  finalToolCalls?: ToolCallPart[] // Optional: for assistant messages with tool calls
-): PiperMessage[] {
-  return coreMessages.map((coreMsg: CoreMessage): PiperMessage | null => {
-    // @ts-expect-error - TS struggles with this comparison due to PiperMessage return type, but logic is sound.
-    if ((coreMsg as CoreMessage).role === 'data') {
-      appLogger.warn("[transformCoreMessagesToPiperMessages] Encountered 'data' role message, filtering out.", { coreMsg });
-      return null; // Filter out 'data' role messages
-    }
 
-    const piperMessage: Partial<PiperMessage> = {
-      id: uuidv4(), // PiperMessage expects an ID
-    };
-
-    // At this point, coreMsg.role is one of 'user', 'assistant', 'system', 'tool'
-    switch (coreMsg.role) {
-      case 'user':
-        piperMessage.role = 'user';
-        if (typeof coreMsg.content === 'string') {
-          piperMessage.content = coreMsg.content;
-        } else if (Array.isArray(coreMsg.content)) {
-          // Extract text parts, concatenate. Handle ImagePart as text placeholder for now.
-          piperMessage.content = coreMsg.content
-            .map(part => {
-              if (part.type === 'text') return part.text;
-              if (part.type === 'image') return '[Image Content]'; // Placeholder
-              // Other complex parts like FilePart could be handled here
-              return '';
-            })
-            .join('\n');
-        } else {
-          piperMessage.content = '[Unsupported user content type]';
-        }
-        break;
-      case 'assistant':
-        piperMessage.role = 'assistant';
-        // If finalAssistantMessageText is provided, use it directly for simplicity in this initial version
-        // More sophisticated logic would reconstruct from coreMsg.content if it's an array of parts
-        if (typeof coreMsg.content === 'string') {
-            piperMessage.content = coreMsg.content;
-        } else if (Array.isArray(coreMsg.content)) {
-            // Simple text concatenation for now, or use finalAssistantMessageText if available
-            piperMessage.content = finalAssistantMessageText || coreMsg.content.filter(p => p.type === 'text').map(p => (p as TextPart).text).join('');
-            // Handle tool_calls if present in coreMsg.content or finalToolCalls
-            const toolCallsFromContent = coreMsg.content.filter(p => p.type === 'tool-call') as ToolCallPart[];
-            const allToolCalls = finalToolCalls ? [...toolCallsFromContent, ...finalToolCalls] : toolCallsFromContent;
-            if (allToolCalls.length > 0) {
-                piperMessage.tool_calls = allToolCalls.map(tc => ({
-                    id: tc.toolCallId,
-                    type: 'function', // Assuming 'function' type as per PiperMessage schema
-                    function: {
-                        name: tc.toolName,
-                        arguments: JSON.stringify(tc.args),
-                    },
-                }));
-            }
-        } else {
-            piperMessage.content = finalAssistantMessageText || '[Unsupported assistant content type]';
-        }
-        break;
-      case 'system':
-        piperMessage.role = 'system';
-        piperMessage.content = typeof coreMsg.content === 'string' ? coreMsg.content : '[Unsupported system content]';
-        break;
-      case 'tool':
-        piperMessage.role = 'tool';
-        if (Array.isArray(coreMsg.content) && coreMsg.content.length > 0) {
-          const toolResultPart = coreMsg.content[0]; // Assuming first part is the tool-result
-          if (toolResultPart.type === 'tool-result') {
-            piperMessage.tool_call_id = toolResultPart.toolCallId;
-            piperMessage.name = toolResultPart.toolName; // 'name' in PiperMessage for tool_name
-            piperMessage.content = typeof toolResultPart.result === 'string' 
-              ? toolResultPart.result 
-              : JSON.stringify(toolResultPart.result);
-          } else {
-            piperMessage.content = '[Unsupported tool content part type]';
-          }
-        } else {
-          piperMessage.content = '[Unsupported tool content format]';
-        }
-        break;
-      default:
-        // Log unexpected roles. coreMsg is 'never' here if all known roles were handled.
-        // Provide a generic message for the transformed PiperMessage.
-        const unknownRole = (coreMsg as { role?: string }).role || 'unknown';
-        appLogger.warn(`[transformCoreMessagesToPiperMessages] Unexpected CoreMessage role: ${unknownRole}. Treating as user message.`, { coreMsg });
-        piperMessage.role = 'user';
-        piperMessage.content = `[Unexpected role: ${unknownRole}] Content unavailable due to unknown role.`;
-        break;
-    }
-    return piperMessage as PiperMessage;
-  }).filter(Boolean) as PiperMessage[]; // Filter out nulls (from 'data' role)
-}
 
 export async function POST(req: Request) {
   const correlationId = getCurrentCorrelationId();
@@ -316,10 +220,8 @@ export async function POST(req: Request) {
       operationId,
       messageCount: piperMessagesWithInitialIds.length,
       model: model,
-      userId: userId, // Assuming userIdFromRequest was meant to be userId for LogContext
-      metadata: {
-        agentIdFromRequest: agentId,
-      }
+      userId: userId,
+      agentIdFromRequest: agentId
     });
 
     const effectiveModel = model || 'anthropic/claude-3.5-sonnet';
@@ -338,10 +240,9 @@ export async function POST(req: Request) {
         model: effectiveModel,
         systemPrompt: systemPrompt || '',
         agentId: agentId,
-        userId: userId, 
       },
     });
-    appLogger.logSource(LogSource.DATABASE, LogLevel.INFO, `Chat upserted: ${chatId}`, { correlationId });
+    appLogger.logSource(LogSource.HTTP, LogLevel.INFO, `Chat upserted: ${chatId}`, { correlationId });
 
     await validateAndTrackUsage(); // Assuming this uses context or validatedRequest.data internally
 
@@ -359,9 +260,15 @@ export async function POST(req: Request) {
     // Transform PiperMessages to CoreMessages for the orchestration step
     const coreMessagesForOrchestration = transformPiperMessagesToCoreMessages(piperMessagesWithInitialIds);
 
+    // Convert CoreMessages to AI SDK Messages for orchestration (add IDs)
+    const messagesForOrchestration = coreMessagesForOrchestration.map(msg => ({
+      ...msg,
+      id: uuidv4()
+    }));
+
     const chatRequestPayload: ChatRequest = {
       chatId: chatId, 
-      messages: coreMessagesForOrchestration,
+      messages: messagesForOrchestration as ChatRequest['messages'], // Type assertion to match ChatRequest interface
       model: effectiveModel,
       systemPrompt: systemPrompt || '',
       agentId: agentId,
@@ -373,7 +280,11 @@ export async function POST(req: Request) {
       effectiveSystemPrompt,
       toolsToUse
     } = await orchestrateChatProcessing(chatRequestPayload);
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'Chat orchestration completed', { correlationId, messageCount: coreFinalMessagesForAIFromOrchestration.length, metadata: { hasTools: !!toolsToUse } });
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'Chat orchestration completed', { 
+      correlationId, 
+      messageCount: coreFinalMessagesForAIFromOrchestration.length, 
+      hasTools: !!toolsToUse 
+    });
 
     const originalLastUserMessage = piperMessagesWithInitialIds.filter((m) => m.role === 'user').pop();
     if (originalLastUserMessage) {
@@ -385,33 +296,13 @@ export async function POST(req: Request) {
           attachments: originalLastUserMessage.experimental_attachments,
         });
       } catch (logError) {
-        appLogger.error('Failed to log user message to DB', logError as Error, { correlationId });
+        appLogger.error('Failed to log user message to DB', { correlationId, error: logError });
       }
     }
 
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY || '',
       baseURL: process.env.OPENROUTER_BASE_URL || undefined,
-    });
-
-    let finalAssistantMessageText = '';
-    let finalToolCalls: ToolCallPart[] | undefined = undefined;
-    // let finalToolResults: ToolResultPart[] | undefined = undefined; // Not directly used in this flow before streamText
-
-    appLogger.info(`[POST /api/chat] Final CoreMessages for AI (coreFinalMessagesForAIFromOrchestration). Details:`, {
-      correlationId,
-      count: coreFinalMessagesForAIFromOrchestration.length,
-      effectiveSystemPromptLength: effectiveSystemPrompt?.length || 0,
-      toolsToUseCount: toolsToUse ? Object.keys(toolsToUse).length : 0,
-      // Logging full messages can be verbose, consider sampling or summarizing further if needed
-      sampleMessages: coreFinalMessagesForAIFromOrchestration.slice(0, 2).map(m => ({
-        role: m.role,
-        contentPreview: typeof m.content === 'string' 
-          ? m.content.substring(0,50) + '...' 
-          : Array.isArray(m.content) 
-            ? m.content.map(p => p.type + (p.type === 'text' ? `:${p.text.substring(0,20)}...` : '')).join(', ') 
-            : '[Non-string/array content]',
-      }))
     });
 
     const baseStreamConfig = {
@@ -425,18 +316,20 @@ export async function POST(req: Request) {
       ? { ...baseStreamConfig, tools: toolsToUse, maxSteps: TOKEN_CONFIG.MAX_STEPS, experimental_streamData: true }
       : { ...baseStreamConfig, experimental_streamData: true };
 
-    aiSdkLogger.startOperation({
-      provider: AiProvider.OPENROUTER,
-      model: effectiveModel,
-      operation: AiSdkOperation.STREAMING_START,
-      chatId: chatId,
-      agentId: agentId,
-      messageCount: coreFinalMessagesForAIFromOrchestration.length,
-      hasTools: !!toolsToUse,
-      systemPromptLength: effectiveSystemPrompt?.length || 0,
-      operationId: operationId,
-      correlationId: correlationId,
-    });
+    const operationId_aiSdk = aiSdkLogger.startOperation(
+      AiProvider.OPENROUTER,
+      effectiveModel,
+      AiSdkOperation.STREAMING_START,
+      {
+        chatId: chatId,
+        agentId: agentId,
+        messageCount: coreFinalMessagesForAIFromOrchestration.length,
+        hasTools: !!toolsToUse,
+        systemPromptLength: effectiveSystemPrompt?.length || 0,
+        operationId: operationId,
+        correlationId: correlationId,
+      }
+    );
 
     let streamError: Error | null = null;
     let result;
@@ -448,21 +341,11 @@ export async function POST(req: Request) {
       appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, 'Error calling streamText', { 
         correlationId, 
         error: streamError,
-        metadata: { 
-          agentIdFromRequest: agentId,
-          hasTools: !!toolsToUse
-        }
+        agentIdFromRequest: agentId,
+        hasTools: !!toolsToUse
       });
-      aiSdkLogger.logOperation({
-        status: StreamingState.ERROR,
-        provider: AiProvider.OPENROUTER,
-        model: model || 'unknown_model',
-        operation: AiSdkOperation.STREAMING_COMPLETE,
-        chatId: chatId || 'unknown_chat_id',
-        agentId: agentId,
-        error: error.message,
-        operationId: operationId,
-        correlationId: correlationId,
+      aiSdkLogger.endOperation(operationId_aiSdk, {
+        error: streamError,
       });
       throw error;
     }
@@ -472,95 +355,10 @@ export async function POST(req: Request) {
       throw streamError;
     }
 
-    // The rest of the stream processing logic (onText, onToolCall, etc.)
-    // and the final response generation will be handled by the ReadableStream piping.
-    // We need to construct the TransformStream and pipe the result through it.
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'AI Stream started successfully', { correlationId });
 
-    return result.toDataStreamResponse({
-      onStart: async () => {
-        appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'AI Stream started', { correlationId });
-      },
-      onText: async (textDelta: string) => {
-        finalAssistantMessageText += textDelta;
-        // Optional: log text deltas if needed for debugging, can be very verbose
-        // appLogger.debug('Stream received text delta', { correlationId, textDelta });
-      },
-      onToolCall: async (toolCall: ToolCallPart) => {
-        if (!finalToolCalls) finalToolCalls = [];
-        finalToolCalls.push(toolCall);
-        appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'Stream received tool call', { 
-          correlationId, 
-          toolCallId: toolCall.toolCallId, 
-          toolName: toolCall.toolName, 
-          argsPreview: JSON.stringify(toolCall.args).substring(0, 100) + '...'
-        });
-      },
-      // onToolResult: async (toolResult) => { // Not typically used on client-side stream consumption
-      //   if (!finalToolResults) finalToolResults = [];
-      //   finalToolResults.push(toolResult);
-      // },
-      onFinal: async () => {
-        appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'AI Stream finished', { correlationId });
-        aiSdkLogger.logOperation({
-          status: StreamingState.COMPLETED,
-          provider: AiProvider.OPENROUTER,
-          model: effectiveModel,
-          operation: AiSdkOperation.STREAMING_COMPLETE,
-          chatId: chatId,
-          agentId: agentId,
-          messageCount: coreFinalMessagesForAIFromOrchestration.length, // messages sent to AI
-          // durationMs, // This would require timing the operation
-          operationId: operationId,
-          correlationId: correlationId,
-        });
-
-        // Transform the final CoreMessage(s) from AI (reconstructed) back to PiperMessage for DB storage
-        // This requires reconstructing the full assistant message from finalAssistantMessageText and finalToolCalls
-        const finalAssistantCoreMessage: CoreAssistantMessage = {
-          role: 'assistant',
-          content: [], // Will be populated below
-        };
-        if (finalAssistantMessageText) {
-          (finalAssistantCoreMessage.content as Array<TextPart | ToolCallPart>).push({ type: 'text', text: finalAssistantMessageText });
-        }
-        if (finalToolCalls && finalToolCalls.length > 0) {
-          finalToolCalls.forEach(tc => (finalAssistantCoreMessage.content as Array<TextPart | ToolCallPart>).push(tc));
-        }
-        // If content is just a single text part, simplify it to string for CoreMessage
-        if (Array.isArray(finalAssistantCoreMessage.content) && 
-            finalAssistantCoreMessage.content.length === 1 && 
-            finalAssistantCoreMessage.content[0].type === 'text') {
-          finalAssistantCoreMessage.content = finalAssistantCoreMessage.content[0].text;
-        }
-
-        const piperAssistantMessageForDb = transformCoreMessagesToPiperMessages([finalAssistantCoreMessage])[0];
-
-        if (piperAssistantMessageForDb) {
-          try {
-            await saveFinalAssistantMessage({
-              chatId: chatId,
-              messageId: piperAssistantMessageForDb.id || uuidv4(), // id should be generated by transformCoreMessagesToPiperMessages
-              role: piperAssistantMessageForDb.role as 'assistant', // Ensure role is 'assistant'
-              content: piperAssistantMessageForDb.content,
-              toolCalls: piperAssistantMessageForDb.tool_calls, // Pass tool_calls if any
-              model: effectiveModel,
-              agentId: agentId,
-              userId: userId,
-              operationId: operationId,
-              correlationId: correlationId,
-            });
-          } catch (dbError) {
-            appLogger.error('Failed to save final assistant message to DB', dbError as Error, { correlationId });
-          }
-        } else {
-          appLogger.warn('Could not transform final assistant core message to PiperMessage for DB storage', { correlationId });
-        }
-      },
-      onToken: async () => {
-        // Optional: log token usage if needed for fine-grained tracking
-        // appLogger.debug('Stream received token', { correlationId, token });
-      },
-    });
+    // Return the data stream response directly
+    return result.toDataStreamResponse();
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Internal server error";

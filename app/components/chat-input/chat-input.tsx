@@ -240,7 +240,7 @@ export function ChatInput({
         />
       )}
 
-      <PromptInput className="relative">
+      <PromptInput className="relative bg-transparent border-border/30 shadow-none">
         <div className="flex flex-col gap-2 p-2">
           <div className="flex items-center gap-2 flex-wrap">
             {agentCommand.selectedAgent && (
@@ -265,27 +265,31 @@ export function ChatInput({
             )}
           </div>
 
-          <PromptInputTextarea
-            placeholder="Send a message..."
-            value={value}
-            onChange={e => agentCommand.handleInputChange(e.target.value)}
-            onKeyDown={agentCommand.handleKeyDown as (e: KeyboardEvent<HTMLTextAreaElement>) => void}
-            className="pr-24"
-            ref={textareaRef}
-            disabled={isSubmitting || !!agentCommand.pendingTool}
-            onPaste={handlePaste}
-          />
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex items-center">
+              <AttachMenu
+                onFileUploadAction={handleFileUploadForChat}
+                isUserAuthenticated={!!session?.user?.id}
+                model={currentModelId || MODELS[0].id}
+                onTriggerMentionAction={handleAttachMenuMentionTrigger}
+              />
+            </div>
+
+            <PromptInputTextarea
+              placeholder="Send a message..."
+              value={value}
+              onChange={e => agentCommand.handleInputChange(e.target.value)}
+              onKeyDown={agentCommand.handleKeyDown as (e: KeyboardEvent<HTMLTextAreaElement>) => void}
+              className="pl-14 pr-24 min-h-[44px] max-h-[200px]"
+              ref={textareaRef}
+              disabled={isSubmitting || !!agentCommand.pendingTool}
+              onPaste={handlePaste}
+            />
+          </div>
         </div>
 
         <PromptInputActions className="absolute bottom-2 right-2">
           <div className="flex items-center gap-2">
-            <AttachMenu
-              onFileUploadAction={handleFileUploadForChat}
-              isUserAuthenticated={!!session?.user?.id}
-              model={currentModelId || MODELS[0].id}
-              onTriggerMentionAction={handleAttachMenuMentionTrigger}
-            />
-
             {agentCommand.selectedAgent && noToolSupport && (
               <Tooltip>
                 <TooltipTrigger asChild>

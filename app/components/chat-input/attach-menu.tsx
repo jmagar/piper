@@ -108,7 +108,7 @@ export function AttachMenu({
           <Button
             size="sm"
             variant="secondary"
-            className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent opacity-50 min-h-[44px] min-w-[44px] sm:size-9"
+            className="border-border/30 bg-background/30 size-8 rounded-lg border opacity-50 flex items-center justify-center"
             type="button"
             disabled
             aria-label="Attach content (requires authentication)"
@@ -131,7 +131,7 @@ export function AttachMenu({
               <Button
                 size="sm"
                 variant="secondary"
-                className="border-border dark:bg-secondary size-9 rounded-full border bg-transparent min-h-[44px] min-w-[44px] sm:size-9"
+                className="border-border/30 bg-background/50 hover:bg-background/80 size-8 rounded-lg border transition-all duration-200 flex items-center justify-center"
                 type="button"
                 aria-label="Attach content"
               >

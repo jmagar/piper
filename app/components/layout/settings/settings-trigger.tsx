@@ -20,9 +20,12 @@ export function SettingsTrigger() {
   const isMobile = useBreakpoint(768)
 
   const trigger = (
-    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-      <User className="size-4" />
-      <span>Settings</span>
+    <DropdownMenuItem 
+      onSelect={(e) => e.preventDefault()}
+      className="rounded-lg hover:bg-accent/50 focus:bg-accent/50 transition-colors duration-150 cursor-pointer"
+    >
+      <User className="mr-3 h-4 w-4 text-muted-foreground" />
+      <span className="font-medium">Settings</span>
     </DropdownMenuItem>
   )
 

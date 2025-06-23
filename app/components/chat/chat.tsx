@@ -5,6 +5,8 @@ import { Conversation } from "@/app/components/chat/conversation"
 import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { useChatSession } from "@/app/providers/chat-session-provider"
 import { useUser } from "@/app/providers/user-provider"
+import { ModelSelector } from "@/components/common/model-selector/base"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
@@ -97,6 +99,7 @@ export function Chat() {
   const availableAgents = [...(curatedAgents || []), ...(userAgents || [])]
   const [fetchedTools, setFetchedTools] = useState<FetchedToolInfo[]>([]);
   const availableTools = fetchedTools;
+  const [mcpServers, setMcpServers] = useState<{ name: string; status: string; toolCount: number; transportType: string }[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
@@ -156,7 +159,7 @@ export function Chat() {
     setActiveChatId(chatId ?? null);
   }, [chatId, setActiveChatId]);
 
-  const { handleInputChange, handleDelete, handleEdit } =
+  const { handleInputChange, handleDelete, handleEdit, handleModelChange } =
     useChatHandlers({
       messages,
       setMessages,
@@ -215,9 +218,32 @@ export function Chat() {
       try {
         const tools = await getAllTools();
         setFetchedTools(tools);
+        
+        // Fetch MCP server information using existing metrics system
+        const metricsResponse = await fetch('/api/mcp-metrics');
+        if (metricsResponse.ok) {
+          const metricsData = await metricsResponse.json();
+          if (metricsData.success && metricsData.data?.metrics?.servers) {
+            const servers = metricsData.data.metrics.servers
+              .filter((server: { status: string }) => server.status === 'success') // Only show connected servers
+              .map((server: { 
+                label: string; 
+                status: string; 
+                toolsCount: number; 
+                transportType: string;
+              }) => ({
+                name: server.label,
+                status: 'Connected',
+                toolCount: server.toolsCount,
+                transportType: server.transportType
+              }));
+            setMcpServers(servers);
+          }
+        }
       } catch (error) {
         console.error("Error fetching available tools:", error);
         setFetchedTools([]); // Set to empty on error
+        setMcpServers([]);
         toast({ title: "Failed to load tools", status: "error" });
       }
     };
@@ -423,7 +449,7 @@ export function Chat() {
   return (
     <div
       className={cn(
-        "@container/main relative flex h-full flex-col items-center justify-end md:justify-center"
+        "@container/main relative flex h-full flex-col items-center justify-center"
       )}
     >
       {/* <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} /> */}
@@ -467,7 +493,7 @@ export function Chat() {
       </AnimatePresence>
       <motion.div
         className={cn(
-          "relative inset-x-0 bottom-0 z-50 mx-auto w-full max-w-3xl"
+          "relative mx-auto w-full max-w-3xl mt-8"
         )}
         layout="position"
         layoutId="chat-input-container"
@@ -477,21 +503,82 @@ export function Chat() {
           },
         }}
       >
-        <ChatInput
-          value={input}
-          onValueChange={handleInputChange}
-          onSend={submit}
-          onStop={stop}
-          onFileSelect={handleFileSelect}
-          isSubmitting={isSubmitting}
-          isStreaming={status === "streaming"}
-          availableAgents={availableAgents}
-          availableTools={availableTools}
-          prompts={prompts}
-          currentAgent={currentAgent?.id || null}
-          currentModelId={selectedModel}
-          session={session}
-        />
+        {/* Enhanced input container with unified styling */}
+        <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-4">
+          {/* Model selector and tools info row */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {selectedModel && (
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                )}
+                <ModelSelector
+                  availableModels={availableModels}
+                  selectedModelId={selectedModel}
+                  setSelectedModelId={handleModelChange}
+                  className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
+                  isUserAuthenticated={!!session?.user?.id}
+                />
+              </div>
+              {availableTools.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 cursor-help">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {availableTools.length} tool{availableTools.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
+                    <div className="space-y-2">
+                      <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
+                      {mcpServers.length > 0 ? (
+                        mcpServers.map((server, index) => (
+                          <div key={index} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              <span className="font-medium text-foreground">{server.name}</span>
+                              <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
+                            </div>
+                            <span className="text-muted-foreground">{server.toolCount} tools</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-muted-foreground">No servers connected</div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+          
+          {/* Subtle separator with gradient */}
+          <div className="relative">
+            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+            <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+          </div>
+          
+          {/* Chat input */}
+          <div className="relative">
+            <ChatInput
+              value={input}
+              onValueChange={handleInputChange}
+              onSend={submit}
+              onStop={stop}
+              onFileSelect={handleFileSelect}
+              isSubmitting={isSubmitting}
+              isStreaming={status === "streaming"}
+              availableAgents={availableAgents}
+              availableTools={availableTools}
+              prompts={prompts}
+              currentAgent={currentAgent?.id || null}
+              currentModelId={selectedModel}
+              session={session}
+            />
+          </div>
+        </div>
       </motion.div>
 
       <FeedbackWidget /> 
