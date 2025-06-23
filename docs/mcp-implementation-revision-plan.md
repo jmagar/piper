@@ -6,11 +6,11 @@
 
 This document identifies all files requiring modifications to implement the optimization suggestions from our comprehensive AI SDK v4 MCP research analysis. The revisions focus on:
 
-1. **AI SDK v4.2 Native Integration** - Upgrading to native MCP support
-2. **Schema-First Tool Definitions** - Implementing explicit schema patterns  
+1. **Enhanced Experimental MCP Integration** - Optimizing current experimental_createMCPClient usage
+2. **Schema-First Tool Definitions** - Implementing explicit schema patterns via tools() method
 3. **Connection Pooling & Circuit Breakers** - Enhanced resilience patterns
 4. **Advanced Metrics & Observability** - MCP-specific performance tracking
-5. **Type Safety Improvements** - Leveraging AI SDK v4.2 type system
+5. **Type Safety Improvements** - Leveraging schema-first approaches for better types
 
 ---
 
@@ -19,8 +19,8 @@ This document identifies all files requiring modifications to implement the opti
 ### 1. **lib/mcp/enhanced/client-factory.ts** (Priority: HIGH)
 **Current Size**: 19KB, 506 lines  
 **Required Modifications**:
-- Upgrade from `experimental_createMCPClient` to stable `createMCPClient` from AI SDK v4.2
-- Add schema-first tool definition support with explicit `schema` parameter
+- Enhance current `experimental_createMCPClient` usage with improved error handling
+- Add schema-first tool definition support with explicit `schemas` parameter in tools() method
 - Implement connection pooling configuration options
 - Add circuit breaker patterns for transport failure handling
 - Enhanced error handling with MCP-specific error types
@@ -29,27 +29,30 @@ This document identifies all files requiring modifications to implement the opti
 
 **Key Changes**:
 ```typescript
-// Current: experimental_createMCPClient
-import { createMCPClient } from "ai"; // v4.2+ stable API
+// Continue using experimental API (still experimental in current AI SDK)
+import { experimental_createMCPClient } from "ai";
 
-// Add schema-first definitions
-const client = await createMCPClient({
+// Add schema-first definitions via tools() method
+const client = await experimental_createMCPClient({
   transport: transport,
-  schema: explicitToolSchema, // New parameter
-  onError: enhancedErrorHandler,
-  connectionPool: poolConfig
+  onUncaughtError: enhancedErrorHandler,
+  // Connection pooling would be handled at transport level
+});
+
+const tools = await client.tools({
+  schemas: explicitToolSchemas // Schema-first approach
 });
 ```
 
 ### 2. **lib/mcp/enhanced/managed-client.ts** (Priority: HIGH)
 **Current Size**: 22KB, 467 lines  
 **Required Modifications**:
-- Integrate AI SDK v4.2 native client lifecycle management
-- Add schema-first tool registration and validation
-- Implement connection pooling integration
+- Enhance experimental MCP client lifecycle management
+- Add schema-first tool registration and validation via tools() schemas parameter
+- Implement connection pooling integration at transport layer
 - Add circuit breaker state management
 - Enhanced health check mechanisms with MCP-specific metrics
-- Resource cleanup improvements
+- Resource cleanup improvements for experimental API
 - Implement graceful degradation patterns
 
 ### 3. **lib/mcp/enhanced/types.ts** (Priority: HIGH)
@@ -92,11 +95,11 @@ const client = await createMCPClient({
 ### 6. **lib/mcp/load-mcp-from-local.ts** (Priority: MEDIUM)
 **Current Size**: 495B, 19 lines  
 **Required Modifications**:
-- Replace experimental API with stable AI SDK v4.2 API
-- Add schema-first tool loading
-- Implement proper error handling
-- Add connection pooling support
-- Enhanced resource cleanup
+- Enhance experimental API usage with better error handling
+- Add schema-first tool loading via tools() schemas parameter
+- Implement proper error handling and validation
+- Add connection pooling support at transport layer
+- Enhanced resource cleanup for experimental client
 
 ### 7. **lib/mcp/enhanced/config.ts** (Priority: MEDIUM)
 **Current Size**: 2.6KB, 93 lines  
@@ -311,8 +314,8 @@ const client = await createMCPClient({
 - **Lines of Code**: ~200KB of existing code to be enhanced
 - **Development Effort**: 6-8 weeks for full implementation
 - **Performance Improvement**: 40-60% based on research findings
-- **Type Safety**: Significant improvement with AI SDK v4.2 types
-- **Maintenance**: Reduced complexity with native MCP support
+- **Type Safety**: Significant improvement with schema-first tool definitions
+- **Maintenance**: Improved reliability with enhanced experimental MCP integration
 
 ---
 
@@ -324,4 +327,4 @@ const client = await createMCPClient({
 4. **Performance Monitoring**: Continuous benchmarking during implementation
 5. **Rollback Plan**: Maintain rollback capabilities at each phase
 
-This revision plan provides a comprehensive roadmap for upgrading your MCP implementation to leverage AI SDK v4.2's native capabilities while implementing best practices discovered in our research analysis.
+This revision plan provides a comprehensive roadmap for enhancing your MCP implementation to leverage the current experimental AI SDK MCP capabilities more effectively while implementing best practices discovered in our research analysis.

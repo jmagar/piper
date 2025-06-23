@@ -10,7 +10,7 @@ Based on comprehensive research of AI SDK v4's Model Context Protocol implementa
 
 ### 1. AI SDK v4.2 MCP Integration
 
-**Major Discovery**: AI SDK v4.2 (released March 2025) introduced native MCP client support through the `experimental_createMCPClient` function, representing a significant advancement in MCP adoption.
+**Current State**: AI SDK continues to provide MCP client support through the `experimental_createMCPClient` function, which remains experimental as of 2025, indicating ongoing development and iteration on the MCP integration.
 
 #### Core Implementation
 ```typescript
