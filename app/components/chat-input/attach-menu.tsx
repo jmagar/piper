@@ -74,28 +74,22 @@ export function AttachMenu({
   const isFileUploadAvailable = hasVisionSupport(model)
 
   const handleSectionSelect = (section: string) => {
-    console.log('[AttachMenu] handleSectionSelect called with section:', section);
     setIsOpen(false) // Close the dropdown
     
     switch (section) {
       case 'agents':
-        console.log('[AttachMenu] Selecting agents');
         onTriggerMentionAction('@agents/')
         break
       case 'tools':
-        console.log('[AttachMenu] Selecting tools');
         onTriggerMentionAction('@tools/')
         break
       case 'prompts':
-        console.log('[AttachMenu] Selecting prompts');
         onTriggerMentionAction('@prompts/')
         break
       case 'urls':
-        console.log('[AttachMenu] Selecting urls');
         onTriggerMentionAction('@url/')
         break
       case 'files':
-        console.log('[AttachMenu] Selecting files (handled by FileUpload component)');
         // File upload is handled by FileUpload component itself
         break
     }

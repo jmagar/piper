@@ -29,7 +29,7 @@ interface UnifiedSelectionModalProps {
   onTriggerFileBrowse?: () => void;
 }
 
-export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
+export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = React.memo(({
   isOpen,
   activeCommandType,
   searchTerm,
@@ -255,27 +255,7 @@ export const UnifiedSelectionModal: React.FC<UnifiedSelectionModalProps> = ({
         </ul>
       )}
 
-      {activeCommandType === 'url' && (
-        <div className="p-2">
-          {/* URL Input Field was here, but it's better handled by the input at the top when activeCommandType is 'url' */}
-          {/* Retaining the descriptive text or using the main input for URL entry */}
-          <input
-            type="text"
-            value={urlInputValue} 
-            onChange={(e) => setUrlInputValue(e.target.value)} 
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && urlInputValue.trim() && onUrlSubmit) {
-                e.preventDefault();
-                onUrlSubmit(urlInputValue.trim());
-              }
-            }}
-            placeholder="Enter or paste URL and press Enter"
-            className="w-full p-2 border rounded bg-background text-foreground placeholder-muted-foreground focus:ring-1 focus:ring-ring"
-            autoFocus
-          />
-          <p className="text-xs text-muted-foreground mt-1.5">Submit a URL to include its content as context.</p>
-        </div>
-      )}
+
     </div>
   );
-};
+});

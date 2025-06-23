@@ -117,7 +117,8 @@ export function ChatInput({
 
   const handleFileUploadForChat = (files: File[]) => {
     if (files.length > 0) {
-      console.log("Files selected for chat:", files);
+      // Files processed for chat upload
+      onFileSelect(files[0]); // Process first file
     }
   };
 
@@ -154,21 +155,37 @@ export function ChatInput({
 
   const noToolSupport = !availableModels.find(model => model.id === selectedModelId)?.tools.length
 
+  // Optimized model fetching - fetch tools once and reuse
   useEffect(() => {
     const fetchModels = async () => {
-      const modelsDataPromises = MODELS.map(async (model: ModelConfig) => {
-        const tools = await getAllTools(); // getAllTools is now async
-        return {
+      try {
+        // Fetch tools once instead of per model to avoid redundant API calls
+        const tools = await getAllTools();
+        
+        // Map models with the shared tools data
+        const modelsData = MODELS.map((model: ModelConfig) => ({
           id: model.id,
           name: model.name,
           description: model.description || "",
-          tools: tools, // tools is FetchedToolInfo[] after await
+          tools: tools, // Reuse the same tools data
           providerId: model.providerId,
           contextWindow: model.contextWindow,
-        };
-      });
-      const modelsData = await Promise.all(modelsDataPromises);
-      setAvailableModels(modelsData);
+        }));
+        
+        setAvailableModels(modelsData);
+      } catch (error) {
+        console.error('Failed to fetch models and tools:', error);
+        // Fallback to models without tools data
+        const fallbackModelsData = MODELS.map((model: ModelConfig) => ({
+          id: model.id,
+          name: model.name,
+          description: model.description || "",
+          tools: [], // Empty tools array as fallback
+          providerId: model.providerId,
+          contextWindow: model.contextWindow,
+        }));
+        setAvailableModels(fallbackModelsData);
+      }
     }
 
     fetchModels()

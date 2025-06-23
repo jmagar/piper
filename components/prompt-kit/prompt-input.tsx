@@ -102,14 +102,46 @@ function PromptInputTextarea({
   const { value, setValue, maxHeight, onSubmit, disabled } = usePromptInput()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Optimized auto-sizing with debouncing and ResizeObserver
   useEffect(() => {
     if (disableAutosize || !textareaRef.current) return
 
-    // Reset height to auto first to properly measure scrollHeight
-    textareaRef.current.style.height = "auto"
+    const textarea = textareaRef.current
+    let timeoutId: ReturnType<typeof setTimeout>
 
-    // Set the height based on content
-    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    const resizeTextarea = () => {
+      // Use requestAnimationFrame to avoid layout thrashing
+      requestAnimationFrame(() => {
+        textarea.style.height = "auto"
+        textarea.style.height = `${textarea.scrollHeight}px`
+      })
+    }
+
+    // Debounce the resize operation to reduce frequency
+    const debouncedResize = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(resizeTextarea, 50) // 50ms debounce
+    }
+
+    // Initial resize
+    resizeTextarea()
+
+    // Use ResizeObserver if available for better performance
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(debouncedResize)
+      resizeObserver.observe(textarea)
+      
+      return () => {
+        resizeObserver.disconnect()
+        if (timeoutId) clearTimeout(timeoutId)
+      }
+    } else {
+      // Fallback to debounced resize on value change
+      debouncedResize()
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId)
+      }
+    }
   }, [value, disableAutosize])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
