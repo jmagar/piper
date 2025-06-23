@@ -58,7 +58,7 @@ const tools = await client.tools({
 ### 3. **lib/mcp/enhanced/types.ts** (Priority: HIGH)
 **Current Size**: 7.9KB, 315 lines  
 **Required Modifications**:
-- Add AI SDK v4.2 native MCP types
+- Add enhanced experimental MCP client types
 - Define schema-first tool definition interfaces
 - Add connection pooling configuration types
 - Circuit breaker state and configuration types
@@ -69,7 +69,7 @@ const tools = await client.tools({
 ### 4. **lib/mcp/mcpManager.ts** (Priority: HIGH)
 **Current Size**: 27KB, 598 lines  
 **Required Modifications**:
-- Upgrade to AI SDK v4.2 MCP client integration
+- Enhance experimental MCP client integration and management
 - Implement connection pool management
 - Add circuit breaker coordination across services
 - Enhanced server discovery and health monitoring
@@ -84,7 +84,7 @@ const tools = await client.tools({
 ### 5. **lib/mcp/enhanced/connection-pool.ts** (Priority: MEDIUM)
 **Current Size**: 5.4KB, 196 lines  
 **Required Modifications**:
-- Upgrade to AI SDK v4.2 connection management patterns
+- Enhance experimental MCP connection management patterns
 - Implement proper connection pooling algorithms
 - Add connection health monitoring
 - Circuit breaker integration
@@ -104,7 +104,7 @@ const tools = await client.tools({
 ### 7. **lib/mcp/enhanced/config.ts** (Priority: MEDIUM)
 **Current Size**: 2.6KB, 93 lines  
 **Required Modifications**:
-- Add AI SDK v4.2 configuration options
+- Add enhanced experimental MCP configuration options
 - Schema-first configuration parameters
 - Connection pooling settings
 - Circuit breaker configuration
@@ -118,7 +118,7 @@ const tools = await client.tools({
 ### 8. **lib/mcp/enhanced/metrics-collector.ts** (Priority: HIGH)
 **Current Size**: 10KB, 346 lines  
 **Required Modifications**:
-- Add AI SDK v4.2 specific performance metrics
+- Add experimental MCP client specific performance metrics
 - Schema validation performance tracking
 - Connection pool utilization metrics
 - Circuit breaker state monitoring
@@ -129,7 +129,7 @@ const tools = await client.tools({
 ### 9. **lib/mcp/modules/status-manager.ts** (Priority: MEDIUM)
 **Current Size**: 9.4KB, 304 lines  
 **Required Modifications**:
-- AI SDK v4.2 client status integration
+- Enhanced experimental MCP client status integration
 - Connection pool health status
 - Circuit breaker state reporting
 - Enhanced error categorization
@@ -140,7 +140,7 @@ const tools = await client.tools({
 **Current Size**: 9.4KB, 306 lines  
 **Required Modifications**:
 - Schema-first tool registration and validation
-- AI SDK v4.2 tool integration patterns
+- Enhanced experimental MCP tool integration patterns
 - Enhanced tool metadata collection
 - Performance optimization for tool discovery
 - Type safety improvements
@@ -153,7 +153,7 @@ const tools = await client.tools({
 ### 11. **lib/mcp/modules/service-registry.ts** (Priority: MEDIUM)
 **Current Size**: 5.6KB, 203 lines  
 **Required Modifications**:
-- AI SDK v4.2 service integration
+- Enhanced experimental MCP service integration
 - Connection pool service registration
 - Circuit breaker service coordination
 - Enhanced service discovery
@@ -162,7 +162,7 @@ const tools = await client.tools({
 ### 12. **lib/mcp/modules/polling-manager.ts** (Priority: MEDIUM)
 **Current Size**: 9.9KB, 277 lines  
 **Required Modifications**:
-- Optimized polling strategies for AI SDK v4.2
+- Optimized polling strategies for experimental MCP integration
 - Connection pool-aware polling
 - Circuit breaker integration
 - Enhanced error handling and recovery
@@ -171,7 +171,7 @@ const tools = await client.tools({
 ### 13. **lib/mcp/abort-controller.ts** (Priority: LOW)
 **Current Size**: 1.8KB, 64 lines  
 **Required Modifications**:
-- AI SDK v4.2 abort signal integration
+- Enhanced experimental MCP abort signal integration
 - Connection pool cancellation support
 - Circuit breaker integration
 - Enhanced timeout management
@@ -182,7 +182,7 @@ const tools = await client.tools({
 
 ### 14. **app/api/mcp/test-connection/route.ts** (Priority: MEDIUM)
 **Required Modifications**:
-- Upgrade to AI SDK v4.2 connection testing
+- Enhance experimental MCP connection testing
 - Schema validation in connection tests
 - Connection pool testing capabilities
 - Circuit breaker test scenarios
@@ -190,7 +190,7 @@ const tools = await client.tools({
 
 ### 15. **app/api/mcp-config/route.ts** (Priority: MEDIUM)
 **Required Modifications**:
-- AI SDK v4.2 configuration API integration
+- Enhanced experimental MCP configuration API integration
 - Schema-first configuration validation
 - Connection pooling configuration endpoints
 - Circuit breaker configuration management
@@ -201,7 +201,7 @@ const tools = await client.tools({
 
 ### 16. **app/dashboard/manager.tsx** (Priority: LOW)
 **Required Modifications**:
-- Add AI SDK v4.2 configuration options to UI
+- Add enhanced experimental MCP configuration options to UI
 - Schema-first configuration forms
 - Connection pool status display
 - Circuit breaker state visualization
@@ -209,7 +209,7 @@ const tools = await client.tools({
 
 ### 17. **app/components/mcp-servers/modules/utils/serverTypes.ts** (Priority: LOW)
 **Required Modifications**:
-- Add AI SDK v4.2 configuration types
+- Add enhanced experimental MCP configuration types
 - Schema-first configuration interfaces
 - Connection pooling configuration types
 - Circuit breaker configuration types
@@ -221,7 +221,7 @@ const tools = await client.tools({
 ### 18. **lib/mcp/enhanced/tool-repair.ts** (Priority: MEDIUM)
 **Current Size**: 11KB, 393 lines  
 **Required Modifications**:
-- AI SDK v4.2 tool repair mechanisms
+- Enhanced experimental MCP tool repair mechanisms
 - Schema-first validation and repair
 - Enhanced error recovery patterns
 - Type safety improvements
@@ -229,7 +229,7 @@ const tools = await client.tools({
 ### 19. **lib/mcp/enhanced/multimodal-handler.ts** (Priority: LOW)
 **Current Size**: 14KB, 446 lines  
 **Required Modifications**:
-- AI SDK v4.2 multimodal integration
+- Enhanced experimental MCP multimodal integration
 - Schema-first multimodal tool definitions
 - Enhanced resource management
 - Performance optimizations
@@ -237,7 +237,7 @@ const tools = await client.tools({
 ### 20. **lib/mcp/modules/large-response-processor.ts** (Priority: LOW)
 **Current Size**: 7.8KB, 258 lines  
 **Required Modifications**:
-- AI SDK v4.2 response processing optimization
+- Enhanced experimental MCP response processing optimization
 - Connection pool integration for large responses
 - Enhanced memory management
 - Performance improvements
@@ -249,7 +249,7 @@ const tools = await client.tools({
 ### 21. **lib/mcp/enhanced/index.ts** (Priority: MEDIUM)
 **Current Size**: 3.5KB, 142 lines  
 **Required Modifications**:
-- Export AI SDK v4.2 enhanced APIs
+- Export enhanced experimental MCP APIs
 - Schema-first tool exports
 - Connection pooling exports
 - Circuit breaker pattern exports
@@ -257,7 +257,7 @@ const tools = await client.tools({
 ### 22. **lib/mcp/modules/index.ts** (Priority: LOW)
 **Current Size**: 802B, 40 lines  
 **Required Modifications**:
-- Update module exports for AI SDK v4.2 integration
+- Update module exports for enhanced experimental MCP integration
 - Add new optimization module exports
 
 ---
@@ -266,7 +266,7 @@ const tools = await client.tools({
 
 ### 23. **lib/schemas/mcp-config.schema.ts** (Priority: MEDIUM)
 **Required Modifications**:
-- Add AI SDK v4.2 configuration schema
+- Add enhanced experimental MCP configuration schema
 - Schema-first tool definition schemas
 - Connection pooling configuration schema
 - Circuit breaker configuration schema
@@ -274,7 +274,7 @@ const tools = await client.tools({
 
 ### 24. **prisma/schema.prisma** (Priority: MEDIUM)
 **Required Modifications**:
-- Add AI SDK v4.2 metrics tables
+- Add enhanced experimental MCP metrics tables
 - Schema-first tool metadata storage
 - Connection pool metrics storage
 - Circuit breaker state persistence
