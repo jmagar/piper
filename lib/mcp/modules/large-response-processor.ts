@@ -35,7 +35,7 @@ export function processLargeToolResponse(toolName: string, result: unknown): unk
     return result;
   }
 
-  appLogger.mcp.info(`[Large Response Processor] Processing large ${toolName} response: ${result.length} characters`);
+      appLogger.mcp?.info(`[Large Response Processor] Processing large ${toolName} response: ${result.length} characters`);
 
   try {
     if (toolName === 'fetch' || toolName.includes('fetch')) {
@@ -46,7 +46,7 @@ export function processLargeToolResponse(toolName: string, result: unknown): unk
       return processGenericLargeResponse(toolName, result);
     }
   } catch (error) {
-    appLogger.mcp.warn(`[Large Response Processor] Error processing large response for ${toolName}:`, error);
+    appLogger.mcp?.warn(`[Large Response Processor] Error processing large response for ${toolName}: ${error}`);
     // Fallback to truncated version
     return createTruncatedResponse(toolName, result, 'processing error');
   }

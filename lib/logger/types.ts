@@ -69,6 +69,7 @@ export interface HttpLogEntry extends LogEntry {
 // MCP-specific logging types
 export enum McpOperation {
   INITIALIZE = 'initialize',
+  GET_TOOLS = 'get_tools',
   CAPABILITY_NEGOTIATION = 'capability_negotiation',
   TOOL_CALL = 'tool_call',
   TOOL_RESULT = 'tool_result',
@@ -172,6 +173,14 @@ export interface LogContext {
   agentIdFromRequest?: string;
   hasTools?: boolean;
   coreMsg?: CoreMessage; // Added for detailed message logging
+  errorMessage?: string; // Error message for logging
+  errorStack?: string; // Error stack trace
+  originalMessageCount?: number; // Original message count before processing
+  originalLength?: number; // Original content length
+  sanitizedLength?: number; // Sanitized content length
+  contentPreview?: string; // Preview of content for debugging
+  arrayLength?: number; // Array length for array content
+  contentType?: string; // Content type for debugging
 }
 
 // Logger configuration types

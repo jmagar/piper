@@ -93,7 +93,7 @@ export class ServerStatusManager {
 
       await redisCacheManager.setServerStatus(serverKey, infoToCache);
     } catch (error: unknown) {
-      appLogger.mcp.error(`[Status Manager] Error updating cache for ${serviceLabel}:`, error instanceof Error ? error.message : String(error));
+              appLogger.mcp?.error(`[Status Manager] Error updating cache for ${serviceLabel}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -184,7 +184,7 @@ export class ServerStatusManager {
 
       return combinedFetchedData;
     } catch (error: unknown) {
-      appLogger.mcp.error(`[Status Manager] Error getting status from service ${serviceLabel}:`, error instanceof Error ? error.message : String(error));
+      appLogger.mcp?.error(`[Status Manager] Error getting status from service ${serviceLabel}: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }

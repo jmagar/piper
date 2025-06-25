@@ -3,7 +3,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { 
   getAppConfig,
   validateServerConfig,
-} from '@/lib/mcp/enhanced/config';
+  invalidateConfigCache
+} from '@/lib/mcp/enhanced/cached-config';
 import { mcpManager } from '@/lib/mcp/mcpManager';
 import { ServerConfigEntry } from '@/lib/mcp/enhanced/types';
 import { promises as fs } from 'fs';
@@ -13,7 +14,7 @@ const CONFIG_DIR = process.env.CONFIG_DIR || '/config';
 const CONFIG_FILE_PATH = path.join(CONFIG_DIR, 'config.json');
 
 // Helper function to read the raw config file
-async function readRawConfigFile(): Promise<any> {
+async function readRawConfigFile(): Promise<{ mcpServers: Record<string, ServerConfigEntry> }> {
   try {
     const rawConfig = await fs.readFile(CONFIG_FILE_PATH, 'utf-8');
     return JSON.parse(rawConfig);
@@ -25,9 +26,11 @@ async function readRawConfigFile(): Promise<any> {
 }
 
 // Helper function to write the config file
-async function writeConfigFile(config: any): Promise<void> {
+async function writeConfigFile(config: { mcpServers: Record<string, ServerConfigEntry> }): Promise<void> {
   try {
     await fs.writeFile(CONFIG_FILE_PATH, JSON.stringify(config, null, 2), 'utf-8');
+    // Invalidate cache after writing
+    await invalidateConfigCache();
   } catch (error) {
     console.error('Error writing config file for API:', error);
     throw new Error('Failed to write configuration file.');
@@ -37,9 +40,10 @@ async function writeConfigFile(config: any): Promise<void> {
 export async function GET() {
   // TODO: Implement GET to list all server configurations
   try {
-    const appConfig = getAppConfig();
+    const appConfig = await getAppConfig();
     return NextResponse.json(appConfig.mcpServers || {});
   } catch (error) {
+    console.error('Error in GET /api/mcp/config:', error);
     return NextResponse.json({ error: 'Failed to get MCP configurations' }, { status: 500 });
   }
 }

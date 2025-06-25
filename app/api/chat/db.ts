@@ -19,38 +19,34 @@ type ContentPart = {
   details?: unknown[]
 }
 
-type Message = {
-  role: "user" | "assistant" | "system" | "data" | "tool" | "tool-call"
-  content: string | null | ContentPart[]
-  reasoning?: string
+// Define a more specific type for toolCalls instead of any
+type ToolCall = {
+  id: string
+  name: string
+  args: Record<string, unknown>
+  result?: unknown
 }
-
-const DEFAULT_STEP = 0
 
 interface SaveMessageParams {
   chatId: string;
   messageId: string;
   role: 'assistant'; // Assuming it's always assistant for this function
   content: string | null | ContentPart[];
-  toolCalls?: any; // Adjust type as per actual structure if available
+  toolCalls?: ToolCall[];
   model?: string;
   agentId?: string;
   userId?: string;
   operationId?: string;
   correlationId?: string;
-  // Add other relevant fields from the call in route.ts if needed for processing here
-  // For now, focusing on what's used in prisma.message.create or useful for context
 }
 
 export async function saveFinalAssistantMessage(params: SaveMessageParams) {
-  const { chatId, messageId, role, content, toolCalls, model, agentId, userId, operationId, correlationId } = params;
+  const { chatId, messageId, role, content } = params;
+  // Note: toolCalls, model, agentId, userId, operationId, correlationId are available in params
+  // but not used in current implementation - they're kept for future enhancement
 
-  // This simplified processing logic needs to be replaced with the robust original logic
-  // adapted to use `params.content` and `params.toolCalls` instead of a `messages` array.
-  // The original logic correctly built up `textParts` and `parts` (now `processedParts`).
-  // For now, this is a placeholder to make the function syntactically valid.
   let finalPlainText = "";
-  const processedParts: ContentPart[] = []; // Use const if not reassigned, but items are pushed. Linter might complain.
+  const processedParts: ContentPart[] = [];
 
   if (typeof content === 'string') {
     finalPlainText = content;
@@ -76,7 +72,6 @@ export async function saveFinalAssistantMessage(params: SaveMessageParams) {
   // TODO: The original logic that iterated `messages` and populated `parts`, `toolMap`, and `textParts`
   // needs to be carefully adapted here to work from `params.content` and `params.toolCalls`.
   // The current simplified version above is NOT a complete replacement for that logic.
-
 
   try {
     await prisma.message.create({

@@ -16,6 +16,7 @@ import { globalMetricsCollector } from './metrics-collector';
 import { createMCPClientFromConfig } from './client-factory';
 import { validateServerConfig } from './config';
 import { z } from 'zod';
+import { redisCacheManager } from '@/lib/mcp/modules';
 
 /**
  * Managed MCP Client that handles the lifecycle of an MCP client, including initialization,
@@ -272,6 +273,7 @@ export class ManagedMCPClient {
     displayName: string;
     serverKey: string;
     transportType: string;
+    healthStatus?: { isHealthy: boolean; lastChecked: number };
   }> {
     // Ensure initialization is triggered if pending and not yet started
     if (this.clientInitializationStatus === 'pending' && !this.initializationPromise) {
@@ -287,6 +289,9 @@ export class ManagedMCPClient {
       }
     }
     
+    // Get cached health check result for faster status queries
+    const cachedHealthCheck = await redisCacheManager.getHealthCheckResult(this.serverKey);
+    
     return {
       status: this.clientInitializationStatus === 'pending' && this.initializationPromise ? 'initializing' : this.clientInitializationStatus,
       error: this.clientInitializationError?.message,
@@ -295,15 +300,54 @@ export class ManagedMCPClient {
       serverKey: this.serverKey,
       // Ensure transport is defined before accessing type, provide a fallback if not (though status would likely be 'error')
       transportType: this.config.transport?.type || 'unknown',
+      healthStatus: cachedHealthCheck ? { 
+        isHealthy: cachedHealthCheck.isHealthy, 
+        lastChecked: cachedHealthCheck.timestamp 
+      } : undefined,
     };
   }
 
   public async getTools(): Promise<AISDKToolCollection | null> {
-    await this.initializationPromise; // Ensure initialization is complete
-    if (this.clientInitializationStatus === 'success' && this.enhancedClient) {
-      return this.enhancedClient.tools;
+    this.logger.info(`[MCP-${this.displayName}] getTools called. Current status: ${this.clientInitializationStatus}`);
+    try {
+      // Wait for the initialization to complete, one way or another.
+      if (this.initializationPromise) {
+        await this.initializationPromise;
+      }
+
+      // After awaiting, check the final status.
+      if (this.clientInitializationStatus !== 'success' || !this.enhancedClient) {
+        this.logger.warn(
+          `[MCP-${this.displayName}] Cannot retrieve tools because client initialization failed or is not complete.`,
+          { status: this.clientInitializationStatus, error: this.clientInitializationError?.message }
+        );
+        // Log the failure to the dedicated MCP logger as well
+        mcpLogger.logServerLifecycle(McpOperation.GET_TOOLS, this.serverKey, {
+          error: this.clientInitializationError || new Error('Client not initialized'),
+          metadata: { status: 'failure', reason: 'Client initialization was not successful' }
+        });
+        return null;
+      }
+
+      const tools = this.enhancedClient.tools;
+      if (!tools || Object.keys(tools).length === 0) {
+        this.logger.info(`[MCP-${this.displayName}] No tools found or tools object is empty.`);
+        mcpLogger.logServerLifecycle(McpOperation.GET_TOOLS, this.serverKey, { metadata: { status: 'success', toolCount: 0 } });
+        return {}; // Return empty object for consistency if no tools, but not an error.
+      }
+
+      this.logger.info(`[MCP-${this.displayName}] Successfully retrieved ${Object.keys(tools).length} tools.`);
+      mcpLogger.logServerLifecycle(McpOperation.GET_TOOLS, this.serverKey, { metadata: { status: 'success', toolCount: Object.keys(tools).length } });
+      return tools;
+    } catch (error) {
+      const toolError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`[MCP-${this.displayName}] An unexpected error occurred in getTools.`, toolError);
+      mcpLogger.logServerLifecycle(McpOperation.GET_TOOLS, this.serverKey, {
+        error: toolError,
+        metadata: { status: 'failure', reason: 'Unexpected error during tool retrieval' }
+      });
+      return null; // Ensure null is returned on any catastrophic failure
     }
-    return null;
   }
 
   public async getTypedTools<T extends Record<string, z.ZodSchema>>(
@@ -375,6 +419,10 @@ export class ManagedMCPClient {
         await globalMetricsCollector.recordServerError(this.serverKey);
       }
     }
+    
+    // Clear cached health check results when closing/re-initializing
+    await redisCacheManager.clearHealthCheckResult(this.serverKey);
+    
     this.clientInitializationStatus = 'pending'; // Reset status
     this.enhancedClient = null;
     this.initializationPromise = null; // Allow re-initialization
@@ -414,6 +462,12 @@ export class ManagedMCPClient {
     this.logger.debug(`[MCP-${this.displayName}] Performing health check...`, { serverKey: this.serverKey });
     try {
       const isHealthy = await this.enhancedClient.healthCheck();
+      
+      // Cache the health check result with appropriate TTL
+      // Success: cache for 2 minutes, Failure: cache for 30 seconds for faster retry
+      const cacheTtl = isHealthy ? 120 : 30;
+      await redisCacheManager.setHealthCheckResult(this.serverKey, isHealthy, cacheTtl);
+      
       if (isHealthy) {
         this.logger.debug(`[MCP-${this.displayName}] Health check successful.`, { serverKey: this.serverKey });
         this.healthCheckFailures = 0; // Reset failures on success
@@ -443,6 +497,10 @@ export class ManagedMCPClient {
     } catch (error: unknown) {
       this.healthCheckFailures++;
       const healthCheckError = error instanceof Error ? error : new Error(String(error));
+      
+      // Cache the health check failure with short TTL for faster retry
+      await redisCacheManager.setHealthCheckResult(this.serverKey, false, 30);
+      
       this.logger.error(
         `[MCP-${this.displayName}] Error during health check (Attempt ${this.healthCheckFailures}/${ManagedMCPClient.MAX_HEALTH_CHECK_FAILURES}).`,
         healthCheckError,

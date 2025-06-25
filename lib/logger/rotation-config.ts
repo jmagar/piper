@@ -95,11 +95,7 @@ export class LogRotationManager {
     const oldConfig = { ...this.config };
     this.config = { ...this.config, ...newConfig };
     
-    appLogger.info('Log rotation configuration updated', {
-      oldConfig,
-      newConfig: this.config,
-      source: 'log-rotation'
-    });
+    appLogger.info('Log rotation configuration updated');
 
     // Restart cleanup if needed
     if (this.config.cleanupEnabled !== oldConfig.cleanupEnabled) {
@@ -150,7 +146,7 @@ export class LogRotationManager {
       const now = new Date();
       if (now.getHours() === 2) {
         this.performCleanup().catch(error => {
-          appLogger.error('Error during scheduled log cleanup', error);
+          appLogger.error('Error during scheduled log cleanup', { error });
         });
       }
     };
@@ -158,10 +154,7 @@ export class LogRotationManager {
     // Check every hour
     this.cleanupInterval = setInterval(runCleanup, 60 * 60 * 1000);
     
-    appLogger.info('Log cleanup scheduled', {
-      retentionDays: this.config.retentionDays,
-      source: 'log-rotation'
-    });
+    appLogger.info('Log cleanup scheduled');
   }
 
   /**
@@ -172,9 +165,7 @@ export class LogRotationManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = undefined;
       
-      appLogger.info('Log cleanup stopped', {
-        source: 'log-rotation'
-      });
+      appLogger.info('Log cleanup stopped');
     }
   }
 
@@ -217,22 +208,14 @@ export class LogRotationManager {
         }
       }
 
-      appLogger.info('Log cleanup completed', {
-        deletedFiles: deletedFiles.length,
-        totalSizeKB: Math.round(totalSize / 1024),
-        retentionDays: this.config.retentionDays,
-        errors: errors.length,
-        source: 'log-rotation'
-      });
+      appLogger.info(`Log cleanup completed - deleted ${deletedFiles.length} files`);
 
       return { deletedFiles, totalSize, errors };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       errors.push(`Cleanup failed: ${errorMessage}`);
       
-      appLogger.error('Log cleanup failed', error as Error, {
-        source: 'log-rotation'
-      });
+      appLogger.error('Log cleanup failed', { error: error as Error });
 
       return { deletedFiles, totalSize, errors };
     }
@@ -294,7 +277,7 @@ export class LogRotationManager {
         config: this.getConfig(),
       };
     } catch (error) {
-      appLogger.error('Failed to get rotation stats', error as Error);
+      appLogger.error('Failed to get rotation stats', { error: error as Error });
       
       return {
         totalFiles: 0,
@@ -311,18 +294,12 @@ export class LogRotationManager {
    * Force log rotation for all active log files
    */
   public async forceRotation(): Promise<void> {
-    appLogger.info('Forcing log rotation', {
-      timestamp: new Date().toISOString(),
-      source: 'log-rotation'
-    });
+    appLogger.info('Forcing log rotation');
 
     // This would typically be handled by Winston's daily rotate file transport
     // For manual rotation, we could implement file moving logic here
     // For now, we'll just log the action
-    appLogger.info('Log rotation completed', {
-      timestamp: new Date().toISOString(),
-      source: 'log-rotation'
-    });
+    appLogger.info('Log rotation completed');
   }
 
   /**
@@ -330,9 +307,7 @@ export class LogRotationManager {
    */
   public shutdown(): void {
     this.stopCleanup();
-    appLogger.info('Log rotation manager shutdown', {
-      source: 'log-rotation'
-    });
+    appLogger.info('Log rotation manager shutdown');
   }
 }
 

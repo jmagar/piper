@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    appLogger.error("[Enhance Prompt] Error enhancing prompt:", error)
+    appLogger.error("[Enhance Prompt] Error enhancing prompt:", { 
+      error: error instanceof Error ? error : new Error(String(error))
+    })
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

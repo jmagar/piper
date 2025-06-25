@@ -1,6 +1,7 @@
 import { Message as MessageAISDK, CoreMessage, ToolSet } from "ai";
 import { getCombinedMCPToolsForAISDK, getManagedServersInfo } from "@/lib/mcp/mcpManager";
 import { reportMCPError } from "@/lib/mcp/enhanced-integration";
+import { toolCollectionManager } from "@/lib/mcp/modules";
 import { prisma } from "@/lib/prisma";
 import { appLogger } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
@@ -18,6 +19,7 @@ import {
   FileMention // Assuming FileMention type is exported from tool-mention
 } from "@/app/types/tool-mention";
 import { truncateToolOutput } from "./token-management";
+import { mentionCacheManager } from "@/lib/mcp/modules/mention-cache-manager";
 
 // =============================================================================
 // CONFIGURATION
@@ -45,7 +47,7 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
     return messages;
   }
 
-  appLogger.debug(`[processToolMentions] Found ${toolMentions.length} tool mentions to process`, { correlationId: getCurrentCorrelationId(), count: toolMentions.length });
+  appLogger.debug(`[processToolMentions] Found ${toolMentions.length} tool mentions to process`, { correlationId: getCurrentCorrelationId(), messageCount: toolMentions.length });
 
   // Get available MCP tools to find full tool IDs
   const serversInfo = await getManagedServersInfo();
@@ -65,14 +67,14 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
 
   const processedMessages = [...messages];
   const toolExecutionPromises = toolMentions.map(async (mention) => {
-    appLogger.debug(`[processToolMentions] Preparing tool for execution: ${mention.toolName || 'unknown'}`, { correlationId: getCurrentCorrelationId(), toolName: mention.toolName });
+    appLogger.debug(`[processToolMentions] Preparing tool for execution: ${mention.toolName || 'unknown'}`, { correlationId: getCurrentCorrelationId(), originalToolName: mention.toolName });
     const matchingTool = availableTools.find(tool => tool.name === mention.toolName);
 
     if (!matchingTool) {
       appLogger.warn(`[processToolMentions] Tool not found: ${mention.toolName || 'unknown'}`, {
         correlationId: getCurrentCorrelationId(),
-        toolName: mention.toolName,
-        availableTools: availableTools.map(t => t.name)
+        originalToolName: mention.toolName,
+        args: { availableTools: availableTools.map(t => t.name) }
       });
       return {
         type: 'error' as const,
@@ -81,12 +83,44 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
       };
     }
 
-    const toolFunction = combinedTools[matchingTool.fullId];
+    let toolFunction = combinedTools[matchingTool.fullId];
+    
+    // FALLBACK: If tool not in optimized selection, load all tools as fallback
     if (!toolFunction || typeof toolFunction.execute !== 'function') {
-      appLogger.warn(`[processToolMentions] Tool function not available or not executable: ${matchingTool.fullId}`, {
+      appLogger.info(`[processToolMentions] Tool ${matchingTool.fullId} not in optimized selection, falling back to full tool loading`, {
         correlationId: getCurrentCorrelationId(),
-        toolId: matchingTool.fullId,
-        availableCombinedTools: Object.keys(combinedTools)
+        toolCallId: matchingTool.fullId,
+        messageCount: Object.keys(combinedTools).length
+      });
+      
+      try {
+        // Get ALL available tools as fallback
+        const allTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+        toolFunction = allTools[matchingTool.fullId];
+        
+        if (toolFunction && typeof toolFunction.execute === 'function') {
+          // Add to current collection for future use in this conversation
+          combinedTools[matchingTool.fullId] = toolFunction;
+          appLogger.info(`[processToolMentions] Successfully loaded missing tool via fallback: ${matchingTool.fullId}`, {
+            correlationId: getCurrentCorrelationId(),
+            toolCallId: matchingTool.fullId
+          });
+        }
+      } catch (fallbackError) {
+        appLogger.error(`[processToolMentions] Fallback tool loading failed for ${matchingTool.fullId}`, {
+          correlationId: getCurrentCorrelationId(),
+          toolCallId: matchingTool.fullId,
+          error: fallbackError
+        });
+      }
+    }
+    
+    // Final check after fallback attempt
+    if (!toolFunction || typeof toolFunction.execute !== 'function') {
+      appLogger.warn(`[processToolMentions] Tool function not available even after fallback: ${matchingTool.fullId}`, {
+        correlationId: getCurrentCorrelationId(),
+        toolCallId: matchingTool.fullId,
+        args: { availableCombinedTools: Object.keys(combinedTools) }
       });
       return {
         type: 'error' as const,
@@ -98,8 +132,8 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
     try {
       appLogger.info(`[processToolMentions] Executing tool: ${matchingTool.fullId}`, {
         correlationId: getCurrentCorrelationId(),
-        toolId: matchingTool.fullId,
-        parameters: mention.parameters
+        toolCallId: matchingTool.fullId,
+        args: mention.parameters
       });
 
       const result = await toolFunction.execute(mention.parameters, {
@@ -111,12 +145,12 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
       const fullContent = JSON.stringify(result, null, 2);
       appLogger.debug(`[processToolMentions] Full tool output for '${mention.toolName || 'unknown'}'`, {
         correlationId,
-        toolName: mention.toolName || 'unknown',
-        outputLength: fullContent.length,
+        originalToolName: mention.toolName || 'unknown',
+        args: { outputLength: fullContent.length }
       });
 
       const processedContent = truncateToolOutput(fullContent, mention.toolName || 'unknown', correlationId);
-      appLogger.info(`[processToolMentions] Tool ${matchingTool.fullId} executed successfully`, { correlationId: getCurrentCorrelationId(), toolId: matchingTool.fullId });
+      appLogger.info(`[processToolMentions] Tool ${matchingTool.fullId} executed successfully`, { correlationId: getCurrentCorrelationId(), toolCallId: matchingTool.fullId });
       
       return {
         type: 'success' as const,
@@ -126,7 +160,7 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
     } catch (error) {
       appLogger.error(`[processToolMentions] Error executing tool ${matchingTool.fullId}`, {
         correlationId: getCurrentCorrelationId(),
-        toolId: matchingTool.fullId,
+        toolCallId: matchingTool.fullId,
         error
       });
 
@@ -215,13 +249,37 @@ export async function processUrlMentions(messages: MessageAISDK[]): Promise<Mess
     return messages;
   }
 
-  appLogger.debug(`[processUrlMentions] Found ${urlMentions.length} URL mentions to process`, { correlationId: getCurrentCorrelationId(), count: urlMentions.length });
+  appLogger.debug(`[processUrlMentions] Found ${urlMentions.length} URL mentions to process`, { correlationId: getCurrentCorrelationId(), messageCount: urlMentions.length });
 
   const allTools = await getCombinedMCPToolsForAISDK();
-  const fetchTool: ToolSet[string] | undefined = allTools['fetch_fetch']; // Assuming serverKey 'fetch' and toolName 'fetch'
+  let fetchTool: ToolSet[string] | undefined = allTools['fetch_fetch']; // Assuming serverKey 'fetch' and toolName 'fetch'
+
+  // FALLBACK: If fetch tool not in optimized selection, load all tools as fallback
+  if (!fetchTool || typeof fetchTool.execute !== 'function') {
+    appLogger.info('[processUrlMentions] Fetch tool not in optimized selection, falling back to full tool loading', {
+      correlationId: getCurrentCorrelationId(),
+      messageCount: Object.keys(allTools).length
+    });
+    
+    try {
+      const allAvailableTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+      fetchTool = allAvailableTools['fetch_fetch'];
+      
+      if (fetchTool && typeof fetchTool.execute === 'function') {
+        appLogger.info('[processUrlMentions] Successfully loaded fetch tool via fallback', {
+          correlationId: getCurrentCorrelationId()
+        });
+      }
+    } catch (fallbackError) {
+      appLogger.error('[processUrlMentions] Fallback tool loading failed for fetch tool', {
+        correlationId: getCurrentCorrelationId(),
+        error: fallbackError
+      });
+    }
+  }
 
   if (!fetchTool || typeof fetchTool.execute !== 'function') {
-    appLogger.warn('[processUrlMentions] Fetch tool (fetch_fetch) not available or not executable.', { correlationId: getCurrentCorrelationId() });
+    appLogger.warn('[processUrlMentions] Fetch tool (fetch_fetch) not available even after fallback.', { correlationId: getCurrentCorrelationId() });
     const updatedMessages = [...messages];
     if (updatedMessages.length > 0) {
       const currentLastMessage = updatedMessages[updatedMessages.length - 1];
@@ -232,15 +290,22 @@ export async function processUrlMentions(messages: MessageAISDK[]): Promise<Mess
         role: 'assistant',
         content: 'The URL fetching tool is currently unavailable. Cannot process URL mentions.'
       });
-      appLogger.info(`[processFileMentions] Finished processing. Output Messages. Attachments (first 50 chars + length):`, {
-    correlationId,
-    updatedMessages: updatedMessages.map(m => ({
-      id: m.id,
-      role: m.role,
-      content: typeof m.content === 'string' ? m.content.substring(0,100) + (m.content.length > 100 ? '...' : '') : '[Non-string content]',
-      experimental_attachments: m.experimental_attachments?.map(att => ({ contentType: att.contentType, name: att.name, content: typeof att.content === 'string' ? `${att.content.substring(0, 50)}[...len:${att.content.length}]` : `[type:${typeof att.content}]` }))
-    }))
-  });
+      const correlationId = getCurrentCorrelationId();
+      appLogger.info(`[processUrlMentions] Finished processing. Output Messages. Attachments (first 50 chars + length):`, {
+        correlationId,
+        args: {
+          updatedMessages: updatedMessages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: typeof m.content === 'string' ? m.content.substring(0,100) + (m.content.length > 100 ? '...' : '') : '[Non-string content]',
+            experimental_attachments: m.experimental_attachments?.map(att => ({ 
+              contentType: att.contentType, 
+              name: att.name, 
+              url: att.url 
+            }))
+          }))
+        }
+      });
   return updatedMessages;
     }
     return messages; // Should not happen if urlMentions.length > 0, but good for safety
@@ -248,27 +313,45 @@ export async function processUrlMentions(messages: MessageAISDK[]): Promise<Mess
 
   const urlProcessingPromises = urlMentions.map(async (mention) => {
     try {
-      appLogger.info(`[processUrlMentions] Fetching URL: ${mention.url}`, { correlationId: getCurrentCorrelationId(), url: mention.url });
+      // Check cache first for URL content
+      const cachedContent = await mentionCacheManager.getCachedUrlContent(mention.url);
       
-      // Ensure fetchTool.execute is callable before invoking (already checked, but for TS in map)
-      const result = await fetchTool.execute!({ url: mention.url, max_length: PROCESSING_CONFIG.MAX_URL_CONTENT_LENGTH }, {
-        toolCallId: `tool-call-fetch-${Date.now()}-${Math.random()}`,
-        messages: messages as CoreMessage[] // Pass existing messages for context if tool needs it
-      });
+      let contentToInject: string;
+      
+      if (cachedContent) {
+        // Cache HIT - use cached content
+        contentToInject = cachedContent;
+        appLogger.info(`[processUrlMentions] Using cached content for URL: ${mention.url}`, { 
+          correlationId: getCurrentCorrelationId(), 
+          url: mention.url.substring(0, 50) + '...'
+        });
+      } else {
+        // Cache MISS - fetch URL content
+        appLogger.info(`[processUrlMentions] Fetching URL: ${mention.url}`, { correlationId: getCurrentCorrelationId(), url: mention.url });
+        
+        // Ensure fetchTool.execute is callable before invoking (already checked, but for TS in map)
+        const result = await fetchTool.execute!({ url: mention.url, max_length: PROCESSING_CONFIG.MAX_URL_CONTENT_LENGTH }, {
+          toolCallId: `tool-call-fetch-${Date.now()}-${Math.random()}`,
+          messages: messages as CoreMessage[] // Pass existing messages for context if tool needs it
+        });
 
-      const correlationId = getCurrentCorrelationId() || 'unknown';
-      let contentToInject = "Could not extract content.";
+        if (typeof result === 'string') {
+          contentToInject = result;
+        } else if (result && typeof result === 'object') {
+          contentToInject = processUrlFetchResult(result, mention.url);
+        } else {
+          contentToInject = "Could not extract content.";
+        }
 
-      if (typeof result === 'string') {
-        contentToInject = result;
-      } else if (result && typeof result === 'object') {
-        contentToInject = processUrlFetchResult(result, mention.url);
+        // Cache the fetched content for future requests
+        await mentionCacheManager.setCachedUrlContent(mention.url, contentToInject);
+        
+        appLogger.info(`[processUrlMentions] Successfully fetched and processed URL: ${mention.url}`, { correlationId: getCurrentCorrelationId(), url: mention.url });
       }
 
-      // Truncate here, after specific processing by processUrlFetchResult
+      // Truncate here, after specific processing or cache retrieval
+      const correlationId = getCurrentCorrelationId() || 'unknown';
       const processedContent = truncateToolOutput(contentToInject, `content from ${mention.url}`, correlationId);
-      
-      appLogger.info(`[processUrlMentions] Successfully fetched and processed URL: ${mention.url}`, { correlationId: getCurrentCorrelationId(), url: mention.url });
       
       return {
         type: 'success' as const,
@@ -360,7 +443,7 @@ function processUrlFetchResult(fetchResult: object, url: string): string {
       appLogger.warn(`[MessageProcessing] processUrlFetchResult: Chunked response for ${url} had sections, but they were not in the expected {title: string, content: string} format. Using summary.`, { 
         correlationId: getCurrentCorrelationId(), 
         url,
-        sections: fetchResult.sections // Log the actual sections for diagnostics
+        args: { sections: fetchResult.sections } // Log the actual sections for diagnostics
       });
       return `${summaryText}\n\n(Content sections found but were not in the expected format. Summary provided.)`;
     } else {
@@ -377,7 +460,7 @@ function processUrlFetchResult(fetchResult: object, url: string): string {
     appLogger.warn(`[MessageProcessing] processUrlFetchResult: Received unexpected object structure from fetch tool for URL ${url}. Stringifying result.`, { 
       correlationId: getCurrentCorrelationId(), 
       url, 
-      fetchResult // Log the entire result for diagnostics
+      args: { fetchResult } // Log the entire result for diagnostics
     });
     // Attempt to find a common 'error' or 'message' property
     if ('error' in fetchResult && typeof (fetchResult as {error: unknown}).error === 'string') {
@@ -416,12 +499,18 @@ export async function processFileMentions(messages: MessageAISDK[]): Promise<Mes
   const correlationId = getCurrentCorrelationId();
   appLogger.info(`[processFileMentions] Starting processing. Input Messages. Attachments (first 50 chars + length):`, {
     correlationId,
-    messages: messages.map(m => ({
-      id: m.id,
-      role: m.role,
-      content: typeof m.content === 'string' ? m.content.substring(0,100) + (m.content.length > 100 ? '...' : '') : '[Non-string content]',
-      experimental_attachments: m.experimental_attachments?.map(att => ({ contentType: att.contentType, name: att.name, content: typeof att.content === 'string' ? `${att.content.substring(0, 50)}[...len:${att.content.length}]` : `[type:${typeof att.content}]` }))
-    }))
+    args: {
+      messages: messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content.substring(0,100) + (m.content.length > 100 ? '...' : '') : '[Non-string content]',
+        experimental_attachments: m.experimental_attachments?.map(att => ({ 
+          contentType: att.contentType, 
+          name: att.name, 
+          url: att.url 
+        }))
+      }))
+    }
   });
   const lastMessageIndex = messages.length - 1;
   if (lastMessageIndex < 0) return messages;
@@ -434,15 +523,33 @@ export async function processFileMentions(messages: MessageAISDK[]): Promise<Mes
   }
 
   const fileMentions = parseFileMentions(updatedLastMessage.content);
-  appLogger.debug(`[processFileMentions] Parsed fileMentions from last user message`, { correlationId, fileMentions });
+  appLogger.debug(`[processFileMentions] Parsed fileMentions from last user message`, { correlationId, args: { fileMentions } });
   if (fileMentions.length === 0) {
     return messages;
   }
 
   appLogger.info(`[processFileMentions] Found ${fileMentions.length} file mentions to process`, { 
     correlationId: getCurrentCorrelationId(), 
-    count: fileMentions.length 
+    operationId: `file_mentions_${fileMentions.length}_found`
   });
+
+  // Check cache first for file processing results
+  const filePaths = fileMentions.map(mention => mention.path);
+  const cachedAttachments = await mentionCacheManager.getCachedFileProcessing(filePaths);
+  
+  if (cachedAttachments) {
+    // Cache HIT - use cached results
+    updatedLastMessage.experimental_attachments = cachedAttachments;
+    const cleanedContent = stripFileMentions(updatedLastMessage.content);
+    updatedLastMessage.content = cleanedContent || '(File mentions processed)';
+    
+    updatedMessages[lastMessageIndex] = updatedLastMessage;
+    appLogger.info(`[processFileMentions] Used cached file processing results`, { 
+      correlationId: getCurrentCorrelationId(),
+      operationId: `file_cache_hit_${filePaths.length}_files`
+    });
+    return updatedMessages;
+  }
 
   // Ensure experimental_attachments array exists
   if (!updatedLastMessage.experimental_attachments) {
@@ -475,16 +582,22 @@ export async function processFileMentions(messages: MessageAISDK[]): Promise<Mes
       const resolvedFullLocalPath = path.resolve(UPLOADS_DIR, mention.path);
 
       appLogger.info('[FileMentionDebug] Processing image mention', {
-        cwd: process.cwd(),
-        UPLOADS_DIR,
-        mentionPath: mention.path,
-        resolvedUploadsDir,
-        resolvedFullLocalPath,
+        correlationId: getCurrentCorrelationId(),
+        args: {
+          cwd: process.cwd(),
+          UPLOADS_DIR,
+          mentionPath: mention.path,
+          resolvedUploadsDir,
+          resolvedFullLocalPath,
+        }
       });
 
       // Security check: ensure the resolved path is within the uploads directory
       if (!resolvedFullLocalPath.startsWith(resolvedUploadsDir)) {
-        appLogger.warn(`[FileMentionDebug] Security check failed. Path traversal attempt?`, { resolvedFullLocalPath, resolvedUploadsDir });
+        appLogger.warn(`[FileMentionDebug] Security check failed. Path traversal attempt?`, { 
+          correlationId: getCurrentCorrelationId(),
+          args: { resolvedFullLocalPath, resolvedUploadsDir }
+        });
         attachment.url = appUrl ? new URL(`/api/files/view/${mention.path}`, appUrl).toString() : `/api/files/view/${mention.path}`;
         attachment.name = `Error accessing ${fileName}`;
       } else {
@@ -514,9 +627,12 @@ export async function processFileMentions(messages: MessageAISDK[]): Promise<Mes
           }
 
           appLogger.error('[FileMentionDebug] Error reading file for base64 conversion.', {
-            filePath: resolvedFullLocalPath,
-            errorCode: errorCode,
-            errorMessage: errorMessage,
+            correlationId: getCurrentCorrelationId(),
+            args: {
+              filePath: resolvedFullLocalPath,
+              errorCode: errorCode,
+              errorMessage: errorMessage,
+            }
           });
           // Fallback to URL if file reading fails
           attachment.url = appUrl ? new URL(`/api/files/view/${mention.path}`, appUrl).toString() : `/api/files/view/${mention.path}`;
@@ -530,18 +646,28 @@ export async function processFileMentions(messages: MessageAISDK[]): Promise<Mes
 
     appLogger.debug(`[processFileMentions] Created attachment object for mention`, {
       correlationId,
-      mentionPath: mention.path,
-      attachmentObject: {
-        contentType: attachment.contentType,
-        name: attachment.name,
-        url: typeof attachment.url === 'string' ? `${attachment.url.substring(0, 70)}[...len:${attachment.url.length}]` : `[type:${typeof attachment.url}]`,
-        // Do not log full base64 'content' here, URL is enough for this log level
+      args: {
+        mentionPath: mention.path,
+        attachmentObject: {
+          contentType: attachment.contentType,
+          name: attachment.name,
+          url: typeof attachment.url === 'string' ? `${attachment.url.substring(0, 70)}[...len:${attachment.url.length}]` : `[type:${typeof attachment.url}]`,
+          // Do not log full base64 'content' here, URL is enough for this log level
+        }
       }
     });
     return attachment;
   });
 
   updatedLastMessage.experimental_attachments = await Promise.all(attachmentsPromises);
+
+  // Cache the processed file results for future requests
+  const attachmentsForCache = updatedLastMessage.experimental_attachments?.map(att => ({
+    contentType: att.contentType || 'application/octet-stream',
+    name: att.name || 'unnamed',
+    url: att.url
+  })) || [];
+  await mentionCacheManager.setCachedFileProcessing(filePaths, attachmentsForCache);
 
   // Update the message content to remove file mentions
   const cleanedContent = stripFileMentions(updatedLastMessage.content);
@@ -570,11 +696,47 @@ export async function processPromptMentions(
     return { processedMessages: messages, enhancedSystemPrompt: '' };
   }
 
-  appLogger.debug(`[processPromptMentions] Found ${promptMentions.length} prompt mentions`, { correlationId: getCurrentCorrelationId(), count: promptMentions.length });
+  appLogger.debug(`[processPromptMentions] Found ${promptMentions.length} prompt mentions`, { correlationId: getCurrentCorrelationId(), operationId: `prompt_mentions_${promptMentions.length}_found` });
+
+  // Check cache first for prompt content
+  const promptIdentifiers = promptMentions.map(mention => ({
+    promptId: mention.promptId,
+    promptName: mention.promptName
+  }));
+  
+  const cachedPromptContent = await mentionCacheManager.getCachedPromptContent(promptIdentifiers);
+  
+  if (cachedPromptContent) {
+    // Cache HIT - use cached results
+    const cleanedContent = stripPromptMentions(lastMessage.content);
+    const processedMessages = [...messages];
+    
+    if (cleanedContent) {
+      processedMessages[processedMessages.length - 1] = {
+        ...lastMessage,
+        content: cleanedContent,
+      };
+    } else {
+      processedMessages[processedMessages.length - 1] = {
+        ...lastMessage,
+        content: 'I would like you to apply the mentioned rules to our conversation.'
+      };
+    }
+
+    appLogger.info(`[processPromptMentions] Used cached prompt content`, { 
+      correlationId: getCurrentCorrelationId(),
+      operationId: `prompt_cache_hit_${promptIdentifiers.length}_prompts`
+    });
+    
+    return { 
+      processedMessages, 
+      enhancedSystemPrompt: cachedPromptContent.enhancedSystemPrompt 
+    };
+  }
 
   let allPrompts: { id: string; name: string; system_prompt: string | null; }[] = [];
   try {
-    // Fetch all mentioned prompts in a single query to avoid N+1 problem
+    // Cache MISS - fetch prompts from database
     allPrompts = await prisma.prompt.findMany({
       where: {
         OR: [
@@ -614,19 +776,26 @@ export async function processPromptMentions(
     const prompt = allPrompts.find(p => p.id === mention.promptId || p.name === mention.promptName);
 
     if (prompt) {
-      appLogger.debug(`[processPromptMentions] Found prompt: ${prompt.name}`, { correlationId: getCurrentCorrelationId(), promptName: prompt.name, slug: mention.promptSlug });
+      appLogger.debug(`[processPromptMentions] Found prompt: ${prompt.name}`, { 
+        correlationId: getCurrentCorrelationId(), 
+        args: { promptName: prompt.name, slug: mention.promptSlug }
+      });
       if (prompt.system_prompt) {
         promptContents.push(prompt.system_prompt);
       }
     } else {
       appLogger.warn(`[processPromptMentions] Prompt not found for mention: ${mention.promptSlug}`, {
         correlationId: getCurrentCorrelationId(),
-        slug: mention.promptSlug
+        args: { slug: mention.promptSlug }
       });
     }
   }
 
   const enhancedSystemPrompt = promptContents.join('\n\n---\n\n');
+  
+  // Cache the processed prompt results for future requests
+  await mentionCacheManager.setCachedPromptContent(promptIdentifiers, enhancedSystemPrompt, allPrompts);
+  
   const cleanedContent = stripPromptMentions(lastMessage.content);
 
   const processedMessages = [...messages];
@@ -644,6 +813,6 @@ export async function processPromptMentions(
     };
   }
 
-  appLogger.info(`[processPromptMentions] Enhanced system prompt with ${promptContents.length} prompt(s)`, { correlationId: getCurrentCorrelationId(), count: promptContents.length });
+  appLogger.info(`[processPromptMentions] Enhanced system prompt with ${promptContents.length} prompt(s)`, { correlationId: getCurrentCorrelationId(), operationId: `prompt_processing_complete_${promptContents.length}_prompts` });
   return { processedMessages, enhancedSystemPrompt };
 }

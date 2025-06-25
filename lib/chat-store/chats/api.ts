@@ -6,6 +6,7 @@ import { serverFetch } from "../../server-fetch"
 import {
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "../../routes"
+import { appLogger } from "@/lib/logger"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -243,11 +244,24 @@ export async function createNewChat(
 
   const data = await response.json()
   
+  appLogger.info("Chat creation API response received", {
+    operationId: "createNewChat"
+  })
+  
   if (!data.chat) {
+    appLogger.error("Chat creation failed: No chat in API response", {
+      operationId: "createNewChat",
+      model
+    })
     throw new Error("Failed to create chat: No chat returned")
   }
   
-  const newChat = data.chat as Chat
+  // Ensure the chat object has all required properties for the frontend
+  const newChat: Chat = {
+    ...data.chat,
+    messages: data.chat.messages || [],
+    attachments: data.chat.attachments || [],
+  }
   
   const currentChats = await getCachedChats()
   currentChats.unshift(newChat)

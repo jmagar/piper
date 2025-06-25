@@ -43,6 +43,7 @@ export async function logUserMessage({
         await prisma.attachment.create({
           data: {
             chatId,
+            messageId: message.id, // Add the required messageId
             fileName: attachment.name || 'unknown',
             fileType: attachment.contentType || 'unknown',
             fileSize: 0, // Will be updated when file is actually saved

@@ -70,8 +70,7 @@ export async function GET(request: NextRequest) {
     
     appLogger.info('Log export requested', {
       correlationId,
-      filters,
-      format
+      args: { filters, format }
     })
     
     // Read and filter logs
@@ -83,8 +82,7 @@ export async function GET(request: NextRequest) {
     if (logs.length > 10000) {
       appLogger.warn('Log export truncated due to size limit', {
         correlationId,
-        originalCount: logs.length,
-        exportedCount: 10000
+        args: { originalCount: logs.length, exportedCount: 10000 }
       })
     }
     
@@ -115,9 +113,7 @@ export async function GET(request: NextRequest) {
     
     appLogger.info('Log export completed', {
       correlationId,
-      exportedCount: limitedLogs.length,
-      format,
-      sizeBytes: content.length
+      args: { exportedCount: limitedLogs.length, format, sizeBytes: content.length }
     })
     
     return new NextResponse(content, {
@@ -131,7 +127,10 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    appLogger.error('Error in log export API', error as Error, { correlationId })
+    appLogger.error('Error in log export API', { 
+      correlationId,
+      error: error as Error 
+    })
     
     return NextResponse.json(
       { error: 'Failed to export logs' },

@@ -1,4 +1,4 @@
-import { MCPServerConfigFromUI, MCPTransportSSE, MCPTransportStdio, ServerFormData } from './serverTypes';
+import { MCPServerConfigFromUI, MCPTransportSSE, MCPTransportStdio, ServerFormData, FormMCPTransport } from './serverTypes';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -61,6 +61,26 @@ export const validateStdioTransport = (transport: MCPTransportStdio): Validation
 };
 
 /**
+ * Validate STDIO transport configuration for form data (with env as string)
+ */
+export const validateFormStdioTransport = (transport: { type: 'stdio'; command: string; env?: string }): ValidationResult => {
+  if (!transport.command?.trim()) {
+    return { isValid: false, error: 'Command is required for STDIO transport' };
+  }
+
+  // Validate env string format if provided
+  if (transport.env && transport.env.trim()) {
+    try {
+      JSON.parse(transport.env);
+    } catch {
+      return { isValid: false, error: 'Environment variables must be valid JSON' };
+    }
+  }
+
+  return { isValid: true };
+};
+
+/**
  * Validate SSE/HTTP transport configuration
  */
 export const validateSseHttpTransport = (transport: MCPTransportSSE): ValidationResult => {
@@ -81,7 +101,20 @@ export const validateSseHttpTransport = (transport: MCPTransportSSE): Validation
 export const validateTransport = (transport: MCPTransportSSE | MCPTransportStdio): ValidationResult => {
   if (transport.type === 'stdio') {
     return validateStdioTransport(transport as MCPTransportStdio);
-  } else if (transport.type === 'sse' || transport.type === 'http') {
+  } else if (transport.type === 'sse' || transport.type === 'streamable-http') {
+    return validateSseHttpTransport(transport as MCPTransportSSE);
+  }
+
+  return { isValid: false, error: 'Invalid transport type' };
+};
+
+/**
+ * Validate form transport configuration based on type
+ */
+export const validateFormTransport = (transport: FormMCPTransport): ValidationResult => {
+  if (transport.type === 'stdio') {
+    return validateFormStdioTransport(transport as { type: 'stdio'; command: string; env?: string });
+  } else if (transport.type === 'sse' || transport.type === 'streamable-http') {
     return validateSseHttpTransport(transport as MCPTransportSSE);
   }
 
@@ -109,7 +142,7 @@ export const validateServerForm = (
   }
 
   // Validate transport configuration
-  const transportValidation = validateTransport(formData.transport);
+  const transportValidation = validateFormTransport(formData.transport);
   if (!transportValidation.isValid) {
     return transportValidation;
   }
@@ -125,15 +158,24 @@ export const validateServerConfig = (
   existingServers: MCPServerConfigFromUI[],
   isEditing: boolean = false
 ): ValidationResult => {
-  const formData: ServerFormData = {
-    id: server.id,
-    name: server.name,
-    displayName: server.displayName || '',
-    enabled: server.enabled,
-    transport: server.transport
-  };
+  // Validate server name uniqueness
+  const nameValidation = validateServerNameUniqueness(
+    server.name,
+    existingServers,
+    isEditing ? server.id : undefined
+  );
+  
+  if (!nameValidation.isValid) {
+    return nameValidation;
+  }
 
-  return validateServerForm(formData, existingServers, isEditing, server.id);
+  // Validate transport configuration (final transport, not form transport)
+  const transportValidation = validateTransport(server.transport);
+  if (!transportValidation.isValid) {
+    return transportValidation;
+  }
+
+  return { isValid: true };
 };
 
 /**

@@ -75,10 +75,10 @@ async function wrapToolsWithMetrics(
               wasProcessed = processedResult !== rawResult;
               
               if (wasProcessed) {
-                appLogger.mcp.info(`[Enhanced MCP] Processed large response for tool: ${toolName} (${processingTime}ms)`);
+                appLogger.mcp?.info(`[Enhanced MCP] Processed large response for tool: ${toolName} (${processingTime}ms)`);
               }
             } catch (processingError) {
-              appLogger.mcp.warn(`[Enhanced MCP] Failed to process large response for ${toolName}:`, processingError);
+              appLogger.mcp?.warn(`[Enhanced MCP] Failed to process large response for ${toolName}: ${processingError}`);
               processedResult = rawResult;
               wasProcessed = false;
             }
@@ -129,10 +129,12 @@ export async function createEnhancedStdioMCPClient(
   config: EnhancedStdioConfig
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
-  logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
-    clientName: config.clientName || 'ai-sdk-mcp-client',
-    args: config.args, // Log arguments as part of the metadata object
-  });
+  if (logger) {
+    logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
+      clientName: config.clientName || 'ai-sdk-mcp-client',
+      args: config.args, // Log arguments as part of the metadata object
+    });
+  }
 
   try {
     const mcpClient = await createMCPClient({
@@ -151,45 +153,74 @@ export async function createEnhancedStdioMCPClient(
     // Wrap tools with metrics collection
     const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
     
-    logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+    if (logger) {
+      logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+    }
 
     return {
       tools: enhancedTools,
       close: async () => {
-        logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
+        if (logger) {
+          logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
+        }
         try {
           await mcpClient.close();
-          logger.info(`[Enhanced MCP] Stdio client for command ${config.command} closed successfully`);
+          if (logger) {
+            logger.info(`[Enhanced MCP] Stdio client for command ${config.command} closed successfully`);
+          }
         } catch (error) {
-          logger.error(`[Enhanced MCP] Error closing stdio client for command ${config.command}:`, error as Error);
+          if (logger) {
+            logger.error(`[Enhanced MCP] Error closing stdio client for command ${config.command}:`, error as Error);
+          }
           throw new MCPClientError(`Failed to close MCP client for command ${config.command}`, 'CLOSE_ERROR');
         }
       },
       healthCheck: async () => {
-        logger.debug(`[Enhanced MCP] Performing health check for stdio client: ${config.command}`);
+        if (logger) {
+          logger.debug(`[Enhanced MCP] Performing health check for stdio client: ${config.command}`);
+        }
         try {
           const currentTools = await mcpClient.tools();
           // A basic check: if tools() doesn't throw and returns an object (even empty), consider it healthy.
           // MCP servers should always return at least an empty object for capabilities.
           const isHealthy = typeof currentTools === 'object' && currentTools !== null;
-          if (!isHealthy) {
+          if (!isHealthy && logger) {
              logger.warn(`[Enhanced MCP] Stdio health check failed for ${config.command}: mcpClient.tools() returned non-object or null.`);
           }
           return isHealthy;
         } catch (hcError) {
-          logger.error(`[Enhanced MCP] Stdio health check failed for ${config.command}:`, hcError as Error);
+          if (logger) {
+            logger.error(`[Enhanced MCP] Stdio health check failed for ${config.command}:`, hcError as Error);
+          }
           return false;
         }
       }
     };
   } catch (error) {
-    logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
+    if (logger) {
+      logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
+    }
+
+    // Enhanced error reporting: try to provide more context about what went wrong
+    let enhancedErrorMessage = `Failed to initialize stdio MCP client: ${error instanceof Error ? error.message : String(error)}`;
+    
+    // Check if this looks like a process startup failure
+    if (error instanceof Error && (
+      error.message.includes('Connection closed') || 
+      error.message.includes('ENOENT') ||
+      error.message.includes('spawn') ||
+      error.message.includes('exit')
+    )) {
+      enhancedErrorMessage += `. This often indicates:
+        - The command '${config.command}' is not available or failed to start
+        - Missing dependencies for the MCP server
+        - Configuration validation errors in the MCP server
+        - Environment variable issues
+        Try running '${config.command} ${(config.args || []).join(' ')}' manually to diagnose the issue.`;
+    }
 
     if (error instanceof Error) {
-      throw new MCPClientError(
-        `Failed to initialize stdio MCP client: ${error.message}`,
-        'INIT_ERROR'
-      )
+      throw new MCPClientError(enhancedErrorMessage, 'INIT_ERROR')
     }
     
     throw new MCPClientError('Unknown error during stdio MCP client initialization')
@@ -203,7 +234,7 @@ export async function createEnhancedSSEMCPClient(
   serverId: string,
   config: EnhancedSSEConfig
 ): Promise<MCPToolSet> {
-  const logger = config.logger || appLogger.mcp;
+  const logger = config.logger || appLogger.mcp!;
   logger.info(`[Enhanced MCP] Creating SSE client for URL: ${config.url}`, {
     clientName: config.clientName || 'ai-sdk-mcp-client',
     hasHeaders: !!config.headers // Log headers presence as part of metadata
@@ -277,7 +308,7 @@ export async function createEnhancedStreamableHTTPMCPClient(
   serverId: string,
   config: EnhancedStreamableHTTPConfig
 ): Promise<MCPToolSet> {
-  const logger = config.logger || appLogger.mcp;
+  const logger = config.logger || appLogger.mcp!;
   logger.info(`[Enhanced MCP] Creating StreamableHTTP client for URL: ${config.url}`, {
     clientName: config.clientName || 'ai-sdk-mcp-client',
     sessionId: config.sessionId,

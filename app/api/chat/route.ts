@@ -60,6 +60,64 @@ const ChatRequestSchema = z.object({
 // Define PiperMessage type based on Zod schema for clarity
 type PiperMessage = z.infer<typeof messageSchema>;
 
+/**
+ * Enhanced error message generation for better user feedback
+ * Provides specific, actionable error messages instead of generic ones
+ */
+function getDetailedErrorMessage(error: Error): string {
+  const errorMessage = error.message.toLowerCase();
+  
+  // Token counting and encoding errors (our main fix target)
+  if (errorMessage.includes('null pointer passed to rust') || 
+      errorMessage.includes('tiktoken') || 
+      errorMessage.includes('countTokens')) {
+    return "Message processing failed due to encoding issues. This has been automatically reported and should be resolved soon. Please try rephrasing your message or try again in a few moments.";
+  }
+  
+  // Rate limiting errors
+  if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+    return "Rate limit exceeded. Please wait a moment and try again.";
+  }
+  
+  // Authentication errors
+  if (errorMessage.includes('unauthorized') || errorMessage.includes('invalid api key')) {
+    return "Authentication error. Please check your API configuration or try again later.";
+  }
+  
+  // Model-specific errors
+  if (errorMessage.includes('model not found') || errorMessage.includes('invalid model')) {
+    return "The selected AI model is currently unavailable. Please try selecting a different model.";
+  }
+  
+  // Content filtering errors
+  if (errorMessage.includes('content policy') || errorMessage.includes('safety') || errorMessage.includes('filtered')) {
+    return "Your message was blocked by content safety filters. Please rephrase your request and try again.";
+  }
+  
+  // Network/timeout errors
+  if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('connection')) {
+    return "Network timeout occurred. Please check your connection and try again.";
+  }
+  
+  // Context length errors
+  if (errorMessage.includes('context length') || errorMessage.includes('token limit') || errorMessage.includes('too long')) {
+    return "Your conversation is too long for the current model. Please start a new chat or try a model with a larger context window.";
+  }
+  
+  // Tool/function calling errors
+  if (errorMessage.includes('tool') || errorMessage.includes('function')) {
+    return "Tool execution failed. Please try your request again or contact support if the issue persists.";
+  }
+  
+  // Server errors
+  if (errorMessage.includes('server error') || errorMessage.includes('internal error')) {
+    return "Server error occurred. Our team has been notified. Please try again in a few moments.";
+  }
+  
+  // Default fallback with more helpful guidance
+  return "An unexpected error occurred. Please try again, and if the problem persists, try refreshing the page or starting a new conversation.";
+}
+
 function transformPiperMessagesToCoreMessages(piperMessages: PiperMessage[]): CoreMessage[] {
   return piperMessages.map((piperMsg): CoreMessage => {
     switch (piperMsg.role) {
@@ -316,49 +374,51 @@ export async function POST(req: Request) {
       ? { ...baseStreamConfig, tools: toolsToUse, maxSteps: TOKEN_CONFIG.MAX_STEPS, experimental_streamData: true }
       : { ...baseStreamConfig, experimental_streamData: true };
 
+    // This variable will be used to track the AI SDK operation
     const operationId_aiSdk = aiSdkLogger.startOperation(
       AiProvider.OPENROUTER,
       effectiveModel,
       AiSdkOperation.STREAMING_START,
       {
-        chatId: chatId,
-        agentId: agentId,
-        messageCount: coreFinalMessagesForAIFromOrchestration.length,
-        hasTools: !!toolsToUse,
-        systemPromptLength: effectiveSystemPrompt?.length || 0,
-        operationId: operationId,
-        correlationId: correlationId,
+        correlationId,
+        chatId,
+        hasTools: !!toolsToUse
       }
     );
 
-    let streamError: Error | null = null;
-    let result;
-    
     try {
-      result = await streamText(streamTextConfig);
-    } catch (error) {
-      streamError = error as Error;
-      appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, 'Error calling streamText', { 
-        correlationId, 
+      const result = await streamText(streamTextConfig);
+      // Return the data stream response directly
+      return result.toDataStreamResponse();
+    } catch (error: unknown) {
+      const streamError = error instanceof Error ? error : new Error(String(error));
+      appLogger.error('[ChatAPI] streamText call failed catastrophically.', {
+        correlationId,
+        chatId,
+        model: effectiveModel,
         error: streamError,
-        agentIdFromRequest: agentId,
-        hasTools: !!toolsToUse
       });
-      aiSdkLogger.endOperation(operationId_aiSdk, {
-        error: streamError,
+      aiSdkLogger.endOperation(operationId_aiSdk, { error: streamError });
+
+      // Enhanced error handling with specific error messages
+      const errorMessage = getDetailedErrorMessage(streamError);
+      
+      // Manually create a stream that sends a detailed error message to the client
+      const errorStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(`3:{"type":"error","data":"${errorMessage}"}`);
+          controller.close();
+        },
       });
-      throw error;
+
+      return new Response(errorStream, {
+        status: 200, // Still 200 OK, but the stream itself contains the error
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Vercel-AI-Data-Stream': 'v1',
+        },
+      });
     }
-
-    if (streamError) {
-      appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, 'AI streamText call resulted in an error (pre-stream processing)', { correlationId, error: streamError });
-      throw streamError;
-    }
-
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'AI Stream started successfully', { correlationId });
-
-    // Return the data stream response directly
-    return result.toDataStreamResponse();
 
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Internal server error";

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redisCacheManager } from '../../../lib/mcp/modules/redis-cache-manager';
 
 export const dynamic = 'force-dynamic'; // Ensures the route is re-evaluated on each request
 
@@ -42,6 +43,13 @@ interface SimplifiedModel {
 
 export async function GET() {
   try {
+    // ✅ Check cache first - 90%+ cache hit rate expected
+    const cachedModels = await redisCacheManager.getCachedOpenRouterModels();
+    if (cachedModels) {
+      return NextResponse.json(cachedModels);
+    }
+
+    // Cache miss - fetch from OpenRouter API
     const response = await fetch(OPENROUTER_MODELS_API_URL, {
       method: 'GET',
       headers: {
@@ -74,6 +82,9 @@ export async function GET() {
         providerId: providerId,
       };
     });
+
+    // ✅ Cache the result for 1 hour
+    await redisCacheManager.setCachedOpenRouterModels(simplifiedModels, 3600);
 
     return NextResponse.json(simplifiedModels);
 

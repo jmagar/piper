@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAppConfig } from "@/lib/mcp/enhanced"
+import { getAppConfig } from "@/lib/mcp/enhanced/cached-config"
 
 export interface MCPServerOption {
   key: string
@@ -10,7 +10,7 @@ export interface MCPServerOption {
 
 export async function GET() {
   try {
-    const appConfig = getAppConfig()
+    const appConfig = await getAppConfig()
     
     if (!appConfig || !appConfig.mcpServers) {
       console.error("[API /api/agents/mcp-options] MCP server configuration is missing or invalid")

@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join as pathJoin } from 'path';
-import { appLogger } from '@/lib/logger';
+import { appLogger, LogLevel } from '@/lib/logger';
 import {
   AppConfig,
   ServerConfigEntry
@@ -18,14 +18,14 @@ export function getAppConfig(): AppConfig {
     const parsedConfig = JSON.parse(rawConfig);
     
     if (!parsedConfig.mcpServers) {
-      appLogger.logSource('MCP', 'error', 'config.json is missing the mcpServers property.');
+      appLogger.logSource('MCP', LogLevel.ERROR, 'config.json is missing the mcpServers property.');
       return { mcpServers: {} };
     }
 
     // Config is now used as-is - no normalization needed for new simplified format
     return parsedConfig;
   } catch (error) {
-    appLogger.logSource('MCP', 'error', `Failed to load or parse config.json from ${configPath}:`, error as Error);
+    appLogger.logSource('MCP', LogLevel.ERROR, `Failed to load or parse config.json from ${configPath}:`, error as Error);
     return { mcpServers: {} };
   }
 }
@@ -70,6 +70,7 @@ export function validateServerConfig(config: ServerConfigEntry): { valid: boolea
 
 /**
  * Gets configuration for a specific server
+ * Note: For better performance, use getCachedServerConfig from cached-config.ts
  */
 export function getServerConfig(serverKey: string): ServerConfigEntry | null {
   const config = getAppConfig();
@@ -78,6 +79,7 @@ export function getServerConfig(serverKey: string): ServerConfigEntry | null {
 
 /**
  * Lists all configured server keys
+ * Note: For better performance, use getCachedConfiguredServers from cached-config.ts
  */
 export function getConfiguredServers(): string[] {
   const config = getAppConfig();
@@ -86,6 +88,7 @@ export function getConfiguredServers(): string[] {
 
 /**
  * Checks if a server is enabled in configuration
+ * Note: For better performance, use isCachedServerEnabled from cached-config.ts
  */
 export function isServerEnabled(serverKey: string): boolean {
   const config = getServerConfig(serverKey);

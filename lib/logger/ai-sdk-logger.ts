@@ -185,7 +185,7 @@ export class AiSdkLogger {
   ): void {
     const operation = this.activeOperations.get(operationId);
     if (!operation) {
-      appLogger.aiSdk.warn('AI operation not found for completion logging', undefined, {
+      appLogger.aiSdk.warn('AI operation not found for completion logging', {
         operationId,
       });
       return;
@@ -283,7 +283,7 @@ export class AiSdkLogger {
   ): void {
     const operation = this.activeOperations.get(operationId);
     if (!operation) {
-      appLogger.aiSdk.warn('Streaming operation not found', undefined, { operationId, state });
+      appLogger.aiSdk.warn('Streaming operation not found', { operationId, state });
       return;
     }
 
@@ -399,10 +399,11 @@ export class AiSdkLogger {
                                execution.error.message.includes('function');
       
       if (isToolResultError) {
-        appLogger.aiSdk.warn('Tool execution returned error result', execution.error, {
+        appLogger.aiSdk.warn('Tool execution returned error result', {
           ...logData,
           correlationId,
           userId: context?.userId,
+          error: execution.error,
         });
       } else {
         appLogger.aiSdk.error('Tool execution failed', execution.error, {

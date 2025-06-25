@@ -35,7 +35,7 @@ const RawConfigEditor: React.FC = () => {
         appLogger.info('[RawConfigEditor] MCP configuration fetched successfully.');
         toast.success('MCP Config loaded successfully');
       } catch (error) {
-        appLogger.error('[RawConfigEditor] Error fetching MCP configuration', error);
+        appLogger.error('[RawConfigEditor] Error fetching MCP configuration', { error });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error fetching config';
         setConfigText(`// Error loading configuration:\n// ${errorMessage}`);
         toast.error(`Failed to load MCP Config: ${errorMessage}`);
@@ -93,7 +93,7 @@ const RawConfigEditor: React.FC = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error saving config';
       toast.error(`Failed to save MCP Config: ${errorMessage}`);
-      appLogger.error('[RawConfigEditor] Error saving MCP configuration', error);
+      appLogger.error('[RawConfigEditor] Error saving MCP configuration', { error });
     } finally {
       setIsSaving(false);
     }
@@ -112,9 +112,9 @@ const RawConfigEditor: React.FC = () => {
         setParseError(null); // Clear error if JSON is valid
       } catch (_e) {
         if (_e instanceof Error) {
-          appLogger.debug('[RawConfigEditor] JSON parsing error', { message: _e.message, stack: _e.stack });
+          appLogger.debug('[RawConfigEditor] JSON parsing error', { error: _e });
         } else {
-          appLogger.debug('[RawConfigEditor] JSON parsing error. Non-Error object thrown:', String(_e));
+          appLogger.debug('[RawConfigEditor] JSON parsing error. Non-Error object thrown', { error: _e });
         }
         // More specific error messages could be extracted from '_e' if desired
         setParseError('Invalid JSON format. Please check syntax.');

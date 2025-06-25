@@ -6,7 +6,7 @@ import { openaiModels } from "./data/openai"
 import { ModelConfig } from "./types";
 export type { ModelConfig } from "./types";
 
-export const MODELS: ModelConfig[] = [
+const buildModelsList = (): ModelConfig[] => [
   ...openaiModels,
   ...mistralModels,
   ...deepseekModels,
@@ -15,4 +15,15 @@ export const MODELS: ModelConfig[] = [
 
   // not ready
   // ...llamaModels,
-]
+];
+
+// Synchronous export for current usage
+export const MODELS: ModelConfig[] = buildModelsList();
+
+/**
+ * Get models - for future caching implementation via API route
+ * Currently returns static models, will be enhanced with caching
+ */
+export function getModels(): ModelConfig[] {
+  return MODELS;
+}

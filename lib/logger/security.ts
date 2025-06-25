@@ -279,10 +279,7 @@ export class LogSecurity {
     }
 
     // Log to application logger as well
-    appLogger.info(`Log access ${action.toLowerCase()}`, {
-      audit: auditEntry,
-      source: 'log-security'
-    });
+    appLogger.info(`Log access ${action.toLowerCase()}`);
   }
 
   /**
@@ -374,10 +371,7 @@ export class LogSecurity {
   public updateConfig(newConfig: Partial<SecurityConfig>): void {
     this.config = { ...this.config, ...newConfig };
     
-    appLogger.info('Log security configuration updated', {
-      updatedFields: Object.keys(newConfig),
-      source: 'log-security'
-    });
+    appLogger.info('Log security configuration updated');
   }
 
   /**

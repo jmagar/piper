@@ -240,7 +240,7 @@ export function ChatInput({
         />
       )}
 
-      <PromptInput className="relative bg-transparent border-border/30 shadow-none">
+      <PromptInput className="relative bg-transparent border-border/30 shadow-none" onSubmit={handleSend}>
         <div className="flex flex-col gap-2 p-2">
           <div className="flex items-center gap-2 flex-wrap">
             {agentCommand.selectedAgent && (

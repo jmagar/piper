@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Agent } from "../../types/agent";
-import { DatabasePrompt } from './use-agent-command';
+import { Prompt } from './use-agent-command';
 
 // Tool structure provided by useAgentCommand
 interface MCPTool {
@@ -17,10 +17,10 @@ interface UnifiedSelectionModalProps {
   searchTerm: string;
   agents: Agent[];
   tools: MCPTool[];
-  prompts: DatabasePrompt[];
+  prompts: Prompt[];
   onSelectAgent: (agent: Agent) => void;
   onSelectTool: (tool: MCPTool) => void;
-  onSelectPrompt?: (prompt: DatabasePrompt) => void;
+  onSelectPrompt?: (prompt: Prompt) => void;
   onUrlSubmit?: (url: string) => void;
   onClose: () => void;
   activeIndex: number;

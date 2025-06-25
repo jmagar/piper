@@ -1,6 +1,7 @@
 import { MCPMetricsCollector } from './enhanced/metrics-collector'
 import { globalMCPPool } from './enhanced/connection-pool'
 import { getManagedServersInfo } from './mcpManager'
+import { redisCacheManager } from './modules'
 
 /**
  * Enhanced MCP Integration Helper
@@ -83,7 +84,7 @@ export function getMCPPoolStats() {
 }
 
 /**
- * Health check for Enhanced MCP system
+ * Health check for Enhanced MCP system with cached health results
  */
 export async function performMCPHealthCheck() {
   try {
@@ -100,7 +101,25 @@ export async function performMCPHealthCheck() {
         totalTools: metrics?.summary.totalTools || 0,
         poolConnections: poolStats.totalConnections
       },
-      recommendations: [] as string[]
+      recommendations: [] as string[],
+      cachedHealthChecks: {} as Record<string, { isHealthy: boolean; lastChecked: number }>
+    }
+
+    // Get cached health check results for all servers to provide more detailed health information
+    if (metrics?.servers) {
+      const serverKeys = metrics.servers.map(server => server.key);
+      const cachedHealthResults = await redisCacheManager.getMultipleHealthCheckResults(serverKeys);
+      
+      // Map cached results to server keys
+      serverKeys.forEach((key, index) => {
+        const cached = cachedHealthResults[index];
+        if (cached) {
+          healthStatus.cachedHealthChecks[key] = {
+            isHealthy: cached.isHealthy,
+            lastChecked: cached.timestamp
+          };
+        }
+      });
     }
 
     // Determine overall health
@@ -118,6 +137,15 @@ export async function performMCPHealthCheck() {
       if (healthStatus.details.totalTools === 0) {
         healthStatus.status = 'unhealthy'
         healthStatus.recommendations.push('No tools available from any server')
+      }
+
+      // Add recommendations based on cached health check failures
+      const unhealthyServers = Object.entries(healthStatus.cachedHealthChecks)
+        .filter(([, health]) => !health.isHealthy)
+        .map(([key]) => key);
+      
+      if (unhealthyServers.length > 0) {
+        healthStatus.recommendations.push(`Health check failures detected for servers: ${unhealthyServers.join(', ')}`);
       }
     } else {
       healthStatus.status = 'unhealthy'

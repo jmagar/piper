@@ -1,8 +1,9 @@
 // Type definitions for MCP servers dashboard
 import { McpServerInfo } from '@/app/api/mcp-servers/route';
+import { MCPServerConfig } from '@/lib/mcp/config-watcher';
 
 export interface MCPTransportSSE {
-  type: 'sse' | 'http';
+  type: 'sse' | 'streamable-http';
   url: string;
   headers?: Record<string, string>;
 }
@@ -15,17 +16,17 @@ export interface MCPTransportStdio {
   cwd?: string;
 }
 
-export type MCPTransport = MCPTransportSSE | MCPTransportHTTP | MCPTransportStdio;
+export type MCPTransport = MCPTransportSSE | MCPTransportStdio;
 
 // Form-specific transport types to handle env as a string for stdio
 export type FormMCPTransportStdio = Omit<MCPTransportStdio, 'env'> & { env?: string };
-export type FormMCPTransport = MCPTransportSSE | MCPTransportHTTP | FormMCPTransportStdio;
+export type FormMCPTransport = MCPTransportSSE | FormMCPTransportStdio;
 
 export interface MCPServerConfigFromUI extends Omit<MCPServerConfig, 'id' | 'transport' | 'isEnvManaged'> {
   id: string;
   name: string;
   displayName?: string;
-  transport: FormMCPTransport;
+  transport: MCPTransport;
   enabled: boolean;
   isEnvManaged?: boolean;
 }
@@ -73,6 +74,7 @@ export const DEFAULT_SERVER_FORM: ServerFormData = {
   displayName: '',
   enabled: true,
   transport: { type: 'stdio', command: '' },
+  retries: 3,
 };
 
 export const DEFAULT_FILTERS: ServerFilters = {

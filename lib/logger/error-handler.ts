@@ -426,7 +426,7 @@ export class ErrorHandler {
     const fullLogMetadata = { ...logMetadata, error: error.message, stack: error.stack };
     switch (classified.severity) {
       case 'critical':
-        appLogger.fatal('Critical error occurred', fullLogMetadata);
+        appLogger.error('Critical error occurred', fullLogMetadata);
         break;
       case 'high':
         appLogger.error('High severity error occurred', fullLogMetadata);

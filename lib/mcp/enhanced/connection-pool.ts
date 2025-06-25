@@ -31,7 +31,7 @@ export class MCPConnectionPool {
     // Setup timeout if specified (but without abort functionality)
     if (config.timeout) {
       const timeoutId = setTimeout(() => {
-        appLogger.mcp.warn(`[MCP Pool] Client '${id}' timed out after ${config.timeout}ms`)
+        appLogger.mcp?.warn(`[MCP Pool] Client '${id}' timed out after ${config.timeout}ms`)
         // Just log timeout - no abort functionality
       }, config.timeout)
       this.timeouts.set(id, timeoutId)
@@ -42,7 +42,7 @@ export class MCPConnectionPool {
     this.clients.set(id, client)
     this.connectionCount++
     
-    appLogger.mcp.info(`[MCP Pool] Added stdio client '${id}'. Total connections: ${this.connectionCount}`)
+    appLogger.mcp?.info(`[MCP Pool] Added stdio client '${id}'. Total connections: ${this.connectionCount}`)
     return client
   }
 
@@ -58,7 +58,7 @@ export class MCPConnectionPool {
     this.clients.set(id, client)
     this.connectionCount++
     
-    appLogger.mcp.info(`[MCP Pool] Added SSE client '${id}'. Total connections: ${this.connectionCount}`)
+    appLogger.mcp?.info(`[MCP Pool] Added SSE client '${id}'. Total connections: ${this.connectionCount}`)
     return client
   }
 
@@ -74,7 +74,7 @@ export class MCPConnectionPool {
     this.clients.set(id, client)
     this.connectionCount++
     
-    appLogger.mcp.info(`[MCP Pool] Added StreamableHTTP client '${id}'. Total connections: ${this.connectionCount}`)
+    appLogger.mcp?.info(`[MCP Pool] Added StreamableHTTP client '${id}'. Total connections: ${this.connectionCount}`)
     return client
   }
 
@@ -106,10 +106,10 @@ export class MCPConnectionPool {
       this.clients.delete(id)
       this.connectionCount--
       
-      appLogger.mcp.info(`[MCP Pool] Removed client '${id}'. Total connections: ${this.connectionCount}`)
+      appLogger.mcp?.info(`[MCP Pool] Removed client '${id}'. Total connections: ${this.connectionCount}`)
       return true
     } catch (error) {
-      appLogger.mcp.error(`[MCP Pool] Error removing client '${id}'`, error as Error)
+      appLogger.mcp?.error(`[MCP Pool] Error removing client '${id}'`, error as Error)
       throw new MCPClientError(`Failed to remove client '${id}'`)
     }
   }
@@ -119,9 +119,9 @@ export class MCPConnectionPool {
       async ([id, client]) => {
         try {
           await client.close()
-          appLogger.mcp.info(`[MCP Pool] Closed client '${id}'`)
+          appLogger.mcp?.info(`[MCP Pool] Closed client '${id}'`)
         } catch (error) {
-          appLogger.mcp.error(`[MCP Pool] Error closing client '${id}'`, error as Error)
+          appLogger.mcp?.error(`[MCP Pool] Error closing client '${id}'`, error as Error)
         }
       }
     )
@@ -136,7 +136,7 @@ export class MCPConnectionPool {
     this.clients.clear()
     this.connectionCount = 0
     
-    appLogger.mcp.info('[MCP Pool] All clients closed')
+    appLogger.mcp?.info('[MCP Pool] All clients closed')
   }
 
   async closeClient(id: string): Promise<boolean> {
@@ -177,18 +177,18 @@ export class MCPConnectionPool {
   }
 
   async cleanup(): Promise<void> {
-    appLogger.mcp.info('[MCP Pool] Starting cleanup...')
+    appLogger.mcp?.info('[MCP Pool] Starting cleanup...')
     
     // Run health check and log issues
     const healthCheck = await this.healthCheck()
     if (!healthCheck.healthy) {
-      appLogger.mcp.warn('[MCP Pool] Health check issues during cleanup:', healthCheck.issues)
+      appLogger.mcp?.warn(`[MCP Pool] Health check issues during cleanup: ${healthCheck.issues.join(', ')}`)
     }
 
     // Close all clients
     await this.closeAll()
     
-    appLogger.mcp.info('[MCP Pool] Cleanup completed')
+    appLogger.mcp?.info('[MCP Pool] Cleanup completed')
   }
 }
 

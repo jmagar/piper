@@ -143,18 +143,21 @@ export class McpLogger {
     // Log error details if present
     if (message.error) {
       const errorLevel = this.getErrorSeverity(message.error.code);
-      appLogger.mcp[errorLevel]('JSON-RPC error message', {
+      
+      // Create a proper Error object for the logger
+      const error = this.createMcpError(
+        message.error.code,
+        message.error.message,
+        message.error.data
+      );
+      
+      appLogger.mcp?.[errorLevel]('JSON-RPC error message', error as Error & Record<string, unknown>, {
         ...logData,
-        error: {
-          code: message.error.code,
-          message: message.error.message,
-          data: message.error.data,
-        },
         correlationId,
         userId: context?.userId,
       });
     } else {
-      appLogger.mcp.debug('JSON-RPC message', {
+      appLogger.mcp?.debug('JSON-RPC message', {
         ...logData,
         correlationId,
         userId: context?.userId,
@@ -178,7 +181,7 @@ export class McpLogger {
   ): void {
     const correlationId = getCurrentCorrelationId();
     const context = getCurrentContext();
-    const transport = (details.serverInfo as any)?.transport;
+    const transport = (details.serverInfo as { transport?: { type?: McpTransportType; info?: unknown; httpSettings?: unknown } })?.transport;
 
     // Update server registry
     if (details.serverInfo && operation === McpOperation.SERVER_STARTUP) {
@@ -207,13 +210,13 @@ export class McpLogger {
     };
 
     if (details.error) {
-      appLogger.mcp.error(`Server lifecycle error: ${operation}`, details.error, {
+      appLogger.mcp?.error(`Server lifecycle error: ${operation}`, details.error, {
         ...logData,
         correlationId,
         userId: context?.userId,
       });
     } else {
-      appLogger.mcp.info(`Server lifecycle: ${operation}`, {
+      appLogger.mcp?.info(`Server lifecycle: ${operation}`, {
         ...logData,
         correlationId,
         userId: context?.userId,
@@ -277,7 +280,7 @@ export class McpLogger {
       },
     };
 
-    appLogger.mcp.info('Tool execution started', {
+    appLogger.mcp?.info('Tool execution started', {
       ...logData,
       correlationId,
       userId: context?.userId,
@@ -296,7 +299,7 @@ export class McpLogger {
   ): void {
     const execution = this.activeExecutions.get(executionId);
     if (!execution) {
-      appLogger.mcp.warn('Tool execution not found for completion logging', {
+      appLogger.mcp?.warn('Tool execution not found for completion logging', {
         executionId,
       });
       return;
@@ -345,13 +348,13 @@ export class McpLogger {
         },
       });
 
-      appLogger.mcp.error('Tool execution failed', error, {
+      appLogger.mcp?.error('Tool execution failed', error, {
         ...logData,
         correlationId,
         userId: context?.userId,
       });
     } else {
-      appLogger.mcp.info('Tool execution completed', {
+      appLogger.mcp?.info('Tool execution completed', {
         ...logData,
         correlationId,
         userId: context?.userId,
@@ -393,13 +396,13 @@ export class McpLogger {
     };
 
     if (error) {
-      appLogger.mcp.error('Resource access failed', error, {
+      appLogger.mcp?.error('Resource access failed', error, {
         ...logData,
         correlationId,
         userId: context?.userId,
       });
     } else {
-      appLogger.mcp.info('Resource accessed', {
+      appLogger.mcp?.info('Resource accessed', {
         ...logData,
         correlationId,
         userId: context?.userId,
@@ -432,7 +435,7 @@ export class McpLogger {
       },
     };
 
-    appLogger.mcp.info('Capability negotiation completed', {
+    appLogger.mcp?.info('Capability negotiation completed', {
       ...logData,
       correlationId,
       userId: context?.userId,

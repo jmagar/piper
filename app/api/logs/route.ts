@@ -71,9 +71,7 @@ export async function GET(request: NextRequest) {
     
     appLogger.debug('Logs API request received', {
       correlationId,
-      filters,
-      page,
-      limit
+      args: { filters, page, limit }
     })
     
     // Read and parse log files
@@ -101,16 +99,16 @@ export async function GET(request: NextRequest) {
     
     appLogger.debug('Logs API response prepared', {
       correlationId,
-      totalLogs: logs.length,
-      returnedLogs: paginatedLogs.length,
-      page,
-      limit
+      args: { totalLogs: logs.length, returnedLogs: paginatedLogs.length, page, limit }
     })
     
     return NextResponse.json(response)
     
   } catch (error) {
-    appLogger.error('Error in logs API', error as Error, { correlationId })
+    appLogger.error('Error in logs API', { 
+      correlationId,
+      error: error as Error 
+    })
     
     return NextResponse.json(
       { error: 'Failed to fetch logs' },

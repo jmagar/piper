@@ -23,14 +23,16 @@ const ABSOLUTE_UPLOADS_DIR = path.resolve(UPLOADS_DIR);
 
 export async function GET(
   request: NextRequest,
-  context: { params: { filepath: string[] } }
+  { params }: { params: Promise<{ filepath: string[] }> }
 ) {
-  if (!context.params.filepath || context.params.filepath.length === 0) {
+  const resolvedParams = await params;
+  
+  if (!resolvedParams.filepath || resolvedParams.filepath.length === 0) {
     return new NextResponse('Filepath cannot be empty', { status: 400 });
   }
 
-  const relativeFilePath = context.params.filepath.join('/');
-  const fileName = context.params.filepath[context.params.filepath.length - 1];
+  const relativeFilePath = resolvedParams.filepath.join('/');
+  const fileName = resolvedParams.filepath[resolvedParams.filepath.length - 1];
 
   // Construct the absolute path to the requested file
   const requestedAbsolutePath = path.resolve(ABSOLUTE_UPLOADS_DIR, relativeFilePath);

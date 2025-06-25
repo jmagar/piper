@@ -235,7 +235,7 @@ export class MCPMetricsCollector {
         activeUsers: 0, // Placeholder: Active user tracking requires further design and implementation
       };
     } catch (error) {
-      appLogger.mcp.error('Failed to calculate global summary metrics:', error as Error);
+      appLogger.mcp?.error('Failed to calculate global summary metrics:', error as Error);
       return {
         totalRequests: 0,
         errorRate: 0,

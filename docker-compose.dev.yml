@@ -17,8 +17,8 @@ services:
     environment:
       # Add or override any environment variables here if needed
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper
-      - REDIS_URL=redis://piper-cache:6379
+      - DATABASE_URL=postgresql://piper:piper@piper-db-dev:5432/piper
+      - REDIS_URL=redis://piper-cache-dev:6379
       # CHOKIDAR_USEPOLLING=true # Uncomment if hot reloading is unreliable
     volumes:
       # Mounts for hot reloading application code

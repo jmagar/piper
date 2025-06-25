@@ -115,6 +115,7 @@ export async function addMessage(chatId: string, content: string, role: string) 
  */
 export async function addAttachment(
   chatId: string, 
+  messageId: string,
   fileName: string, 
   fileType: string, 
   fileSize: number, 
@@ -124,6 +125,7 @@ export async function addAttachment(
     const attachment = await prisma.attachment.create({
       data: {
         chatId,
+        messageId,
         fileName,
         fileType,
         fileSize,

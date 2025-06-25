@@ -1,4 +1,4 @@
-import { appLogger } from '@/lib/logger';
+import { appLogger, LogLevel } from '@/lib/logger';
 import {
   ManagedMCPClient as MCPService,
   type ServerConfigEntry,
@@ -18,12 +18,12 @@ export class MCPServiceRegistry {
     // Initialize services map with HMR support
     if (process.env.NODE_ENV === 'production') {
       this.services = new Map<string, MCPService>();
-      appLogger.logSource('MCP', 'info', '[Service Registry] Initialized services map for production.');
+      appLogger.logSource('MCP', LogLevel.INFO, '[Service Registry] Initialized services map for production.');
     } else {
       // Development HMR logic
       if (!globalThis.__mcpServicesMap) {
         globalThis.__mcpServicesMap = new Map<string, MCPService>();
-        appLogger.logSource('MCP', 'info', '[Service Registry] Initialized globalThis.__mcpServicesMap for development.');
+        appLogger.logSource('MCP', LogLevel.INFO, '[Service Registry] Initialized globalThis.__mcpServicesMap for development.');
       }
       this.services = globalThis.__mcpServicesMap;
     }
@@ -41,7 +41,7 @@ export class MCPServiceRegistry {
    */
   registerService(serverKey: string, serverConfig: ServerConfigEntry): MCPService {
     const serviceLabel = serverConfig.label || serverKey;
-    appLogger.logSource('MCP', 'info', `[Service Registry] Registering service '${serviceLabel}' with key '${serverKey}'.`);
+    appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Registering service '${serviceLabel}' with key '${serverKey}'.`);
     
     const service = new MCPService(serverConfig, serverKey);
     this.services.set(serverKey, service);
@@ -90,16 +90,16 @@ export class MCPServiceRegistry {
     if (service) {
       if (typeof service.close === 'function') {
         try {
-          appLogger.logSource('MCP', 'info', `[Service Registry] Shutting down service '${service.displayName}' with key '${serverKey}'.`);
+          appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Shutting down service '${service.displayName}' with key '${serverKey}'.`);
           await service.close();
         } catch (error) {
-          appLogger.logSource('MCP', 'error', `[Service Registry] Error shutting down service '${service.displayName}' with key '${serverKey}':`, error);
+          appLogger.logSource('MCP', LogLevel.ERROR, `[Service Registry] Error shutting down service '${service.displayName}' with key '${serverKey}': ${error}`);
           // Continue with removal even if shutdown fails
         }
       }
       const removed = this.services.delete(serverKey);
       if (removed) {
-        appLogger.logSource('MCP', 'info', `[Service Registry] Removed service with key '${serverKey}' from map.`);
+        appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Removed service with key '${serverKey}' from map.`);
       }
       return removed;
     }
@@ -112,7 +112,7 @@ export class MCPServiceRegistry {
   clearAll(): void {
     const count = this.services.size;
     this.services.clear();
-    appLogger.logSource('MCP', 'info', `[Service Registry] Cleared ${count} services from registry.`);
+    appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Cleared ${count} services from registry.`);
   }
 
   /**

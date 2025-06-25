@@ -1,10 +1,10 @@
 import React from 'react';
-import { DatabasePrompt } from '@/app/components/chat-input/use-agent-command'; // Adjust path if necessary
+import { Prompt } from '@/app/components/chat-input/use-agent-command'; // Adjust path if necessary
 import { Badge } from '@/components/ui/badge';
 import { XIcon } from 'lucide-react';
 
 interface SelectedPromptDisplayProps {
-  selectedPrompt: DatabasePrompt | null;
+  selectedPrompt: Prompt | null;
   removeSelectedPrompt: () => void;
 }
 

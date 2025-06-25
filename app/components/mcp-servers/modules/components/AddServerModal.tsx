@@ -19,18 +19,28 @@ export interface AddServerModalProps {
   existingServers: MCPServerConfigFromUI[];
 }
 
-const initialFormState: Omit<MCPServerConfigFromUI, 'id' | 'isEnvManaged'> & { transport: FormMCPTransport } = {
+// Form state type that uses FormMCPTransport for handling string env
+type FormState = {
+  name: string;
+  displayName: string;
+  enabled: boolean;
+  transport: FormMCPTransport;
+  retries: number;
+};
+
+const initialFormState: FormState = {
   name: '',
   displayName: '',
   enabled: true,
   transport: { type: 'stdio', command: '', env: '' },
+  retries: 3,
 };
 
 export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: AddServerModalProps) {
   const actions = useServerActions();
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState<FormState>(initialFormState);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,23 +52,23 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value } as Omit<MCPServerConfigFromUI, 'id' | 'isEnvManaged'> & { transport: FormMCPTransport }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSwitchChange = (checked: boolean, name: string) => {
     if (name === 'enabled') {
-      setFormData(prev => ({ ...prev, enabled: checked } as Omit<MCPServerConfigFromUI, 'id' | 'isEnvManaged'> & { transport: FormMCPTransport }));
+      setFormData(prev => ({ ...prev, enabled: checked }));
     }
   };
 
-  const handleTransportTypeChange = (value: 'sse' | 'http' | 'stdio') => {
+  const handleTransportTypeChange = (value: 'sse' | 'streamable-http' | 'stdio') => {
     let newTransportConf: FormMCPTransport;
     switch (value) {
       case 'sse':
         newTransportConf = { type: 'sse', url: (formData.transport as MCPTransportSSE)?.url || '' };
         break;
-      case 'http':
-        newTransportConf = { type: 'http', url: (formData.transport as MCPTransportSSE)?.url || '' };
+      case 'streamable-http':
+        newTransportConf = { type: 'streamable-http', url: (formData.transport as MCPTransportSSE)?.url || '' };
         break;
       case 'stdio':
       default:
@@ -87,7 +97,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
         if (name === 'command') stdioTransport.command = processedValue as string;
         if (name === 'cwd') stdioTransport.cwd = processedValue as string;
       }
-    } else if ((newTransport.type === 'sse' || newTransport.type === 'http') && name === 'url') {
+    } else if ((newTransport.type === 'sse' || newTransport.type === 'streamable-http') && name === 'url') {
       (newTransport as MCPTransportSSE).url = processedValue as string;
     }
     setFormData(prev => ({ ...prev, transport: newTransport }));
@@ -97,6 +107,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
     setIsSaving(true);
     setFormError(null);
 
+    // Convert FormMCPTransport to MCPTransport for submission
     let finalTransportConfig: MCPTransport;
     if (formData.transport.type === 'stdio') {
       const formStdioTransport = formData.transport as FormMCPTransportStdio;
@@ -127,6 +138,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
       displayName: formData.displayName || formData.name,
       enabled: formData.enabled,
       transport: finalTransportConfig,
+      retries: formData.retries,
       isEnvManaged: false, // New servers are not environment-managed
     };
 
@@ -137,6 +149,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
       displayName: formData.displayName || formData.name,
       enabled: formData.enabled,
       transport: formData.transport, // Use original form transport for validation
+      retries: formData.retries,
     };
 
     const validationResult = validateServerForm(serverDataForValidation, existingServers);
@@ -147,6 +160,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
     }
 
     const result = await actions.addServer(serverDataToSubmit);
+    setIsSaving(false);
 
     if (result.success && result.data) {
       onSubmit(result.data); // Pass the server data returned from API (might include backend-generated fields)
@@ -198,7 +212,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
               <SelectContent>
                 <SelectItem value="stdio">STDIO</SelectItem>
                 <SelectItem value="sse">SSE (Server-Sent Events)</SelectItem>
-                <SelectItem value="http">HTTP (Streamable)</SelectItem>
+                <SelectItem value="streamable-http">HTTP (Streamable)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -218,39 +232,27 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
                   Arguments
                 </Label>
                 <Input id="args" name="args" value={(formData.transport as MCPTransportStdio)?.args?.join(' ') || ''} onChange={handleTransportConfigChange} className="col-span-3" placeholder="e.g., --port 8080 --host 0.0.0.0" title="Space-separated arguments for the command." />
+                {/* Specific field errors for transport */}
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="cwd" className="text-right">
                   Working Dir
                 </Label>
                 <Input id="cwd" name="cwd" value={(formData.transport as MCPTransportStdio)?.cwd || ''} onChange={handleTransportConfigChange} className="col-span-3" placeholder="e.g., /opt/mcp-server (Optional)" title="Current working directory for the command (Optional)." />
+                {/* Specific field errors for transport */}
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="env" className="text-right">
                   Environment
                 </Label>
-                <Input id="env" name="env" value={(() => {
-                  const currentEnv = (formData.transport as MCPTransportStdio).env;
-                  if (typeof currentEnv === 'string') return currentEnv;
-                  if (typeof currentEnv === 'object' && currentEnv !== null) return JSON.stringify(currentEnv);
-                  return '';
-                })()} onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData(prev => ({
-                    ...prev,
-                    transport: {
-                      ...prev.transport,
-                      env: value, // Stored as string, will be parsed in handleSubmit
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    } as any, // Allow temporary type mismatch for env string
-                  }));
-                }} className="col-span-3" placeholder='e.g., {"API_KEY":"secret", "PORT":"3000"}' title='Environment variables as a JSON string (e.g., {"KEY":"VALUE"}).' />
+                <Input id="env" name="env" value={(formData.transport as FormMCPTransportStdio)?.env || ''} onChange={handleTransportConfigChange} className="col-span-3" placeholder='e.g., {"API_KEY":"secret"}' title='Environment variables as a JSON string (e.g., {"KEY":"VALUE"}).' />
+                {/* Specific field errors for transport */}
               </div>
             </>
           )}
 
-          {/* SSE/Streamable HTTP Fields */}
-          {(formData.transport.type === 'sse' || formData.transport.type === 'http') && (
+          {/* SSE/HTTP Fields */}
+          {(formData.transport.type === 'sse' || formData.transport.type === 'streamable-http') && (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="url" className="text-right">
@@ -259,6 +261,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
                 <Input id="url" name="url" value={(formData.transport as MCPTransportSSE).url || ''} onChange={handleTransportConfigChange} className="col-span-3" placeholder="e.g., http://localhost:8000/events" title="Full URL for SSE or HTTP stream endpoint." />
                 {/* Specific field errors for transport */}
               </div>
+              {/* TODO: Add headers field for SSE/HTTP if needed */}
             </>
           )}
         </div>
@@ -274,6 +277,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
               displayName: formData.displayName || formData.name,
               enabled: formData.enabled,
               transport: { ...formData.transport } as MCPTransport,
+              retries: formData.retries,
             };
             // Parse env for stdio if it's a string
             const transportStdio = tempServerConfig.transport as MCPTransportStdio;

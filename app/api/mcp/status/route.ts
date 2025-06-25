@@ -1,17 +1,18 @@
 // app/api/mcp/status/route.ts
 import { NextResponse } from 'next/server';
 import { initializeMCPManager, getManagedClient } from '@/lib/mcp/mcpManager';
-import { getAppConfig, getConfiguredServers, getServerConfig } from '@/lib/mcp/enhanced/config';
+import { getAppConfig, getCachedConfiguredServers, getCachedServerConfig } from '@/lib/mcp/enhanced/cached-config';
 
 export async function GET() {
-  await initializeMCPManager(getAppConfig());
+  const appConfig = await getAppConfig();
+  await initializeMCPManager(appConfig);
   try {
-    const configuredServerKeys = getConfiguredServers();
+    const configuredServerKeys = await getCachedConfiguredServers();
     const statuses = [];
 
     for (const serverKey of configuredServerKeys) {
       const client = getManagedClient(serverKey);
-      const serverConfig = getServerConfig(serverKey); // To get the 'disabled' status
+      const serverConfig = await getCachedServerConfig(serverKey); // To get the 'disabled' status
 
       if (client && serverConfig) {
         const clientStatus = await client.getStatus();
@@ -27,7 +28,7 @@ export async function GET() {
           toolsCount: 0,
           displayName: serverConfig.label || serverKey,
           serverKey: serverKey,
-          transportType: serverConfig.transport.type,
+          transportType: serverConfig.transport?.type || 'unknown',
           enabled: !serverConfig.disabled,
         });
       }
