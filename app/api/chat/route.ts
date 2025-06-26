@@ -276,7 +276,7 @@ export async function POST(req: Request) {
     const chatId = rawChatId || uuidv4(); // Ensure chatId is always present
     const operationId = reqOpId || uuidv4(); // Use provided operationId or generate new
     
-    appLogger.info(`[POST /api/chat] Received validated request. ChatID: ${chatId}, OperationID: ${operationId}. Messages: ${piperMessagesWithInitialIds.length}`, {
+    appLogger.debug(`[POST /api/chat] Received validated request. ChatID: ${chatId}, OperationID: ${operationId}. Messages: ${piperMessagesWithInitialIds.length}`, {
       correlationId,
       chatId,
       operationId,
@@ -288,7 +288,7 @@ export async function POST(req: Request) {
     const effectiveModel = model || process.env.DEFAULT_MODEL_ID || 'anthropic/claude-3.5-sonnet';
     const detectedProvider = getProviderForModel(effectiveModel as SupportedModel);
     
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Model selection: ${effectiveModel} (provider: ${detectedProvider})`, {
+    appLogger.debug(`Model selection: ${effectiveModel} (provider: ${detectedProvider})`, {
       correlationId,
       model: effectiveModel
     });
@@ -310,7 +310,7 @@ export async function POST(req: Request) {
         agentId: agentId,
       },
     });
-    appLogger.logSource(LogSource.HTTP, LogLevel.INFO, `Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, { 
+    appLogger.debug(`Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, { 
       correlationId,
       chatId
     });
@@ -318,7 +318,7 @@ export async function POST(req: Request) {
     await validateAndTrackUsage(); // Assuming this uses context or validatedRequest.data internally
 
     // Log PiperMessages before transforming to CoreMessages for orchestration
-    appLogger.info(`[POST /api/chat] Processing ${piperMessagesWithInitialIds.length} messages for orchestration`, {
+    appLogger.debug(`[POST /api/chat] Processing ${piperMessagesWithInitialIds.length} messages for orchestration`, {
       correlationId,
       messageCount: piperMessagesWithInitialIds.length
     });
@@ -374,7 +374,7 @@ export async function POST(req: Request) {
     const openrouterApiKey = process.env.OPENROUTER_API_KEY;
     const openrouterBaseUrl = process.env.OPENROUTER_BASE_URL;
     
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Initializing OpenRouter client (API key: ${openrouterApiKey ? 'present' : 'missing'}, length: ${openrouterApiKey ? openrouterApiKey.length : 0})`, {
+    appLogger.debug(`Initializing OpenRouter client (API key: ${openrouterApiKey ? 'present' : 'missing'}, length: ${openrouterApiKey ? openrouterApiKey.length : 0})`, {
       correlationId
     });
 
@@ -384,7 +384,7 @@ export async function POST(req: Request) {
     });
     
     const openrouterInitDuration = Date.now() - openrouterStartTime;
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `OpenRouter client initialized (${openrouterInitDuration}ms)`, {
+    appLogger.debug(`OpenRouter client initialized (${openrouterInitDuration}ms)`, {
       correlationId
     });
 
@@ -400,7 +400,7 @@ export async function POST(req: Request) {
       : { ...baseStreamConfig, experimental_streamData: true };
 
     // Enhanced request logging
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Preparing streamText request: ${effectiveModel} (${detectedProvider}), ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolsToUse ? Object.keys(toolsToUse).length : 0} tools`, {
+    appLogger.debug(`Preparing streamText request: ${effectiveModel} (${detectedProvider}), ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolsToUse ? Object.keys(toolsToUse).length : 0} tools`, {
       correlationId,
       model: effectiveModel,
       messageCount: coreFinalMessagesForAIFromOrchestration.length,
@@ -424,7 +424,7 @@ export async function POST(req: Request) {
     );
 
     try {
-      appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Initiating streamText call (operation: ${operationId_aiSdk})`, {
+      appLogger.debug(`Initiating streamText call (operation: ${operationId_aiSdk})`, {
         correlationId,
         operationId: operationId_aiSdk
       });

@@ -88,12 +88,13 @@ async function initializeServerComponents() {
 
 // Environment configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
+const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info');
 
 // Console format for development
 const createFileTransport = (logsDir: string, filename: string, level?: string) => {
   return new winston!.transports.File({
     filename: path!.join(logsDir, `${filename}.log`),
-    level: level || 'info',
+    level: level || logLevel,
     format: winston!.format.combine(
       winston!.format.timestamp(),
       winston!.format.json()
@@ -111,12 +112,12 @@ const createWinstonLogger = (logsDir: string) => {
   );
 
   const transports = [
-    createFileTransport(logsDir, 'app', 'info'), // General app logs
+    createFileTransport(logsDir, 'app', logLevel), // Use environment log level
     createFileTransport(logsDir, 'error', 'error'), // Error logs
   ];
 
   const logger = winston!.createLogger({
-    level: 'debug',
+    level: logLevel, // Use environment log level instead of hardcoded 'debug'
     format: logFormat,
     transports,
     defaultMeta: { service: 'piper' },

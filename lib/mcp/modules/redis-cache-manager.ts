@@ -1,6 +1,7 @@
 import Redis from 'ioredis';
 import { appLogger } from '@/lib/logger';
 import { LogLevel } from '@/lib/logger/constants';
+import { logCacheOperation } from '@/lib/logger/utils';
 
 // Enhance globalThis for HMR persistence in development
 declare global {
@@ -195,10 +196,10 @@ export class RedisCacheManager {
     try {
       const cached = await client.get(`system_prompt:${contextHash}`);
       if (cached) {
-        appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] System prompt cache HIT for context: ${contextHash.substring(0, 8)}...`);
+        logCacheOperation('hit', 'SystemPrompt', contextHash.substring(0, 8));
         return cached;
       }
-      appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] System prompt cache MISS for context: ${contextHash.substring(0, 8)}...`);
+      logCacheOperation('miss', 'SystemPrompt', contextHash.substring(0, 8));
       return null;
     } catch (error) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error getting system prompt: ${error instanceof Error ? error.message : String(error)}`);
@@ -212,7 +213,7 @@ export class RedisCacheManager {
 
     try {
       await client.setex(`system_prompt:${contextHash}`, ttl, prompt);
-      appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] Cached system prompt for context: ${contextHash.substring(0, 8)}... (TTL: ${ttl}s)`);
+      logCacheOperation('set', 'SystemPrompt', contextHash.substring(0, 8), { ttl });
     } catch (error) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error caching system prompt: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -229,10 +230,10 @@ export class RedisCacheManager {
     try {
       const cached = await client.get(`tool_selection:${contextHash}`);
       if (cached) {
-        appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] Tool selection cache HIT for context: ${contextHash.substring(0, 8)}...`);
+        logCacheOperation('hit', 'ToolSelection', contextHash.substring(0, 8));
         return JSON.parse(cached);
       }
-      appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] Tool selection cache MISS for context: ${contextHash.substring(0, 8)}...`);
+      logCacheOperation('miss', 'ToolSelection', contextHash.substring(0, 8));
       return null;
     } catch (error) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error getting tool selection: ${error instanceof Error ? error.message : String(error)}`);
@@ -247,7 +248,7 @@ export class RedisCacheManager {
     try {
       await client.setex(`tool_selection:${contextHash}`, ttl, JSON.stringify(tools));
       const toolCount = Object.keys(tools).length;
-      appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] Cached tool selection: ${toolCount} tools for context: ${contextHash.substring(0, 8)}... (TTL: ${ttl}s)`);
+      logCacheOperation('set', 'ToolSelection', contextHash.substring(0, 8), { toolCount, ttl });
     } catch (error) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error caching tool selection: ${error instanceof Error ? error.message : String(error)}`);
     }
