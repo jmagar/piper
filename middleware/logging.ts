@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentCorrelationId, getCurrentContext } from '@/lib/logger/correlation';
 // import { HttpLogEntry, LoggingMiddlewareConfig } from '@/lib/logger/types'; // Remove HttpLogEntry
 import { LoggingMiddlewareConfig } from '@/lib/logger/types'; 
+import { logThrottledOperation } from '@/lib/logger/utils';
 // import { ExpressRequest, ExpressResponse, NextFunction } from './correlation'; // To be removed by commenting out Express fns
 
 // Default sensitive headers to exclude from logging
@@ -130,29 +131,12 @@ export function nextRequestLoggingMiddleware(
   try {
     const startTime = Date.now();
     const correlationId = getCurrentCorrelationId();
-    const context = getCurrentContext();
     
-    // Prepare request log data
-    const requestData = {
-      method: request.method,
-      url: request.url,
-      path: request.nextUrl.pathname,
-      query: Object.fromEntries(request.nextUrl.searchParams.entries()),
-      headers: finalConfig.logHeaders ? 
-        sanitizeHeaders(Object.fromEntries(request.headers.entries()), finalConfig.sensitiveHeaders) : 
-        undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
-      ip: getClientIP(request),
-      correlationId,
-      userId: context?.userId,
-      timestamp: new Date().toISOString(),
-      startTime,
-    };
-    
-    // Log the request
-    console.info('[Middleware] Incoming request', { // Changed to console
-      request: requestData,
-      source: 'next-middleware',
+    // Simple, concise logging - just the essentials
+    console.debug(`[${request.method}] ${request.nextUrl.pathname}`, {
+      correlationId: correlationId?.substring(0, 8),
+      ip: getClientIP(request)?.split(',')[0], // Just first IP
+      userAgent: request.headers.get('user-agent')?.substring(0, 50) + '...',
     });
     
     // Store start time for response logging

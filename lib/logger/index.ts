@@ -24,6 +24,7 @@ async function initializeServerComponents() {
   try {
     const winstonModule = await import('winston');
     winston = winstonModule.default || winstonModule;
+    
     const pathModule = await import('path');
     path = pathModule.default || pathModule;
 
@@ -57,7 +58,7 @@ async function initializeServerComponents() {
               } else {
                 metaString += ` ${stringKey}=${JSON.stringify(info[key])}`;
               }
-            } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars -- Non-critical, so we don't want to crash the app. _error is unused.
+            } catch (_error) {
               metaString += ` ${stringKey}=[Unserializable]`;
             }
           }
@@ -90,7 +91,7 @@ async function initializeServerComponents() {
 const isDevelopment = process.env.NODE_ENV === 'development';
 const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info');
 
-// Console format for development
+// Create basic file transport (no rotation for now to avoid client-side issues)
 const createFileTransport = (logsDir: string, filename: string, level?: string) => {
   return new winston!.transports.File({
     filename: path!.join(logsDir, `${filename}.log`),
@@ -104,7 +105,7 @@ const createFileTransport = (logsDir: string, filename: string, level?: string) 
   });
 };
 
-// Create Winston logger with file transports
+// Create Winston logger with basic file transports
 const createWinstonLogger = (logsDir: string) => {
   const logFormat = winston!.format.combine(
     winston!.format.timestamp(),
@@ -112,12 +113,12 @@ const createWinstonLogger = (logsDir: string) => {
   );
 
   const transports = [
-    createFileTransport(logsDir, 'app', logLevel), // Use environment log level
-    createFileTransport(logsDir, 'error', 'error'), // Error logs
+    createFileTransport(logsDir, 'app', logLevel), // Main application logs
+    createFileTransport(logsDir, 'error', 'error'), // Error logs only
   ];
 
   const logger = winston!.createLogger({
-    level: logLevel, // Use environment log level instead of hardcoded 'debug'
+    level: logLevel,
     format: logFormat,
     transports,
     defaultMeta: { service: 'piper' },
@@ -222,10 +223,8 @@ const _internalServerLog = async (level: LogLevel, message: string, context?: Lo
   }
 
   const winstonLevel = level.toLowerCase();
-  if (winstonLogger && typeof (winstonLogger as any)[winstonLevel] === 'function') { // eslint-disable-line @typescript-eslint/no-explicit-any
-    // The `as any` is used here because Winston's type definitions for log levels
-    // don't easily support dynamic access via a variable string level.
-    (winstonLogger as any)[winstonLevel](message, logMeta); // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (winstonLogger && typeof (winstonLogger as any)[winstonLevel] === 'function') {
+    (winstonLogger as any)[winstonLevel](message, logMeta);
   } else {
     // Fallback if Winston isn't initialized or level is somehow invalid
     const simpleContext = { ...context };

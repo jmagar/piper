@@ -129,6 +129,38 @@ export function logChatOperation(
 }
 
 /**
+ * Log throttled operations (middleware, API calls, etc.) to reduce spam
+ * Only logs every Nth operation or after a time threshold
+ */
+export function logThrottledOperation(
+  operationType: string,
+  operation: string,
+  key: string,
+  metadata?: Record<string, unknown>
+): void {
+  const throttleKey = `${operationType}:${key}`;
+  const now = Date.now();
+  const existing = cacheLogCounts.get(throttleKey);
+  
+  if (!existing) {
+    cacheLogCounts.set(throttleKey, { count: 1, lastLogged: now });
+    // Always log the first operation of each type
+    console.debug(`[Throttled] ${operation}`, metadata);
+    return;
+  }
+  
+  existing.count++;
+  const shouldLog = 
+    existing.count % CACHE_LOG_BATCH_SIZE === 0 || 
+    (now - existing.lastLogged) > CACHE_LOG_THROTTLE_MS;
+    
+  if (shouldLog) {
+    existing.lastLogged = now;
+    console.debug(`[Throttled] ${operation} (${existing.count} ops)`, metadata);
+  }
+}
+
+/**
  * Get cache statistics for monitoring
  */
 export function getCacheLogStats(): Record<string, { count: number, lastLogged: number }> {

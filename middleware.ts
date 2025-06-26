@@ -7,6 +7,7 @@ import {
 import { nextRequestLoggingMiddleware } from "./middleware/logging"
 import { nextErrorHandler } from "./middleware/error-handler"
 import { correlationManager } from "./lib/logger/correlation"
+import { logThrottledOperation } from "./lib/logger/utils"
 
 export async function middleware(request: NextRequest) {
   try {
@@ -45,12 +46,9 @@ export async function middleware(request: NextRequest) {
       // Ensure correlation headers are added
       addCorrelationHeaders(response, context.correlationId, context.requestId)
 
-      // Log middleware completion
-      console.debug('Middleware processing completed', {
-        path: request.nextUrl.pathname,
-        method: request.method,
-        correlationId: context.correlationId,
-        source: 'next-middleware',
+      // Simple completion logging
+      console.debug(`[${request.method}] ${request.nextUrl.pathname} completed`, {
+        correlationId: context.correlationId?.substring(0, 8),
       });
 
       return response;
