@@ -89,6 +89,7 @@ const MODEL_PROVIDER_MAP: Record<SupportedModel, Provider> = {
   "anthropic/claude-3-haiku-20240307": "openrouter",
   "anthropic/claude-4-sonnet-20250514": "openrouter",
   "anthropic/claude-4-opus-20250514": "openrouter",
+  "anthropic/claude-sonnet-4": "openrouter",
 
   // XAI
   "grok-3": "xai",

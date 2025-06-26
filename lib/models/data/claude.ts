@@ -182,7 +182,7 @@ const claudeModels: ModelConfig[] = [
     apiDocs: "https://docs.anthropic.com/en/docs/about-claude/models/overview",
     modelPage: "https://www.anthropic.com/claude/sonnet",
     releasedAt: "2025-05-14", // Approximate based on research
-    apiSdk: () => openproviders("anthropic/claude-4-sonnet-20250514"),
+    apiSdk: () => openproviders("anthropic/claude-sonnet-4"),
   },
   {
     id: "anthropic/claude-4-opus-20250514",

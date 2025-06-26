@@ -285,7 +285,7 @@ export async function POST(req: Request) {
       userId: userId
     });
 
-    const effectiveModel = model || 'anthropic/claude-3.5-sonnet';
+    const effectiveModel = model || process.env.DEFAULT_MODEL_ID || 'anthropic/claude-3.5-sonnet';
     const detectedProvider = getProviderForModel(effectiveModel as SupportedModel);
     
     appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Model selection: ${effectiveModel} (provider: ${detectedProvider})`, {

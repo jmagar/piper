@@ -87,6 +87,7 @@ export type AnthropicModel =
   | "anthropic/claude-3-haiku-20240307"
   // Adding new Claude 4 models
   | "anthropic/claude-4-sonnet-20250514"
+  | "anthropic/claude-sonnet-4"
   | "anthropic/claude-4-opus-20250514"
 
 export type XaiModel =
