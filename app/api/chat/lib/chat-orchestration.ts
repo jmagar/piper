@@ -162,11 +162,42 @@ async function configureToolsEnhanced(
     const intelligentlySelectedTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
     
     const duration = Date.now() - startTime;
-         appLogger.info(`[ChatOrchestration] 🎯 Enhanced tool configuration completed: ${Object.keys(intelligentlySelectedTools).length} tools (${conversationContext.messageCount} messages) in ${duration}ms`, {
-       correlationId
-     });
+    const toolCount = Object.keys(intelligentlySelectedTools).length;
+    
+    // ENHANCED DIAGNOSTIC LOGGING for MCP tool access issue
+    appLogger.info(`[ChatOrchestration] 🎯 Enhanced tool configuration completed: ${toolCount} tools (${conversationContext.messageCount} messages) in ${duration}ms`, {
+      correlationId,
+      toolCount,
+      toolNames: Object.keys(intelligentlySelectedTools),
+      conversationContext: {
+        messageCount: conversationContext.messageCount,
+        mentionedTools: conversationContext.mentionedTools,
+        messageLength: conversationContext.messageLength
+      }
+    });
+    
+    // Log detailed tool information for debugging
+    if (toolCount > 0) {
+      appLogger.debug(`[ChatOrchestration] 🔧 Tool details for AI SDK:`, {
+        correlationId,
+                 tools: Object.keys(intelligentlySelectedTools).map(toolName => {
+           const tool = intelligentlySelectedTools[toolName] as Record<string, unknown>;
+           return {
+             name: toolName,
+             hasDescription: !!(tool?.description),
+             hasParameters: !!(tool?.parameters),
+             type: typeof tool
+           };
+         })
+      });
+    } else {
+      appLogger.warn(`[ChatOrchestration] ⚠️ No tools loaded for AI SDK - this may cause assistant to claim no tool access`, {
+        correlationId,
+        conversationContext
+      });
+    }
 
-    return Object.keys(intelligentlySelectedTools).length > 0 ? intelligentlySelectedTools : undefined;
+    return toolCount > 0 ? intelligentlySelectedTools : undefined;
     
   } catch (error) {
     appLogger.error('[ChatOrchestration] Error in enhanced tool configuration', {

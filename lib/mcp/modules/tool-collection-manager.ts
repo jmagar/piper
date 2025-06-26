@@ -48,7 +48,18 @@ export class ToolCollectionManager {
                 
                 Object.entries(tools).forEach(([toolName, toolDefinition]) => {
                   const prefixedToolName = `${server.key}_${toolName}`;
-                  combinedTools[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
+                  
+                  // Validate tool schema before adding to prevent AI SDK conversion errors
+                  if (this.validateToolSchema(toolDefinition, prefixedToolName)) {
+                    combinedTools[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
+                  } else {
+                    appLogger.warn(`[Tool Collection Manager] ⚠️ Skipping tool '${prefixedToolName}' due to invalid schema`, {
+                      correlationId: getCurrentCorrelationId(),
+                      operationId: 'tool_collection_schema_validation_failed',
+                      toolName: prefixedToolName,
+                      serverKey: server.key
+                    });
+                  }
                 });
               } else {
                 appLogger.warn(`[Tool Collection Manager] ⚠️ No tools found for server '${server.label}' despite success status`, {
@@ -354,6 +365,63 @@ export class ToolCollectionManager {
   }
 
   /**
+   * Validate tool schema to prevent AI SDK conversion errors
+   */
+  private validateToolSchema(toolDefinition: unknown, toolName: string): boolean {
+    try {
+      // Check if the tool definition has the basic structure expected by AI SDK
+      if (!toolDefinition || typeof toolDefinition !== 'object') {
+        return false;
+      }
+
+      const tool = toolDefinition as Record<string, unknown>;
+      
+      // Check for required properties
+      if (!tool.description && !tool.parameters) {
+        return false;
+      }
+
+      // If parameters exist, validate they have proper structure
+      if (tool.parameters) {
+        // Check if parameters is an object with properties
+        if (typeof tool.parameters !== 'object' || !tool.parameters || !(tool.parameters as Record<string, unknown>).properties) {
+          return false;
+        }
+
+        // Try to simulate what zod-to-json-schema does - check for typeName
+        const params = tool.parameters as Record<string, unknown>;
+        if (params.properties) {
+          for (const [propName, propDef] of Object.entries(params.properties as Record<string, unknown>)) {
+            if (propDef && typeof propDef === 'object') {
+              const prop = propDef as Record<string, unknown>;
+              // Check if the property has the structure that zod-to-json-schema expects
+              if (prop.type === undefined && prop.typeName === undefined && prop._def === undefined) {
+                appLogger.warn(`[Tool Collection Manager] Tool '${toolName}' has malformed parameter '${propName}' - missing type information`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_schema_validation_param_error',
+                  toolName,
+                  paramName: propName
+                });
+                return false;
+              }
+            }
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      appLogger.error(`[Tool Collection Manager] Error validating schema for tool '${toolName}'`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_schema_validation_error',
+        toolName,
+        error: error as Error
+      });
+      return false;
+    }
+  }
+
+  /**
    * Validate that a tool exists in the collection
    */
   async validateToolExists(prefixedToolName: string): Promise<boolean> {
@@ -381,6 +449,8 @@ export class ToolCollectionManager {
 
     return false;
   }
+
+
 }
 
 // Export singleton instance

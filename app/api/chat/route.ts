@@ -399,13 +399,36 @@ export async function POST(req: Request) {
       ? { ...baseStreamConfig, tools: toolsToUse, maxSteps: TOKEN_CONFIG.MAX_STEPS, experimental_streamData: true }
       : { ...baseStreamConfig, experimental_streamData: true };
 
-    // Enhanced request logging
-    appLogger.debug(`Preparing streamText request: ${effectiveModel} (${detectedProvider}), ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolsToUse ? Object.keys(toolsToUse).length : 0} tools`, {
+    // Enhanced request logging with detailed tool information
+    const toolCount = toolsToUse ? Object.keys(toolsToUse).length : 0;
+    appLogger.debug(`Preparing streamText request: ${effectiveModel} (${detectedProvider}), ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolCount} tools`, {
       correlationId,
       model: effectiveModel,
       messageCount: coreFinalMessagesForAIFromOrchestration.length,
-      hasTools: !!toolsToUse
+      hasTools: !!toolsToUse,
+      toolCount
     });
+    
+    // CRITICAL DIAGNOSTIC: Log exactly what tools are being passed to AI SDK
+    if (toolsToUse && toolCount > 0) {
+      appLogger.info(`[ChatAPI] 🔧 Tools being passed to AI SDK:`, {
+        correlationId,
+        toolNames: Object.keys(toolsToUse),
+        toolCount,
+        streamTextConfig: {
+          hasTools: 'tools' in streamTextConfig,
+          hasMaxSteps: 'maxSteps' in streamTextConfig,
+          configKeys: Object.keys(streamTextConfig)
+        }
+      });
+    } else {
+      appLogger.warn(`[ChatAPI] ⚠️ NO TOOLS being passed to AI SDK - assistant will claim no tool access`, {
+        correlationId,
+        toolsToUse: !!toolsToUse,
+        toolCount,
+        streamTextConfigHasTools: 'tools' in streamTextConfig
+      });
+    }
 
     // This variable will be used to track the AI SDK operation
     const operationId_aiSdk = aiSdkLogger.startOperation(
@@ -430,7 +453,16 @@ export async function POST(req: Request) {
       });
 
       const streamStartTime = Date.now();
-      const result = await streamText(streamTextConfig);
+      const result = await streamText({
+        ...streamTextConfig,
+        onError: ({ error }) => {
+          appLogger.error(`StreamText error during streaming for ${effectiveModel}`, {
+            error,
+            correlationId,
+            operationId: operationId_aiSdk
+          });
+        }
+      });
       const streamInitDuration = Date.now() - streamStartTime;
       
       appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `streamText call successful, creating response stream (${streamInitDuration}ms)`, {
@@ -449,8 +481,32 @@ export async function POST(req: Request) {
         response: 'Stream created successfully'
       });
 
-      // Return the data stream response directly
-      return result.toDataStreamResponse();
+      // Return the data stream response with proper error handling
+      return result.toDataStreamResponse({
+        getErrorMessage: (error: unknown) => {
+          // Log the actual error for debugging
+          appLogger.error(`Streaming error occurred for ${effectiveModel}`, {
+            error,
+            correlationId,
+            operationId: operationId_aiSdk
+          });
+          
+          // Return a detailed error message to the client
+          if (error == null) {
+            return 'Unknown error occurred';
+          }
+          
+          if (typeof error === 'string') {
+            return error;
+          }
+          
+          if (error instanceof Error) {
+            return error.message;
+          }
+          
+          return JSON.stringify(error);
+        }
+      });
     } catch (error: unknown) {
       const streamError = error instanceof Error ? error : new Error(String(error));
       const streamErrorDuration = Date.now() - requestStartTime;

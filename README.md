@@ -126,6 +126,26 @@ DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper
 REDIS_URL=redis://piper-cache:6379
 ```
 
+### Cache Management
+
+Piper uses Redis for high-performance caching of configurations and token counting. The cache automatically invalidates when config files change, but manual management is also available:
+
+```bash
+# View cache statistics
+./scripts/clear-cache.sh --stats
+
+# Clear all caches
+./scripts/clear-cache.sh
+
+# Clear only config cache (useful for config troubleshooting)
+./scripts/clear-cache.sh --config-only
+
+# See what would be cleared without doing it
+./scripts/clear-cache.sh --dry-run --verbose
+```
+
+For detailed cache management documentation, see [docs/cache-management.md](docs/cache-management.md).
+
 ---
 
 <div align="center">

@@ -3,7 +3,7 @@ import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { mcpServiceRegistry } from './service-registry';
 import { serverStatusManager } from './status-manager';
 import { getCachedAppConfig as getAppConfig, type AppConfig, type ServerConfigEntry } from '../enhanced/index';
-import { mcpManager } from '../mcpManager';
+import { initializeNewServer } from '../mcpManager';
 
 // Enhance globalThis for HMR persistence in development
 declare global {
@@ -265,7 +265,7 @@ export class PollingManager {
 
     try {
       // Delegate to MCPManager's initializeNewServer for consistent logic
-      await mcpManager.initializeNewServer(serverKey, serverConfig);
+      await initializeNewServer(serverKey, serverConfig);
       appLogger.info(`[Polling Manager] Successfully delegated initialization for new server ${serviceLabel}`, {
         correlationId: getCurrentCorrelationId(),
         operationId: 'initializeNewServer',

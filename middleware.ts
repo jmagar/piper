@@ -1,3 +1,4 @@
+import '@/lib/mcp/startup'; // Initiate background startup processes
 import { NextResponse, type NextRequest } from "next/server"
 // import { appLogger } from "@/lib/logger" // Now unused
 import { 

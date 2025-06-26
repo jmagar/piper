@@ -517,7 +517,15 @@ export class MCPManager {
    * Clean up for HMR
    */
   cleanupForHmr(): void {
-    pollingManager.cleanupForHmr();
+    // Logic to clean up resources before HMR reload
+    if (process.env.NODE_ENV !== 'production') {
+      appLogger.logSource('MCP', LogLevel.WARN, '[MCP Manager] Cleaning up resources for HMR reload...');
+      mcpServiceRegistry.clearAll();
+      pollingManager.stopPolling();
+      if (globalThis.__isMCPManagerInitialized) {
+        globalThis.__isMCPManagerInitialized = false;
+      }
+    }
   }
 
   /**
@@ -538,40 +546,43 @@ export class MCPManager {
   }
 }
 
-// Export singleton instance and legacy functions for backward compatibility
-export const mcpManager = MCPManager.getInstance();
-
+//
+// Exported Functions for Global Access
+//
 export async function initializeMCPManager(appConfig: AppConfig): Promise<void> {
-  return await mcpManager.initialize(appConfig);
+  await MCPManager.getInstance().initialize(appConfig);
 }
 
 export async function initializeNewServer(serverKey: string, serverConfig: ServerConfigEntry): Promise<void> {
-  return await mcpManager.initializeNewServer(serverKey, serverConfig);
+  await MCPManager.getInstance().initializeNewServer(serverKey, serverConfig);
 }
 
 export async function checkAndInitializeNewServers(): Promise<void> {
-  return await mcpManager.checkAndInitializeNewServers();
+  await MCPManager.getInstance().checkAndInitializeNewServers();
 }
 
 export async function pollAllServers(): Promise<void> {
-  return await mcpManager.pollAllServers();
+  await MCPManager.getInstance().pollAllServers();
 }
 
 export async function getManagedServersInfo(appConfig?: AppConfig): Promise<ManagedServerInfo[]> {
-  return await mcpManager.getManagedServersInfo(appConfig);
+  return await MCPManager.getInstance().getManagedServersInfo(appConfig);
 }
 
 export function getManagedClient(serverKey: string) {
-  return mcpManager.getManagedClient(serverKey);
+  return MCPManager.getInstance().getManagedClient(serverKey);
 }
 
 export async function getCombinedMCPToolsForAISDK(): Promise<ToolSet> {
-  return await mcpManager.getCombinedMCPToolsForAISDK();
+  return await toolCollectionManager.getCombinedMCPToolsForAISDK();
 }
 
 export function cleanupForHmr(): void {
-  mcpManager.cleanupForHmr();
+  MCPManager.getInstance().cleanupForHmr();
 }
+
+// Export the manager instance for modules that need direct access
+export const mcpManager = MCPManager.getInstance();
 
 // Re-export types and modules for external use
 export type { ManagedServerInfo, MCPServiceStatus };
@@ -583,18 +594,3 @@ export {
   pollingManager,
   toolCollectionManager,
 };
-
-// Auto-initialize if on server side
-if (typeof window === 'undefined') {
-  getAppConfig().then(initialAppConfig => {
-    if (initialAppConfig) {
-      initializeMCPManager(initialAppConfig).catch(error => {
-        appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to initialize MCP Manager on startup:', error);
-      });
-    } else {
-      appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Could not load initial app config. MCP Manager not started.');
-    }
-  }).catch(error => {
-    appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to load initial config during auto-initialization:', error);
-  });
-}
