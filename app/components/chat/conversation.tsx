@@ -1,13 +1,13 @@
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
-import { ChatContainer } from "@/components/prompt-kit/chat-container"
 import { Loader } from "@/components/prompt-kit/loader"
-import { Message as MessageType } from "@ai-sdk/react"
-import { useRef } from "react"
 import { Message } from "./message"
+import { type Message as MessageType } from "ai"
+import { useRef } from "react"
+import { ChatContainer } from "@/components/prompt-kit/chat-container"
 
 type ConversationProps = {
   messages: MessageType[]
-  status?: "streaming" | "ready" | "submitted" | "error"
+  status: "streaming" | "ready" | "submitted" | "error"
   onDelete: (id: string) => void
   onEdit: (id: string, newText: string) => void
   onReload: () => void
@@ -15,17 +15,14 @@ type ConversationProps = {
 
 export function Conversation({
   messages,
-  status = "ready",
+  status,
   onDelete,
   onEdit,
   onReload,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
-  const scrollRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  if (!messages || messages.length === 0)
-    return <div className="h-full w-full"></div>
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   return (
     <div className="relative flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto">
@@ -60,6 +57,7 @@ export function Conversation({
               hasScrollAnchor={hasScrollAnchor}
               parts={message.parts}
               status={status}
+              createdAt={message.createdAt}
             >
               {message.content}
             </Message>

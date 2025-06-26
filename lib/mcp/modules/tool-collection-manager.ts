@@ -5,6 +5,25 @@ import { mcpServiceRegistry } from './service-registry';
 import { getCachedAppConfig as getAppConfig } from '../enhanced';
 import { toolDefinitionCompressor } from './tool-definition-compressor';
 
+/**
+ * Validates a tool definition to ensure it has the required structure for AI SDK
+ */
+function isValidToolDefinition(toolDefinition: unknown): toolDefinition is NonNullable<ToolSet[string]> {
+  if (!toolDefinition || typeof toolDefinition !== 'object') {
+    return false;
+  }
+  
+  // Check for required AI SDK tool properties
+  const tool = toolDefinition as Record<string, unknown>;
+  return (
+    typeof tool.description === 'string' || tool.description === undefined
+  ) && (
+    typeof tool.parameters === 'object' && tool.parameters !== null
+  ) && (
+    typeof tool.execute === 'function' || tool.execute === undefined
+  );
+}
+
 export class ToolCollectionManager {
   private static instance: ToolCollectionManager;
 
@@ -36,38 +55,91 @@ export class ToolCollectionManager {
           if (service) {
             try {
               const tools = await service.getTools();
-              if (tools) {
-                appLogger.info(`[Tool Collection Manager] ✅ Loaded ${Object.keys(tools).length} tools from '${server.label}' (${server.transportType})`, {
+              
+              // Critical fix: Properly handle null/undefined tools
+              if (!tools) {
+                appLogger.warn(`[Tool Collection Manager] ⚠️ Service returned null/undefined tools for '${server.label}'`, {
                   correlationId: getCurrentCorrelationId(),
-                  operationId: 'tool_collection_server_loaded',
+                  operationId: 'tool_collection_server_null_tools',
                   serverKey: server.key, 
-                  serverLabel: server.label, 
-                  toolCount: Object.keys(tools).length,
-                  transportType: server.transportType
+                  serverLabel: server.label
                 });
-                
-                Object.entries(tools).forEach(([toolName, toolDefinition]) => {
-                  const prefixedToolName = `${server.key}_${toolName}`;
-                  
-                  // Validate tool schema before adding to prevent AI SDK conversion errors
-                  if (this.validateToolSchema(toolDefinition, prefixedToolName)) {
-                    combinedTools[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
-                  } else {
-                    appLogger.warn(`[Tool Collection Manager] ⚠️ Skipping tool '${prefixedToolName}' due to invalid schema`, {
-                      correlationId: getCurrentCorrelationId(),
-                      operationId: 'tool_collection_schema_validation_failed',
-                      toolName: prefixedToolName,
-                      serverKey: server.key
-                    });
-                  }
-                });
-              } else {
-                appLogger.warn(`[Tool Collection Manager] ⚠️ No tools found for server '${server.label}' despite success status`, {
+                continue;
+              }
+
+              if (typeof tools !== 'object') {
+                appLogger.error(`[Tool Collection Manager] ❌ Service returned invalid tools type for '${server.label}' - expected object, got ${typeof tools}`, {
                   correlationId: getCurrentCorrelationId(),
-                  operationId: 'tool_collection_server_no_tools',
-                  serverKey: server.key, serverLabel: server.label
+                  operationId: 'tool_collection_server_invalid_tools_type',
+                  serverKey: server.key, 
+                  serverLabel: server.label,
+                  toolsType: typeof tools
+                });
+                continue;
+              }
+
+              const toolEntries = Object.entries(tools);
+              if (toolEntries.length === 0) {
+                appLogger.debug(`[Tool Collection Manager] No tools found in tools object for '${server.label}'`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_collection_server_empty_tools',
+                  serverKey: server.key, 
+                  serverLabel: server.label
+                });
+                continue;
+              }
+
+              appLogger.info(`[Tool Collection Manager] ✅ Loaded ${toolEntries.length} tools from '${server.label}' (${server.transportType})`, {
+                correlationId: getCurrentCorrelationId(),
+                operationId: 'tool_collection_server_loaded',
+                serverKey: server.key, 
+                serverLabel: server.label, 
+                toolCount: toolEntries.length,
+                transportType: server.transportType
+              });
+              
+              let validToolCount = 0;
+              let invalidToolCount = 0;
+
+              toolEntries.forEach(([toolName, toolDefinition]) => {
+                const prefixedToolName = `${server.key}_${toolName}`;
+                
+                // Validate tool definition before adding to collection
+                if (!isValidToolDefinition(toolDefinition)) {
+                  appLogger.error(`[Tool Collection Manager] ❌ Invalid tool definition for '${prefixedToolName}' - missing required properties`, {
+                    correlationId: getCurrentCorrelationId(),
+                    operationId: 'tool_collection_invalid_tool_definition',
+                    toolName: prefixedToolName,
+                    serverKey: server.key,
+                    toolDefinition: toolDefinition // Log the actual definition for debugging
+                  });
+                  invalidToolCount++;
+                  return; // Skip this tool
+                }
+                
+                // Safe assignment - we've validated the tool definition
+                combinedTools[prefixedToolName] = toolDefinition;
+                validToolCount++;
+                
+                appLogger.debug(`[Tool Collection Manager] ✅ Added tool '${prefixedToolName}' to collection`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_collection_tool_added',
+                  toolName: prefixedToolName,
+                  serverKey: server.key
+                });
+              });
+
+              if (invalidToolCount > 0) {
+                appLogger.warn(`[Tool Collection Manager] ⚠️ Skipped ${invalidToolCount} invalid tools from '${server.label}', added ${validToolCount} valid tools`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_collection_server_partial_success',
+                  serverKey: server.key, 
+                  serverLabel: server.label,
+                  validToolCount,
+                  invalidToolCount
                 });
               }
+              
             } catch (error) {
               appLogger.error(`[Tool Collection Manager] ❌ Error loading tools from '${server.label}'`, {
                 correlationId: getCurrentCorrelationId(),
@@ -126,20 +198,58 @@ export class ToolCollectionManager {
 
     try {
       const tools = await service.getTools();
-      if (tools) {
-        const toolSet: ToolSet = {};
-        Object.entries(tools).forEach(([toolName, toolDefinition]) => {
-          const prefixedToolName = `${serverKey}_${toolName}`;
-          toolSet[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
-        });
-        
-        appLogger.info(`[Tool Collection Manager] Loaded ${Object.keys(toolSet).length} tools from server '${serverKey}'.`, {
+      
+      // Apply the same validation as in getCombinedMCPToolsForAISDK
+      if (!tools) {
+        appLogger.warn(`[Tool Collection Manager] ⚠️ Service returned null/undefined tools for server '${serverKey}'`, {
           correlationId: getCurrentCorrelationId(),
-          operationId: 'tool_collection_server_loaded',
-          serverKey, toolCount: Object.keys(toolSet).length
+          operationId: 'tool_collection_server_null_tools',
+          serverKey
         });
-        return toolSet;
+        return {};
       }
+
+      if (typeof tools !== 'object') {
+        appLogger.error(`[Tool Collection Manager] ❌ Service returned invalid tools type for server '${serverKey}' - expected object, got ${typeof tools}`, {
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'tool_collection_server_invalid_tools_type',
+          serverKey,
+          toolsType: typeof tools
+        });
+        return {};
+      }
+
+      const toolSet: ToolSet = {};
+      let validToolCount = 0;
+      let invalidToolCount = 0;
+
+      Object.entries(tools).forEach(([toolName, toolDefinition]) => {
+        const prefixedToolName = `${serverKey}_${toolName}`;
+        
+        if (!isValidToolDefinition(toolDefinition)) {
+          appLogger.error(`[Tool Collection Manager] ❌ Invalid tool definition for '${prefixedToolName}'`, {
+            correlationId: getCurrentCorrelationId(),
+            operationId: 'tool_collection_invalid_tool_definition',
+            toolName: prefixedToolName,
+            serverKey
+          });
+          invalidToolCount++;
+          return;
+        }
+        
+        toolSet[prefixedToolName] = toolDefinition;
+        validToolCount++;
+      });
+      
+      appLogger.info(`[Tool Collection Manager] Loaded ${validToolCount} valid tools from server '${serverKey}' (${invalidToolCount} invalid skipped).`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_server_loaded',
+        serverKey, 
+        validToolCount,
+        invalidToolCount
+      });
+      
+      return toolSet;
     } catch (error) {
       appLogger.error(`[Tool Collection Manager] Error loading tools from server '${serverKey}'`, {
         correlationId: getCurrentCorrelationId(),
@@ -364,62 +474,7 @@ export class ToolCollectionManager {
     return serversInfo;
   }
 
-  /**
-   * Validate tool schema to prevent AI SDK conversion errors
-   */
-  private validateToolSchema(toolDefinition: unknown, toolName: string): boolean {
-    try {
-      // Check if the tool definition has the basic structure expected by AI SDK
-      if (!toolDefinition || typeof toolDefinition !== 'object') {
-        return false;
-      }
-
-      const tool = toolDefinition as Record<string, unknown>;
-      
-      // Check for required properties
-      if (!tool.description && !tool.parameters) {
-        return false;
-      }
-
-      // If parameters exist, validate they have proper structure
-      if (tool.parameters) {
-        // Check if parameters is an object with properties
-        if (typeof tool.parameters !== 'object' || !tool.parameters || !(tool.parameters as Record<string, unknown>).properties) {
-          return false;
-        }
-
-        // Try to simulate what zod-to-json-schema does - check for typeName
-        const params = tool.parameters as Record<string, unknown>;
-        if (params.properties) {
-          for (const [propName, propDef] of Object.entries(params.properties as Record<string, unknown>)) {
-            if (propDef && typeof propDef === 'object') {
-              const prop = propDef as Record<string, unknown>;
-              // Check if the property has the structure that zod-to-json-schema expects
-              if (prop.type === undefined && prop.typeName === undefined && prop._def === undefined) {
-                appLogger.warn(`[Tool Collection Manager] Tool '${toolName}' has malformed parameter '${propName}' - missing type information`, {
-                  correlationId: getCurrentCorrelationId(),
-                  operationId: 'tool_schema_validation_param_error',
-                  toolName,
-                  paramName: propName
-                });
-                return false;
-              }
-            }
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      appLogger.error(`[Tool Collection Manager] Error validating schema for tool '${toolName}'`, {
-        correlationId: getCurrentCorrelationId(),
-        operationId: 'tool_schema_validation_error',
-        toolName,
-        error: error as Error
-      });
-      return false;
-    }
-  }
+  // Removed validateToolSchema function - AI SDK handles MCP tool schema conversion automatically
 
   /**
    * Validate that a tool exists in the collection

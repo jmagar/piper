@@ -4,7 +4,7 @@ import { MessageContent } from "@/components/prompt-kit/message"
 import { cn } from "@/lib/utils"
 import type { Message as MessageAISDK } from "@ai-sdk/react"
 import type { ToolInvocationUIPart } from "@ai-sdk/ui-utils"
-import { Spinner, Wrench, CaretDown, CheckCircle as Check, Code, ArrowRight, Play } from "@phosphor-icons/react"
+import { Spinner, Wrench, CaretDown, CheckCircle as Check, Code, ArrowRight } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState } from "react"
 
@@ -217,22 +217,22 @@ function PartRenderer({ part }: PartRendererProps) {
         </div>
       )
 
-    case "step-start":
-      return (
-        <div className="bg-green-50 dark:bg-green-950/20 border-l-4 border-green-500 p-3 rounded-r-md">
-          <div className="flex items-center gap-2">
-            <Play className="size-4 text-green-600 dark:text-green-400" />
-            <div className="text-xs font-medium text-green-600 dark:text-green-400">
-              Starting Step
-            </div>
-          </div>
-          {(part as { description?: string }).description && (
-            <div className="text-sm text-green-700 dark:text-green-300 mt-1">
-              {(part as { description?: string }).description}
-            </div>
-          )}
-        </div>
-      )
+    // case "step-start":
+    //   return (
+    //     <div className="bg-green-50 dark:bg-green-950/20 border-l-4 border-green-500 p-3 rounded-r-md">
+    //       <div className="flex items-center gap-2">
+    //         <Play className="size-4 text-green-600 dark:text-green-400" />
+    //         <div className="text-xs font-medium text-green-600 dark:text-green-400">
+    //           Starting Step
+    //         </div>
+    //       </div>
+    //       {(part as { description?: string }).description && (
+    //         <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+    //           {(part as { description?: string }).description}
+    //         </div>
+    //       )}
+    //     </div>
+    //   )
 
     default:
       // Handle other part types generically - but don't show the error for now

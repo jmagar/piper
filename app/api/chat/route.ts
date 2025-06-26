@@ -12,6 +12,7 @@ import {
 } from 'ai';
 import { prisma } from "@/lib/prisma";
 import { logUserMessage, validateAndTrackUsage } from "./api";
+import { saveFinalAssistantMessage } from "./db";
 import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger';
 import { appLogger, LogSource, LogLevel } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
@@ -455,6 +456,44 @@ export async function POST(req: Request) {
       const streamStartTime = Date.now();
       const result = await streamText({
         ...streamTextConfig,
+        onFinish: async (finishResult) => {
+          try {
+            // Generate a unique message ID for the assistant response
+            const assistantMessageId = uuidv4();
+            
+            // Save the assistant message to the database
+            await saveFinalAssistantMessage({
+              chatId: chatId!,
+              messageId: assistantMessageId,
+              role: 'assistant',
+              content: finishResult.text,
+              toolCalls: finishResult.toolCalls?.map(tc => ({
+                id: tc.toolCallId,
+                name: tc.toolName,
+                args: tc.args
+              })),
+              model: effectiveModel,
+              userId: userId,
+              operationId: operationId_aiSdk,
+              correlationId: correlationId
+            });
+            
+            appLogger.info(`[ChatAPI] ✅ Assistant message saved to database`, {
+              correlationId,
+              chatId,
+              messageId: assistantMessageId,
+              textLength: finishResult.text?.length || 0,
+              toolCallsCount: finishResult.toolCalls?.length || 0
+            });
+          } catch (error) {
+            appLogger.error(`[ChatAPI] ❌ Failed to save assistant message to database`, {
+              correlationId,
+              chatId,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            // Don't throw here to avoid breaking the streaming response
+          }
+        },
         onError: ({ error }) => {
           appLogger.error(`StreamText error during streaming for ${effectiveModel}`, {
             error,

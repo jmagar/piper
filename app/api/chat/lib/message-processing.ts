@@ -1,7 +1,7 @@
 import { Message as MessageAISDK, CoreMessage, ToolSet } from "ai";
-import { getCombinedMCPToolsForAISDK, getManagedServersInfo } from "@/lib/mcp/mcpManager";
+import { getManagedServersInfo } from "@/lib/mcp/mcpManager";
 import { reportMCPError } from "@/lib/mcp/enhanced-integration";
-import { toolCollectionManager } from "@/lib/mcp/modules";
+import { getEnhancedMCPToolsForAISDK } from "@/lib/mcp/enhanced-tools-access";
 import { prisma } from "@/lib/prisma";
 import { appLogger } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
@@ -63,7 +63,7 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
     );
 
   // Get combined tools for execution
-  const combinedTools = await getCombinedMCPToolsForAISDK();
+  const combinedTools = await getEnhancedMCPToolsForAISDK();
 
   const processedMessages = [...messages];
   const toolExecutionPromises = toolMentions.map(async (mention) => {
@@ -95,7 +95,7 @@ export async function processToolMentions(messages: MessageAISDK[]): Promise<Mes
       
       try {
         // Get ALL available tools as fallback
-        const allTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+        const allTools = await getEnhancedMCPToolsForAISDK();
         toolFunction = allTools[matchingTool.fullId];
         
         if (toolFunction && typeof toolFunction.execute === 'function') {
@@ -251,7 +251,7 @@ export async function processUrlMentions(messages: MessageAISDK[]): Promise<Mess
 
   appLogger.debug(`[processUrlMentions] Found ${urlMentions.length} URL mentions to process`, { correlationId: getCurrentCorrelationId(), messageCount: urlMentions.length });
 
-  const allTools = await getCombinedMCPToolsForAISDK();
+  const allTools = await getEnhancedMCPToolsForAISDK();
   let fetchTool: ToolSet[string] | undefined = allTools['fetch_fetch']; // Assuming serverKey 'fetch' and toolName 'fetch'
 
   // FALLBACK: If fetch tool not in optimized selection, load all tools as fallback
@@ -262,7 +262,7 @@ export async function processUrlMentions(messages: MessageAISDK[]): Promise<Mess
     });
     
     try {
-      const allAvailableTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+      const allAvailableTools = await getEnhancedMCPToolsForAISDK();
       fetchTool = allAvailableTools['fetch_fetch'];
       
       if (fetchTool && typeof fetchTool.execute === 'function') {

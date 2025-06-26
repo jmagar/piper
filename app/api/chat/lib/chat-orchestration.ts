@@ -1,7 +1,6 @@
 import { Message as MessageAISDK, ToolSet } from 'ai';
 import { loadAgentCached } from "@/lib/agents/load-agent";
-import { getCombinedMCPToolsForAISDK } from "@/lib/mcp/mcpManager";
-import { toolCollectionManager } from "@/lib/mcp/modules";
+import { getEnhancedMCPToolsForAISDK } from "@/lib/mcp/enhanced-tools-access";
 import { trackSpecialAgentUsage } from "../api";
 import { appLogger } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
@@ -139,7 +138,7 @@ async function configureToolsEnhanced(
       const mcpConfig = agentConfig.mcpConfig as { server?: string | string[] };
       if (mcpConfig.server) {
         // Get all available tools first for filtering
-        const allTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+        const allTools = await getEnhancedMCPToolsForAISDK();
         
         const serverKeys = Array.isArray(mcpConfig.server) ? mcpConfig.server : [mcpConfig.server];
         const filteredTools: ToolSet = {};
@@ -158,8 +157,8 @@ async function configureToolsEnhanced(
       }
     }
 
-    // Use enhanced tool collection manager with conversation context
-    const intelligentlySelectedTools = await toolCollectionManager.getCombinedMCPToolsForAISDK();
+    // Use Enhanced MCP direct access with conversation context
+    const intelligentlySelectedTools = await getEnhancedMCPToolsForAISDK();
     
     const duration = Date.now() - startTime;
     const toolCount = Object.keys(intelligentlySelectedTools).length;
@@ -205,8 +204,8 @@ async function configureToolsEnhanced(
       error: error as Error
     });
     
-    // Fallback to original implementation
-    const allTools = await getCombinedMCPToolsForAISDK() as unknown as ToolSet;
+    // Fallback to Enhanced MCP direct access
+    const allTools = await getEnhancedMCPToolsForAISDK();
     return Object.keys(allTools).length > 0 ? allTools : undefined;
   }
 }

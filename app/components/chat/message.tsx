@@ -15,6 +15,7 @@ type MessageProps = {
   hasScrollAnchor?: boolean
   parts?: MessageType["parts"]
   status?: "streaming" | "ready" | "submitted" | "error"
+  createdAt?: Date | string
 }
 
 export function Message({
@@ -29,6 +30,7 @@ export function Message({
   hasScrollAnchor,
   parts,
   status,
+  createdAt,
 }: MessageProps) {
   const [copied, setCopied] = useState(false)
 
@@ -37,6 +39,9 @@ export function Message({
     setCopied(true)
     setTimeout(() => setCopied(false), 500)
   }
+
+  // Convert createdAt to Date if it's a string
+  const timestamp = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt) : createdAt) : undefined
 
   if (variant === "user") {
     return (
@@ -49,6 +54,7 @@ export function Message({
         id={id}
         hasScrollAnchor={hasScrollAnchor}
         attachments={attachments}
+        timestamp={timestamp}
       >
         {children}
       </MessageUser>
@@ -65,6 +71,7 @@ export function Message({
         hasScrollAnchor={hasScrollAnchor}
         parts={parts}
         status={status}
+        timestamp={timestamp}
       >
         {children}
       </MessageAssistant>

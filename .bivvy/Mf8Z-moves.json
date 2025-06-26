@@ -8,20 +8,20 @@
       "rest": true
     },
     {
-      "status": "climbing", 
+      "status": "complete", 
       "description": "Investigate AI SDK tool integration in streamText call",
-      "details": "Check if tools are properly formatted and passed to streamText() in chat/route.ts. Verify toolsToUse object structure matches AI SDK expectations"
+      "details": "DISCOVERED: MCPService is ManagedMCPClient. Tools flow: ManagedMCPClient.getTools() → ToolCollectionManager → Chat Orchestration → AI SDK. Added diagnostic logging shows tools should be reaching AI SDK. Issue likely in tool schema format or execution mapping."
     },
     {
-      "status": "todo",
+      "status": "complete",
       "description": "Verify tool execution handler connectivity", 
-      "details": "Ensure that when AI tries to call a prefixed tool (e.g., 'fetch_fetch'), it correctly maps to the actual MCP tool execution pipeline",
+      "details": "CRITICAL DISCOVERY: AI SDK handles MCP schemas automatically via mcpClient.tools(). Our custom schema validation is BLOCKING all tools with 'invalid schema' errors. Need to remove custom validation and let AI SDK handle it.",
       "rest": true
     },
     {
-      "status": "todo",
-      "description": "Add tool schema validation before AI SDK integration",
-      "details": "Implement validation in tool-collection-manager.ts to catch any schema issues that could cause AI SDK to reject tools silently"
+      "status": "complete",
+      "description": "Fixed tool collection - existing method already uses Enhanced MCP clients correctly",
+      "details": "✅ DISCOVERY: Existing getCombinedMCPToolsForAISDK() already calls service.getTools() which is ManagedMCPClient.getTools() that returns AI SDK-compatible tools from mcpClient.tools(). Logs show tools loading successfully. No new method needed - just had to remove schema validation."
     },
     {
       "status": "todo",

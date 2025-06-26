@@ -1,0 +1,36 @@
+{
+  "Climb": "mcp7",
+  "moves": [
+    {
+      "status": "done",
+      "description": "Create enhanced MCP tools collection function",
+      "details": "✅ Created lib/mcp/enhanced-tools-access.ts - Direct Enhanced MCP client access function that replaces legacy tool-collection-manager",
+      "rest": true
+    },
+    {
+      "status": "done", 
+      "description": "Update chat orchestration to use Enhanced MCP directly",
+      "details": "✅ Updated app/api/chat/lib/chat-orchestration.ts - Replaced all toolCollectionManager.getCombinedMCPToolsForAISDK() calls with getEnhancedMCPToolsForAISDK()"
+    },
+    {
+      "status": "done",
+      "description": "Update message processing to use Enhanced MCP directly",
+      "details": "✅ Updated app/api/chat/lib/message-processing.ts - Replaced all legacy tool collection calls in processToolMentions() and processUrlMentions()"
+    },
+    {
+      "status": "done",
+      "description": "Create comprehensive legacy removal documentation",
+      "details": "✅ Created docs/MCP-LEGACY-REMOVAL.md - Complete documentation of what was removed, modified, and why"
+    },
+    {
+      "status": "todo",
+      "description": "Test and verify system works without typeName errors",
+      "details": "Run comprehensive tests to ensure MCP tools work properly and no typeName errors occur"
+    },
+    {
+      "status": "todo",
+      "description": "Remove unused legacy code files (optional)",
+      "details": "After verification, can optionally remove lib/mcp/modules/tool-collection-manager.ts and wrapper functions in mcpManager.ts"
+    }
+  ]
+} 
