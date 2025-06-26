@@ -9,6 +9,7 @@ import {
 } from "@/components/prompt-kit/prompt-input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { appLogger } from "@/lib/logger";
 import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
 import { MODELS, type ModelConfig } from "@/lib/models";
 import { getAllTools } from "@/lib/tool-utils";
@@ -67,6 +68,7 @@ export function ChatInput({
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const hiddenFileInputRef = useRef<HTMLInputElement>(null)
+  const rafId = useRef<number | null>(null)
 
   const [isEnhancing, setIsEnhancing] = useState(false)
   const [availableModels, setAvailableModels] = useState<AvailableModelData[]>([])
@@ -117,9 +119,44 @@ export function ChatInput({
 
   const handleFileUploadForChat = (files: File[]) => {
     if (files.length > 0) {
-      console.log("Files selected for chat:", files);
+      appLogger.debug("Files selected for chat, but not processed by this handler:", {
+        fileCount: files.length,
+        fileName: files[0].name
+      });
     }
   };
+
+  const resizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+      }
+      rafId.current = requestAnimationFrame(resizeTextarea);
+    };
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(textarea);
+
+      // Initial resize
+      handleResize();
+
+      return () => {
+        resizeObserver.unobserve(textarea);
+        if (rafId.current) {
+          cancelAnimationFrame(rafId.current);
+        }
+      };
+    }
+  }, [value]);
 
   const handleAttachMenuMentionTrigger = (prefix: string) => {
     if (textareaRef.current) {
@@ -156,20 +193,24 @@ export function ChatInput({
 
   useEffect(() => {
     const fetchModels = async () => {
-      const modelsDataPromises = MODELS.map(async (model: ModelConfig) => {
-        const tools = await getAllTools(); // getAllTools is now async
-        return {
-          id: model.id,
-          name: model.name,
-          description: model.description || "",
-          tools: tools, // tools is FetchedToolInfo[] after await
-          providerId: model.providerId,
-          contextWindow: model.contextWindow,
-        };
-      });
-      const modelsData = await Promise.all(modelsDataPromises);
-      setAvailableModels(modelsData);
-    }
+      try {
+        const modelsDataPromises = MODELS.map(async (model: ModelConfig) => {
+          const tools = await getAllTools(); // getAllTools is now async
+          return {
+            id: model.id,
+            name: model.name,
+            description: model.description || "",
+            tools: tools, // tools is FetchedToolInfo[] after await
+            providerId: model.providerId,
+            contextWindow: model.contextWindow,
+          };
+        });
+        const modelsData = await Promise.all(modelsDataPromises);
+        setAvailableModels(modelsData);
+      } catch (error) {
+        appLogger.error("Failed to fetch models and tools:", { error });
+      }
+    };
 
     fetchModels()
   }, [])

@@ -131,7 +131,6 @@ export function useAgentCommand({
           prompt.description.toLowerCase().includes(searchTermLower))
     )
   }, [prompts, activeCommandType, currentSearchTerm]);
-
   // Utility functions
   const generateId = useCallback(() => uuidv4(), [])
   const resetMentionState = useCallback(() => { mentionStartPosRef.current = null }, [])
