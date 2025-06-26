@@ -2,7 +2,8 @@ import { promises as fs } from 'fs'
 import { watch, FSWatcher } from 'fs'
 import { z } from 'zod'
 import { MCPConnectionPool } from './enhanced/connection-pool'
-import type { AppConfig, ServerConfigEntry, LocalMCPToolSchema } from './enhanced/types'
+import type { AppConfig, ServerConfigEntry } from './enhanced/types'
+import { AppConfigSchema } from './schemas'
 
 // Enhanced MCP Configuration schema for validation
 // Using the actual types from the enhanced module to avoid conflicts
@@ -53,10 +54,6 @@ const ServerConfigEntrySchema = z.object({
   cwd: z.string().optional(),
   url: z.string().optional(),
   headers: z.record(z.string()).optional()
-})
-
-const AppConfigSchema = z.object({
-  mcpServers: z.record(ServerConfigEntrySchema)
 })
 
 // Re-export types for backward compatibility

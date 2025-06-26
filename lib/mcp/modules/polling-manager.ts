@@ -1,4 +1,5 @@
-import { appLogger, LogLevel } from '@/lib/logger';
+import { appLogger } from '@/lib/logger';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { mcpServiceRegistry } from './service-registry';
 import { serverStatusManager } from './status-manager';
 import { getCachedAppConfig as getAppConfig, type AppConfig, type ServerConfigEntry } from '../enhanced/index';
@@ -21,7 +22,10 @@ export class PollingManager {
     if (process.env.NODE_ENV !== 'production' && globalThis.__pollIntervalId) {
       this.intervalId = globalThis.__pollIntervalId;
       this.isPolling = true;
-      appLogger.logSource('MCP', LogLevel.DEBUG, '[Polling Manager] Restored polling state from globalThis (HMR).');
+      appLogger.debug('[Polling Manager] Restored polling state from globalThis (HMR).', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'PollingManager.constructor'
+      });
     }
   }
 
@@ -37,12 +41,18 @@ export class PollingManager {
    */
   setPollingInterval(intervalMs: number): void {
     if (intervalMs < 1000) {
-      appLogger.logSource('MCP', LogLevel.WARN, '[Polling Manager] Polling interval too short, minimum is 1000ms.');
+      appLogger.warn('[Polling Manager] Polling interval too short, minimum is 1000ms.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'setPollingInterval'
+      });
       return;
     }
     
     this.pollingIntervalMs = intervalMs;
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Polling interval set to ${intervalMs}ms.`);
+    appLogger.info(`[Polling Manager] Polling interval set to ${intervalMs}ms.`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'setPollingInterval'
+    });
     
     // If currently polling, restart with new interval
     if (this.isPolling) {
@@ -56,7 +66,10 @@ export class PollingManager {
    */
   startPolling(): void {
     if (this.intervalId && process.env.NODE_ENV !== 'production') {
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] Polling already started (development HMR). Not starting another.');
+      appLogger.info('[Polling Manager] Polling already started (development HMR). Not starting another.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'startPolling'
+      });
       return;
     }
     
@@ -64,14 +77,24 @@ export class PollingManager {
       clearInterval(this.intervalId);
     }
     
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Starting periodic polling every ${this.pollingIntervalMs / 1000} seconds.`);
+    appLogger.info(`[Polling Manager] Starting periodic polling every ${this.pollingIntervalMs / 1000} seconds.`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'startPolling'
+    });
     
     this.intervalId = setInterval(async () => {
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] Periodic poll triggered.');
+      appLogger.info('[Polling Manager] Periodic poll triggered.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'startPolling.interval'
+      });
       try {
         await this.executePollingCycle();
       } catch (error) {
-        appLogger.logSource('MCP', LogLevel.ERROR, '[Polling Manager] Error during polling cycle:', { error });
+        appLogger.error('[Polling Manager] Error during polling cycle:', {
+          error,
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'startPolling.interval'
+        });
       }
     }, this.pollingIntervalMs);
 
@@ -90,7 +113,10 @@ export class PollingManager {
       clearInterval(this.intervalId);
       this.intervalId = null;
       this.isPolling = false;
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] Polling stopped.');
+      appLogger.info('[Polling Manager] Polling stopped.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'stopPolling'
+      });
     }
 
     if (process.env.NODE_ENV !== 'production' && globalThis.__pollIntervalId) {
@@ -105,7 +131,10 @@ export class PollingManager {
   async executePollingCycle(): Promise<void> {
     const appConfig = await getAppConfig();
     if (!appConfig || !appConfig.mcpServers) {
-      appLogger.logSource('MCP', LogLevel.ERROR, '[Polling Manager] AppConfig not available. Stopping poll.');
+      appLogger.error('[Polling Manager] AppConfig not available. Stopping poll.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'executePollingCycle'
+      });
       this.stopPolling();
       return;
     }
@@ -115,13 +144,22 @@ export class PollingManager {
 
     const registryStats = mcpServiceRegistry.getRegistryStats();
     if (registryStats.totalServices === 0) {
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] No MCP services registered to poll.');
+      appLogger.info('[Polling Manager] No MCP services registered to poll.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'executePollingCycle'
+      });
       return;
     }
 
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Polling ${registryStats.totalServices} managed MCP services...`);
+    appLogger.info(`[Polling Manager] Polling ${registryStats.totalServices} managed MCP services...`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'executePollingCycle'
+    });
     await this.pollAllServices(appConfig);
-    appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] All servers polled.');
+    appLogger.info('[Polling Manager] All servers polled.', {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'executePollingCycle'
+    });
   }
 
   /**
@@ -151,7 +189,13 @@ export class PollingManager {
     try {
       await serverStatusManager.refreshServerStatus(serverKey, serviceLabel);
     } catch (error: unknown) {
-      appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Error polling server ${serviceLabel}:`, { error });
+      appLogger.error(`[Polling Manager] Error polling server ${serviceLabel}:`, {
+        error,
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'pollSingleService',
+        serverKey,
+        serviceLabel
+      });
       // Update cache with error status
       const appConfig = await getAppConfig();
       if (appConfig?.mcpServers[serverKey]) {
@@ -173,11 +217,17 @@ export class PollingManager {
     const newServerKeys = configServerKeys.filter(key => !managedServerKeys.includes(key));
     
     if (newServerKeys.length === 0) {
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] No new servers found in config.');
+      appLogger.info('[Polling Manager] No new servers found in config.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'checkAndInitializeNewServers'
+      });
       return;
     }
 
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Found ${newServerKeys.length} new server(s) in config: ${newServerKeys.join(', ')}`);
+    appLogger.info(`[Polling Manager] Found ${newServerKeys.length} new server(s) in config: ${newServerKeys.join(', ')}`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'checkAndInitializeNewServers'
+    });
     
     // Initialize new servers in parallel
     const initPromises = newServerKeys.map(async (serverKey) => {
@@ -186,7 +236,10 @@ export class PollingManager {
     });
 
     await Promise.all(initPromises);
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Completed initialization of ${newServerKeys.length} new server(s).`);
+    appLogger.info(`[Polling Manager] Completed initialization of ${newServerKeys.length} new server(s).`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'checkAndInitializeNewServers'
+    });
   }
 
   /**
@@ -195,19 +248,36 @@ export class PollingManager {
   private async initializeNewServer(serverKey: string, serverConfig: ServerConfigEntry): Promise<void> {
     // Skip if server already exists in our managed services
     if (mcpServiceRegistry.hasService(serverKey)) {
-      appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Server '${serverKey}' already initialized. Skipping.`);
+      appLogger.info(`[Polling Manager] Server '${serverKey}' already initialized. Skipping.`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'initializeNewServer',
+        serverKey
+      });
       return;
     }
 
     const serviceLabel = serverConfig.label || serverKey;
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Dynamically initializing new server via MCPManager: ${serviceLabel}`);
+    appLogger.info(`[Polling Manager] Dynamically initializing new server via MCPManager: ${serviceLabel}`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'initializeNewServer',
+      serverKey
+    });
 
     try {
       // Delegate to MCPManager's initializeNewServer for consistent logic
       await mcpManager.initializeNewServer(serverKey, serverConfig);
-      appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Successfully delegated initialization for new server ${serviceLabel}`);
+      appLogger.info(`[Polling Manager] Successfully delegated initialization for new server ${serviceLabel}`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'initializeNewServer',
+        serverKey
+      });
     } catch (e: unknown) {
-      appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Error during delegated dynamic initialization for ${serviceLabel}:`, { error: e instanceof Error ? e.message : String(e) });
+      appLogger.error(`[Polling Manager] Error during delegated dynamic initialization for ${serviceLabel}:`, {
+        error: e instanceof Error ? e.message : String(e),
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'initializeNewServer',
+        serverKey
+      });
       // MCPManager's initializeServer (called by initializeNewServer) should handle error status updates.
       // If not, we might need to call serverStatusManager.initializeErrorServerStatus here as a fallback.
     }
@@ -217,7 +287,10 @@ export class PollingManager {
    * Force an immediate poll of all servers
    */
   async forcePoll(): Promise<void> {
-    appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] Force polling triggered.');
+    appLogger.info('[Polling Manager] Force polling triggered.', {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'forcePoll'
+    });
     await this.executePollingCycle();
   }
 
@@ -227,14 +300,22 @@ export class PollingManager {
   async forcePollServer(serverKey: string): Promise<void> {
     const appConfig = await getAppConfig();
     if (!appConfig?.mcpServers[serverKey]) {
-      appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Server '${serverKey}' not found in config.`);
+      appLogger.error(`[Polling Manager] Server '${serverKey}' not found in config.`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'forcePollServer',
+        serverKey
+      });
       return;
     }
 
     const serverConfig = appConfig.mcpServers[serverKey] as ServerConfigEntry;
     const serviceLabel = serverConfig.label || serverKey;
     
-    appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Force polling server: ${serviceLabel}`);
+    appLogger.info(`[Polling Manager] Force polling server: ${serviceLabel}`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'forcePollServer',
+      serverKey
+    });
     await this.pollSingleService(serverKey, serviceLabel);
   }
 
@@ -268,7 +349,10 @@ export class PollingManager {
     if (process.env.NODE_ENV !== 'production' && globalThis.__pollIntervalId) {
       clearInterval(globalThis.__pollIntervalId);
       globalThis.__pollIntervalId = null;
-      appLogger.logSource('MCP', LogLevel.INFO, '[Polling Manager] Cleared polling interval for HMR.');
+      appLogger.info('[Polling Manager] Cleared polling interval for HMR.', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'cleanupForHmr'
+      });
     }
   }
 }

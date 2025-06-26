@@ -181,6 +181,7 @@ export interface LogContext {
   contentPreview?: string; // Preview of content for debugging
   arrayLength?: number; // Array length for array content
   contentType?: string; // Content type for debugging
+  [key: string]: any; // Allow any other string-keyed properties
 }
 
 // Logger configuration types

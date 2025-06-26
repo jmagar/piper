@@ -120,13 +120,17 @@ export function useAgentCommand({
       }); // Closes .map() and the return statement of the factory function
   }, [tools, activeCommandType, currentSearchTerm]); // Dependency array for filteredTools
 
-  const filteredPrompts = useMemo(() => 
-    prompts.filter(prompt => 
-      prompt.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) || 
-      (prompt.description && prompt.description.toLowerCase().includes(currentSearchTerm.toLowerCase()))
-    ), 
-    [prompts, currentSearchTerm]
-  );
+  const filteredPrompts = useMemo(() => {
+    if (activeCommandType !== "prompts") return [];
+    if (!currentSearchTerm) return prompts;
+    const searchTermLower = currentSearchTerm.toLowerCase();
+    return prompts.filter(
+      prompt =>
+        prompt.name.toLowerCase().includes(searchTermLower) ||
+        (prompt.description &&
+          prompt.description.toLowerCase().includes(searchTermLower))
+    )
+  }, [prompts, activeCommandType, currentSearchTerm]);
 
   // Utility functions
   const generateId = useCallback(() => uuidv4(), [])

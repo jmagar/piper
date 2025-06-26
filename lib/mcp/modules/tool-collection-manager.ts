@@ -26,7 +26,7 @@ export class ToolCollectionManager {
       appLogger.info(`[Tool Collection Manager] Processing ${serversInfo.length} servers for tool collection...`, {
         correlationId: getCurrentCorrelationId(),
         operationId: 'tool_collection_start',
-        args: { serverCount: serversInfo.length }
+        serverCount: serversInfo.length
       });
 
       // Process each connected server
@@ -40,12 +40,10 @@ export class ToolCollectionManager {
                 appLogger.info(`[Tool Collection Manager] ✅ Loaded ${Object.keys(tools).length} tools from '${server.label}' (${server.transportType})`, {
                   correlationId: getCurrentCorrelationId(),
                   operationId: 'tool_collection_server_loaded',
-                  args: { 
-                    serverKey: server.key, 
-                    serverLabel: server.label, 
-                    toolCount: Object.keys(tools).length,
-                    transportType: server.transportType
-                  }
+                  serverKey: server.key, 
+                  serverLabel: server.label, 
+                  toolCount: Object.keys(tools).length,
+                  transportType: server.transportType
                 });
                 
                 Object.entries(tools).forEach(([toolName, toolDefinition]) => {
@@ -56,14 +54,14 @@ export class ToolCollectionManager {
                 appLogger.warn(`[Tool Collection Manager] ⚠️ No tools found for server '${server.label}' despite success status`, {
                   correlationId: getCurrentCorrelationId(),
                   operationId: 'tool_collection_server_no_tools',
-                  args: { serverKey: server.key, serverLabel: server.label }
+                  serverKey: server.key, serverLabel: server.label
                 });
               }
             } catch (error) {
               appLogger.error(`[Tool Collection Manager] ❌ Error loading tools from '${server.label}'`, {
                 correlationId: getCurrentCorrelationId(),
                 operationId: 'tool_collection_server_error',
-                args: { serverKey: server.key, serverLabel: server.label },
+                serverKey: server.key, serverLabel: server.label,
                 error: error as Error
               });
             }
@@ -72,12 +70,10 @@ export class ToolCollectionManager {
           appLogger.debug(`[Tool Collection Manager] Skipping server '${server.label}' (status: ${server.status}, hasTools: ${server.hasActiveTools})`, {
             correlationId: getCurrentCorrelationId(),
             operationId: 'tool_collection_server_skipped',
-            args: { 
-              serverKey: server.key, 
-              serverLabel: server.label, 
-              status: server.status, 
-              hasActiveTools: server.hasActiveTools 
-            }
+            serverKey: server.key, 
+            serverLabel: server.label, 
+            status: server.status, 
+            hasActiveTools: server.hasActiveTools
           });
         }
       }
@@ -86,7 +82,7 @@ export class ToolCollectionManager {
       appLogger.info(`[Tool Collection Manager] 🎉 Successfully loaded ${toolCount} total tools`, {
         correlationId: getCurrentCorrelationId(),
         operationId: 'tool_collection_completed',
-        args: { totalToolCount: toolCount }
+        totalToolCount: toolCount
       });
       
       // Apply tool definition compression for token optimization
@@ -112,7 +108,7 @@ export class ToolCollectionManager {
       appLogger.warn(`[Tool Collection Manager] Server '${serverKey}' not found in registry.`, {
         correlationId: getCurrentCorrelationId(),
         operationId: 'tool_collection_server_not_found',
-        args: { serverKey }
+        serverKey
       });
       return {};
     }
@@ -129,7 +125,7 @@ export class ToolCollectionManager {
         appLogger.info(`[Tool Collection Manager] Loaded ${Object.keys(toolSet).length} tools from server '${serverKey}'.`, {
           correlationId: getCurrentCorrelationId(),
           operationId: 'tool_collection_server_loaded',
-          args: { serverKey, toolCount: Object.keys(tools).length }
+          serverKey, toolCount: Object.keys(toolSet).length
         });
         return toolSet;
       }
@@ -137,7 +133,7 @@ export class ToolCollectionManager {
       appLogger.error(`[Tool Collection Manager] Error loading tools from server '${serverKey}'`, {
         correlationId: getCurrentCorrelationId(),
         operationId: 'tool_collection_server_error',
-        args: { serverKey },
+        serverKey,
         error: error as Error
       });
     }
@@ -190,7 +186,7 @@ export class ToolCollectionManager {
             appLogger.error(`[Tool Collection Manager] Error getting tool info from server '${server.label}'`, {
               correlationId: getCurrentCorrelationId(),
               operationId: 'tool_collection_server_info_error',
-              args: { serverKey: server.key, serverLabel: server.label },
+              serverKey: server.key, serverLabel: server.label,
               error: error as Error
             });
           }
@@ -253,8 +249,9 @@ export class ToolCollectionManager {
 
     for (const server of serversInfo) {
       let toolCount = 0;
-      
-      if (server.status === 'success') {
+      let status = server.status;
+
+      if (server.status === 'success' && server.hasActiveTools) {
         const service = mcpServiceRegistry.getService(server.key);
         if (service) {
           try {
@@ -262,10 +259,12 @@ export class ToolCollectionManager {
             toolCount = tools ? Object.keys(tools).length : 0;
             totalTools += toolCount;
           } catch (error) {
-            appLogger.error(`[Tool Collection Manager] Error counting tools for ${server.label}`, {
+            status = 'error-tool-count';
+            appLogger.error(`[Tool Collection Manager] Error getting tool count from server '${server.label}'`, {
               correlationId: getCurrentCorrelationId(),
               operationId: 'tool_collection_server_tool_count_error',
-              args: { serverKey: server.key, serverLabel: server.label },
+              serverKey: server.key, 
+              serverLabel: server.label,
               error: error as Error
             });
           }
@@ -276,7 +275,7 @@ export class ToolCollectionManager {
         serverKey: server.key,
         serverLabel: server.label,
         toolCount,
-        status: server.status,
+        status,
       });
     }
 
@@ -337,7 +336,7 @@ export class ToolCollectionManager {
           appLogger.error(`[Tool Collection Manager] Error getting status for server '${serverKey}'`, {
             correlationId: getCurrentCorrelationId(),
             operationId: 'tool_collection_server_status_error',
-            args: { serverKey },
+            serverKey,
             error: error as Error
           });
           serversInfo.push({
