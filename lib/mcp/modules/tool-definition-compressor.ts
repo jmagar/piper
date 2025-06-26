@@ -150,6 +150,15 @@ export class ToolDefinitionCompressor {
   private compressToolDefinition(toolName: string, toolDef: any): any {
     const compressed = { ...toolDef };
 
+    // SPECIAL OVERRIDE for search_replace tool to prevent token limit errors
+    if (toolName.includes('search_replace')) {
+      compressed.description = "Replaces text in a file. Use for precise, targeted text replacement.";
+      appLogger.info(`[Tool Compressor] Applied special override for ${toolName}`, {
+        correlationId: getCurrentCorrelationId()
+      });
+      return compressed; // Return early to avoid further compression
+    }
+
     // Compress description
     if (toolDef.description) {
       compressed.description = this.compressDescription(toolDef.description);
