@@ -64,6 +64,17 @@ function hasVisionSupport(modelId: string): boolean {
   return similarModels.length > 0;
 }
 
+/**
+ * Renders an attachment menu with options to insert prompts, agents, tools, URLs, or upload files, with availability based on user authentication and model capabilities.
+ *
+ * The menu displays different options depending on whether the user is signed in and whether the current model supports file uploads. Selecting a menu item triggers the corresponding mention action or opens a file upload dialog.
+ *
+ * @param onFileUploadAction - Callback invoked when files are uploaded via the menu
+ * @param isUserAuthenticated - Indicates if the user is signed in; disables the menu if false
+ * @param model - The current model identifier, used to determine file upload support
+ * @param onTriggerMentionAction - Callback to trigger mention actions for prompts, agents, tools, or URLs
+ * @returns The attachment menu React element
+ */
 export function AttachMenu({
   onFileUploadAction,
   isUserAuthenticated,

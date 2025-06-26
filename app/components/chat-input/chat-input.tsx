@@ -49,6 +49,11 @@ export type ChatInputProps = {
   session: Session | null
 }
 
+/**
+ * Renders a chat input interface with agent, tool, and prompt selection, file upload, and message sending capabilities.
+ *
+ * Integrates agent, tool, and prompt selection modals, file upload via multiple sources, and controls for enhancing or sending messages. Disables input and actions appropriately during submission, streaming, or enhancement. Supports file mentions and displays selected agent, tool, and prompt with removal options.
+ */
 export function ChatInput({
   value,
   onValueChange,

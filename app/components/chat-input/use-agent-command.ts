@@ -55,6 +55,13 @@ type UseAgentCommandProps = {
   defaultAgent: Agent | null;
 };
 
+/**
+ * React hook for managing mention detection, filtering, selection, and insertion of agents, tools, prompts, URLs, and files in a textarea input.
+ *
+ * Provides state and handlers for modal UI, debounced mention detection, keyboard navigation, and maintaining attached entities. Supports dynamic filtering and insertion of mentions based on user input and cursor position.
+ *
+ * @returns An object containing state variables, filtered lists, and handlers for input changes, modal control, selection actions, file and URL management, and keyboard navigation.
+ */
 export function useAgentCommand({
   onValueChangeAction,
   textareaRef,

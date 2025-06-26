@@ -93,6 +93,14 @@ export type PromptInputTextareaProps = {
   disableAutosize?: boolean
 } & React.ComponentProps<typeof Textarea>
 
+/**
+ * A textarea component for prompt input that supports auto-resizing and context-based state management.
+ *
+ * Automatically adjusts its height to fit content using debounced resizing and `ResizeObserver` when available. Submits the prompt on Enter (without Shift) and supports disabling autosize. Consumes value, setter, max height, submit handler, and disabled state from the prompt input context.
+ *
+ * @param disableAutosize - If true, disables the auto-resizing behavior.
+ * @param onKeyDown - Optional keydown event handler for additional custom logic.
+ */
 function PromptInputTextarea({
   className,
   onKeyDown,
