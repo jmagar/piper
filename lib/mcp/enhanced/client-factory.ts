@@ -518,7 +518,9 @@ export async function loadMCPToolsFromLocalEnhanced(
     clientName: 'piper-mcp-client',
     ...options
   };
-  return await createEnhancedStdioMCPClient(config.clientName, config);
+  // Use command as serverId for backward compatibility, not clientName
+  const serverId = config.clientName || `stdio-${command.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  return await createEnhancedStdioMCPClient(serverId, config);
 }
 
 /**
@@ -533,5 +535,7 @@ export async function loadMCPToolsFromURLEnhanced(
     clientName: 'piper-mcp-client',
     ...options
   };
-  return await createEnhancedSSEMCPClient(config.clientName, config)
+  // Use URL-based serverId for backward compatibility, not clientName
+  const serverId = config.clientName || `sse-${new URL(url).hostname.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  return await createEnhancedSSEMCPClient(serverId, config)
 } 

@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { Message as MessageAISDK } from 'ai';
 import { appLogger } from '@/lib/logger';
-import { LogLevel } from '@/lib/logger/constants';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { redisCacheManager } from './redis-cache-manager';
 
 // =============================================================================
@@ -288,7 +288,10 @@ export async function getOptimizedSystemPrompt(
     // Try cache first
     const cachedPrompt = await redisCacheManager.getSystemPrompt(contextHash);
     if (cachedPrompt) {
-      appLogger.logSource('MCP', LogLevel.DEBUG, `[System Prompt Optimizer] Cache HIT - using cached prompt`);
+      appLogger.debug(`[System Prompt Optimizer] Cache HIT - using cached prompt`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'system_prompt_cache_hit'
+      });
       return cachedPrompt;
     }
     
@@ -304,7 +307,14 @@ export async function getOptimizedSystemPrompt(
       `(${context.messageCount} messages, ${toolCategories.length} tool categories). ` +
       `Estimated token savings: ${tokenSavings} tokens`,
       {
-        messageCount: context.messageCount
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'system_prompt_generated',
+        args: {
+          conversationType: context.conversationType,
+          messageCount: context.messageCount,
+          toolCategoriesCount: toolCategories.length,
+          estimatedTokenSavings: tokenSavings
+        }
       }
     );
     
@@ -312,9 +322,11 @@ export async function getOptimizedSystemPrompt(
     
   } catch (error) {
     appLogger.error(
-      `[System Prompt Optimizer] Error generating optimized prompt: ${error instanceof Error ? error.message : String(error)}`,
+      `[System Prompt Optimizer] Error generating optimized prompt`,
       {
-        error: error instanceof Error ? error : new Error(String(error))
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'system_prompt_generation_error',
+        error: error as Error
       }
     );
     
@@ -350,14 +362,17 @@ export async function clearSystemPromptCache(): Promise<void> {
     const keys = await client.keys('system_prompt:*');
     if (keys.length > 0) {
       await client.del(...keys);
-      appLogger.info(`[System Prompt Optimizer] Cleared ${keys.length} cached system prompts`);
+      appLogger.info(`[System Prompt Optimizer] Cleared ${keys.length} cached system prompts`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'system_prompt_cache_cleared',
+        args: { keysCleared: keys.length }
+      });
     }
   } catch (error) {
-    appLogger.error(
-      `[System Prompt Optimizer] Error clearing cache: ${error instanceof Error ? error.message : String(error)}`,
-      {
-        error: error instanceof Error ? error : new Error(String(error))
-      }
-    );
+    appLogger.error(`[System Prompt Optimizer] Error clearing cache`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'system_prompt_cache_clear_error',
+      error: error as Error
+    });
   }
 } 

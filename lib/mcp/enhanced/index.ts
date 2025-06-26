@@ -15,6 +15,16 @@ export * from './types'
 // Configuration Management
 export * from './config'
 
+// Cached Configuration Management (Performance Optimized)
+export {
+  getCachedAppConfig,
+  getCachedServerConfig, 
+  getCachedConfiguredServers,
+  isCachedServerEnabled,
+  invalidateConfigCache,
+  getConfigCacheStats
+} from './cached-config'
+
 // Metrics Collection
 export { MCPMetricsCollector, globalMetricsCollector } from './metrics-collector'
 
@@ -96,6 +106,12 @@ import {
   isServerEnabled 
 } from './config'
 import {
+  getCachedAppConfig,
+  getCachedServerConfig,
+  getCachedConfiguredServers,
+  isCachedServerEnabled
+} from './cached-config'
+import {
   createEnhancedStdioMCPClient,
   createEnhancedSSEMCPClient,
   createEnhancedStreamableHTTPMCPClient,
@@ -132,11 +148,17 @@ const enhancedMCP = {
   globalPool: globalMCPPool,
   globalMetrics: globalMetricsCollector,
   
-  // Configuration
+  // Configuration (Regular - Synchronous)
   getConfig: getAppConfig,
   validateConfig: validateServerConfig,
   getServerConfig,
-  isServerEnabled
+  isServerEnabled,
+  
+  // Configuration (Cached - Performance Optimized - Asynchronous)
+  getCachedConfig: getCachedAppConfig,
+  getCachedServerConfig,
+  getCachedConfiguredServers,
+  isCachedServerEnabled
 }
 
 export default enhancedMCP; 

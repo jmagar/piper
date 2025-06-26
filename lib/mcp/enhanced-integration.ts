@@ -1,4 +1,4 @@
-import { MCPMetricsCollector } from './enhanced/metrics-collector'
+import { MCPMetricsCollector, globalMetricsCollector } from './enhanced/metrics-collector'
 import { globalMCPPool } from './enhanced/connection-pool'
 import { getManagedServersInfo } from './mcpManager'
 import { redisCacheManager } from './modules'
@@ -8,8 +8,8 @@ import { redisCacheManager } from './modules'
  * Provides additional functionality for the Enhanced MCP Client
  */
 
-// Global metrics collector instance
-const globalMetricsCollector = new MCPMetricsCollector(true)
+// Use the existing global metrics collector instance
+// const globalMetricsCollector = new MCPMetricsCollector(true) // REMOVED - Use existing instance
 
 interface EnhancedServerMetrics {
   key: string

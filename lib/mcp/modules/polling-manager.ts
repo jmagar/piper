@@ -1,7 +1,7 @@
 import { appLogger, LogLevel } from '@/lib/logger';
 import { mcpServiceRegistry } from './service-registry';
 import { serverStatusManager } from './status-manager';
-import { getAppConfig, type AppConfig, type ServerConfigEntry } from '../enhanced/index';
+import { getCachedAppConfig as getAppConfig, type AppConfig, type ServerConfigEntry } from '../enhanced/index';
 import { mcpManager } from '../mcpManager';
 
 // Enhance globalThis for HMR persistence in development
@@ -103,7 +103,7 @@ export class PollingManager {
    * Execute a single polling cycle
    */
   async executePollingCycle(): Promise<void> {
-    const appConfig = getAppConfig();
+    const appConfig = await getAppConfig();
     if (!appConfig || !appConfig.mcpServers) {
       appLogger.logSource('MCP', LogLevel.ERROR, '[Polling Manager] AppConfig not available. Stopping poll.');
       this.stopPolling();
@@ -153,7 +153,7 @@ export class PollingManager {
     } catch (error: unknown) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Error polling server ${serviceLabel}:`, { error });
       // Update cache with error status
-      const appConfig = getAppConfig();
+      const appConfig = await getAppConfig();
       if (appConfig?.mcpServers[serverKey]) {
         const serverConfig = appConfig.mcpServers[serverKey] as ServerConfigEntry;
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -205,9 +205,9 @@ export class PollingManager {
     try {
       // Delegate to MCPManager's initializeNewServer for consistent logic
       await mcpManager.initializeNewServer(serverKey, serverConfig);
-      appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Successfully delegated initialization for new server ${serviceLabel}.`);
+      appLogger.logSource('MCP', LogLevel.INFO, `[Polling Manager] Successfully delegated initialization for new server ${serviceLabel}`);
     } catch (e: unknown) {
-      appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Error during delegated dynamic initialization for ${serviceLabel}: ${e instanceof Error ? e.message : String(e)}`, { error: e });
+      appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Error during delegated dynamic initialization for ${serviceLabel}:`, { error: e instanceof Error ? e.message : String(e) });
       // MCPManager's initializeServer (called by initializeNewServer) should handle error status updates.
       // If not, we might need to call serverStatusManager.initializeErrorServerStatus here as a fallback.
     }
@@ -225,7 +225,7 @@ export class PollingManager {
    * Force an immediate poll of a specific server
    */
   async forcePollServer(serverKey: string): Promise<void> {
-    const appConfig = getAppConfig();
+    const appConfig = await getAppConfig();
     if (!appConfig?.mcpServers[serverKey]) {
       appLogger.logSource('MCP', LogLevel.ERROR, `[Polling Manager] Server '${serverKey}' not found in config.`);
       return;

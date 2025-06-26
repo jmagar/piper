@@ -1,6 +1,6 @@
 import { ToolSet } from "ai";
 import { appLogger } from '@/lib/logger';
-import { getAppConfig, type AppConfig, type ServerConfigEntry, type EnhancedTransportConfig } from './enhanced/index';
+import { getCachedAppConfig as getAppConfig, type AppConfig, type ServerConfigEntry, type EnhancedTransportConfig } from './enhanced/index';
 import { LogLevel } from '@/lib/logger/constants';
 
 // Import focused modules
@@ -336,7 +336,7 @@ export class MCPManager {
    * Check for new servers in config and initialize them
    */
   async checkAndInitializeNewServers(): Promise<void> {
-    const currentAppConfig = getAppConfig();
+    const currentAppConfig = await getAppConfig();
     if (!currentAppConfig || !currentAppConfig.mcpServers) {
       appLogger.logSource('MCP', LogLevel.INFO, '[MCP Manager] No valid config found for checking new servers.');
       return;
@@ -376,7 +376,7 @@ export class MCPManager {
    * Get managed servers info (delegates to status manager and cache)
    */
   async getManagedServersInfo(appConfig?: AppConfig): Promise<ManagedServerInfo[]> {
-    const currentAppConfig = appConfig || getAppConfig();
+    const currentAppConfig = appConfig || await getAppConfig();
     if (!currentAppConfig || !currentAppConfig.mcpServers) {
       appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] getManagedServersInfo: AppConfig not available.');
       return [];
@@ -444,7 +444,7 @@ export class MCPManager {
   async handleConfigUpdate(): Promise<void> {
     appLogger.logSource('MCP', LogLevel.INFO, '[MCP Manager] Handling configuration update...');
 
-    const newAppConfig = getAppConfig(); // Reloads the configuration from file
+    const newAppConfig = await getAppConfig(); // Reloads the configuration from file
     if (!newAppConfig || !newAppConfig.mcpServers) {
       appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to load new configuration or mcpServers missing. Aborting update.');
       return;
@@ -586,12 +586,15 @@ export {
 
 // Auto-initialize if on server side
 if (typeof window === 'undefined') {
-  const initialAppConfig = getAppConfig();
-  if (initialAppConfig) {
-    initializeMCPManager(initialAppConfig).catch(error => {
-      appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to initialize MCP Manager on startup:', error);
-    });
-  } else {
-    appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Could not load initial app config. MCP Manager not started.');
-  }
+  getAppConfig().then(initialAppConfig => {
+    if (initialAppConfig) {
+      initializeMCPManager(initialAppConfig).catch(error => {
+        appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to initialize MCP Manager on startup:', error);
+      });
+    } else {
+      appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Could not load initial app config. MCP Manager not started.');
+    }
+  }).catch(error => {
+    appLogger.logSource('MCP', LogLevel.ERROR, '[MCP Manager] Failed to load initial config during auto-initialization:', error);
+  });
 }

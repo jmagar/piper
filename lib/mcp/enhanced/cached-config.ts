@@ -149,8 +149,10 @@ export async function getConfigCacheStats(): Promise<{
 // =============================================================================
 
 /**
- * Drop-in replacement for the original getAppConfig function
- * Provides caching while maintaining the same interface
+ * Async cached version of getAppConfig function
+ * Use getCachedAppConfig directly or import the sync version from './config'
+ * 
+ * Note: This is async and returns Promise<AppConfig>, unlike the sync version in config.ts
  */
 export async function getAppConfig(): Promise<AppConfig> {
   return getCachedAppConfig();

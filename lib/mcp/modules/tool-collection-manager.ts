@@ -1,7 +1,8 @@
 import { ToolSet } from "ai";
 import { appLogger } from '@/lib/logger';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { mcpServiceRegistry } from './service-registry';
-import { getAppConfig } from '../enhanced';
+import { getCachedAppConfig as getAppConfig } from '../enhanced';
 import { toolDefinitionCompressor } from './tool-definition-compressor';
 
 export class ToolCollectionManager {
@@ -15,13 +16,6 @@ export class ToolCollectionManager {
   }
 
   /**
-   * Safe logger access - fallback to main logger if mcp logger unavailable
-   */
-  private getLogger() {
-    return appLogger.mcp || appLogger;
-  }
-
-  /**
    * Get combined MCP tools for AI SDK usage
    */
   async getCombinedMCPToolsForAISDK(): Promise<ToolSet> {
@@ -29,7 +23,11 @@ export class ToolCollectionManager {
       const combinedTools: ToolSet = {};
       const serversInfo = await this.getActiveServersInfo();
 
-      this.getLogger().info(`[Tool Collection Manager] Processing ${serversInfo.length} servers for tool collection...`);
+      appLogger.info(`[Tool Collection Manager] Processing ${serversInfo.length} servers for tool collection...`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_start',
+        args: { serverCount: serversInfo.length }
+      });
 
       // Process each connected server
       for (const server of serversInfo) {
@@ -39,35 +37,68 @@ export class ToolCollectionManager {
             try {
               const tools = await service.getTools();
               if (tools) {
-                this.getLogger().info(`[Tool Collection Manager] ✅ Loaded ${Object.keys(tools).length} tools from '${server.label}' (${server.transportType})`);
+                appLogger.info(`[Tool Collection Manager] ✅ Loaded ${Object.keys(tools).length} tools from '${server.label}' (${server.transportType})`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_collection_server_loaded',
+                  args: { 
+                    serverKey: server.key, 
+                    serverLabel: server.label, 
+                    toolCount: Object.keys(tools).length,
+                    transportType: server.transportType
+                  }
+                });
                 
                 Object.entries(tools).forEach(([toolName, toolDefinition]) => {
                   const prefixedToolName = `${server.key}_${toolName}`;
                   combinedTools[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
                 });
               } else {
-                this.getLogger().warn(`[Tool Collection Manager] ⚠️ No tools found for server '${server.label}' despite success status.`);
+                appLogger.warn(`[Tool Collection Manager] ⚠️ No tools found for server '${server.label}' despite success status`, {
+                  correlationId: getCurrentCorrelationId(),
+                  operationId: 'tool_collection_server_no_tools',
+                  args: { serverKey: server.key, serverLabel: server.label }
+                });
               }
             } catch (error) {
-              const errorToLog = error instanceof Error ? error : new Error(String(error));
-              this.getLogger().error(`[Tool Collection Manager] ❌ Error loading tools from '${server.label}':`, errorToLog);
+              appLogger.error(`[Tool Collection Manager] ❌ Error loading tools from '${server.label}'`, {
+                correlationId: getCurrentCorrelationId(),
+                operationId: 'tool_collection_server_error',
+                args: { serverKey: server.key, serverLabel: server.label },
+                error: error as Error
+              });
             }
           }
         } else {
-          this.getLogger().debug(`[Tool Collection Manager] Skipping server '${server.label}' (status: ${server.status}, hasTools: ${server.hasActiveTools})`);
+          appLogger.debug(`[Tool Collection Manager] Skipping server '${server.label}' (status: ${server.status}, hasTools: ${server.hasActiveTools})`, {
+            correlationId: getCurrentCorrelationId(),
+            operationId: 'tool_collection_server_skipped',
+            args: { 
+              serverKey: server.key, 
+              serverLabel: server.label, 
+              status: server.status, 
+              hasActiveTools: server.hasActiveTools 
+            }
+          });
         }
       }
       
       const toolCount = Object.keys(combinedTools).length;
-      this.getLogger().info(`[Tool Collection Manager] 🎉 Successfully loaded ${toolCount} total tools.`);
+      appLogger.info(`[Tool Collection Manager] 🎉 Successfully loaded ${toolCount} total tools`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_completed',
+        args: { totalToolCount: toolCount }
+      });
       
       // Apply tool definition compression for token optimization
       const compressedTools = await toolDefinitionCompressor.compressToolDefinitions(combinedTools);
       
       return compressedTools;
     } catch (error) {
-      const topLevelError = error instanceof Error ? error : new Error(String(error));
-      this.getLogger().error(`[Tool Collection Manager] ❌ A critical error occurred during the tool collection process. Returning an empty toolset.`, topLevelError);
+      appLogger.error(`[Tool Collection Manager] ❌ A critical error occurred during the tool collection process. Returning an empty toolset`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_critical_error',
+        error: error as Error
+      });
       return {}; // Return empty toolset to prevent crashing the chat flow
     }
   }
@@ -78,7 +109,11 @@ export class ToolCollectionManager {
   async getToolsFromServer(serverKey: string): Promise<ToolSet> {
     const service = mcpServiceRegistry.getService(serverKey);
     if (!service) {
-      this.getLogger().warn(`[Tool Collection Manager] Server '${serverKey}' not found in registry.`);
+      appLogger.warn(`[Tool Collection Manager] Server '${serverKey}' not found in registry.`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_server_not_found',
+        args: { serverKey }
+      });
       return {};
     }
 
@@ -91,12 +126,20 @@ export class ToolCollectionManager {
           toolSet[prefixedToolName] = toolDefinition as NonNullable<ToolSet[string]>;
         });
         
-        this.getLogger().info(`[Tool Collection Manager] Loaded ${Object.keys(toolSet).length} tools from server '${serverKey}'.`);
+        appLogger.info(`[Tool Collection Manager] Loaded ${Object.keys(toolSet).length} tools from server '${serverKey}'.`, {
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'tool_collection_server_loaded',
+          args: { serverKey, toolCount: Object.keys(tools).length }
+        });
         return toolSet;
       }
     } catch (error) {
-      const errorToLog = error instanceof Error ? error : new Error(String(error));
-      this.getLogger().error(`[Tool Collection Manager] Error loading tools from server '${serverKey}':`, errorToLog);
+      appLogger.error(`[Tool Collection Manager] Error loading tools from server '${serverKey}'`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'tool_collection_server_error',
+        args: { serverKey },
+        error: error as Error
+      });
     }
 
     return {};
@@ -144,8 +187,12 @@ export class ToolCollectionManager {
               });
             }
           } catch (error) {
-            const errorToLog = error instanceof Error ? error : new Error(String(error));
-            this.getLogger().error(`[Tool Collection Manager] Error getting tool info from server '${server.label}':`, errorToLog);
+            appLogger.error(`[Tool Collection Manager] Error getting tool info from server '${server.label}'`, {
+              correlationId: getCurrentCorrelationId(),
+              operationId: 'tool_collection_server_info_error',
+              args: { serverKey: server.key, serverLabel: server.label },
+              error: error as Error
+            });
           }
         }
       }
@@ -215,8 +262,12 @@ export class ToolCollectionManager {
             toolCount = tools ? Object.keys(tools).length : 0;
             totalTools += toolCount;
           } catch (error) {
-            const errorToLog = error instanceof Error ? error : new Error(String(error));
-            this.getLogger().error(`[Tool Collection Manager] Error counting tools for ${server.label}:`, errorToLog);
+            appLogger.error(`[Tool Collection Manager] Error counting tools for ${server.label}`, {
+              correlationId: getCurrentCorrelationId(),
+              operationId: 'tool_collection_server_tool_count_error',
+              args: { serverKey: server.key, serverLabel: server.label },
+              error: error as Error
+            });
           }
         }
       }
@@ -247,7 +298,7 @@ export class ToolCollectionManager {
     hasActiveTools: boolean;
     transportType: string;
   }>> {
-    const appConfig = getAppConfig();
+    const appConfig = await getAppConfig();
     if (!appConfig?.mcpServers) {
       return [];
     }
@@ -283,8 +334,12 @@ export class ToolCollectionManager {
             transportType: statusResult.transportType || 'unknown',
           });
         } catch (error) {
-          const errorToLog = error instanceof Error ? error : new Error(String(error));
-          this.getLogger().error(`[Tool Collection Manager] Error getting status for server '${serverKey}':`, errorToLog);
+          appLogger.error(`[Tool Collection Manager] Error getting status for server '${serverKey}'`, {
+            correlationId: getCurrentCorrelationId(),
+            operationId: 'tool_collection_server_status_error',
+            args: { serverKey },
+            error: error as Error
+          });
           serversInfo.push({
             key: serverKey,
             label: serverConfig.label || serverKey,
@@ -316,8 +371,12 @@ export class ToolCollectionManager {
         const tools = await service.getTools();
         return tools ? Object.prototype.hasOwnProperty.call(tools, unprefixedName) : false;
       } catch (error) {
-        const errorToLog = error instanceof Error ? error : new Error(String(error));
-        this.getLogger().error(`[Tool Collection Manager] Error validating tool '${prefixedToolName}':`, errorToLog);
+        appLogger.error(`[Tool Collection Manager] Error validating tool '${prefixedToolName}'`, {
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'tool_collection_tool_validation_error',
+          args: { prefixedToolName },
+          error: error as Error
+        });
       }
     }
 

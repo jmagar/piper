@@ -1,4 +1,5 @@
 import { appLogger } from '@/lib/logger';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { redisCacheManager, type CacheableServerInfo } from './redis-cache-manager';
 import { mcpServiceRegistry } from './service-registry';
 import {
@@ -93,7 +94,12 @@ export class ServerStatusManager {
 
       await redisCacheManager.setServerStatus(serverKey, infoToCache);
     } catch (error: unknown) {
-              appLogger.mcp?.error(`[Status Manager] Error updating cache for ${serviceLabel}: ${error instanceof Error ? error.message : String(error)}`);
+      appLogger.error(`[Status Manager] Error updating cache for ${serviceLabel}`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'status_manager_cache_update_error',
+        args: { serverKey, serviceLabel },
+        error: error as Error
+      });
     }
   }
 
@@ -184,7 +190,12 @@ export class ServerStatusManager {
 
       return combinedFetchedData;
     } catch (error: unknown) {
-      appLogger.mcp?.error(`[Status Manager] Error getting status from service ${serviceLabel}: ${error instanceof Error ? error.message : String(error)}`);
+      appLogger.error(`[Status Manager] Error getting status from service ${serviceLabel}`, {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'status_manager_service_get_error',
+        args: { serverKey, serviceLabel },
+        error: error as Error
+      });
       return null;
     }
   }

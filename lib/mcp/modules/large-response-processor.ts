@@ -1,4 +1,5 @@
 import { appLogger } from '@/lib/logger';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 
 // Smart content processing for large tool responses
 export interface ChunkedContent {
@@ -35,7 +36,11 @@ export function processLargeToolResponse(toolName: string, result: unknown): unk
     return result;
   }
 
-      appLogger.mcp?.info(`[Large Response Processor] Processing large ${toolName} response: ${result.length} characters`);
+  appLogger.info(`[Large Response Processor] Processing large ${toolName} response: ${result.length} characters`, {
+    correlationId: getCurrentCorrelationId(),
+    operationId: `process_large_response_${toolName}`,
+    args: { toolName, responseLength: result.length }
+  });
 
   try {
     if (toolName === 'fetch' || toolName.includes('fetch')) {
@@ -46,7 +51,11 @@ export function processLargeToolResponse(toolName: string, result: unknown): unk
       return processGenericLargeResponse(toolName, result);
     }
   } catch (error) {
-    appLogger.mcp?.warn(`[Large Response Processor] Error processing large response for ${toolName}: ${error}`);
+    appLogger.warn(`[Large Response Processor] Error processing large response for ${toolName}`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: `process_large_response_error_${toolName}`,
+      error: error as Error
+    });
     // Fallback to truncated version
     return createTruncatedResponse(toolName, result, 'processing error');
   }

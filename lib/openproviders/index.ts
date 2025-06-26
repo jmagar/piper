@@ -46,8 +46,7 @@ export function openproviders<T extends SupportedModel>(
     return openai(modelId as string, { // Pass modelId as a generic string for OpenRouter
       ...(settings as OpenAIChatSettings), // Spread existing settings, ensure they are compatible
       baseURL: "https://openrouter.ai/api/v1",
-      // API key needs to be managed. Typically, setting OPENAI_API_KEY to your OpenRouter key
-      // in the environment is the simplest way if the SDK doesn't allow explicit apiKey pass-through here.
+      apiKey: process.env.OPENROUTER_API_KEY,
     } as OpenAIChatSettings);
   }
 

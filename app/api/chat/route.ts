@@ -12,11 +12,13 @@ import {
 } from 'ai';
 import { prisma } from "@/lib/prisma";
 import { logUserMessage, validateAndTrackUsage } from "./api";
-import { aiSdkLogger, AiProvider, AiSdkOperation } from '@/lib/logger/ai-sdk-logger';
+import { aiSdkLogger, AiProvider, AiSdkOperation, StreamingState } from '@/lib/logger/ai-sdk-logger';
 import { appLogger, LogSource, LogLevel } from '@/lib/logger';
 import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { orchestrateChatProcessing, ChatRequest } from './lib/chat-orchestration';
 import { TOKEN_CONFIG } from './lib/token-management';
+import { getProviderForModel } from '@/lib/openproviders/provider-map';
+import type { SupportedModel } from '@/lib/openproviders/types';
 
 export const maxDuration = 60;
 
@@ -229,11 +231,13 @@ function transformPiperMessagesToCoreMessages(piperMessages: PiperMessage[]): Co
   });
 }
 
-
-
 export async function POST(req: Request) {
   const correlationId = getCurrentCorrelationId();
-  appLogger.logSource(LogSource.HTTP, LogLevel.INFO, 'Chat API request received', { correlationId });
+  const requestStartTime = Date.now();
+  
+  appLogger.logSource(LogSource.HTTP, LogLevel.INFO, 'Chat API request received', { 
+    correlationId
+  });
 
   try {
     const requestBody = await req.json();
@@ -242,7 +246,7 @@ export async function POST(req: Request) {
     if (!validatedRequest.success) {
       appLogger.logSource(LogSource.HTTP, LogLevel.WARN, 'Chat API request validation failed', {
         correlationId,
-        error: validatedRequest.error.flatten(),
+        error: validatedRequest.error.flatten()
       });
       return new Response(
         JSON.stringify({
@@ -272,23 +276,29 @@ export async function POST(req: Request) {
     const chatId = rawChatId || uuidv4(); // Ensure chatId is always present
     const operationId = reqOpId || uuidv4(); // Use provided operationId or generate new
     
-    appLogger.info(`[POST /api/chat] Received validated request. ChatID: ${chatId}, OperationID: ${operationId}. Messages (brief):`, {
+    appLogger.info(`[POST /api/chat] Received validated request. ChatID: ${chatId}, OperationID: ${operationId}. Messages: ${piperMessagesWithInitialIds.length}`, {
       correlationId,
       chatId,
       operationId,
       messageCount: piperMessagesWithInitialIds.length,
       model: model,
-      userId: userId,
-      agentIdFromRequest: agentId
+      userId: userId
     });
 
     const effectiveModel = model || 'anthropic/claude-3.5-sonnet';
+    const detectedProvider = getProviderForModel(effectiveModel as SupportedModel);
+    
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Model selection: ${effectiveModel} (provider: ${detectedProvider})`, {
+      correlationId,
+      model: effectiveModel
+    });
 
     const firstUserMessageContent = piperMessagesWithInitialIds.find(m => m.role === 'user')?.content || "New Chat";
     const defaultTitle = typeof firstUserMessageContent === 'string'
       ? firstUserMessageContent.substring(0, 100)
       : "New Chat";
 
+    const chatUpsertStartTime = Date.now();
     await prisma.chat.upsert({
       where: { id: chatId },
       update: { updatedAt: new Date() },
@@ -300,19 +310,17 @@ export async function POST(req: Request) {
         agentId: agentId,
       },
     });
-    appLogger.logSource(LogSource.HTTP, LogLevel.INFO, `Chat upserted: ${chatId}`, { correlationId });
+    appLogger.logSource(LogSource.HTTP, LogLevel.INFO, `Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, { 
+      correlationId,
+      chatId
+    });
 
     await validateAndTrackUsage(); // Assuming this uses context or validatedRequest.data internally
 
     // Log PiperMessages before transforming to CoreMessages for orchestration
-    appLogger.info(`[POST /api/chat] PiperMessages for orchestration (piperMessagesWithInitialIds). Attachments (first 50 chars + length):`, {
+    appLogger.info(`[POST /api/chat] Processing ${piperMessagesWithInitialIds.length} messages for orchestration`, {
       correlationId,
-      messages: piperMessagesWithInitialIds.map(m => ({
-        id: m.id,
-        role: m.role,
-        content: typeof m.content === 'string' ? m.content.substring(0, 100) + (m.content.length > 100 ? '...' : '') : '[Non-string content]',
-        experimental_attachments: m.experimental_attachments?.map(att => ({ contentType: att.contentType, name: att.name, url: att.url.substring(0,50) + (att.url.length > 50 ? '...' : ''), size: att.size }))
-      }))
+      messageCount: piperMessagesWithInitialIds.length
     });
 
     // Transform PiperMessages to CoreMessages for the orchestration step
@@ -333,15 +341,18 @@ export async function POST(req: Request) {
       userId: userId,
     };
 
+    const orchestrationStartTime = Date.now();
     const {
       finalMessages: coreFinalMessagesForAIFromOrchestration,
       effectiveSystemPrompt,
       toolsToUse
     } = await orchestrateChatProcessing(chatRequestPayload);
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, 'Chat orchestration completed', { 
+    
+    const orchestrationDuration = Date.now() - orchestrationStartTime;
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Chat orchestration completed: ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolsToUse ? Object.keys(toolsToUse).length : 0} tools (${orchestrationDuration}ms)`, { 
       correlationId, 
       messageCount: coreFinalMessagesForAIFromOrchestration.length, 
-      hasTools: !!toolsToUse 
+      hasTools: !!toolsToUse
     });
 
     const originalLastUserMessage = piperMessagesWithInitialIds.filter((m) => m.role === 'user').pop();
@@ -358,9 +369,23 @@ export async function POST(req: Request) {
       }
     }
 
+    // Enhanced OpenRouter client initialization with detailed logging
+    const openrouterStartTime = Date.now();
+    const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+    const openrouterBaseUrl = process.env.OPENROUTER_BASE_URL;
+    
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Initializing OpenRouter client (API key: ${openrouterApiKey ? 'present' : 'missing'}, length: ${openrouterApiKey ? openrouterApiKey.length : 0})`, {
+      correlationId
+    });
+
     const openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY || '',
-      baseURL: process.env.OPENROUTER_BASE_URL || undefined,
+      apiKey: openrouterApiKey || '',
+      baseURL: openrouterBaseUrl || undefined,
+    });
+    
+    const openrouterInitDuration = Date.now() - openrouterStartTime;
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `OpenRouter client initialized (${openrouterInitDuration}ms)`, {
+      correlationId
     });
 
     const baseStreamConfig = {
@@ -374,6 +399,14 @@ export async function POST(req: Request) {
       ? { ...baseStreamConfig, tools: toolsToUse, maxSteps: TOKEN_CONFIG.MAX_STEPS, experimental_streamData: true }
       : { ...baseStreamConfig, experimental_streamData: true };
 
+    // Enhanced request logging
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Preparing streamText request: ${effectiveModel} (${detectedProvider}), ${coreFinalMessagesForAIFromOrchestration.length} messages, ${toolsToUse ? Object.keys(toolsToUse).length : 0} tools`, {
+      correlationId,
+      model: effectiveModel,
+      messageCount: coreFinalMessagesForAIFromOrchestration.length,
+      hasTools: !!toolsToUse
+    });
+
     // This variable will be used to track the AI SDK operation
     const operationId_aiSdk = aiSdkLogger.startOperation(
       AiProvider.OPENROUTER,
@@ -382,26 +415,83 @@ export async function POST(req: Request) {
       {
         correlationId,
         chatId,
-        hasTools: !!toolsToUse
+        hasTools: !!toolsToUse,
+        messageCount: coreFinalMessagesForAIFromOrchestration.length,
+        provider: detectedProvider,
+        systemPromptLength: effectiveSystemPrompt.length,
+        requestPreparationTime: Date.now() - requestStartTime
       }
     );
 
     try {
+      appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `Initiating streamText call (operation: ${operationId_aiSdk})`, {
+        correlationId,
+        operationId: operationId_aiSdk
+      });
+
+      const streamStartTime = Date.now();
       const result = await streamText(streamTextConfig);
+      const streamInitDuration = Date.now() - streamStartTime;
+      
+      appLogger.logSource(LogSource.AI_SDK, LogLevel.INFO, `streamText call successful, creating response stream (${streamInitDuration}ms)`, {
+        correlationId,
+        operationId: operationId_aiSdk
+      });
+
+      // Log streaming events
+      aiSdkLogger.logStreamingEvent(operationId_aiSdk, StreamingState.STARTED, {
+        chunkData: 'Stream initialized',
+        totalChunks: 0
+      });
+
+      // End the operation successfully
+      aiSdkLogger.endOperation(operationId_aiSdk, {
+        response: 'Stream created successfully'
+      });
+
       // Return the data stream response directly
       return result.toDataStreamResponse();
     } catch (error: unknown) {
       const streamError = error instanceof Error ? error : new Error(String(error));
-      appLogger.error('[ChatAPI] streamText call failed catastrophically.', {
+      const streamErrorDuration = Date.now() - requestStartTime;
+      
+      appLogger.error(`[ChatAPI] streamText call failed catastrophically: ${streamError.message} (${streamErrorDuration}ms total)`, {
         correlationId,
         chatId,
         model: effectiveModel,
         error: streamError,
+        operationId: operationId_aiSdk
       });
+
+      // Log provider-specific error with context
+      aiSdkLogger.logProviderError(
+        AiProvider.OPENROUTER,
+        effectiveModel,
+        streamError,
+        {
+          operation: AiSdkOperation.STREAMING_START,
+          requestData: {
+            messageCount: coreFinalMessagesForAIFromOrchestration.length,
+            hasTools: !!toolsToUse,
+            provider: detectedProvider
+          }
+        }
+      );
+
+      // Log streaming error event
+      aiSdkLogger.logStreamingEvent(operationId_aiSdk, StreamingState.ERROR, {
+        error: streamError
+      });
+
       aiSdkLogger.endOperation(operationId_aiSdk, { error: streamError });
 
       // Enhanced error handling with specific error messages
       const errorMessage = getDetailedErrorMessage(streamError);
+      
+      appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, `Returning error stream to client: ${errorMessage}`, {
+        correlationId,
+        operationId: operationId_aiSdk
+      });
       
       // Manually create a stream that sends a detailed error message to the client
       const errorStream = new ReadableStream({
@@ -421,9 +511,19 @@ export async function POST(req: Request) {
     }
 
   } catch (err: unknown) {
+    const totalRequestDuration = Date.now() - requestStartTime;
     const errorMessage = err instanceof Error ? err.message : "Internal server error";
-    appLogger.logSource(LogSource.HTTP, LogLevel.ERROR, "Error in /api/chat:", { error: err as Error, correlationId });
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, "Chat completion failed:", { error: err as Error, correlationId });
+    
+    appLogger.logSource(LogSource.HTTP, LogLevel.ERROR, `Error in /api/chat: ${errorMessage} (${totalRequestDuration}ms total)`, { 
+      error: err as Error, 
+      correlationId
+    });
+    
+    appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, `Chat completion failed: ${errorMessage}`, { 
+      error: err as Error, 
+      correlationId
+    });
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {

@@ -1,4 +1,5 @@
-import { appLogger, LogLevel } from '@/lib/logger';
+import { appLogger } from '@/lib/logger';
+import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import {
   ManagedMCPClient as MCPService,
   type ServerConfigEntry,
@@ -18,12 +19,18 @@ export class MCPServiceRegistry {
     // Initialize services map with HMR support
     if (process.env.NODE_ENV === 'production') {
       this.services = new Map<string, MCPService>();
-      appLogger.logSource('MCP', LogLevel.INFO, '[Service Registry] Initialized services map for production.');
+      appLogger.info('[Service Registry] Initialized services map for production', {
+        correlationId: getCurrentCorrelationId(),
+        operationId: 'service_registry_init_production'
+      });
     } else {
       // Development HMR logic
       if (!globalThis.__mcpServicesMap) {
         globalThis.__mcpServicesMap = new Map<string, MCPService>();
-        appLogger.logSource('MCP', LogLevel.INFO, '[Service Registry] Initialized globalThis.__mcpServicesMap for development.');
+        appLogger.info('[Service Registry] Initialized globalThis.__mcpServicesMap for development', {
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'service_registry_init_development'
+        });
       }
       this.services = globalThis.__mcpServicesMap;
     }
@@ -41,7 +48,11 @@ export class MCPServiceRegistry {
    */
   registerService(serverKey: string, serverConfig: ServerConfigEntry): MCPService {
     const serviceLabel = serverConfig.label || serverKey;
-    appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Registering service '${serviceLabel}' with key '${serverKey}'.`);
+    appLogger.info(`[Service Registry] Registering service '${serviceLabel}' with key '${serverKey}'`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'service_registry_register',
+      args: { serverKey, serviceLabel }
+    });
     
     const service = new MCPService(serverConfig, serverKey);
     this.services.set(serverKey, service);
@@ -90,16 +101,29 @@ export class MCPServiceRegistry {
     if (service) {
       if (typeof service.close === 'function') {
         try {
-          appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Shutting down service '${service.displayName}' with key '${serverKey}'.`);
+          appLogger.info(`[Service Registry] Shutting down service '${service.displayName}' with key '${serverKey}'`, {
+            correlationId: getCurrentCorrelationId(),
+            operationId: 'service_registry_shutdown',
+            args: { serverKey, displayName: service.displayName }
+          });
           await service.close();
         } catch (error) {
-          appLogger.logSource('MCP', LogLevel.ERROR, `[Service Registry] Error shutting down service '${service.displayName}' with key '${serverKey}': ${error}`);
+          appLogger.error(`[Service Registry] Error shutting down service '${service.displayName}' with key '${serverKey}'`, {
+            correlationId: getCurrentCorrelationId(),
+            operationId: 'service_registry_shutdown_error',
+            args: { serverKey, displayName: service.displayName },
+            error: error as Error
+          });
           // Continue with removal even if shutdown fails
         }
       }
       const removed = this.services.delete(serverKey);
       if (removed) {
-        appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Removed service with key '${serverKey}' from map.`);
+        appLogger.info(`[Service Registry] Removed service with key '${serverKey}' from map`, {
+          correlationId: getCurrentCorrelationId(),
+          operationId: 'service_registry_removed',
+          args: { serverKey }
+        });
       }
       return removed;
     }
@@ -112,7 +136,11 @@ export class MCPServiceRegistry {
   clearAll(): void {
     const count = this.services.size;
     this.services.clear();
-    appLogger.logSource('MCP', LogLevel.INFO, `[Service Registry] Cleared ${count} services from registry.`);
+    appLogger.info(`[Service Registry] Cleared ${count} services from registry`, {
+      correlationId: getCurrentCorrelationId(),
+      operationId: 'service_registry_clear_all',
+      args: { servicesCleared: count }
+    });
   }
 
   /**

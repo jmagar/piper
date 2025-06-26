@@ -2,40 +2,66 @@ import { promises as fs } from 'fs'
 import { watch, FSWatcher } from 'fs'
 import { z } from 'zod'
 import { MCPConnectionPool } from './enhanced/connection-pool'
+import type { AppConfig, ServerConfigEntry, LocalMCPToolSchema } from './enhanced/types'
 
-// Configuration schema for validation
-const MCPServerConfigSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  transport: z.object({
-    type: z.enum(['stdio', 'sse', 'streamable-http']),
-    command: z.string().optional(),
+// Enhanced MCP Configuration schema for validation
+// Using the actual types from the enhanced module to avoid conflicts
+// TODO: Consider importing schemas from enhanced module to avoid duplication
+const EnhancedTransportConfigSchema = z.union([
+  z.object({
+    type: z.literal('stdio'),
+    command: z.string(),
     args: z.array(z.string()).optional(),
     env: z.record(z.string()).optional(),
     cwd: z.string().optional(),
-    url: z.string().optional(),
-    sessionId: z.string().optional(),
-    headers: z.record(z.string()).optional()
+    stderr: z.enum(['inherit', 'ignore', 'pipe']).optional(),
+    clientName: z.string().optional(),
+    timeout: z.number().optional(),
+    onUncaughtError: z.function().optional()
   }),
-  enabled: z.boolean().default(true),
-  timeout: z.number().optional(),
-  retries: z.number().default(3),
-  metadata: z.record(z.unknown()).optional()
+  z.object({
+    type: z.literal('sse'),
+    url: z.string(),
+    headers: z.record(z.string()).optional(),
+    clientName: z.string().optional(),
+    timeout: z.number().optional(),
+    onUncaughtError: z.function().optional()
+  }),
+  z.object({
+    type: z.literal('streamable-http'),
+    url: z.string(),
+    sessionId: z.string().optional(),
+    headers: z.record(z.string()).optional(),
+    clientName: z.string().optional(),
+    timeout: z.number().optional(),
+    onUncaughtError: z.function().optional()
+  })
+])
+
+const ServerConfigEntrySchema = z.object({
+  label: z.string().optional(),
+  disabled: z.boolean().optional(), // Legacy compatibility
+  enabled: z.boolean().optional(),
+  transportType: z.enum(['stdio', 'sse', 'streamable-http']).optional(), // Legacy compatibility
+  name: z.string().optional(),
+  transport: EnhancedTransportConfigSchema.optional(),
+  schemas: z.record(z.unknown()).optional(), // Keep as unknown for parsing, will be cast to correct type
+  // Legacy fallback properties
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string()).optional(),
+  cwd: z.string().optional(),
+  url: z.string().optional(),
+  headers: z.record(z.string()).optional()
 })
 
-const MCPConfigSchema = z.object({
-  servers: z.array(MCPServerConfigSchema),
-  global: z.object({
-    enableMetrics: z.boolean().default(true),
-    logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-    maxConcurrentConnections: z.number().default(10),
-    defaultTimeout: z.number().default(30000)
-  }).optional()
+const AppConfigSchema = z.object({
+  mcpServers: z.record(ServerConfigEntrySchema)
 })
 
-export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>
-export type MCPConfig = z.infer<typeof MCPConfigSchema>
+// Re-export types for backward compatibility
+export type MCPServerConfig = ServerConfigEntry
+export type MCPConfig = AppConfig
 
 export interface ConfigWatcherOptions {
   configPath: string
@@ -43,24 +69,25 @@ export interface ConfigWatcherOptions {
   autoReconnect: boolean
   backupOnChange: boolean
   connectionPool?: MCPConnectionPool
-  onConfigChange?: (config: MCPConfig, previousConfig?: MCPConfig) => Promise<void>
+  onConfigChange?: (config: AppConfig, previousConfig?: AppConfig) => Promise<void>
   onValidationError?: (error: z.ZodError) => void
   onReloadError?: (error: Error) => void
 }
 
 /**
  * Configuration file watcher for hot reloading MCP server configurations
+ * Updated to use Enhanced MCP Client types and validation
  */
 export class MCPConfigWatcher {
   private watcher?: FSWatcher
-  private currentConfig?: MCPConfig
-  private configBackups: MCPConfig[] = []
+  private currentConfig?: AppConfig
+  private configBackups: AppConfig[] = []
   private maxBackups = 5
   private isReloading = false
 
   constructor(private options: ConfigWatcherOptions) {}
 
-  async start(): Promise<MCPConfig> {
+  async start(): Promise<AppConfig> {
     try {
       console.log(`[Config Watcher] Starting watcher for: ${this.options.configPath}`)
       
@@ -95,18 +122,19 @@ export class MCPConfigWatcher {
     }
   }
 
-  private async loadConfig(): Promise<MCPConfig> {
+  private async loadConfig(): Promise<AppConfig> {
     try {
       const configContent = await fs.readFile(this.options.configPath, 'utf-8')
       const rawConfig = JSON.parse(configContent)
       
       if (this.options.validateOnLoad) {
-        const validatedConfig = MCPConfigSchema.parse(rawConfig)
-        console.log('[Config Watcher] Configuration loaded and validated')
-        return validatedConfig
+        const validatedConfig = AppConfigSchema.parse(rawConfig)
+        console.log('[Config Watcher] Configuration loaded and validated with Enhanced MCP types')
+        // Cast to AppConfig since the schema validation ensures compatibility
+        return validatedConfig as AppConfig
       } else {
         console.log('[Config Watcher] Configuration loaded (validation skipped)')
-        return rawConfig as MCPConfig
+        return rawConfig as AppConfig
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -172,10 +200,12 @@ export class MCPConfigWatcher {
     }
   }
 
-  private createConfigBackup(config: MCPConfig): void {
+  private createConfigBackup(config: AppConfig): void {
     this.configBackups.unshift({
       ...config,
-      servers: config.servers.map(server => ({ ...server }))
+      mcpServers: Object.fromEntries(
+        Object.entries(config.mcpServers).map(([key, server]) => [key, { ...server }])
+      )
     })
 
     // Limit backup count
@@ -187,8 +217,8 @@ export class MCPConfigWatcher {
   }
 
   private analyzeConfigChanges(
-    oldConfig?: MCPConfig,
-    newConfig?: MCPConfig
+    oldConfig?: AppConfig,
+    newConfig?: AppConfig
   ): {
     serversAdded: string[]
     serversRemoved: string[]
@@ -206,8 +236,8 @@ export class MCPConfigWatcher {
       return changes
     }
 
-    const oldServerIds = new Set(oldConfig.servers.map(s => s.id))
-    const newServerIds = new Set(newConfig.servers.map(s => s.id))
+    const oldServerIds = new Set(Object.keys(oldConfig.mcpServers))
+    const newServerIds = new Set(Object.keys(newConfig.mcpServers))
 
     // Find added servers
     for (const serverId of newServerIds) {
@@ -224,17 +254,16 @@ export class MCPConfigWatcher {
     }
 
     // Find modified servers
-    for (const newServer of newConfig.servers) {
-      const oldServer = oldConfig.servers.find(s => s.id === newServer.id)
+    for (const serverId of newServerIds) {
+      const oldServer = oldConfig.mcpServers[serverId]
+      const newServer = newConfig.mcpServers[serverId]
       if (oldServer && JSON.stringify(oldServer) !== JSON.stringify(newServer)) {
-        changes.serversModified.push(newServer.id)
+        changes.serversModified.push(serverId)
       }
     }
 
-    // Check global config changes
-    if (JSON.stringify(oldConfig.global) !== JSON.stringify(newConfig.global)) {
-      changes.globalChanged = true
-    }
+    // Note: No global config in AppConfig type, so globalChanged always false
+    changes.globalChanged = false
 
     return changes
   }
@@ -299,28 +328,28 @@ export class MCPConfigWatcher {
     }
   }
 
-  getCurrentConfig(): MCPConfig | undefined {
+  getCurrentConfig(): AppConfig | undefined {
     return this.currentConfig
   }
 
-  getConfigBackups(): MCPConfig[] {
+  getConfigBackups(): AppConfig[] {
     return [...this.configBackups]
   }
 
   async validateConfig(configPath?: string): Promise<{
     valid: boolean
     errors?: z.ZodError
-    config?: MCPConfig
+    config?: AppConfig
   }> {
     try {
       const path = configPath || this.options.configPath
       const configContent = await fs.readFile(path, 'utf-8')
       const rawConfig = JSON.parse(configContent)
-      const validatedConfig = MCPConfigSchema.parse(rawConfig)
+      const validatedConfig = AppConfigSchema.parse(rawConfig)
       
       return {
         valid: true,
-        config: validatedConfig
+        config: validatedConfig as AppConfig
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -333,7 +362,7 @@ export class MCPConfigWatcher {
     }
   }
 
-  async reloadConfig(): Promise<MCPConfig> {
+  async reloadConfig(): Promise<AppConfig> {
     if (this.isReloading) {
       throw new Error('Configuration reload already in progress')
     }
