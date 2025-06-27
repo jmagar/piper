@@ -6,11 +6,22 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { Message as MessageAISDK } from "@ai-sdk/react"
-import { ArrowClockwise, Check, Copy, Warning, Robot } from "@phosphor-icons/react"
+import type { ToolInvocationUIPart } from "@ai-sdk/ui-utils"
+import {
+  ArrowClockwise,
+  Check,
+  Copy,
+  Warning,
+  Robot,
+  Scroll,
+  CircleNotch,
+  CheckCircle,
+} from "@phosphor-icons/react"
 import { memo, useMemo, useState } from "react"
 import { getSources } from "./get-sources"
 import { SourcesList } from "./sources-list"
 import { InlinePartsRenderer } from "./inline-parts-renderer"
+import { ToolLogViewer } from "./tool-log-viewer"
 
 type MessageAssistantProps = {
   children: string
@@ -37,23 +48,29 @@ const MessageAssistantComponent = ({
 }: MessageAssistantProps) => {
   const [showTimestamp, setShowTimestamp] = useState(false)
   const sources = useMemo(() => getSources(parts), [parts])
+  const toolInvocations = useMemo(
+    () =>
+      parts?.filter(
+        (part): part is ToolInvocationUIPart =>
+          part.type === "tool-invocation"
+      ) ?? [],
+    [parts]
+  )
 
   const contentNullOrEmpty = children === null || children === ""
   const isLastStreaming = status === "streaming" && isLast
   const isError = status === "error" && isLast
+
+  const hasRunningTools = useMemo(
+    () => toolInvocations.some(t => t.toolInvocation.state === "call"),
+    [toolInvocations]
+  )
 
   const getAriaLabel = () => {
     if (isError) return "Piper's response failed"
     if (isLastStreaming) return "Piper is currently pondering"
     return "Piper's response complete"
   }
-  
-  const responseStats = useMemo(() => {
-    if (!children || !isLastStreaming) return null
-    
-    const wordCount = children.trim().split(/\s+/).filter(word => word.length > 0).length
-    return { wordCount }
-  }, [children, isLastStreaming])
   
   const formatTimestamp = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(date)
@@ -82,78 +99,82 @@ const MessageAssistantComponent = ({
           </div>
         )}
 
-        <div 
-          className={cn(
-            "rounded-2xl border bg-background p-4 shadow-sm",
-            "border-input"
-          )}
-          aria-label={getAriaLabel()}
-          role="region"
-          aria-live={isLastStreaming ? "polite" : "off"}
-        >
-          {isError && (
-            <div 
-              className="flex items-center gap-3 rounded-lg border border-destructive/20 bg-red-50 p-3 text-sm dark:bg-red-900/20"
-              role="alert"
-              aria-label="AI response error"
-            >
-              <Warning className="size-5 text-destructive" aria-hidden="true" />
-              <div className="flex-1">
-                <p className="font-medium text-destructive">Response failed to generate</p>
-                <p className="text-muted-foreground mt-1">
-                  {children || "Piper encountered an error. Please try again."}
-                </p>
-              </div>
-              <button
-                onClick={onReload}
-                className="rounded-md bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus:outline-none focus:ring-2 focus:ring-destructive/50"
-                aria-label="Retry generating AI response"
+        <div className="relative">
+          <div
+            className={cn(
+              "rounded-2xl bg-slate-100 p-4 shadow-md dark:bg-slate-800"
+            )}
+            aria-label={getAriaLabel()}
+            role="region"
+            aria-live={isLastStreaming ? "polite" : "off"}
+          >
+            {isError && (
+              <div 
+                className="flex items-center gap-3 rounded-lg border border-destructive/20 bg-red-50 p-3 text-sm dark:bg-red-900/20"
+                role="alert"
+                aria-label="AI response error"
               >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {!isError && !contentNullOrEmpty && (
-            <div className="relative">
-              <InlinePartsRenderer 
-                parts={parts}
-                textContent={children}
-                isStreaming={isLastStreaming}
-              />
-              
-              {isLastStreaming && (
-                <div className="mt-2 flex items-center justify-between">
-                  <div 
-                    className="flex items-center gap-2 text-xs text-muted-foreground"
-                    aria-label="AI is currently generating a response"
-                    role="status"
-                  >
-                    <div className="flex space-x-1" aria-hidden="true">
-                      <div className="animate-pulse rounded-full bg-current w-1.5 h-1.5" style={{ animationDelay: '0ms' }}></div>
-                      <div className="animate-pulse rounded-full bg-current w-1.5 h-1.5" style={{ animationDelay: '150ms' }}></div>
-                      <div className="animate-pulse rounded-full bg-current w-1.5 h-1.5" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                    <span className="font-medium">Pondering...</span>
-                  </div>
-                  
-                  {responseStats && responseStats.wordCount > 0 && (
-                    <div className="text-xs text-muted-foreground/70">
-                      {responseStats.wordCount} word{responseStats.wordCount !== 1 ? 's' : ''}
-                    </div>
-                  )}
+                <Warning className="size-5 text-destructive" aria-hidden="true" />
+                <div className="flex-1">
+                  <p className="font-medium text-destructive">Response failed to generate</p>
+                  <p className="text-muted-foreground mt-1">
+                    {children || "Piper encountered an error. Please try again."}
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
+                <button
+                  onClick={onReload}
+                  className="rounded-md bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus:outline-none focus:ring-2 focus:ring-destructive/50"
+                  aria-label="Retry generating AI response"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!isError && !contentNullOrEmpty && (
+              <div className="relative">
+                <InlinePartsRenderer 
+                  parts={parts}
+                  textContent={children}
+                  isStreaming={isLastStreaming}
+                />
+                
+                {isLastStreaming && (
+                  <div className="mt-2 flex items-center">
+                    <div
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                      aria-label="AI is currently generating a response"
+                      role="status"
+                    >
+                      <div className="flex space-x-1" aria-hidden="true">
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {sources && sources.length > 0 && <SourcesList sources={sources} />}
-
-        {Boolean(isLastStreaming || contentNullOrEmpty || isError) ? null : (
+        {/* --- Actions and Tool Badge Container --- */}
+        <div className="flex w-full min-h-[38px] items-start justify-between">
+          {/* MessageActions on the left (visible on hover) */}
           <MessageActions
             className={cn(
-              "-ml-2 flex gap-0 opacity-0 transition-opacity group-hover:opacity-100"
+              "flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100",
+              (isLastStreaming || contentNullOrEmpty || isError) && "invisible" // Use invisible to reserve space
             )}
           >
             <MessageAction
@@ -184,7 +205,35 @@ const MessageAssistantComponent = ({
               </button>
             </MessageAction>
           </MessageActions>
-        )}
+
+          {/* Tool badge on the right (always visible when tools exist) */}
+          <div className="flex justify-end">
+            {toolInvocations.length > 0 && (
+              <div className="mt-1 flex items-center gap-1 rounded-full bg-slate-100 p-1 shadow-md dark:bg-slate-800">
+                <div className="flex items-center gap-1.5 rounded-full bg-white px-2 py-1 dark:bg-slate-700">
+                  {hasRunningTools ? (
+                    <CircleNotch className="size-4 animate-spin text-amber-500" />
+                  ) : (
+                    <CheckCircle className="size-4 text-emerald-500" />
+                  )}
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                    {toolInvocations.length}
+                  </span>
+                </div>
+                <ToolLogViewer toolInvocations={toolInvocations}>
+                  <button
+                    className="flex size-7 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-600"
+                    aria-label="View tool logs"
+                  >
+                    <Scroll className="size-4 text-slate-500 dark:text-slate-400" />
+                  </button>
+                </ToolLogViewer>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {sources && sources.length > 0 && <SourcesList sources={sources} />}
       </div>
     </Message>
   )

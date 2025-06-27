@@ -86,16 +86,32 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const cacheAndAddMessage = async (message: MessageAISDK) => {
     if (!chatId) return
 
+    // First, update the local state optimistically
+    setMessages(prev => {
+      const updated = [...prev, message]
+      // Also update the IndexedDB cache
+      writeToIndexedDB("messages", { id: chatId, messages: updated })
+      return updated
+    })
+
+    // Then, send the new message to the server for persistence
     try {
-      setMessages((prev) => {
-        const updated = [...prev, message]
-        writeToIndexedDB("messages", { id: chatId, messages: updated })
-        return updated
+      await fetch(`/api/messages/${chatId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
       })
     } catch (e: unknown) {
-      console.error("Failed to save message to IndexedDB:", e);
-      const description = e instanceof Error ? e.message : 'Unknown error';
-      toast({ title: "Failed to save message locally", description, status: "error" })
+      console.error("Failed to save message to server:", e)
+      const description = e instanceof Error ? e.message : "Unknown error"
+      toast({
+        title: "Failed to save message to server",
+        description,
+        status: "error",
+      })
+      // Optional: Implement logic to revert the optimistic update here
     }
   }
 

@@ -174,14 +174,14 @@ export function MessageUser({
         ) : (
           <MessageContent
             className={cn(
-              "relative max-w-[85%] rounded-2xl border bg-blue-600 p-4 text-white shadow-sm",
-              "border-blue-700"
+              "relative max-w-[85%] rounded-2xl border bg-blue-500 p-4 text-white shadow-md",
+              "border-blue-600"
             )}
             markdown={true}
             ref={contentRef}
             components={{
-              code: ({ children }) => <span className="bg-blue-700 px-1 rounded text-blue-100">{children}</span>,
-              pre: ({ children }) => <div className="bg-blue-700 p-2 rounded text-blue-100 my-2">{children}</div>,
+              code: ({ children }) => <span className="bg-blue-600 px-1 rounded text-blue-100">{children}</span>,
+              pre: ({ children }) => <div className="bg-blue-600 p-2 rounded text-blue-100 my-2">{children}</div>,
               h1: ({ children }) => <p className="font-bold text-white">{children}</p>,
               h2: ({ children }) => <p className="font-semibold text-white">{children}</p>,
               h3: ({ children }) => <p className="font-medium text-white">{children}</p>,
@@ -193,7 +193,7 @@ export function MessageUser({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-200 hover:text-blue-100 hover:underline"
+                  className="text-blue-100 hover:text-white hover:underline"
                   {...props}
                 >
                   {children}
@@ -215,7 +215,7 @@ export function MessageUser({
                             href={`/uploads/${filePath}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-blue-200 hover:text-blue-100 hover:underline"
+                            className="text-blue-100 hover:text-white hover:underline"
                           >
                             {part}
                           </a>

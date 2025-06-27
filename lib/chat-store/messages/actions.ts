@@ -44,6 +44,7 @@ export async function insertMessageToDb(chatId: string, message: MessageAISDK) {
   try {
     await prisma.message.create({
       data: {
+        id: message.id,
         chatId,
         role: message.role,
         content: message.content, // Use content field matching database schema
@@ -58,6 +59,7 @@ export async function insertMessageToDb(chatId: string, message: MessageAISDK) {
 export async function insertMessagesToDb(chatId: string, messages: MessageAISDK[]) {
   try {
     const messageData = messages.map((message) => ({
+      id: message.id,
       chatId,
       role: message.role,
       content: message.content, // Use content field matching database schema
