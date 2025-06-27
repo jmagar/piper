@@ -50,7 +50,7 @@ export function AppSidebar() {
   const hasChats = Array.isArray(chats) && chats.length > 0
 
   return (
-    <Sidebar collapsible="offcanvas" variant="sidebar" className="border-none">
+    <Sidebar collapsible="offcanvas" variant="sidebar" className="border-none bg-background/95 backdrop-blur-sm shadow-lg">
       <SidebarHeader className="h-14 pl-3">
         <div className="flex justify-between">
           {isMobile ? (
@@ -87,12 +87,12 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent className="mask-t-from-98% mask-t-to-100% mask-b-from-98% mask-b-to-100% px-3">
-        <ScrollArea className="flex h-full [&>div>div]:!block">
+        <ScrollArea className="flex h-full rounded-xl border border-border/20 bg-background/50 backdrop-blur-sm shadow-sm [&>div>div]:!block">
           {safeIsLoading ? (
             <div className="h-full" />
           ) : hasChats ? (
             <ChatErrorBoundary>
-              <div className="space-y-5">
+              <div className="space-y-3 p-2">
                 {groupedChats?.map((group) => (
                   <SidebarList
                     key={group.name}
@@ -120,7 +120,7 @@ export function AppSidebar() {
       <SidebarFooter className="mb-2 p-3">
         <a
           href="https://github.com/jmagar/piper"
-          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+          className="hover:bg-muted flex items-center gap-2 rounded-xl p-3 transition-all duration-300 hover:shadow-md backdrop-blur-sm border border-transparent hover:border-border/30"
           target="_blank"
           aria-label="Star the repo on GitHub"
         >

@@ -5,7 +5,8 @@ import { useTheme } from "next-themes"
 import React, { useEffect, useState } from "react"
 import { codeToHtml } from "shiki"
 import { Button } from "@/components/ui/button"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, Edit, Save, X, Sparkles } from "lucide-react"
+import { CodeMirrorEditor } from "./code-mirror-editor"
 
 export type CodeBlockProps = {
   children?: React.ReactNode
@@ -17,33 +18,14 @@ function CodeBlock({ children, className, ...props }: CodeBlockProps) {
     <div
       className={cn(
         "not-prose group relative w-full overflow-hidden",
-        "border-2 border-transparent bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-cyan-500/20 dark:from-pink-400/30 dark:via-purple-400/30 dark:to-cyan-400/30",
-        "rounded-2xl shadow-2xl hover:shadow-pink-500/20 dark:hover:shadow-purple-500/30 transition-all duration-700 ease-out",
-        "ring-2 ring-gradient-to-r ring-purple-500/30 dark:ring-cyan-400/40",
-        "backdrop-blur-xl",
-        "bg-gradient-to-br from-rose-50/95 via-purple-50/90 to-cyan-50/95",
-        "dark:bg-gradient-to-br dark:from-slate-900/98 dark:via-purple-900/95 dark:to-indigo-900/90",
-        "hover:ring-purple-500/50 dark:hover:ring-cyan-400/60",
-        "hover:shadow-purple-500/25 dark:hover:shadow-cyan-500/25",
-        "transform hover:scale-[1.003] transition-transform duration-400",
-        "before:absolute before:inset-0 before:rounded-2xl before:p-[2px] before:bg-gradient-to-r before:from-pink-500 before:via-purple-500 before:to-cyan-500 before:opacity-60 before:-z-10",
-        "after:absolute after:inset-[2px] after:rounded-2xl after:bg-gradient-to-br after:from-white/95 after:via-purple-50/90 after:to-cyan-50/95 dark:after:from-slate-900/98 dark:after:via-purple-900/95 dark:after:to-indigo-900/90 after:-z-10",
+        "rounded-xl border border-border/20 bg-background/95 backdrop-blur-sm",
+        "shadow-lg hover:shadow-xl transition-all duration-300",
+        "hover:border-border/40",
         className
       )}
       {...props}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-pink-500/[0.08] via-purple-500/[0.06] to-cyan-500/[0.08] dark:from-pink-400/[0.12] dark:via-purple-400/[0.10] dark:to-cyan-400/[0.12] pointer-events-none rounded-2xl" />
-      <div className="absolute inset-0 bg-gradient-to-br from-rose-100/30 via-purple-100/20 to-cyan-100/30 dark:via-purple-800/20 dark:from-purple-900/30 dark:to-indigo-800/30 pointer-events-none rounded-2xl" />
-      
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-pink-300/[0.3] to-transparent dark:via-purple-300/[0.2] -translate-x-full group-hover:translate-x-full transition-transform duration-1200 ease-out pointer-events-none rounded-2xl" />
-      
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-rose-200/50 via-purple-200/30 to-cyan-200/50 dark:from-purple-700/40 dark:via-indigo-700/30 dark:to-cyan-700/40 pointer-events-none" />
-      
-      <div className="absolute top-4 right-4 w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full opacity-60 animate-pulse" />
-      <div className="absolute top-6 right-8 w-1 h-1 bg-gradient-to-r from-purple-400 to-cyan-500 rounded-full opacity-40 animate-pulse delay-300" />
-      <div className="absolute bottom-4 left-4 w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-pink-500 rounded-full opacity-50 animate-pulse delay-700" />
-      
-      <div className="relative z-20">
+      <div className="relative z-10">
         {children}
       </div>
     </div>
@@ -55,6 +37,7 @@ export type CodeBlockCodeProps = {
   language?: string
   theme?: string
   className?: string
+  onSave?: (newCode: string) => Promise<void>
 } & React.HTMLProps<HTMLDivElement>
 
 function CodeBlockCode({
@@ -62,22 +45,31 @@ function CodeBlockCode({
   language = "tsx",
   theme = "github-light",
   className,
+  onSave,
   ...props
 }: CodeBlockCodeProps) {
   const { theme: appTheme } = useTheme()
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedCode, setEditedCode] = useState(code)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isEnhancing, setIsEnhancing] = useState(false)
 
   useEffect(() => {
     async function highlight() {
       const html = await codeToHtml(code, {
         lang: language,
-        theme: appTheme === "dark" ? "material-theme-darker" : "material-theme-lighter",
+        theme: appTheme === "dark" ? "github-dark" : "github-light",
       })
       setHighlightedHtml(html)
     }
     highlight()
   }, [code, language, theme, appTheme])
+
+  useEffect(() => {
+    setEditedCode(code)
+  }, [code])
 
   const handleCopy = async () => {
     try {
@@ -86,6 +78,69 @@ function CodeBlockCode({
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy text: ', err)
+    }
+  }
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditedCode(code)
+  }
+
+  const handleSave = async () => {
+    if (!onSave) return
+    
+    setIsSaving(true)
+    try {
+      await onSave(editedCode)
+      setIsEditing(false)
+    } catch (err) {
+      console.error('Failed to save:', err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditedCode(code)
+  }
+
+  const handleEnhance = async () => {
+    if (!onSave) return
+    
+    setIsEnhancing(true)
+    try {
+      const response = await fetch('/api/enhance-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: isEditing ? editedCode : code }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to enhance prompt')
+      }
+
+      const data = await response.json()
+      if (data.enhancedPrompt) {
+        if (isEditing) {
+          setEditedCode(data.enhancedPrompt)
+        } else {
+          setEditedCode(data.enhancedPrompt)
+          setIsEditing(true)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to enhance prompt:', err)
+    } finally {
+      setIsEnhancing(false)
+    }
+  }
+
+  const handleDoubleClick = () => {
+    if (onSave && !isEditing) {
+      handleEdit()
     }
   }
 
@@ -110,35 +165,95 @@ function CodeBlockCode({
 
   return (
     <div className="relative">
-      {highlightedHtml ? (
-        <div
-          className={classNames}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-          {...props}
-        />
-      ) : (
-        <div className={classNames} {...props}>
-          <pre className="px-6 py-5 m-0 font-mono text-[0.9rem] leading-[1.7] font-normal tracking-[0.005em] bg-transparent border-0 subpixel-antialiased text-slate-800 dark:text-slate-50 [text-rendering:optimizeLegibility] [font-feature-settings:'liga','calt'] whitespace-pre-wrap break-words">
-            <code className="block w-full font-mono text-[0.9rem] leading-[1.7] font-normal tracking-[0.005em] bg-transparent p-0 subpixel-antialiased [text-rendering:optimizeLegibility] [font-feature-settings:'liga','calt'] whitespace-pre-wrap break-words">
-              {code}
-            </code>
-          </pre>
-        </div>
-      )}
+      {/* Action buttons */}
+      <div className="absolute top-4 right-4 z-30 flex gap-2">
+        {isEditing ? (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="h-8 w-8 p-0 hover:bg-red-100/50 dark:hover:bg-red-800/30 transition-colors duration-200 bg-background/80 backdrop-blur-sm border border-border/30"
+            >
+              <X className="h-4 w-4 text-red-500" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEnhance}
+              disabled={isEnhancing}
+              className="h-8 w-8 p-0 hover:bg-amber-100/50 dark:hover:bg-amber-800/30 transition-colors duration-200 bg-background/80 backdrop-blur-sm border border-border/30"
+            >
+              <Sparkles className={cn("h-4 w-4", isEnhancing ? "animate-pulse" : "text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400")} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving || editedCode === code}
+              className="h-8 w-8 p-0 hover:bg-green-100/50 dark:hover:bg-green-800/30 transition-colors duration-200 bg-background/80 backdrop-blur-sm border border-border/30"
+            >
+              <Save className={cn("h-4 w-4", isSaving ? "animate-pulse" : "text-green-500")} />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="h-8 w-8 p-0 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors duration-200 bg-background/80 backdrop-blur-sm border border-border/30"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400" />
+              )}
+            </Button>
+            {onSave && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEdit}
+                className="h-8 w-8 p-0 hover:bg-blue-100/50 dark:hover:bg-blue-800/30 transition-colors duration-200 bg-background/80 backdrop-blur-sm border border-border/30"
+              >
+                <Edit className="h-4 w-4 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400" />
+              </Button>
+            )}
+          </>
+        )}
+      </div>
       
-      <div className="flex justify-end px-6 pb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          className="h-8 w-8 p-0 hover:bg-purple-100/50 dark:hover:bg-purple-800/30 transition-colors duration-200"
-        >
-          {copied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400" />
-          )}
-        </Button>
+      {/* Content container with proper overflow handling */}
+      <div 
+        className="overflow-hidden"
+        onDoubleClick={handleDoubleClick}
+        style={{ cursor: onSave && !isEditing ? 'pointer' : 'default' }}
+      >
+        {isEditing ? (
+          <CodeMirrorEditor
+            value={editedCode}
+            onChange={setEditedCode}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            language={language}
+            className="min-h-[200px]"
+          />
+        ) : highlightedHtml ? (
+          <div
+            className={classNames}
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            {...props}
+          />
+        ) : (
+          <div className={classNames} {...props}>
+            <pre className="px-6 py-5 m-0 font-mono text-[0.9rem] leading-[1.7] font-normal tracking-[0.005em] bg-transparent border-0 subpixel-antialiased text-slate-800 dark:text-slate-50 [text-rendering:optimizeLegibility] [font-feature-settings:'liga','calt'] whitespace-pre-wrap break-words min-w-0">
+              <code className="block w-full font-mono text-[0.9rem] leading-[1.7] font-normal tracking-[0.005em] bg-transparent p-0 subpixel-antialiased [text-rendering:optimizeLegibility] [font-feature-settings:'liga','calt'] whitespace-pre-wrap break-words">
+                {code}
+              </code>
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   )

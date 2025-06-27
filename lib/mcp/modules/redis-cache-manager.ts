@@ -782,13 +782,53 @@ export class RedisCacheManager {
    */
   async clearHealthCheckResult(serverKey: string): Promise<void> {
     const client = this.getClient();
-    if (!client) return;
+    if (!client) {
+      return;
+    }
 
     try {
       await client.del(`health_check:${serverKey}`);
-      appLogger.logSource('MCP', LogLevel.INFO, `[Redis Cache] Cleared health check cache for: ${serverKey}`);
+    } catch (error: unknown) {
+      appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error clearing health check for ${serverKey}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async getRawPromptContent(filename: string): Promise<string | null> {
+    const client = this.getClient();
+    if (!client) return null;
+    try {
+      const cached = await client.get(`raw_prompt:${filename}`);
+      if (cached) {
+        logCacheOperation('hit', 'RawPrompt', filename);
+        return cached;
+      }
+      logCacheOperation('miss', 'RawPrompt', filename);
+      return null;
     } catch (error) {
-      appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error clearing health check cache: ${error instanceof Error ? error.message : String(error)}`);
+      appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error getting raw prompt ${filename}: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+
+  async setRawPromptContent(filename: string, content: string): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+    try {
+      await client.setex(`raw_prompt:${filename}`, REDIS_CACHE_EXPIRY_SECONDS, content);
+      logCacheOperation('set', 'RawPrompt', filename);
+    } catch (error) {
+      appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error setting raw prompt ${filename}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async clearRawPromptContent(filename: string): Promise<void> {
+    const client = this.getClient();
+    if (!client) return;
+    try {
+      await client.del(`raw_prompt:${filename}`);
+      logCacheOperation('clear', 'RawPrompt', filename);
+    } catch (error) {
+      appLogger.logSource('MCP', LogLevel.ERROR, `[Redis Cache] Error clearing raw prompt ${filename}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

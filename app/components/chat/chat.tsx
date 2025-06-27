@@ -35,8 +35,7 @@ import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { useFileUpload } from "./use-file-upload"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { ChevronUp } from "lucide-react"
-import { ChatNavigation } from "./chat-navigation"
+import { ChevronUp, ChevronLeft, ChevronRight } from "lucide-react"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -107,6 +106,8 @@ export function Chat() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [randomMarkdownContent, setRandomMarkdownContent] = useState<string>("");
   const [isLoadingMarkdown, setIsLoadingMarkdown] = useState(false);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+
   const isMobile = useBreakpoint(768)
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false)
   const systemPrompt =
@@ -353,24 +354,25 @@ export function Chat() {
     }
   }, [error])
 
-  // Function to load random markdown file
-  const loadRandomMarkdown = async () => {
+  // Available markdown files
+  const markdownFiles = [
+    'ROO-IMPROVE-CODE.MD',
+    'ROO-FIX-ISSUES.MD', 
+    'ROO-EXPLAIN-CODE.MD',
+    'ROO-ENHANCE-PROMPT.MD',
+    'CONTEXT-CONDENSING-PROMPT.md',
+    'mcp-server-testing-prompt.md',
+    'create-fastmcp-server.md',
+    'expert_prompt_writer.md',
+    'cursor-rules.md'
+  ];
+
+  // Function to load markdown file by index
+  const loadMarkdownByIndex = async (index: number) => {
     setIsLoadingMarkdown(true);
     try {
-      const markdownFiles = [
-        'ROO-IMPROVE-CODE.MD',
-        'ROO-FIX-ISSUES.MD', 
-        'ROO-EXPLAIN-CODE.MD',
-        'ROO-ENHANCE-PROMPT.MD',
-        'CONTEXT-CONDENSING-PROMPT.md',
-        'mcp-server-testing-prompt.md',
-        'create-fastmcp-server.md',
-        'expert_prompt_writer.md',
-        'cursor-rules.md'
-      ];
-      
-      const randomFile = markdownFiles[Math.floor(Math.random() * markdownFiles.length)];
-      const response = await fetch(`/api/docs/${randomFile}`);
+      const file = markdownFiles[index];
+      const response = await fetch(`/api/prompts/docs/${file}`);
       
       if (response.ok) {
         const content = await response.text();
@@ -379,10 +381,30 @@ export function Chat() {
         console.error('Failed to load markdown file:', response.statusText);
       }
     } catch (error) {
-      console.error('Error loading random markdown:', error);
+      console.error('Error loading markdown:', error);
     } finally {
       setIsLoadingMarkdown(false);
     }
+  };
+
+  // Function to load random markdown file (for initial load)
+  const loadRandomMarkdown = async () => {
+    const randomIndex = Math.floor(Math.random() * markdownFiles.length);
+    setCurrentFileIndex(randomIndex);
+    await loadMarkdownByIndex(randomIndex);
+  };
+
+  // Navigation functions
+  const navigateToPrevious = () => {
+    const newIndex = currentFileIndex > 0 ? currentFileIndex - 1 : markdownFiles.length - 1;
+    setCurrentFileIndex(newIndex);
+    loadMarkdownByIndex(newIndex);
+  };
+
+  const navigateToNext = () => {
+    const newIndex = currentFileIndex < markdownFiles.length - 1 ? currentFileIndex + 1 : 0;
+    setCurrentFileIndex(newIndex);
+    loadMarkdownByIndex(newIndex);
   };
 
   // Load random markdown on component mount
@@ -391,6 +413,33 @@ export function Chat() {
       loadRandomMarkdown();
     }
   }, [hydrated, chatId, messages.length]);
+
+  // Function to save edited prompt content
+  const handleSavePrompt = async (newContent: string) => {
+    try {
+      const currentFile = markdownFiles[currentFileIndex];
+      const response = await fetch(`/api/prompts/docs/${currentFile}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: newContent }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save prompt');
+      }
+
+      // Update the displayed content and clear cache
+      setRandomMarkdownContent(newContent);
+      
+      // Optionally show a success message
+      console.log('Prompt saved successfully');
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      throw error; // Re-throw to let the CodeBlock component handle the error
+    }
+  };
 
   const submit = async () => {
     setIsSubmitting(true)
@@ -522,25 +571,46 @@ export function Chat() {
                   },
                 }}
               >
-                <div className="text-center mb-8">
-                  <h1 className="mb-6 text-3xl font-medium tracking-tight">
-                    How can I help?
-                  </h1>
-                </div>
-                
-                {/* Display random markdown content */}
+                {/* Display random markdown content with navigation */}
                 {isLoadingMarkdown ? (
                   <div className="flex items-center justify-center p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 ) : randomMarkdownContent ? (
-                  <div className="max-h-96 overflow-y-auto">
-                    <CodeBlock>
-                      <CodeBlockCode
-                        code={randomMarkdownContent}
-                        language="markdown"
-                      />
-                    </CodeBlock>
+                  <div className="relative max-w-3xl mx-auto px-12 md:px-0">
+                    {/* Left Arrow */}
+                    <button
+                      onClick={navigateToPrevious}
+                      className="absolute left-2 md:left-0 top-1/2 -translate-y-1/2 md:-translate-x-12 z-10 flex items-center justify-center w-10 h-10 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full hover:bg-background/95 hover:border-border transition-all duration-200 shadow-md hover:shadow-lg"
+                      aria-label="Previous prompt"
+                    >
+                      <ChevronLeft size={20} className="text-muted-foreground hover:text-foreground" />
+                    </button>
+                    
+                    {/* CodeBlock */}
+                    <div className="max-h-[48rem] overflow-y-auto">
+                      <CodeBlock>
+                        <CodeBlockCode
+                          code={randomMarkdownContent}
+                          language="markdown"
+                          onSave={handleSavePrompt}
+                        />
+                      </CodeBlock>
+                    </div>
+                    
+                    {/* Right Arrow */}
+                    <button
+                      onClick={navigateToNext}
+                      className="absolute right-2 md:right-0 top-1/2 -translate-y-1/2 md:translate-x-12 z-10 flex items-center justify-center w-10 h-10 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full hover:bg-background/95 hover:border-border transition-all duration-200 shadow-md hover:shadow-lg"
+                      aria-label="Next prompt"
+                    >
+                      <ChevronRight size={20} className="text-muted-foreground hover:text-foreground" />
+                    </button>
+                    
+                    {/* File indicator */}
+                    <div className="flex items-center justify-center mt-4 text-xs text-muted-foreground">
+                      <span>{currentFileIndex + 1} of {markdownFiles.length}</span>
+                    </div>
                   </div>
                 ) : null}
               </motion.div>
@@ -563,8 +633,6 @@ export function Chat() {
       {/* Chat input - fixed at bottom, never scrolls out of view */}
       <div className="flex-shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-sm">
         <div className="px-4 py-4">
-          {/* Chat navigation - positioned above input on mobile */}
-          <ChatNavigation />
           <motion.div
             className={cn(
               "relative mx-auto w-full max-w-3xl"
@@ -708,7 +776,7 @@ export function Chat() {
         </div>
       </div>
 
-      <FeedbackWidget /> 
+      <FeedbackWidget />
     </div>
   )
 }

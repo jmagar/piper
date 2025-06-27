@@ -435,6 +435,55 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "ss02" 1, "ss03" 1, "ss04" 1;
 }
 
+/* Custom scrollbar styling */
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.02 286.033 / 0.3);
+  border-radius: 4px;
+  border: 1px solid oklch(0.85 0.004 286.32 / 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.4 0.02 286.033 / 0.5);
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.6 0.02 286.033 / 0.4);
+  border-color: oklch(0.35 0.006 286.033 / 0.3);
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.7 0.02 286.033 / 0.6);
+}
+
+/* Firefox scrollbar styling */
+.overflow-x-auto,
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.5 0.02 286.033 / 0.3) transparent;
+}
+
+.dark .overflow-x-auto,
+.dark .overflow-y-auto {
+  scrollbar-color: oklch(0.6 0.02 286.033 / 0.4) transparent;
+}
+
 /* sonner toast */
 [data-sonner-toaster] > li {
   width: 100%;

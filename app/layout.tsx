@@ -17,6 +17,7 @@ import { ChatSessionProvider } from "./providers/chat-session-provider"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { UserPreferencesProvider } from "./providers/user-preferences-provider"
 import { UserProvider } from "./providers/user-provider"
+import { ChatNavigation } from "./components/chat/chat-navigation"
 import '@/lib/mcp/mcpManager'; // Initialize MCP Manager on server start
 
 const geistSans = Geist({
@@ -85,6 +86,7 @@ export default async function RootLayout({
                         {/* PWA Components */}
                         <OfflineIndicator />
                         <InstallPrompt />
+                        <ChatNavigation />
                       </SidebarProvider>
                     </ThemeProvider>
                   </TooltipProvider>

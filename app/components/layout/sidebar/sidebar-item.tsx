@@ -6,9 +6,10 @@ import { Check, X } from "@phosphor-icons/react"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { SidebarItemMenu } from "./sidebar-item-menu"
+import type { Chat } from "@/app/types/database.types"
 
 type SidebarItemProps = {
-  chat: any
+  chat: Chat
   currentChatId: string
 }
 
@@ -61,9 +62,9 @@ export function SidebarItem({ chat, currentChatId }: SidebarItemProps) {
   return (
     <div
       className={cn(
-        "hover:bg-accent/80 hover:text-foreground group/chat relative w-full rounded-md transition-colors",
+        "hover:bg-accent/60 hover:text-foreground hover:shadow-md group/chat relative w-full rounded-xl transition-all duration-300 backdrop-blur-sm border border-transparent hover:border-border/30",
         (chat.id === currentChatId || isEditing || isMenuOpen) &&
-          "bg-accent hover:bg-accent text-foreground"
+          "bg-accent/80 hover:bg-accent/90 text-foreground shadow-md border-border/30"
       )}
       onClick={(e) => {
         if (isEditing) {
@@ -73,7 +74,7 @@ export function SidebarItem({ chat, currentChatId }: SidebarItemProps) {
       ref={containerRef}
     >
       {isEditing ? (
-        <div className="bg-accent flex items-center rounded-md py-1 pr-1 pl-2">
+        <div className="bg-accent/90 flex items-center rounded-xl py-2 pr-2 pl-3 shadow-sm border border-border/50">
           <input
             ref={inputRef}
             value={editTitle}
@@ -90,13 +91,13 @@ export function SidebarItem({ chat, currentChatId }: SidebarItemProps) {
             }}
             autoFocus
           />
-          <div className="flex gap-0.5">
+          <div className="flex gap-1">
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 handleSave()
               }}
-              className="hover:bg-secondary text-muted-foreground hover:text-primary flex size-7 items-center justify-center rounded-md p-1 transition-colors duration-150"
+              className="hover:bg-secondary text-muted-foreground hover:text-primary flex size-7 items-center justify-center rounded-lg p-1 transition-all duration-200 hover:shadow-sm"
               type="button"
             >
               <Check size={16} weight="bold" />
@@ -106,7 +107,7 @@ export function SidebarItem({ chat, currentChatId }: SidebarItemProps) {
                 e.stopPropagation()
                 handleCancel()
               }}
-              className="hover:bg-secondary text-muted-foreground hover:text-primary flex size-7 items-center justify-center rounded-md p-1 transition-colors duration-150"
+              className="hover:bg-secondary text-muted-foreground hover:text-primary flex size-7 items-center justify-center rounded-lg p-1 transition-all duration-200 hover:shadow-sm"
               type="button"
             >
               <X size={16} weight="bold" />
@@ -122,7 +123,7 @@ export function SidebarItem({ chat, currentChatId }: SidebarItemProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="text-primary relative line-clamp-1 mask-r-from-80% mask-r-to-85% px-2 py-2 text-sm text-ellipsis whitespace-nowrap"
+              className="text-primary relative line-clamp-1 mask-r-from-80% mask-r-to-85% px-3 py-2.5 text-sm text-ellipsis whitespace-nowrap"
               title={chat.title || "Untitled Chat"}
             >
               {chat.title || "Untitled Chat"}
