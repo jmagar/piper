@@ -70,21 +70,17 @@ const itemVariants = {
 const fabVariants = {
   default: { 
     rotate: 0, 
-    scale: 1,
-    boxShadow: "0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+    scale: 1
   },
   open: { 
     rotate: 135, 
-    scale: 1.1,
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 20px -5px rgba(0, 0, 0, 0.1)"
+    scale: 1.1
   },
   hover: {
-    scale: 1.15,
-    boxShadow: "0 20px 40px -8px rgba(0, 0, 0, 0.2), 0 8px 16px -4px rgba(0, 0, 0, 0.08)"
+    scale: 1.15
   },
   dragging: {
     scale: 1.2,
-    boxShadow: "0 30px 60px -12px rgba(0, 0, 0, 0.3), 0 15px 25px -5px rgba(0, 0, 0, 0.15)",
     zIndex: 50
   }
 }
@@ -228,14 +224,12 @@ export function ChatNavigation() {
               className={`
                 relative h-16 w-16 rounded-full p-0 overflow-hidden
                 transition-all duration-300 flex items-center justify-center
-                ${!isOpen && activeItem ? `ring-2 ring-blue-400/50 ring-offset-2 ring-offset-background` : ''}
+                bg-black text-white shadow-xl hover:shadow-2xl
                 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
               `}
               aria-label={isOpen ? "Close navigation" : "Open navigation"}
               style={{ 
-                background: 'hsl(var(--primary))',
-                border: 'none',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 20px -5px rgba(0, 0, 0, 0.1)'
+                border: 'none'
               }}
             >
               <AnimatePresence mode="wait">
@@ -247,7 +241,7 @@ export function ChatNavigation() {
                     exit={{ rotate: 90, scale: 0.5, opacity: 0 }}
                     transition={{ duration: 0.2, ease: [0.4, 0.0, 0.2, 1] }}
                   >
-                    <X className="h-7 w-7 text-primary-foreground drop-shadow-lg" />
+                    <X className="h-7 w-7 text-white drop-shadow-lg" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -259,9 +253,9 @@ export function ChatNavigation() {
                     className="relative"
                   >
                     {activeItem ? (
-                      <activeItem.Icon className="h-6 w-6 text-primary-foreground drop-shadow-lg" />
+                      <activeItem.Icon className="h-6 w-6 text-white drop-shadow-lg" />
                     ) : (
-                      <Plus className="h-7 w-7 text-primary-foreground drop-shadow-lg" />
+                      <Plus className="h-7 w-7 text-white drop-shadow-lg" />
                     )}
                   </motion.div>
                 )}
@@ -272,4 +266,4 @@ export function ChatNavigation() {
       </motion.div>
     </>
   )
-} 
+}

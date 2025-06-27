@@ -4,7 +4,6 @@ import { join } from 'path';
 import { RedisCacheManager } from '@/lib/mcp/modules/redis-cache-manager';
 import { writeFile } from 'fs/promises';
 
-const CACHE_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 const cacheManager = RedisCacheManager.getInstance();
 
 export async function GET(
@@ -46,7 +45,7 @@ export async function GET(
     const content = await readFile(filePath, 'utf-8');
 
     // 3. Store in Redis with a long TTL
-    await cacheManager.setRawPromptContent(filename, content, CACHE_TTL_SECONDS);
+    await cacheManager.setRawPromptContent(filename, content);
 
     return new NextResponse(content, {
       headers: {
@@ -90,4 +89,4 @@ export async function PUT(
       { status: 500 }
     );
   }
-} 
+}

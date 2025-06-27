@@ -8,7 +8,6 @@ import {
   createNewChat as createNewChatFromDb,
   deleteChat as deleteChatFromDb,
   fetchAndCacheChats,
-  getCachedChats,
   updateChatAgent as updateChatAgentFromDb,
   updateChatModel as updateChatModelFromDb,
   updateChatTitle,
@@ -60,10 +59,6 @@ export function ChatsProvider({
     const load = async () => {
       setIsLoading(true)
       try {
-        const cached = await getCachedChats()
-        // Ensure we always have an array, never undefined/null
-        setChats(Array.isArray(cached) ? cached : [])
-
         const fresh = await fetchAndCacheChats()
         // Ensure we always have an array, never undefined/null
         setChats(Array.isArray(fresh) ? fresh : [])
