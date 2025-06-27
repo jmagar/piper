@@ -7,6 +7,7 @@ import { useChatSession } from "@/app/providers/chat-session-provider"
 import { useUser } from "@/app/providers/user-provider"
 import { ModelSelector } from "@/components/common/model-selector/base"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { CodeBlock, CodeBlockCode } from "@/components/prompt-kit/code-block"
 
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
@@ -33,6 +34,9 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { useFileUpload } from "./use-file-upload"
+import { useBreakpoint } from "@/app/hooks/use-breakpoint"
+import { ChevronUp } from "lucide-react"
+import { ChatNavigation } from "./chat-navigation"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -101,13 +105,15 @@ export function Chat() {
   const availableTools = fetchedTools;
   const [mcpServers, setMcpServers] = useState<{ name: string; status: string; toolCount: number; transportType: string }[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [randomMarkdownContent, setRandomMarkdownContent] = useState<string>("");
+  const [isLoadingMarkdown, setIsLoadingMarkdown] = useState(false);
+  const isMobile = useBreakpoint(768)
+  const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false)
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
 
   const [hydrated, setHydrated] = useState(false)
   const hasSentFirstMessageRef = useRef(false)
-
-
 
   const { draftValue, clearDraft } = useChatDraft(chatId)
 
@@ -347,6 +353,45 @@ export function Chat() {
     }
   }, [error])
 
+  // Function to load random markdown file
+  const loadRandomMarkdown = async () => {
+    setIsLoadingMarkdown(true);
+    try {
+      const markdownFiles = [
+        'ROO-IMPROVE-CODE.MD',
+        'ROO-FIX-ISSUES.MD', 
+        'ROO-EXPLAIN-CODE.MD',
+        'ROO-ENHANCE-PROMPT.MD',
+        'CONTEXT-CONDENSING-PROMPT.md',
+        'mcp-server-testing-prompt.md',
+        'create-fastmcp-server.md',
+        'expert_prompt_writer.md',
+        'cursor-rules.md'
+      ];
+      
+      const randomFile = markdownFiles[Math.floor(Math.random() * markdownFiles.length)];
+      const response = await fetch(`/api/docs/${randomFile}`);
+      
+      if (response.ok) {
+        const content = await response.text();
+        setRandomMarkdownContent(content);
+      } else {
+        console.error('Failed to load markdown file:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error loading random markdown:', error);
+    } finally {
+      setIsLoadingMarkdown(false);
+    }
+  };
+
+  // Load random markdown on component mount
+  useEffect(() => {
+    if (hydrated && !chatId && messages.length === 0) {
+      loadRandomMarkdown();
+    }
+  }, [hydrated, chatId, messages.length]);
+
   const submit = async () => {
     setIsSubmitting(true)
 
@@ -444,12 +489,10 @@ export function Chat() {
     return redirect("/")
   }
 
-
-
   return (
     <div
       className={cn(
-        "@container/main relative flex h-full flex-col items-center justify-center"
+        "@container/main relative flex h-full flex-col"
       )}
     >
       {/* <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} /> */}
@@ -460,126 +503,210 @@ export function Chat() {
         <SearchParamsProvider setInput={setInput} />
       </Suspense>
 
-      <AnimatePresence initial={false} mode="popLayout">
-        {!chatId && messages.length === 0 ? (
+      {/* Main content area - scrollable, takes remaining space */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="min-h-full flex flex-col items-center justify-center px-4 py-8">
+          <AnimatePresence initial={false} mode="popLayout">
+            {!chatId && messages.length === 0 ? (
+              <motion.div
+                key="onboarding"
+                className="w-full max-w-4xl mx-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                layout="position"
+                layoutId="onboarding"
+                transition={{
+                  layout: {
+                    duration: 0,
+                  },
+                }}
+              >
+                <div className="text-center mb-8">
+                  <h1 className="mb-6 text-3xl font-medium tracking-tight">
+                    How can I help?
+                  </h1>
+                </div>
+                
+                {/* Display random markdown content */}
+                {isLoadingMarkdown ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : randomMarkdownContent ? (
+                  <div className="max-h-96 overflow-y-auto">
+                    <CodeBlock>
+                      <CodeBlockCode
+                        code={randomMarkdownContent}
+                        language="markdown"
+                      />
+                    </CodeBlock>
+                  </div>
+                ) : null}
+              </motion.div>
+            ) : (
+              <div className="w-full max-w-4xl mx-auto">
+                <Conversation
+                  key="conversation"
+                  messages={messages}
+                  status={status}
+                  onDelete={handleDelete}
+                  onEdit={handleEdit}
+                  onReload={handleReload}
+                />
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Chat input - fixed at bottom, never scrolls out of view */}
+      <div className="flex-shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-4">
+          {/* Chat navigation - positioned above input on mobile */}
+          <ChatNavigation />
           <motion.div
-            key="onboarding"
-            className="absolute bottom-[60%] mx-auto max-w-[50rem] md:relative md:bottom-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className={cn(
+              "relative mx-auto w-full max-w-3xl"
+            )}
             layout="position"
-            layoutId="onboarding"
+            layoutId="chat-input-container"
             transition={{
               layout: {
-                duration: 0,
+                duration: messages.length === 1 ? 0.3 : 0,
               },
             }}
           >
-            <h1 className="mb-6 text-3xl font-medium tracking-tight">
-              How can I help?
-            </h1>
-          </motion.div>
-        ) : (
-          <Conversation
-            key="conversation"
-            messages={messages}
-            status={status}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onReload={handleReload}
-          />
-        )}
-      </AnimatePresence>
-      <motion.div
-        className={cn(
-          "relative mx-auto w-full max-w-3xl mt-8"
-        )}
-        layout="position"
-        layoutId="chat-input-container"
-        transition={{
-          layout: {
-            duration: messages.length === 1 ? 0.3 : 0,
-          },
-        }}
-      >
-        {/* Enhanced input container with unified styling */}
-        <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-4">
-          {/* Model selector and tools info row */}
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                {selectedModel && (
-                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+            {/* Enhanced input container with unified styling */}
+            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-4">
+              {/* Collapsible Model selector and tools info row */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {/* Collapse/expand button for mobile */}
+                  {isMobile && (
+                    <button
+                      onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
+                      className="flex items-center justify-center w-6 h-6 rounded-md bg-muted/50 border border-border/30 hover:bg-muted transition-colors"
+                      aria-label={isInputSectionCollapsed ? "Expand input options" : "Collapse input options"}
+                    >
+                      <motion.div
+                        animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronUp size={14} />
+                      </motion.div>
+                    </button>
+                  )}
+                  
+                  {/* Tools info - hidden when collapsed on mobile */}
+                  <AnimatePresence>
+                    {(!isMobile || !isInputSectionCollapsed) && availableTools.length > 0 && (
+                      <motion.div
+                        initial={isMobile ? { opacity: 0, scale: 0.9 } : false}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={isMobile ? { opacity: 0, scale: 0.9 } : {}}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button 
+                              className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
+                              aria-label="View connected MCP servers"
+                            >
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {availableTools.length} tool{availableTools.length !== 1 ? 's' : ''}
+                              </span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
+                            <div className="space-y-2">
+                              <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
+                              {mcpServers.length > 0 ? (
+                                mcpServers.map((server, index) => (
+                                  <div key={index} className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                      <span className="font-medium text-foreground">{server.name}</span>
+                                      <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
+                                    </div>
+                                    <span className="text-muted-foreground">{server.toolCount} tools</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-xs text-muted-foreground">No servers connected</div>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Model selector - hidden when collapsed on mobile */}
+                <AnimatePresence>
+                  {(!isMobile || !isInputSectionCollapsed) && (
+                    <motion.div
+                      initial={isMobile ? { opacity: 0, scale: 0.9 } : false}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={isMobile ? { opacity: 0, scale: 0.9 } : {}}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center gap-2"
+                    >
+                      {selectedModel && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      )}
+                      <ModelSelector
+                        availableModels={availableModels}
+                        selectedModelId={selectedModel}
+                        setSelectedModelId={handleModelChange}
+                        className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
+                        isUserAuthenticated={!!session?.user?.id}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              {/* Subtle separator with gradient - only show when not collapsed */}
+              <AnimatePresence>
+                {(!isMobile || !isInputSectionCollapsed) && (
+                  <motion.div
+                    initial={isMobile ? { opacity: 0, height: 0 } : false}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={isMobile ? { opacity: 0, height: 0 } : {}}
+                    transition={{ duration: 0.2 }}
+                    className="relative"
+                  >
+                    <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+                    <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+                  </motion.div>
                 )}
-                <ModelSelector
-                  availableModels={availableModels}
-                  selectedModelId={selectedModel}
-                  setSelectedModelId={handleModelChange}
-                  className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
-                  isUserAuthenticated={!!session?.user?.id}
+              </AnimatePresence>
+              
+              {/* Chat input */}
+              <div className="relative">
+                <ChatInput
+                  value={input}
+                  onValueChange={handleInputChange}
+                  onSend={submit}
+                  onStop={stop}
+                  onFileSelect={handleFileSelect}
+                  isSubmitting={isSubmitting}
+                  isStreaming={status === "streaming"}
+                  availableAgents={availableAgents}
+                  availableTools={availableTools}
+                  prompts={prompts}
+                  currentAgent={currentAgent?.id || null}
+                  currentModelId={selectedModel}
+                  session={session}
                 />
               </div>
-              {availableTools.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 cursor-help">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {availableTools.length} tool{availableTools.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
-                    <div className="space-y-2">
-                      <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
-                      {mcpServers.length > 0 ? (
-                        mcpServers.map((server, index) => (
-                          <div key={index} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                              <span className="font-medium text-foreground">{server.name}</span>
-                              <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
-                            </div>
-                            <span className="text-muted-foreground">{server.toolCount} tools</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-xs text-muted-foreground">No servers connected</div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
-          </div>
-          
-          {/* Subtle separator with gradient */}
-          <div className="relative">
-            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-            <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
-          </div>
-          
-          {/* Chat input */}
-          <div className="relative">
-            <ChatInput
-              value={input}
-              onValueChange={handleInputChange}
-              onSend={submit}
-              onStop={stop}
-              onFileSelect={handleFileSelect}
-              isSubmitting={isSubmitting}
-              isStreaming={status === "streaming"}
-              availableAgents={availableAgents}
-              availableTools={availableTools}
-              prompts={prompts}
-              currentAgent={currentAgent?.id || null}
-              currentModelId={selectedModel}
-              session={session}
-            />
-          </div>
+          </motion.div>
         </div>
-      </motion.div>
+      </div>
 
       <FeedbackWidget /> 
     </div>

@@ -173,7 +173,9 @@ const MessageAssistantComponent = ({
           {/* MessageActions on the left (visible on hover) */}
           <MessageActions
             className={cn(
-              "flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100",
+              "flex items-center gap-2 transition-opacity",
+              // Always show on mobile, hover-only on desktop
+              "opacity-100 md:opacity-0 md:group-hover:opacity-100",
               (isLastStreaming || contentNullOrEmpty || isError) && "invisible" // Use invisible to reserve space
             )}
           >

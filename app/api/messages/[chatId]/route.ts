@@ -7,10 +7,10 @@ import {
 // GET /api/messages/[chatId]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { chatId:string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const { chatId } = params
+    const { chatId } = await params
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId is required" }, { status: 400 })
@@ -31,10 +31,10 @@ export async function GET(
 // POST /api/messages/[chatId]
 export async function POST(
   request: NextRequest,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const { chatId } = params
+    const { chatId } = await params
     if (!chatId) {
       return NextResponse.json({ error: "chatId is required" }, { status: 400 })
     }
