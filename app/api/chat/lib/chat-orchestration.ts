@@ -9,7 +9,6 @@ import { getOptimizedSystemPrompt } from "@/lib/mcp/modules/system-prompt-optimi
 
 import {
   processToolMentions,
-  processFileMentions,
   processPromptMentions,
 } from "./message-processing"
 
@@ -351,11 +350,8 @@ async function processMessagesPipeline(
   const messagesAfterTools = await processToolMentions(messages);
   
   // Step 2: Process prompt mentions and enhance system prompt  
-  const { processedMessages: messagesWithPrompts, enhancedSystemPrompt } = 
+  const { processedMessages: finalProcessedMessages, enhancedSystemPrompt } = 
     await processPromptMentions(messagesAfterTools);
-  
-  // Step 3: Process File mentions (URL mentions are deprecated)
-  const finalProcessedMessages = await processFileMentions(messagesWithPrompts);
 
   return {
     processedMessages: finalProcessedMessages,

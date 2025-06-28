@@ -12,6 +12,7 @@ import { CodeBlock, CodeBlockCode } from "@/components/prompt-kit/code-block"
 import { useAgent } from "@/lib/agent-store/provider"
 import { getOrCreateGuestUserId } from "@/lib/api"
 import { useChats } from "@/lib/chat-store/chats/provider"
+import { type Agent } from "@/app/types/agent"
 import { type Prompt } from "@/app/components/chat-input/use-agent-command"
 import { type Prompt as ApiPrompt } from "@/app/types/prompt"
 import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
@@ -410,8 +411,7 @@ export function Chat() {
   // Function to save edited prompt content
   const handleSavePrompt = async (newContent: string) => {
     try {
-      const currentFile = markdownFiles[currentFileIndex];
-      const response = await fetch(`/api/prompts/docs/${currentFile}`, {
+      const response = await fetch("/api/prompts", {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -434,8 +434,22 @@ export function Chat() {
     }
   };
 
-  const submit = async () => {
+  const submit = async (value: string, data?: { agent?: Agent | null; tool?: FetchedToolInfo | null }) => {
     setIsSubmitting(true)
+
+    if (!value.trim()) {
+      setIsSubmitting(false)
+      return
+    }
+
+    if (value.length > MESSAGE_MAX_LENGTH) {
+      toast({
+        title: `The message you submitted was too long, please submit something shorter. (Max ${MESSAGE_MAX_LENGTH} characters)`,
+        status: "error",
+      })
+      setIsSubmitting(false)
+      return
+    }
 
     const uid = await getOrCreateGuestUserId()
     if (!uid) {
@@ -451,15 +465,6 @@ export function Chat() {
 
     const currentChatId = await ensureChatExists()
     if (!currentChatId) {
-      setIsSubmitting(false)
-      return
-    }
-
-    if (input.length > MESSAGE_MAX_LENGTH) {
-      toast({
-        title: `The message you submitted was too long, please submit something shorter. (Max ${MESSAGE_MAX_LENGTH} characters)`,
-        status: "error",
-      })
       setIsSubmitting(false)
       return
     }
@@ -483,16 +488,23 @@ export function Chat() {
         chatId: currentChatId,
         userId: uid,
         model: selectedModel,
-        systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
-        ...(currentAgent && { agentId: currentAgent.id }),
+        system_prompt: systemPrompt,
+        ...(data?.agent && { agentId: data.agent.id }),
+        ...(data?.tool && { 
+          toolName: data.tool.name,
+          // Assuming parameters are handled separately or are part of the tool object
+          // toolParameters: data.tool.parameters 
+        }),
       },
       experimental_attachments: attachmentsPayload,
     }
 
     try {
-      await handleSubmit(undefined, options)
-      setAttachments([]) // Clear attachments after submission
-      clearDraft()
+      setInput(value); // Set the input value before submitting
+      await handleSubmit(undefined, options);
+
+      clearDraft();
+      setAttachments([]);
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
       toast({ title: "Failed to send message", status: "error" })
@@ -513,7 +525,7 @@ export function Chat() {
         chatId,
         userId: uid,
         model: selectedModel,
-        systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
+        system_prompt: systemPrompt,
       },
     }
 
@@ -535,9 +547,27 @@ export function Chat() {
       <DialogAuth />
 
       {/* Add Suspense boundary for SearchParamsProvider */}
-      <Suspense>
-        <SearchParamsProvider setInput={setInput} />
-      </Suspense>
+      <div className="mx-auto w-full max-w-3xl shrink-0 px-4 md:px-6">
+        <Suspense fallback={<div>Loading...</div>}>
+          <SearchParamsProvider setInput={setInput} />
+        </Suspense>
+        <ChatInput
+          value={input}
+          onValueChange={handleInputChange}
+          onSend={(data) => submit(input, data)}
+          onStop={stop}
+          isSubmitting={isSubmitting}
+          isStreaming={status === "streaming"}
+          availableAgents={availableAgents}
+          availableTools={availableTools}
+          prompts={prompts}
+          currentAgent={currentAgent?.id || null}
+          currentModelId={selectedModel}
+          session={session}
+          attachments={attachments}
+          setAttachments={setAttachments}
+        />
+      </div>
 
       {/* Main content area - scrollable, takes remaining space */}
       <div className="flex-1 overflow-y-auto">
@@ -614,130 +644,6 @@ export function Chat() {
               </div>
             )}
           </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Chat input - fixed at bottom, never scrolls out of view */}
-      <div className="flex-shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-sm">
-        <div className="px-4 py-4">
-          <motion.div
-            className={cn(
-              "relative mx-auto w-full max-w-3xl"
-            )}
-            layout="position"
-            layoutId="chat-input-container"
-            transition={{
-              layout: {
-                duration: messages.length === 1 ? 0.3 : 0,
-              },
-            }}
-          >
-            {/* Enhanced input container with unified styling */}
-            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-2">
-              {/* Collapsible Model selector and tools info row */}
-              <AnimatePresence>
-                {!isInputSectionCollapsed && (
-                  <motion.div
-                    key="chat-options"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between text-sm pb-2">
-                      <div className="flex items-center gap-2">
-                        {selectedModel && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
-                        )}
-                        <ModelSelector
-                          availableModels={availableModels}
-                          selectedModelId={selectedModel}
-                          setSelectedModelId={handleModelChange}
-                          className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
-                          isUserAuthenticated={!!session?.user?.id}
-                        />
-                      </div>
-
-                      {/* Tools info */}
-                      <div className="flex items-center gap-2">
-                        {availableTools.length > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
-                                aria-label="View connected MCP servers"
-                              >
-                                <Wrench className="w-3.5 h-3.5 text-blue-500" />
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  {availableTools.length}
-                                </span>
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
-                              <div className="space-y-2">
-                                <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
-                                {mcpServers.length > 0 ? (
-                                  mcpServers.map((server, index) => (
-                                    <div key={index} className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                        <span className="font-medium text-foreground">{server.name}</span>
-                                        <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
-                                      </div>
-                                      <span className="text-muted-foreground">{server.toolCount} tools</span>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="text-xs text-muted-foreground">No servers connected</div>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Collapse/expand button */}
-              <div className="flex items-center justify-center">
-                <button
-                  onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
-                  className="flex w-full items-center justify-center gap-1 rounded-md py-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                  aria-label={isInputSectionCollapsed ? "Show options" : "Hide options"}
-                >
-                  <motion.div
-                    animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ChevronUp size={14} />
-                  </motion.div>
-                </button>
-              </div>
-
-              {/* Chat input */}
-              <div className="relative pt-2 border-t border-border/20">
-                <ChatInput
-                  value={input}
-                  onValueChange={handleInputChange}
-                  onSend={submit}
-                  onStop={stop}
-                  isSubmitting={isSubmitting}
-                  isStreaming={status === "streaming"}
-                  availableAgents={availableAgents}
-                  availableTools={availableTools}
-                  prompts={prompts}
-                  currentAgent={currentAgent?.id || null}
-                  currentModelId={selectedModel}
-                  session={session}
-                  attachments={attachments}
-                  setAttachments={setAttachments}
-                />
-              </div>
-            </div>
-          </motion.div>
         </div>
       </div>
 

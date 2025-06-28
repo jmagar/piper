@@ -37,7 +37,7 @@ export type AvailableModelData = {
 export type ChatInputProps = {
   value: string
   onValueChange: (value: string) => void
-  onSend: () => void
+  onSend: (data?: { agent?: Agent | null, tool?: FetchedToolInfo | null }) => void
   onStop: () => void
   isSubmitting: boolean
   isStreaming: boolean
@@ -209,7 +209,7 @@ export function ChatInput({
 
   const handleSend = () => {
     if (isSubmitting || isEnhancing) return
-    onSend()
+    onSend({ agent: agentCommand.selectedAgent, tool: agentCommand.selectedTool })
   }
 
   const noToolSupport = !availableModels.find(model => model.id === selectedModelId)?.tools.length
