@@ -33,8 +33,8 @@ import { redirect, useSearchParams } from "next/navigation"
 import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
-import { useFileUpload } from "./use-file-upload"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
+import { useFileUpload } from "./use-file-upload"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -92,6 +92,7 @@ export function Chat() {
     setFiles,
     handleFileUpload,
   } = useFileUpload()
+  const [attachments, setAttachments] = useState<File[]>([])
   const [selectedModel, setSelectedModel] = useState(
     currentChat?.model || ""
   );
@@ -469,9 +470,11 @@ export function Chat() {
       return
     }
 
-    // ✅ AI SDK PATTERN: Convert files to data URLs for AI model access
-    const attachments = files.length > 0 ? await Promise.all(
-      files.map(async (file) => {
+    // Combine both file sources for submission
+    const allFiles = [...files, ...attachments];
+
+    const attachmentsPayload = allFiles.length > 0 ? await Promise.all(
+      allFiles.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer()
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
         const dataUrl = `data:${file.type};base64,${base64}`
@@ -492,19 +495,19 @@ export function Chat() {
         systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
         ...(currentAgent && { agentId: currentAgent.id }),
       },
-      experimental_attachments: attachments,
+      experimental_attachments: attachmentsPayload,
     }
 
     try {
       await handleSubmit(undefined, options)
-      setFiles([])  // Clear files after submission
+      setFiles([]) // Clear original files
+      setAttachments([]) // Clear new attachments
       clearDraft()
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
       toast({ title: "Failed to send message", status: "error" })
       console.error("Error submitting message:", submitError)
     } finally {
-
       setIsSubmitting(false)
     }
   }
@@ -744,6 +747,8 @@ export function Chat() {
                   currentAgent={currentAgent?.id || null}
                   currentModelId={selectedModel}
                   session={session}
+                  attachments={attachments}
+                  setAttachments={setAttachments}
                 />
               </div>
             </div>

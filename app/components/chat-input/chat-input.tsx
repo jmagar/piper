@@ -48,6 +48,8 @@ export type ChatInputProps = {
   currentAgent: string | null
   currentModelId: string
   session: Session | null
+  attachments: File[]
+  setAttachments: React.Dispatch<React.SetStateAction<File[]>>
 }
 
 export function ChatInput({
@@ -64,6 +66,8 @@ export function ChatInput({
   currentAgent,
   currentModelId,
   session,
+  attachments,
+  setAttachments,
 }: ChatInputProps) {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -74,6 +78,23 @@ export function ChatInput({
   const [availableModels, setAvailableModels] = useState<AvailableModelData[]>([])
   const [selectedModelId] = useState<string>("claude-3-haiku-20240307")
 
+  const handleFileMentioned = async (filePath: string) => {
+    try {
+      // Assuming the backend serves files at /api/files/view/[...filepath]
+      const response = await fetch(`/api/files/view/${filePath}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const fileName = filePath.split('/').pop() || 'file';
+      const file = new File([blob], fileName, { type: blob.type });
+      setAttachments(prev => [...prev, file]);
+    } catch (error) {
+      console.error("Error handling file mention:", error);
+      // Optionally, show a toast notification to the user
+    }
+  };
+
   const agentCommand = useAgentCommand({
     onValueChangeAction: onValueChange,
     textareaRef: textareaRef as React.RefObject<HTMLTextAreaElement>,
@@ -81,6 +102,7 @@ export function ChatInput({
     tools: availableTools || [],
     prompts: prompts || [],
     defaultAgent: (availableAgents || []).find(agent => agent.id === currentAgent) || null,
+    onFileMentioned: handleFileMentioned,
   })
 
   const handleFileUpload = (file: File) => {
@@ -104,13 +126,12 @@ export function ChatInput({
   }
 
   const handlePaste = (event: React.ClipboardEvent) => {
-    const items = event.clipboardData?.items
-    if (items) {
-      for (const item of items) {
+    if (event.clipboardData?.items) {
+      for (const item of event.clipboardData.items) {
         if (item.kind === "file") {
-          const file = item.getAsFile()
+          const file = item.getAsFile();
           if (file) {
-            handleFileUpload(file)
+            handleFileUpload(file);
           }
         }
       }
@@ -252,18 +273,20 @@ export function ChatInput({
         onSelectAgent={agentCommand.handleAgentSelectAction}
         onSelectTool={agentCommand.handleToolSelectAction}
         onSelectPrompt={agentCommand.handlePromptSelectAction}
-        onUrlSubmit={(url: string) => agentCommand.handleUrlSubmit(url, `@url/${url}`)}
-        onModalSearchChange={agentCommand.handleModalSearchChange}
+        onUrlSubmit={(url) => agentCommand.handleUrlSubmit(url, `@url/${url}`)}
         activeIndex={agentCommand.activeSelectionIndex}
+        onModalSearchChange={agentCommand.handleModalSearchChange}
         onTriggerFileUpload={handleTriggerFileUpload}
         onTriggerFileBrowse={handleTriggerFileBrowse}
       />
 
-      <FileExplorerModal
-        isOpen={agentCommand.isFileExplorerModalOpen}
-        onClose={() => agentCommand.setIsFileExplorerModalOpen(false)}
-        onFileSelectForMention={agentCommand.handleFileMentionSelectedFromModal}
-      />
+      {agentCommand.isFileExplorerModalOpen && (
+        <FileExplorerModal
+          isOpen={agentCommand.isFileExplorerModalOpen}
+          onClose={() => agentCommand.setIsFileExplorerModalOpen(false)}
+          onFileSelectForMention={agentCommand.handleFileMentionSelectedFromModal}
+        />
+      )}
 
       <input
         type="file"
@@ -281,111 +304,127 @@ export function ChatInput({
         />
       )}
 
-      <PromptInput className="relative bg-transparent border-border/30 shadow-none" onSubmit={handleSend}>
-        <div className="flex flex-col gap-2 p-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            {agentCommand.selectedAgent && (
-              <SelectedAgent
-                selectedAgent={agentCommand.selectedAgent}
-                removeSelectedAgent={agentCommand.removeSelectedAgent}
-              />
-            )}
+      <div className="flex flex-col">
+        <div className="flex flex-wrap items-center gap-2 p-2">
+          {attachments.map((file, index) => (
+            <div key={index} className="flex items-center gap-2 bg-muted rounded-md p-1">
+              <span className="text-sm">{file.name}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+              >
+                &times;
+              </Button>
+            </div>
+          ))}
+        </div>
+        <PromptInput className="relative bg-transparent border-border/30 shadow-none" onSubmit={handleSend}>
+          <div className="flex flex-col gap-2 p-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {agentCommand.selectedAgent && (
+                <SelectedAgent
+                  selectedAgent={agentCommand.selectedAgent}
+                  removeSelectedAgent={agentCommand.removeSelectedAgent}
+                />
+              )}
 
-            {agentCommand.selectedTool && (
-              <SelectedToolDisplay
-                selectedTool={mcpSelectedTool}
-                removeSelectedTool={agentCommand.removeSelectedTool}
-              />
-            )}
+              {agentCommand.selectedTool && (
+                <SelectedToolDisplay
+                  selectedTool={mcpSelectedTool}
+                  removeSelectedTool={agentCommand.removeSelectedTool}
+                />
+              )}
 
-            {agentCommand.selectedPrompt && (
-              <SelectedPromptDisplay
-                selectedPrompt={agentCommand.selectedPrompt}
-                removeSelectedPrompt={agentCommand.removeSelectedPrompt}
-              />
-            )}
-          </div>
-
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex items-center">
-              <AttachMenu
-                onFileUploadAction={handleFileUploadForChat}
-                isUserAuthenticated={!!session?.user?.id}
-                model={currentModelId || MODELS[0].id}
-                onTriggerMentionAction={handleAttachMenuMentionTrigger}
-              />
+              {agentCommand.selectedPrompt && (
+                <SelectedPromptDisplay
+                  selectedPrompt={agentCommand.selectedPrompt}
+                  removeSelectedPrompt={agentCommand.removeSelectedPrompt}
+                />
+              )}
             </div>
 
-            <PromptInputTextarea
-              placeholder="Send a message..."
-              value={value}
-              onChange={e => agentCommand.handleInputChange(e.target.value)}
-              onKeyDown={agentCommand.handleKeyDown as (e: KeyboardEvent<HTMLTextAreaElement>) => void}
-              className="pl-14 pr-24 min-h-[44px] max-h-[200px]"
-              ref={textareaRef}
-              disabled={isSubmitting || !!agentCommand.pendingTool}
-              onPaste={handlePaste}
-            />
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex items-center">
+                <AttachMenu
+                  onFileUploadAction={handleFileUploadForChat}
+                  isUserAuthenticated={!!session?.user?.id}
+                  model={currentModelId || MODELS[0].id}
+                  onTriggerMentionAction={handleAttachMenuMentionTrigger}
+                />
+              </div>
+
+              <PromptInputTextarea
+                placeholder="Send a message..."
+                value={value}
+                onChange={e => agentCommand.handleInputChange(e.target.value)}
+                onKeyDown={agentCommand.handleKeyDown as (e: KeyboardEvent<HTMLTextAreaElement>) => void}
+                className="pl-14 pr-24 min-h-[44px] max-h-[200px]"
+                ref={textareaRef}
+                disabled={isSubmitting || !!agentCommand.pendingTool}
+                onPaste={handlePaste}
+              />
+            </div>
           </div>
-        </div>
 
-        <PromptInputActions className="absolute bottom-2 right-2">
-          <div className="flex items-center gap-2">
-            {agentCommand.selectedAgent && noToolSupport && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertTriangle size={20} className="text-yellow-500" />
-                </TooltipTrigger>
-                <TooltipContent side="top">This model does not support tools. Some agent functionality may be limited.</TooltipContent>
-              </Tooltip>
-            )}
-
-            {isStreaming ? (
-              <Button
-                variant="default"
-                size="icon"
-                onClick={onStop}
-              >
-                <StopCircle size={20} />
-              </Button>
-            ) : (
-              <>
+          <PromptInputActions className="absolute bottom-2 right-2">
+            <div className="flex items-center gap-2">
+              {agentCommand.selectedAgent && noToolSupport && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleEnhance}
-                      disabled={!value || isEnhancing || isSubmitting}
-                      className="group"
-                    >
-                      <Sparkle
-                        size={20}
-                        className={`transition-transform duration-500 ${isEnhancing ? "animate-spin" : "group-hover:scale-110"}`}
-                      />
-                    </Button>
+                    <AlertTriangle size={20} className="text-yellow-500" />
                   </TooltipTrigger>
-                  <TooltipContent side="top">Enhance prompt</TooltipContent>
+                  <TooltipContent side="top">This model does not support tools. Some agent functionality may be limited.</TooltipContent>
                 </Tooltip>
+              )}
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      onClick={handleSend}
-                      disabled={!value || isSubmitting}
-                    >
-                      <SendHorizontal size={20} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Send message</TooltipContent>
-                </Tooltip>
-              </>
-            )}
-          </div>
-        </PromptInputActions>
-      </PromptInput>
+              {isStreaming ? (
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={onStop}
+                >
+                  <StopCircle size={20} />
+                </Button>
+              ) : (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleEnhance}
+                        disabled={!value || isEnhancing || isSubmitting}
+                        className="group"
+                      >
+                        <Sparkle
+                          size={20}
+                          className={`transition-transform duration-500 ${isEnhancing ? "animate-spin" : "group-hover:scale-110"}`}
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Enhance prompt</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={handleSend}
+                        disabled={!value || isSubmitting}
+                      >
+                        <SendHorizontal size={20} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Send message</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          </PromptInputActions>
+        </PromptInput>
+      </div>
     </>
   )
 }

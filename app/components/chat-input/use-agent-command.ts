@@ -53,6 +53,7 @@ type UseAgentCommandProps = {
   tools: FetchedToolInfo[]; // Explicitly use FetchedToolInfo[]
   prompts: Prompt[];
   defaultAgent: Agent | null;
+  onFileMentioned: (filePath: string) => void;
 };
 
 export function useAgentCommand({
@@ -61,7 +62,8 @@ export function useAgentCommand({
   agents,
   tools,
   prompts,
-  defaultAgent
+  defaultAgent,
+  onFileMentioned,
 }: UseAgentCommandProps) {
   // State
   const [showSelectionModal, setShowSelectionModal] = useState(false)
@@ -76,7 +78,6 @@ export function useAgentCommand({
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
 
   const [pendingTool, setPendingTool] = useState<FetchedToolInfo | null>(null);
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [attachedUrls, setAttachedUrls] = useState<AttachedUrl[]>([])
 
   // Refs
@@ -132,7 +133,6 @@ export function useAgentCommand({
     )
   }, [prompts, activeCommandType, currentSearchTerm]);
   // Utility functions
-  const generateId = useCallback(() => uuidv4(), [])
   const resetMentionState = useCallback(() => { mentionStartPosRef.current = null }, [])
 
   const closeSelectionModal = useCallback(() => {
@@ -239,16 +239,10 @@ export function useAgentCommand({
     closeSelectionModal()
   }, [closeSelectionModal, onValueChangeAction, textareaRef])
 
-  const handleFileSubmit = useCallback((filePath: string, rawMention: string) => {
-    const fileName = filePath.split('/').pop() || filePath;
-    // generateId() is stable, no need to list as dependency if generateId itself is memoized correctly.
-    const newFile: AttachedFile = { id: generateId(), path: filePath, name: fileName, rawMention };
-    setAttachedFiles(prev => (prev.find(f => f.rawMention === rawMention) ? prev : [...prev, newFile]));
-  }, [generateId]); // Keeping generateId here as it's directly called. If generateId is `useCallback(() => uuidv4(), [])`, it's fine.
-
   const handleFileMentionSelectedFromModal = useCallback((filePath: string) => {
     insertMention(FILE_PREFIX, filePath)
-  }, [insertMention])
+    onFileMentioned(filePath)
+  }, [insertMention, onFileMentioned]);
 
   const handleModalSearchChange = useCallback((term: string) => setCurrentSearchTerm(term), [])
 
@@ -313,8 +307,6 @@ export function useAgentCommand({
     removeAttachedUrl: (id: string) => setAttachedUrls(prev => prev.filter(u => u.id !== id)),
     handleUrlSubmit,
     // Files
-    attachedFiles,
-    handleFileSubmit,
     isFileExplorerModalOpen,
     setIsFileExplorerModalOpen,
     handleFileMentionSelectedFromModal,
