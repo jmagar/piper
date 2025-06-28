@@ -39,7 +39,6 @@ export type ChatInputProps = {
   onValueChange: (value: string) => void
   onSend: () => void
   onStop: () => void
-  onFileSelect: (file: File) => void
   isSubmitting: boolean
   isStreaming: boolean
   availableAgents: Agent[]
@@ -57,7 +56,6 @@ export function ChatInput({
   onValueChange,
   onSend,
   onStop,
-  onFileSelect,
   isSubmitting,
   isStreaming,
   availableAgents,
@@ -106,7 +104,7 @@ export function ChatInput({
   })
 
   const handleFileUpload = (file: File) => {
-    onFileSelect(file)
+    setAttachments(prev => [...prev, file])
   }
 
   const handleHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,13 +125,17 @@ export function ChatInput({
 
   const handlePaste = (event: React.ClipboardEvent) => {
     if (event.clipboardData?.items) {
+      const newFiles: File[] = [];
       for (const item of event.clipboardData.items) {
         if (item.kind === "file") {
           const file = item.getAsFile();
           if (file) {
-            handleFileUpload(file);
+            newFiles.push(file);
           }
         }
+      }
+      if (newFiles.length > 0) {
+        setAttachments(prev => [...prev, ...newFiles]);
       }
     }
   }

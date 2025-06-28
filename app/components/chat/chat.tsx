@@ -34,7 +34,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
-import { useFileUpload } from "./use-file-upload"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -87,11 +86,6 @@ export function Chat() {
     expires: new Date(Date.now() + 86400 * 1000).toISOString(), // 24 hours from now
   }
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const {
-    files,
-    setFiles,
-    handleFileUpload,
-  } = useFileUpload()
   const [attachments, setAttachments] = useState<File[]>([])
   const [selectedModel, setSelectedModel] = useState(
     currentChat?.model || ""
@@ -470,11 +464,8 @@ export function Chat() {
       return
     }
 
-    // Combine both file sources for submission
-    const allFiles = [...files, ...attachments];
-
-    const attachmentsPayload = allFiles.length > 0 ? await Promise.all(
-      allFiles.map(async (file) => {
+    const attachmentsPayload = attachments.length > 0 ? await Promise.all(
+      attachments.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer()
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
         const dataUrl = `data:${file.type};base64,${base64}`
@@ -500,8 +491,7 @@ export function Chat() {
 
     try {
       await handleSubmit(undefined, options)
-      setFiles([]) // Clear original files
-      setAttachments([]) // Clear new attachments
+      setAttachments([]) // Clear attachments after submission
       clearDraft()
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
@@ -528,10 +518,6 @@ export function Chat() {
     }
 
     reload(options)
-  }
-
-  const handleFileSelect = (file: File) => {
-    handleFileUpload([file])
   }
 
   // not user chatId and no messages
@@ -738,7 +724,6 @@ export function Chat() {
                   onValueChange={handleInputChange}
                   onSend={submit}
                   onStop={stop}
-                  onFileSelect={handleFileSelect}
                   isSubmitting={isSubmitting}
                   isStreaming={status === "streaming"}
                   availableAgents={availableAgents}
