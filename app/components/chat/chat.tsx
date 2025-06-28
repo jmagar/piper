@@ -34,8 +34,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { useFileUpload } from "./use-file-upload"
-import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { ChevronUp, ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
 
 const FeedbackWidget = dynamic(
   () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
@@ -108,7 +107,6 @@ export function Chat() {
   const [isLoadingMarkdown, setIsLoadingMarkdown] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
 
-  const isMobile = useBreakpoint(768)
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false)
   const systemPrompt =
     currentAgent?.system_prompt || user?.system_prompt || SYSTEM_PROMPT_DEFAULT
@@ -646,115 +644,92 @@ export function Chat() {
             }}
           >
             {/* Enhanced input container with unified styling */}
-            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-4">
+            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-4 space-y-2">
               {/* Collapsible Model selector and tools info row */}
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  {/* Collapse/expand button for mobile */}
-                  {isMobile && (
-                    <button
-                      onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
-                      className="flex items-center justify-center w-6 h-6 rounded-md bg-muted/50 border border-border/30 hover:bg-muted transition-colors"
-                      aria-label={isInputSectionCollapsed ? "Expand input options" : "Collapse input options"}
-                    >
-                      <motion.div
-                        animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ChevronUp size={14} />
-                      </motion.div>
-                    </button>
-                  )}
-                  
-                  {/* Tools info - hidden when collapsed on mobile */}
-                  <AnimatePresence>
-                    {(!isMobile || !isInputSectionCollapsed) && availableTools.length > 0 && (
-                      <motion.div
-                        initial={isMobile ? { opacity: 0, scale: 0.9 } : false}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={isMobile ? { opacity: 0, scale: 0.9 } : {}}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button 
-                              className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
-                              aria-label="View connected MCP servers"
-                            >
-                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                              <span className="text-xs font-medium text-muted-foreground">
-                                {availableTools.length} tool{availableTools.length !== 1 ? 's' : ''}
-                              </span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
-                            <div className="space-y-2">
-                              <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
-                              {mcpServers.length > 0 ? (
-                                mcpServers.map((server, index) => (
-                                  <div key={index} className="flex items-center justify-between text-xs">
-                                    <div className="flex items-center gap-1.5">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                      <span className="font-medium text-foreground">{server.name}</span>
-                                      <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
-                                    </div>
-                                    <span className="text-muted-foreground">{server.toolCount} tools</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-xs text-muted-foreground">No servers connected</div>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Model selector - hidden when collapsed on mobile */}
-                <AnimatePresence>
-                  {(!isMobile || !isInputSectionCollapsed) && (
-                    <motion.div
-                      initial={isMobile ? { opacity: 0, scale: 0.9 } : false}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={isMobile ? { opacity: 0, scale: 0.9 } : {}}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center gap-2"
-                    >
-                      {selectedModel && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                      )}
-                      <ModelSelector
-                        availableModels={availableModels}
-                        selectedModelId={selectedModel}
-                        setSelectedModelId={handleModelChange}
-                        className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
-                        isUserAuthenticated={!!session?.user?.id}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              {/* Subtle separator with gradient - only show when not collapsed */}
               <AnimatePresence>
-                {(!isMobile || !isInputSectionCollapsed) && (
+                {!isInputSectionCollapsed && (
                   <motion.div
-                    initial={isMobile ? { opacity: 0, height: 0 } : false}
+                    key="chat-options"
+                    initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    exit={isMobile ? { opacity: 0, height: 0 } : {}}
-                    transition={{ duration: 0.2 }}
-                    className="relative"
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
                   >
-                    <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-                    <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+                    <div className="flex items-center justify-between text-sm pb-2">
+                      <div className="flex items-center gap-2">
+                        {selectedModel && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        )}
+                        <ModelSelector
+                          availableModels={availableModels}
+                          selectedModelId={selectedModel}
+                          setSelectedModelId={handleModelChange}
+                          className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
+                          isUserAuthenticated={!!session?.user?.id}
+                        />
+                      </div>
+
+                      {/* Tools info */}
+                      <div className="flex items-center gap-2">
+                        {availableTools.length > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
+                                aria-label="View connected MCP servers"
+                              >
+                                <Wrench className="w-3.5 h-3.5 text-blue-500" />
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {availableTools.length}
+                                </span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
+                              <div className="space-y-2">
+                                <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
+                                {mcpServers.length > 0 ? (
+                                  mcpServers.map((server, index) => (
+                                    <div key={index} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                        <span className="font-medium text-foreground">{server.name}</span>
+                                        <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
+                                      </div>
+                                      <span className="text-muted-foreground">{server.toolCount} tools</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">No servers connected</div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-              
+
+              {/* Collapse/expand button */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
+                  className="flex w-full items-center justify-center gap-1 rounded-md py-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                  aria-label={isInputSectionCollapsed ? "Show options" : "Hide options"}
+                >
+                  <motion.div
+                    animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronUp size={14} />
+                  </motion.div>
+                </button>
+              </div>
+
               {/* Chat input */}
-              <div className="relative">
+              <div className="relative pt-2 border-t border-border/20">
                 <ChatInput
                   value={input}
                   onValueChange={handleInputChange}
