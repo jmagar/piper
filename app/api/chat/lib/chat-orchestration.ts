@@ -7,7 +7,12 @@ import { getCurrentCorrelationId } from '@/lib/logger/correlation';
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config";
 import { getOptimizedSystemPrompt } from "@/lib/mcp/modules/system-prompt-optimizer";
 
-import { processToolMentions, processUrlMentions, processPromptMentions, processFileMentions } from './message-processing';
+import {
+  processToolMentions,
+  processFileMentions,
+  processPromptMentions,
+} from "./message-processing"
+
 import { pruneMessagesForPayloadSize } from './message-pruning';
 import { truncateToolDefinitions, estimateToolDefinitionTokens, calculateTokenBudget } from './token-management';
 import { selectRelevantTools, optimizeToolDefinitions } from './tool-management';
@@ -349,11 +354,8 @@ async function processMessagesPipeline(
   const { processedMessages: messagesWithPrompts, enhancedSystemPrompt } = 
     await processPromptMentions(messagesAfterTools);
   
-  // Step 3: Process URL mentions
-  const messagesAfterUrls = await processUrlMentions(messagesWithPrompts);
-
-  // Step 4: Process File mentions
-  const finalProcessedMessages = await processFileMentions(messagesAfterUrls);
+  // Step 3: Process File mentions (URL mentions are deprecated)
+  const finalProcessedMessages = await processFileMentions(messagesWithPrompts);
 
   return {
     processedMessages: finalProcessedMessages,

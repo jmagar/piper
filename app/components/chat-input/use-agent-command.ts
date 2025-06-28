@@ -5,7 +5,6 @@ import { Agent } from "@/app/types/agent";
 // FetchedToolInfo is now imported directly and used for the tools prop.
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types"; // Ensure FetchedToolInfo is explicitly available
-import { v4 as uuidv4 } from "uuid"
 
 // Mention prefixes
 const AGENT_PREFIX = "@agents/"
@@ -40,12 +39,6 @@ export interface Prompt {
   content: string; // Or whatever structure a prompt has
 }
 
-export interface AttachedUrl {
-  id: string
-  url: string
-  rawMention: string
-}
-
 type UseAgentCommandProps = {
   onValueChangeAction: (value: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -78,7 +71,6 @@ export function useAgentCommand({
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
 
   const [pendingTool, setPendingTool] = useState<FetchedToolInfo | null>(null);
-  const [attachedUrls, setAttachedUrls] = useState<AttachedUrl[]>([])
 
   // Refs
   const mentionStartPosRef = useRef<number | null>(null)
@@ -226,18 +218,9 @@ export function useAgentCommand({
     }
   }, [tools, insertMention, setSelectedTool, setPendingTool, closeSelectionModal]);
 
-  const handleUrlSubmit = useCallback((url: string, rawMention: string) => {
-    const newUrl: AttachedUrl = { id: uuidv4(), url, rawMention }
-    setAttachedUrls(prev => [...prev, newUrl])
-    if (textareaRef.current && mentionStartPosRef.current !== null) {
-      const currentVal = textareaRef.current.value
-      const textBefore = currentVal.substring(0, mentionStartPosRef.current)
-      const textAfter = currentVal.substring(mentionStartPosRef.current + rawMention.length)
-      const newValue = (textBefore + textAfter).trimStart()
-      onValueChangeAction(newValue)
-    }
-    closeSelectionModal()
-  }, [closeSelectionModal, onValueChangeAction, textareaRef])
+  const handleUrlSubmit = useCallback((url: string) => {
+    insertMention(URL_PREFIX, url);
+  }, [insertMention]);
 
   const handleFileMentionSelectedFromModal = useCallback((filePath: string) => {
     insertMention(FILE_PREFIX, filePath)
@@ -301,10 +284,6 @@ export function useAgentCommand({
     pendingTool,
     setPendingTool,
     handleToolSelectAction,
-    // URLs
-    attachedUrls,
-    setAttachedUrls, // Added setAttachedUrls
-    removeAttachedUrl: (id: string) => setAttachedUrls(prev => prev.filter(u => u.id !== id)),
     handleUrlSubmit,
     // Files
     isFileExplorerModalOpen,

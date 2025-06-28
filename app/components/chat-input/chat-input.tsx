@@ -273,7 +273,7 @@ export function ChatInput({
         onSelectAgent={agentCommand.handleAgentSelectAction}
         onSelectTool={agentCommand.handleToolSelectAction}
         onSelectPrompt={agentCommand.handlePromptSelectAction}
-        onUrlSubmit={(url) => agentCommand.handleUrlSubmit(url, `@url/${url}`)}
+        onUrlSubmit={agentCommand.handleUrlSubmit}
         activeIndex={agentCommand.activeSelectionIndex}
         onModalSearchChange={agentCommand.handleModalSearchChange}
         onTriggerFileUpload={handleTriggerFileUpload}
