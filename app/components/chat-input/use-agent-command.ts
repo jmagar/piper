@@ -219,6 +219,12 @@ export function useAgentCommand({
   }, [tools, insertMention, setSelectedTool, setPendingTool, closeSelectionModal]);
 
   const handleUrlSubmit = useCallback((url: string) => {
+    try {
+      new URL(url); // Validate URL format
+    } catch {
+      console.error('Invalid URL format:', url);
+      return;
+    }
     insertMention(URL_PREFIX, url);
   }, [insertMention]);
 

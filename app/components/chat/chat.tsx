@@ -36,10 +36,7 @@ import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
 
-const FeedbackWidget = dynamic(
-  () => import("./feedback-widget").then((mod) => mod.FeedbackWidget),
-  { ssr: false }
-)
+
 
 const DialogAuth = dynamic(
   () => import("./dialog-auth").then((mod) => mod.DialogAuth),
@@ -411,7 +408,8 @@ export function Chat() {
   // Function to save edited prompt content
   const handleSavePrompt = async (newContent: string) => {
     try {
-      const response = await fetch("/api/prompts", {
+      const currentFile = markdownFiles[currentFileIndex];
+      const response = await fetch(`/api/prompts/docs/${currentFile}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -469,6 +467,18 @@ export function Chat() {
       return
     }
 
+    // Validate file sizes before processing
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+    const oversizedFiles = attachments.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: `Some files exceed the ${MAX_FILE_SIZE / 1024 / 1024}MB limit`,
+        status: "error",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     const attachmentsPayload = attachments.length > 0 ? await Promise.all(
       attachments.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer()
@@ -488,7 +498,7 @@ export function Chat() {
         chatId: currentChatId,
         userId: uid,
         model: selectedModel,
-        system_prompt: systemPrompt,
+        systemPrompt: systemPrompt,
         ...(data?.agent && { agentId: data.agent.id }),
         ...(data?.tool && { 
           toolName: data.tool.name,
@@ -500,7 +510,6 @@ export function Chat() {
     }
 
     try {
-      setInput(value); // Set the input value before submitting
       await handleSubmit(undefined, options);
 
       clearDraft();
@@ -525,7 +534,7 @@ export function Chat() {
         chatId,
         userId: uid,
         model: selectedModel,
-        system_prompt: systemPrompt,
+        systemPrompt: systemPrompt,
       },
     }
 
@@ -546,32 +555,14 @@ export function Chat() {
       {/* <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} /> */}
       <DialogAuth />
 
-      {/* Add Suspense boundary for SearchParamsProvider */}
-      <div className="mx-auto w-full max-w-3xl shrink-0 px-4 md:px-6">
-        <Suspense fallback={<div>Loading...</div>}>
-          <SearchParamsProvider setInput={setInput} />
-        </Suspense>
-        <ChatInput
-          value={input}
-          onValueChange={handleInputChange}
-          onSend={(data) => submit(input, data)}
-          onStop={stop}
-          isSubmitting={isSubmitting}
-          isStreaming={status === "streaming"}
-          availableAgents={availableAgents}
-          availableTools={availableTools}
-          prompts={prompts}
-          currentAgent={currentAgent?.id || null}
-          currentModelId={selectedModel}
-          session={session}
-          attachments={attachments}
-          setAttachments={setAttachments}
-        />
-      </div>
+            {/* Add Suspense boundary for SearchParamsProvider */}
+      <Suspense fallback={<div>Loading...</div>}>
+        <SearchParamsProvider setInput={setInput} />
+      </Suspense>
 
       {/* Main content area - scrollable, takes remaining space */}
       <div className="flex-1 overflow-y-auto">
-        <div className="min-h-full flex flex-col items-center justify-center px-4 py-8">
+        <div className="min-h-full flex flex-col items-center justify-center px-4 py-4">
           <AnimatePresence initial={false} mode="popLayout">
             {!chatId && messages.length === 0 ? (
               <motion.div
@@ -647,7 +638,129 @@ export function Chat() {
         </div>
       </div>
 
-      <FeedbackWidget />
+      {/* Chat input - fixed at bottom, never scrolls out of view */}
+      <div className="flex-shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-4">
+          <motion.div
+            className={cn(
+              "relative mx-auto w-full max-w-3xl"
+            )}
+            layout="position"
+            layoutId="chat-input-container"
+            transition={{
+              layout: {
+                duration: messages.length === 1 ? 0.3 : 0,
+              },
+            }}
+          >
+            {/* Enhanced input container with unified styling */}
+            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-3 space-y-1">
+              {/* Collapsible Model selector and tools info row */}
+              <AnimatePresence>
+                {!isInputSectionCollapsed && (
+                  <motion.div
+                    key="chat-options"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between text-sm pb-2">
+                      <div className="flex items-center gap-2">
+                        {selectedModel && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        )}
+                        <ModelSelector
+                          availableModels={availableModels}
+                          selectedModelId={selectedModel}
+                          setSelectedModelId={handleModelChange}
+                          className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
+                          isUserAuthenticated={!!session?.user?.id}
+                        />
+                      </div>
+
+                      {/* Tools info */}
+                      <div className="flex items-center gap-2">
+                        {availableTools.length > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
+                                aria-label="View connected MCP servers"
+                              >
+                                <Wrench className="w-3.5 h-3.5 text-blue-500" />
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {availableTools.length}
+                                </span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
+                              <div className="space-y-2">
+                                <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
+                                {mcpServers.length > 0 ? (
+                                  mcpServers.map((server, index) => (
+                                    <div key={index} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                        <span className="font-medium text-foreground">{server.name}</span>
+                                        <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
+                                      </div>
+                                      <span className="text-muted-foreground">{server.toolCount} tools</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">No servers connected</div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Collapse/expand button */}
+              <div className="flex items-center justify-center -my-1">
+                <button
+                  onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
+                  className="flex w-full items-center justify-center gap-1 rounded-md py-0.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                  aria-label={isInputSectionCollapsed ? "Show options" : "Hide options"}
+                >
+                  <motion.div
+                    animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronUp size={12} />
+                  </motion.div>
+                </button>
+              </div>
+
+              {/* Chat input */}
+              <div className="relative">
+                <ChatInput
+                  value={input}
+                  onValueChange={handleInputChange}
+                  onSend={(data) => submit(input, data)}
+                  onStop={stop}
+                  isSubmitting={isSubmitting}
+                  isStreaming={status === "streaming"}
+                  availableAgents={availableAgents}
+                  availableTools={availableTools}
+                  prompts={prompts}
+                  currentAgent={currentAgent?.id || null}
+                  currentModelId={selectedModel}
+                  session={session}
+                  attachments={attachments}
+                  setAttachments={setAttachments}
+                />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   )
 }

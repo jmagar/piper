@@ -359,16 +359,6 @@ async function processMessagesPipeline(
   };
 }
 
-/**
- * Convert relative attachment URLs to absolute URLs for AI model access
- */
-function processAttachmentUrls(messages: MessageAISDK[]): MessageAISDK[] {
-  return messages.map((message) => {
-    // ✅ AI SDK PATTERN: Files are already handled by AI SDK, just pass through
-    return message;
-  });
-}
-
 // =============================================================================
 // MAIN ORCHESTRATION
 // =============================================================================
@@ -387,10 +377,7 @@ export async function orchestrateChatProcessing(request: ChatRequest): Promise<P
     // Step 2: Process messages through pipeline
     const { processedMessages, enhancedSystemPrompt } = await processMessagesPipeline(messages);
     
-    // Step 3: Process attachment URLs
-    const messagesWithAbsoluteUrls = processAttachmentUrls(processedMessages);
-    
-    // Step 4: Configure tools
+    // Step 3: Configure tools
     let toolsToUse = await configureToolsEnhanced(agentConfig, extractConversationContext(messages));
     
     if (toolsToUse && Object.keys(toolsToUse).length > 0) {
@@ -398,7 +385,7 @@ export async function orchestrateChatProcessing(request: ChatRequest): Promise<P
       toolsToUse = optimizeToolDefinitions(toolsToUse, correlationId || 'unknown');
       
       // Select relevant tools for large conversations
-      toolsToUse = selectRelevantTools(toolsToUse, messagesWithAbsoluteUrls.length);
+      toolsToUse = selectRelevantTools(toolsToUse, processedMessages.length);
 
       // Truncate individual tool definitions if they are too verbose
       if (toolsToUse && Object.keys(toolsToUse).length > 0) {
@@ -410,16 +397,16 @@ export async function orchestrateChatProcessing(request: ChatRequest): Promise<P
       correlationId
     });
 
-    // Step 5: Generate optimized system prompt with caching
+    // Step 4: Generate optimized system prompt with caching
     const availableToolNames = toolsToUse ? Object.keys(toolsToUse) : [];
     const effectiveSystemPrompt = await generateOptimizedSystemPrompt(
-      messagesWithAbsoluteUrls,
+      processedMessages,
       availableToolNames,
       agentConfig,
       enhancedSystemPrompt
     );
 
-    // Step 6: Calculate token budget
+    // Step 5: Calculate token budget
     const toolDefinitionTokens = estimateToolDefinitionTokens(toolsToUse || {});
     const tokenBudget = calculateTokenBudget(toolDefinitionTokens);
 
@@ -430,18 +417,18 @@ export async function orchestrateChatProcessing(request: ChatRequest): Promise<P
       }
     );
 
-    // Step 7: Prune messages if necessary
+    // Step 6: Prune messages if necessary
     const prunedMessages = pruneMessagesForPayloadSize(
-      messagesWithAbsoluteUrls, 
+      processedMessages, 
       tokenBudget.messageLimit, 
       correlationId
     );
 
-    // Step 8: Validate messages to prevent AI_InvalidPromptError
+    // Step 7: Validate messages to prevent AI_InvalidPromptError
     const finalMessages = validateAndSanitizeMessages(prunedMessages, correlationId);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[ChatOrchestration] Pipeline complete: ${messagesWithAbsoluteUrls.length} messages → ${finalMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
+      console.log(`[ChatOrchestration] Pipeline complete: ${processedMessages.length} messages → ${finalMessages.length} messages, tools: ${toolsToUse ? Object.keys(toolsToUse).length : 0}`);
     }
 
     return {
