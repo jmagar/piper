@@ -5,7 +5,7 @@
     <strong>Piper</strong> is a web-based Model Context Protocol (MCP) client that brings powerful AI tooling to your browser. With full MCP support, Piper enables you to access and manage all your AI tools and agents from anywhere, without needing an IDE or desktop application.
   </p>
   
-  [![Piper Dashboard](/assets/mcp-dashboard.png)](#)
+  [![Piper Dashboard](/assets/dashboard-manager.png)](#)
   
   [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
   [![GitHub Stars](https://img.shields.io/github/stars/jmagar/piper?style=social)](https://github.com/jmagar/piper)

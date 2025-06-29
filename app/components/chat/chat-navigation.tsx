@@ -9,10 +9,10 @@ import {
   Wrench,
   Users,
   X,
-  Plus,
+  LayoutDashboard,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 
 const navItems = [
@@ -98,18 +98,15 @@ export function ChatNavigation() {
     setIsClient(true)
   }, [])
 
-  const getActiveTab = () => {
-    for (const item of navItems) {
-      if (item.value === "chat") {
-        if (pathname === "/" || pathname.startsWith("/c/")) return item.value
-      } else if (pathname.startsWith(`/${item.value}`)) {
-        return item.value
-      }
-    }
-    if (pathname.startsWith("/mcp-dashboard")) return "mcp" // Legacy fallback
-    return "chat" // Default to chat
-  }
-  const activeTabValue = getActiveTab()
+  const getActiveNav = useCallback(() => {
+    if (pathname === "/") return "chat"
+    if (pathname.startsWith("/p/")) return "chat"
+    if (pathname.startsWith("/dashboard/manager")) return "mcp" 
+    if (pathname === "/settings") return "settings"
+    return "chat"
+  }, [pathname])
+
+  const activeTabValue = getActiveNav()
   const activeItem = navItems.find(item => item.value === activeTabValue)
 
   const handleTabChange = (value: string) => {
@@ -121,7 +118,7 @@ export function ChatNavigation() {
         router.push("/")
       }
     } else if (value === "mcp") {
-      router.push("/mcp-dashboard")
+      router.push("/dashboard/manager")
     } else {
       router.push(`/${value}`)
     }
@@ -261,7 +258,7 @@ export function ChatNavigation() {
                       {activeItem ? (
                         <activeItem.Icon className="h-6 w-6 text-white drop-shadow-lg" />
                       ) : (
-                        <Plus className="h-7 w-7 text-white drop-shadow-lg" />
+                        <LayoutDashboard className="h-7 w-7 text-white drop-shadow-lg" />
                       )}
                     </motion.div>
                   )}

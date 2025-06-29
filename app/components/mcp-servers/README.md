@@ -1,6 +1,6 @@
 # MCP Server Management UI
 
-This directory contains all the React components, hooks, and utilities required for the MCP Server Management Dashboard, located at `/mcp-dashboard`.
+This directory contains all the React components, hooks, and utilities required for the MCP Server Management Dashboard, located at `/dashboard/manager`.
 
 ## Architecture Overview
 
