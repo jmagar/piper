@@ -78,48 +78,49 @@ export function ChatInput({
 
   const handleFileMentioned = async (filePath: string) => {
     // Validate file path to prevent directory traversal (additional client-side check)
-    if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
-      console.error("Invalid file path:", filePath);
+    if (!filePath || filePath.includes("..") || filePath.startsWith("/")) {
+      console.error("Invalid file path:", filePath)
       // TODO: Add toast notification when toast system is available
-      alert("Invalid file path. Please try again.");
-      return;
+      alert("Invalid file path. Please try again.")
+      return
     }
 
-    // Check for duplicate files to prevent re-attachment
-    const fileName = filePath.split('/').pop() || 'file';
-    const isDuplicate = attachments.some(attachment => attachment.name === fileName);
+    // Bug Fix 2: Use the full path for the duplicate check to ensure uniqueness.
+    const isDuplicate = attachments.some(attachment => attachment.name === filePath)
     if (isDuplicate) {
-      console.log(`File "${fileName}" is already attached`);
+      console.log(`File "${filePath}" is already attached`)
       // TODO: Add toast notification when toast system is available
-      alert(`File "${fileName}" is already attached`);
-      return;
+      alert(`File "${filePath}" is already attached`)
+      return
     }
 
     try {
-      // Assuming the backend serves files at /api/files/view/[...filepath]
-      const response = await fetch(`/api/files/view/${encodeURIComponent(filePath)}`);
+      // Bug Fix 1: Correctly encode the file path for the API request.
+      const encodedFilePath = filePath.split("/").map(encodeURIComponent).join("/")
+      const response = await fetch(`/api/files/view/${encodedFilePath}`)
       if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
+        throw new Error(`Failed to fetch file: ${response.statusText}`)
       }
-      const blob = await response.blob();
-      
+      const blob = await response.blob()
+
       // Validate file size (e.g., 50MB limit)
       if (blob.size > 50 * 1024 * 1024) {
-        throw new Error("File too large (max 50MB)");
+        throw new Error("File too large (max 50MB)")
       }
-      
-      const file = new File([blob], fileName, { type: blob.type });
-      setAttachments(prev => [...prev, file]);
-      
+
+      // Use the full path as the unique name for the File object.
+      const file = new File([blob], filePath, { type: blob.type })
+      setAttachments(prev => [...prev, file])
+
       // TODO: Add success toast when toast system is available
-      console.log(`File "${fileName}" attached successfully`);
+      console.log(`File "${filePath}" attached successfully`)
     } catch (error) {
-      console.error("Error handling file mention:", error);
+      console.error("Error handling file mention:", error)
       // TODO: Replace with toast notification when toast system is available
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      alert(`Failed to attach file: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      alert(`Failed to attach file: ${errorMessage}`)
     }
-  };
+  }
 
   const agentCommand = useAgentCommand({
     onValueChangeAction: onValueChange,
@@ -338,7 +339,7 @@ export function ChatInput({
         <div className="flex flex-wrap items-center gap-2 p-2">
           {attachments.map((file, index) => (
             <div key={index} className="flex items-center gap-2 bg-muted rounded-md p-1">
-              <span className="text-sm">{file.name}</span>
+              <span className="text-sm">{file.name.split("/").pop()}</span>
               <Button
                 size="sm"
                 variant="ghost"

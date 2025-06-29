@@ -1,6 +1,7 @@
 "use client"
 
 import { Agent } from "@/app/types/agent";
+import { toast } from "sonner"
 
 // FetchedToolInfo is now imported directly and used for the tools prop.
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -46,7 +47,7 @@ type UseAgentCommandProps = {
   tools: FetchedToolInfo[]; // Explicitly use FetchedToolInfo[]
   prompts: Prompt[];
   defaultAgent: Agent | null;
-  onFileMentioned: (filePath: string) => void;
+  onFileMentioned: (filePath: string) => Promise<void>;
 };
 
 export function useAgentCommand({
@@ -218,27 +219,39 @@ export function useAgentCommand({
     }
   }, [tools, insertMention, setSelectedTool, setPendingTool, closeSelectionModal]);
 
-  const handleUrlSubmit = useCallback((url: string) => {
-    try {
-      new URL(url); // Validate URL format
-    } catch {
-      console.error('Invalid URL format:', url);
-      return;
-    }
-    insertMention(URL_PREFIX, url);
-  }, [insertMention]);
+  const handleUrlSubmit = useCallback(
+    (url: string) => {
+      let urlObject
+      try {
+        urlObject = new URL(url) // Validate URL format
+      } catch {
+        console.error("Invalid URL format:", url)
+        return
+      }
 
-  const handleFileMentionSelectedFromModal = useCallback(async (filePath: string) => {
-    try {
-      insertMention(FILE_PREFIX, filePath)
-      await onFileMentioned(filePath)
-    } catch (error) {
-      console.error('Failed to process file mention:', error);
-      // TODO: Add toast notification when toast system is available
-      // For now, show alert as user feedback
-      alert(`Failed to attach file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }, [insertMention, onFileMentioned]);
+      if (urlObject.protocol !== "http:" && urlObject.protocol !== "https:") {
+        console.error("Invalid URL protocol:", urlObject.protocol)
+        return
+      }
+
+      insertMention(URL_PREFIX, url)
+    },
+    [insertMention]
+  )
+
+  const handleFileMentionSelectedFromModal = useCallback(
+    async (filePath: string) => {
+      try {
+        insertMention(FILE_PREFIX, filePath)
+        await onFileMentioned(filePath)
+      } catch (error) {
+        console.error("Failed to process file mention:", error)
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+        toast.error(`Failed to attach file: ${errorMessage}`)
+      }
+    },
+    [insertMention, onFileMentioned]
+  )
 
   const handleModalSearchChange = useCallback((term: string) => setCurrentSearchTerm(term), [])
 

@@ -24,10 +24,10 @@ services:
       # Mounts for hot reloading application code
       - .:/app # Mount current directory to /app in container
       - /app/node_modules # Isolate container's node_modules from host's
-      # Persistent volumes for data (same as your production-like compose)
-      - ./uploads:/uploads
-      - ./config:/config
-      - ./logs:/logs
+      # Persistent volumes for data using named volumes
+      - piper-uploads-dev:/uploads
+      - piper-config-dev:/config
+      - piper-logs-dev:/logs
       # Other mounts you had, ensure these paths exist on your host or are appropriate for dev
       - /mnt/user/data:/data
       - /mnt/user/code:/code
@@ -35,13 +35,20 @@ services:
       - /mnt/user/compose:/compose
       - /mnt/user/downloads:/downloads
     depends_on:
-      - piper-db-dev
-      - piper-cache-dev
+      piper-db-dev:
+        condition: service_healthy
+      piper-cache-dev:
+        condition: service_healthy
     restart: unless-stopped # Or 'no' for development if you prefer manual restarts
 
   piper-db-dev:
     container_name: piper-db-dev
     image: postgres:15-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U piper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_DB: piper
       POSTGRES_USER: piper
@@ -55,6 +62,11 @@ services:
   piper-cache-dev:
     container_name: piper-cache-dev
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - "8632:6379" # Expose Redis port to host, consistent with main docker-compose.yml
     restart: unless-stopped
@@ -64,3 +76,6 @@ services:
 volumes:
   piper-db-dev: # Defines the named volume for PostgreSQL data persistence
   piper-cache-dev: # Defines the named volume for Redis data persistence
+  piper-uploads-dev:
+  piper-config-dev:
+  piper-logs-dev:
