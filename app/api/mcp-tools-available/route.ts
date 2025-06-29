@@ -1,5 +1,6 @@
 import { getManagedServersInfo } from "@/lib/mcp/mcpManager"
 import { NextResponse } from "next/server"
+import { appLogger } from "@/lib/logger"
 
 export async function GET() {
   try {
@@ -19,7 +20,13 @@ export async function GET() {
 
     return NextResponse.json({ tools: mcpTools })
   } catch (error) {
-    console.error("Failed to fetch MCP tools:", error)
-    return NextResponse.json({ tools: [] })
+    appLogger.error("Failed to fetch MCP tools", { error })
+    return NextResponse.json(
+      { 
+        tools: [], 
+        error: "Failed to fetch available MCP tools." 
+      },
+      { status: 500 }
+    );
   }
 } 

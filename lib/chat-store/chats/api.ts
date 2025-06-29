@@ -199,7 +199,7 @@ export async function createNewChat(
   title?: string,
   model?: string
 ): Promise<Chat> {
-  const response = await serverFetch("/api/create-chat", {
+  const response = await serverFetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

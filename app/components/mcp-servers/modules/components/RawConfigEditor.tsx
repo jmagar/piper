@@ -29,7 +29,7 @@ const RawConfigEditor: React.FC = () => {
           throw new Error(`Failed to fetch config: ${response.statusText}`);
         }
         const data = await response.json();
-        const fetchedContent = JSON.stringify(data, null, 2);
+        const fetchedContent = JSON.stringify(data.mcpServers || {}, null, 2);
         setConfigText(fetchedContent);
         initialContentRef.current = fetchedContent; // Store initial content
         appLogger.info('[RawConfigEditor] MCP configuration fetched successfully.');
@@ -76,16 +76,16 @@ const RawConfigEditor: React.FC = () => {
       }
 
       const response = await fetch('/api/mcp/config', {
-        method: 'PUT', // Or POST, depending on API design for updates
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(parsedConfig),
+        body: JSON.stringify({ mcpServers: parsedConfig }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to save config: ${response.statusText} - ${errorData}`);
+        const errorData = await response.json();
+        throw new Error(`Failed to save config: ${response.statusText} - ${errorData.error || 'Unknown error'}`);
       }
       initialContentRef.current = configText; // Update initial content to current saved content
       toast.success('MCP Config saved successfully');

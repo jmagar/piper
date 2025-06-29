@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { appLogger } from "@/lib/logger"
 import { 
   getEnhancedMCPMetrics, 
   performMCPHealthCheck, 
@@ -23,7 +24,7 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error("Failed to fetch enhanced MCP metrics:", error)
+    appLogger.error("Failed to fetch enhanced MCP metrics", { error })
     return NextResponse.json(
       { 
         success: false, 

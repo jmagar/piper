@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { globalMetricsCollector } from "@/lib/mcp/enhanced-integration"
+import { appLogger } from "@/lib/logger"
 
 interface ToolExecutionRecord {
   id: string
@@ -60,9 +61,10 @@ export async function GET() {
       recentExecutions
     })
   } catch (error) {
-    console.error("Failed to fetch tool execution data:", error)
+    appLogger.error("Failed to fetch tool execution data", { error })
     return NextResponse.json(
       { 
+        success: false,
         error: "Failed to fetch tool execution data",
         timestamp: new Date().toISOString()
       },
