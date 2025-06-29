@@ -3,7 +3,7 @@ import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { type CreateNewChatArgs } from "@/lib/chat-store/chats/api"
 import { type Chat } from "@/lib/chat-store/types"
-import { useState, useRef } from "react"
+import { useRef } from "react"
 
 type UseChatUtilsProps = {
   chatId: string | null
@@ -18,8 +18,9 @@ export function useChatUtils({
   selectedModel,
   createNewChat,
 }: UseChatUtilsProps) {
-  // Phase 1 Fix: Track chat creation state to prevent race conditions
-  const [isCreatingChat, setIsCreatingChat] = useState(false)
+  // Phase 1 Fix v2: Use refs for synchronous access to prevent React state race conditions
+  // This eliminates the timing window where multiple calls could bypass the check
+  const isCreatingRef = useRef(false)
   const creationAttemptRef = useRef<Promise<string | null> | null>(null)
 
   const checkLimitsAndNotify = async (uid: string): Promise<boolean> => {
@@ -57,9 +58,10 @@ export function useChatUtils({
       return chatId
     }
 
-    // Phase 1 Fix: Prevent concurrent chat creation attempts
-    if (isCreatingChat) {
-      // If a creation is already in progress, wait for it to complete
+    // Phase 1 Fix v2: Synchronous race condition prevention using refs
+    // Check if creation is already in progress (synchronous check)
+    if (isCreatingRef.current) {
+      // If a creation promise exists, wait for it to complete
       if (creationAttemptRef.current) {
         try {
           const result = await creationAttemptRef.current
@@ -72,10 +74,10 @@ export function useChatUtils({
       return null
     }
 
-    // Start the chat creation process
-    setIsCreatingChat(true)
-
-    // Create a promise for this creation attempt
+    // Atomically set creation state and create promise to eliminate timing window
+    isCreatingRef.current = true
+    
+    // Create the promise immediately to prevent timing window race condition
     const creationPromise = (async (): Promise<string | null> => {
       try {
         const newChat = await createNewChat({
@@ -117,12 +119,12 @@ export function useChatUtils({
         return null
       } finally {
         // Always reset the creation state and clear the attempt reference
-        setIsCreatingChat(false)
+        isCreatingRef.current = false
         creationAttemptRef.current = null
       }
     })()
 
-    // Store the creation attempt so other calls can wait for it
+    // Store the creation attempt immediately (no timing window)
     creationAttemptRef.current = creationPromise
 
     return creationPromise
@@ -131,6 +133,9 @@ export function useChatUtils({
   return {
     checkLimitsAndNotify,
     ensureChatExists,
-    isCreatingChat, // Expose for UI feedback
+    // Expose creation state for UI feedback (derived from ref)
+    get isCreatingChat() {
+      return isCreatingRef.current
+    },
   }
 }
