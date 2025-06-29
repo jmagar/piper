@@ -99,10 +99,21 @@ export function ChatNavigation() {
   }, [])
 
   const getActiveNav = useCallback(() => {
-    if (pathname === "/") return "chat"
-    if (pathname.startsWith("/p/")) return "chat"
-    if (pathname.startsWith("/dashboard/manager")) return "mcp" 
-    if (pathname === "/settings") return "settings"
+    if (pathname === "/" || pathname.startsWith("/c/")) {
+      return "chat"
+    }
+    if (pathname.startsWith("/dashboard/manager")) {
+      return "mcp"
+    }
+    if (pathname === "/settings") {
+      return "settings"
+    }
+
+    const firstSegment = pathname.split("/")[1]
+    if (firstSegment && navItems.some(item => item.value === firstSegment)) {
+      return firstSegment
+    }
+
     return "chat"
   }, [pathname])
 

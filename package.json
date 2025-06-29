@@ -101,6 +101,7 @@
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@modelcontextprotocol/server-filesystem": "^2025.3.28",
     "@next/bundle-analyzer": "^15.2.4",
+    "@next/eslint-plugin-next": "^15.3.4",
     "@sylphlab/pdf-reader-mcp": "^0.3.23",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.10",
