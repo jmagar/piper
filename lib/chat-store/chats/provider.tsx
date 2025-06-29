@@ -117,34 +117,36 @@ export function ChatsProvider({
   const createNewChat = async (
     title?: string,
     model?: string
-  ) => {
-    // Defensive check to ensure chats is properly initialized
-    const prev = Array.isArray(chats) ? [...chats] : []
-
+  ): Promise<Chats | undefined> => {
     try {
+      // Call the API to create the chat and wait for the canonical object
       const newChat = await createNewChatFromDb(
         title,
         model || MODEL_DEFAULT
       )
-      
-      // Ensure newChat exists before proceeding
-      if (!newChat) {
-        throw new Error("Failed to create chat: No chat returned")
+
+      // The API now returns the full chat object.
+      // We no longer need to construct it on the client.
+      if (!newChat || !newChat.id) {
+        throw new Error("Failed to create chat: Invalid response from server")
       }
 
-      setChats((prevChats) => {
+      // Update the local state with the server-confirmed chat object
+      setChats(prevChats => {
         const currentChats = Array.isArray(prevChats) ? prevChats : []
-        return currentChats
-          .concat(newChat)
-          .sort(
-            (a, b) =>
-              +new Date(b.createdAt || "") - +new Date(a.createdAt || "")
-          )
+        // Prevent duplicates, just in case
+        if (currentChats.some(chat => chat.id === newChat.id)) {
+          return currentChats
+        }
+        return [newChat, ...currentChats].sort(
+          (a, b) =>
+            +new Date(b.createdAt || "") - +new Date(a.createdAt || "")
+        )
       })
+
       return newChat
     } catch (error) {
       console.error("Error creating new chat:", error)
-      setChats(prev)
       toast({ title: "Failed to create chat", status: "error" })
       return undefined
     }

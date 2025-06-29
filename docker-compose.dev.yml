@@ -1,5 +1,3 @@
-# version: '3.8' # Obsolete, removing
-
 services:
   piper-app-dev:
     container_name: piper-app-dev
@@ -8,12 +6,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    user: "0:0" # Explicitly run as root
+    # Explicitly run as root
+    user: "0:0"
     command: sh -c "npx prisma db push && npm run dev"
+    # Expose port 3000 on host port 8630
     ports:
-      - "8630:3000" # Expose port 3000 on host port 8630
+      - "8630:3000"
+    # Load environment variables from .env file
     env_file:
-      - .env # Load environment variables from .env file
+      - .env
     environment:
       # Add or override any environment variables here if needed
       - NODE_ENV=development
@@ -22,12 +23,13 @@ services:
       # CHOKIDAR_USEPOLLING=true # Uncomment if hot reloading is unreliable
     volumes:
       # Mounts for hot reloading application code
-      - .:/app # Mount current directory to /app in container
-      - /app/node_modules # Isolate container's node_modules from host's
+      - .:/app
+      # Isolate container's node_modules from host's
+      - /app/node_modules
       # Persistent volumes for data using named volumes
-      - piper-uploads-dev:/uploads
-      - piper-config-dev:/config
-      - piper-logs-dev:/logs
+      - ./uploads:/uploads
+      - ./config:/config
+      - ./logs:/logs
       # Other mounts you had, ensure these paths exist on your host or are appropriate for dev
       - /mnt/user/data:/data
       - /mnt/user/code:/code
@@ -39,7 +41,8 @@ services:
         condition: service_healthy
       piper-cache-dev:
         condition: service_healthy
-    restart: unless-stopped # Or 'no' for development if you prefer manual restarts
+    # Or 'no' for development if you prefer manual restarts
+    restart: unless-stopped
 
   piper-db-dev:
     container_name: piper-db-dev
@@ -52,11 +55,13 @@ services:
     environment:
       POSTGRES_DB: piper
       POSTGRES_USER: piper
-      POSTGRES_PASSWORD: piper # Consider using a secret or .env for password
+      # Consider using a secret or .env for password
+      POSTGRES_PASSWORD: piper
     volumes:
       - piper-db-dev:/var/lib/postgresql/data
+    # Expose DB port to host, consistent with main docker-compose.yml
     ports:
-      - "8631:5432" # Expose DB port to host, consistent with main docker-compose.yml
+      - "8631:5432"
     restart: unless-stopped
 
   piper-cache-dev:
@@ -67,15 +72,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    # Expose Redis port to host, consistent with main docker-compose.yml
     ports:
-      - "8632:6379" # Expose Redis port to host, consistent with main docker-compose.yml
+      - "8632:6379"
     restart: unless-stopped
     volumes:
       - piper-cache-dev:/data
 
 volumes:
-  piper-db-dev: # Defines the named volume for PostgreSQL data persistence
-  piper-cache-dev: # Defines the named volume for Redis data persistence
-  piper-uploads-dev:
-  piper-config-dev:
-  piper-logs-dev:
+  # Defines the named volume for PostgreSQL data persistence
+  piper-db-dev:
+  # Defines the named volume for Redis data persistence
+  piper-cache-dev:

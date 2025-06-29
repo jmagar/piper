@@ -166,33 +166,6 @@ export async function getUserChats(): Promise<Chat[]> {
   return data
 }
 
-export async function createChat(
-  title: string,
-  model: string,
-  systemPrompt: string
-): Promise<string> {
-  const id = await createChatInDb(title, model, systemPrompt)
-  const finalId = id ?? crypto.randomUUID()
-
-  const newChat: Chat = {
-    id: finalId,
-    title,
-    model,
-    systemPrompt: systemPrompt,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    messages: [],
-    attachments: [],
-    agentId: null,
-  }
-
-  const currentChats = await getCachedChats()
-  currentChats.unshift(newChat)
-  await writeToIndexedDB("chats", currentChats)
-
-  return finalId
-}
-
 export async function updateChatModel(chatId: string, model: string) {
   try {
     const res = await serverFetch(API_ROUTE_UPDATE_CHAT_MODEL, {
