@@ -1,15 +1,17 @@
+'use client'
+
 import { toast } from "@/components/ui/toast"
 import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { type CreateNewChatArgs } from "@/lib/chat-store/chats/api"
-import { type Chat } from "@/lib/chat-store/types"
+import { type Chats } from "@/lib/chat-store/types"
 import { useRef } from "react"
 
 type UseChatUtilsProps = {
   chatId: string | null
   input: string
   selectedModel: string
-  createNewChat: (args: CreateNewChatArgs) => Promise<Chat | null>
+  createNewChat: (args: CreateNewChatArgs) => Promise<Chats | undefined>
 }
 
 export function useChatUtils({
