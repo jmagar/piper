@@ -12,7 +12,7 @@ import { FileExplorer } from './file-explorer';
 interface FileExplorerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onFileSelectForMention: (filePath: string) => void;
+  onFileSelectForMention: (filePath: string) => Promise<void>;
 }
 
 export function FileExplorerModal({
@@ -24,9 +24,15 @@ export function FileExplorerModal({
   // This handler will be passed to FileExplorer's onFileSelectForMention prop.
   // When a file is "attached" from FileExplorer, it calls this,
   // which in turn calls the prop from useAgentCommand and closes the modal.
-  const handleFileSelectedAndProcess = (filePath: string) => {
-    onFileSelectForMention(filePath); // This will trigger insertMention in useAgentCommand
-    onClose(); // Close the modal
+  const handleFileSelectedAndProcess = async (filePath: string) => {
+    try {
+      await onFileSelectForMention(filePath); // This will trigger insertMention in useAgentCommand
+      onClose(); // Close the modal only after successful processing
+    } catch (error) {
+      console.error('Failed to process file selection:', error);
+      // Keep modal open on error so user can try again
+      // Error feedback is handled by the async callback itself
+    }
   };
 
   return (

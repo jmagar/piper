@@ -228,9 +228,16 @@ export function useAgentCommand({
     insertMention(URL_PREFIX, url);
   }, [insertMention]);
 
-  const handleFileMentionSelectedFromModal = useCallback((filePath: string) => {
-    insertMention(FILE_PREFIX, filePath)
-    onFileMentioned(filePath)
+  const handleFileMentionSelectedFromModal = useCallback(async (filePath: string) => {
+    try {
+      insertMention(FILE_PREFIX, filePath)
+      await onFileMentioned(filePath)
+    } catch (error) {
+      console.error('Failed to process file mention:', error);
+      // TODO: Add toast notification when toast system is available
+      // For now, show alert as user feedback
+      alert(`Failed to attach file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [insertMention, onFileMentioned]);
 
   const handleModalSearchChange = useCallback((term: string) => setCurrentSearchTerm(term), [])

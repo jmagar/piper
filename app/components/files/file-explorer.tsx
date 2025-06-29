@@ -25,7 +25,7 @@ interface ApiResponse {
 }
 
 interface FileExplorerProps {
-  onFileSelectForMention?: (path: string) => void;
+  onFileSelectForMention?: (path: string) => Promise<void>;
 }
 
 export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
@@ -35,11 +35,20 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
   const [error, setError] = useState<string | null>(null);
   // const [pathInput, setPathInput] = useState<string>(''); // Removed unused state
   const [selectedItemPath, setSelectedItemPath] = useState<string | null>(null);
+  const [isAttaching, setIsAttaching] = useState<boolean>(false);
 
-  const handleAttachSelectedFile = () => {
+  const handleAttachSelectedFile = async () => {
     if (selectedItemPath && onFileSelectForMention) {
-      onFileSelectForMention(selectedItemPath);
-      setSelectedItemPath(null); // Clear selection after attaching
+      setIsAttaching(true);
+      try {
+        await onFileSelectForMention(selectedItemPath);
+        setSelectedItemPath(null); // Clear selection after successful attaching
+      } catch (error) {
+        console.error('Failed to attach file:', error);
+        // Keep selection active on error so user can try again
+      } finally {
+        setIsAttaching(false);
+      }
     }
   };
 
@@ -213,9 +222,16 @@ export function FileExplorer({ onFileSelectForMention }: FileExplorerProps) {
         <div className="mt-4 flex justify-end">
           <Button 
             onClick={handleAttachSelectedFile} 
-            disabled={!selectedItemPath}
+            disabled={!selectedItemPath || isAttaching}
           >
-            Attach Selected File
+            {isAttaching ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Attaching...
+              </>
+            ) : (
+              'Attach Selected File'
+            )}
           </Button>
         </div>
       )}
