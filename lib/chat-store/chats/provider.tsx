@@ -2,7 +2,6 @@
 
 import { toast } from "@/components/ui/toast"
 import { createContext, useContext, useEffect, useState } from "react"
-import { MODEL_DEFAULT } from "../../config"
 import type { Chats } from "../types"
 import {
   createNewChat as createNewChatFromDb,
@@ -11,6 +10,7 @@ import {
   updateChatAgent as updateChatAgentFromDb,
   updateChatModel as updateChatModelFromDb,
   updateChatTitle,
+  type CreateNewChatArgs,
 } from "./api"
 
 interface ChatsContextType {
@@ -24,10 +24,7 @@ interface ChatsContextType {
     redirect?: () => void
   ) => Promise<void>;
   setChats: React.Dispatch<React.SetStateAction<Chats[]>>;
-  createNewChat: (
-    title?: string,
-    model?: string
-  ) => Promise<Chats | undefined>;
+  createNewChat: (args: CreateNewChatArgs) => Promise<Chats | undefined>;
   resetChats: () => Promise<void>;
   getChatById: (id: string) => Chats | undefined;
   updateChatModel: (id: string, model: string) => Promise<void>;
@@ -115,29 +112,33 @@ export function ChatsProvider({
   }
 
   const createNewChat = async (
-    title?: string,
-    model?: string
+    args: CreateNewChatArgs
   ): Promise<Chats | undefined> => {
     try {
-      // Call the API to create the chat and wait for the canonical object
-      const newChat = await createNewChatFromDb(
-        title,
-        model || MODEL_DEFAULT
-      )
+      // Call the API to create the chat. The API handles idempotency and may return an existing chat.
+      const newChat = await createNewChatFromDb(args)
 
-      // The API now returns the full chat object.
-      // We no longer need to construct it on the client.
       if (!newChat || !newChat.id) {
         throw new Error("Failed to create chat: Invalid response from server")
       }
 
-      // Update the local state with the server-confirmed chat object
+      // Critical Fix: Check if this chat already exists in our state
+      // This handles the case where the API returns an existing chat due to idempotency
       setChats(prevChats => {
         const currentChats = Array.isArray(prevChats) ? prevChats : []
-        // Prevent duplicates, just in case
-        if (currentChats.some(chat => chat.id === newChat.id)) {
-          return currentChats
+        
+        // If the chat already exists in our state, don't add it again
+        const existingChatIndex = currentChats.findIndex(chat => chat.id === newChat.id)
+        if (existingChatIndex !== -1) {
+          // Chat already exists - this was an idempotent response
+          // Update the existing chat with the latest data from the server
+          const updatedChats = [...currentChats]
+          updatedChats[existingChatIndex] = newChat
+          return updatedChats
         }
+        
+        // Chat doesn't exist - this is a genuinely new chat
+        // Add it to the front and sort by creation date
         return [newChat, ...currentChats].sort(
           (a, b) =>
             +new Date(b.createdAt || "") - +new Date(a.createdAt || "")

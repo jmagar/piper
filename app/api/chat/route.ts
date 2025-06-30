@@ -58,6 +58,7 @@ const ChatRequestSchema = z.object({
   userId: z.string().optional(),
   user: z.any().optional(),
   operationId: z.string().optional(),
+  stream: z.boolean().optional().default(true),
 });
 
 // Define PiperMessage type based on Zod schema for clarity
@@ -438,7 +439,7 @@ export async function POST(req: Request) {
       AiSdkOperation.STREAMING_START,
       {
         correlationId,
-        chatId,
+        chatId: chatId,
         hasTools: !!toolsToUse,
         messageCount: coreFinalMessagesForAIFromOrchestration.length,
         provider: detectedProvider,
@@ -458,26 +459,22 @@ export async function POST(req: Request) {
         ...streamTextConfig,
         onFinish: async (finishResult) => {
           try {
-            // Generate a unique message ID for the assistant response
             const assistantMessageId = uuidv4();
-            
-            // Save the assistant message to the database
             await saveFinalAssistantMessage({
               chatId: chatId!,
               messageId: assistantMessageId,
               role: 'assistant',
-              content: finishResult.text,
-              toolCalls: finishResult.toolCalls?.map(tc => ({
-                id: tc.toolCallId,
-                name: tc.toolName,
-                args: tc.args
+              content: finishResult.text || '', // Ensure content is always a string
+              toolCalls: finishResult.toolCalls?.map(toolCall => ({
+                id: toolCall.toolCallId,
+                name: toolCall.toolName,
+                args: toolCall.args,
               })),
               model: effectiveModel,
               userId: userId,
               operationId: operationId_aiSdk,
               correlationId: correlationId
             });
-            
             appLogger.info(`[ChatAPI] ✅ Assistant message saved to database`, {
               correlationId,
               chatId,
@@ -491,15 +488,7 @@ export async function POST(req: Request) {
               chatId,
               error: error instanceof Error ? error.message : String(error)
             });
-            // Don't throw here to avoid breaking the streaming response
           }
-        },
-        onError: ({ error }) => {
-          appLogger.error(`StreamText error during streaming for ${effectiveModel}`, {
-            error,
-            correlationId,
-            operationId: operationId_aiSdk
-          });
         }
       });
       const streamInitDuration = Date.now() - streamStartTime;
@@ -510,41 +499,13 @@ export async function POST(req: Request) {
       });
 
       // Log streaming events
-      aiSdkLogger.logStreamingEvent(operationId_aiSdk, StreamingState.STARTED, {
-        chunkData: 'Stream initialized',
-        totalChunks: 0
-      });
+      const streamingResponse = result.toDataStream();
 
-      // End the operation successfully
-      aiSdkLogger.endOperation(operationId_aiSdk, {
-        response: 'Stream created successfully'
-      });
-
-      // Return the data stream response with proper error handling
-      return result.toDataStreamResponse({
-        getErrorMessage: (error: unknown) => {
-          // Log the actual error for debugging
-          appLogger.error(`Streaming error occurred for ${effectiveModel}`, {
-            error,
-            correlationId,
-            operationId: operationId_aiSdk
-          });
-          
-          // Return a detailed error message to the client
-          if (error == null) {
-            return 'Unknown error occurred';
-          }
-          
-          if (typeof error === 'string') {
-            return error;
-          }
-          
-          if (error instanceof Error) {
-            return error.message;
-          }
-          
-          return JSON.stringify(error);
-        }
+      return new Response(streamingResponse, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Vercel-AI-Data-Stream': 'v1',
+        },
       });
     } catch (error: unknown) {
       const streamError = error instanceof Error ? error : new Error(String(error));
@@ -606,25 +567,18 @@ export async function POST(req: Request) {
     }
 
   } catch (err: unknown) {
-    const totalRequestDuration = Date.now() - requestStartTime;
-    const errorMessage = err instanceof Error ? err.message : "Internal server error";
+    const error = err instanceof Error ? err : new Error(String(err));
+    const requestDuration = Date.now() - requestStartTime;
     
-    appLogger.logSource(LogSource.HTTP, LogLevel.ERROR, `Error in /api/chat: ${errorMessage} (${totalRequestDuration}ms total)`, { 
-      error: err as Error, 
-      correlationId
-    });
-    
-    appLogger.logSource(LogSource.AI_SDK, LogLevel.ERROR, `Chat completion failed: ${errorMessage}`, { 
-      error: err as Error, 
-      correlationId
+    appLogger.logSource(LogSource.HTTP, LogLevel.ERROR, `[ChatAPI] Unhandled API error: ${error.message} (${requestDuration}ms)`, {
+      correlationId,
+      error,
+      stack: error.stack
     });
     
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      `Fatal error processing your request: ${error.message}. The error has been logged.`,
+      { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
     );
   }
 }

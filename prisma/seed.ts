@@ -7,6 +7,7 @@ async function main() {
   // Optionally, create a sample chat for testing
   await prisma.chat.create({
     data: {
+      idempotencyKey: 'seed-chat-1',
       title: "Welcome Chat",
       model: "default",
       systemPrompt: "Welcome to Piper!",
