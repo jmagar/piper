@@ -1,3 +1,5 @@
+"use client"
+
 import { ScrollButton } from "@/components/motion-primitives/scroll-button"
 import { Loader } from "@/components/prompt-kit/loader"
 import { Message } from "./message"
