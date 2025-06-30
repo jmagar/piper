@@ -10,17 +10,11 @@ import { ChatContainer } from "@/components/prompt-kit/chat-container"
 type ConversationProps = {
   messages: MessageType[]
   status: "streaming" | "ready" | "submitted" | "error"
-  onDelete: (id: string) => void
-  onEdit: (id: string, newText: string) => void
-  onReload: () => void
 }
 
 export function Conversation({
   messages,
   status,
-  onDelete,
-  onEdit,
-  onReload,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -53,9 +47,6 @@ export function Conversation({
               variant={message.role}
               attachments={message.experimental_attachments}
               isLast={isLast}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              onReload={onReload}
               hasScrollAnchor={hasScrollAnchor}
               parts={message.parts}
               status={status}

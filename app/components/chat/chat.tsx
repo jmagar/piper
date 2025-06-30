@@ -28,7 +28,7 @@ import { toast } from "@/components/ui/toast"
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
@@ -389,7 +389,7 @@ export function Chat() {
   ]
 
   // Function to load markdown file by index
-  const loadMarkdownByIndex = async (index: number) => {
+  const loadMarkdownByIndex = useCallback(async (index: number) => {
     setIsLoadingMarkdown(true)
     try {
       const file = markdownFiles[index]
@@ -406,29 +406,29 @@ export function Chat() {
     } finally {
       setIsLoadingMarkdown(false)
     }
-  }
+  }, [markdownFiles])
 
   // Function to load random markdown file (for initial load)
-  const loadRandomMarkdown = async () => {
+  const loadRandomMarkdown = useCallback(async () => {
     const randomIndex = Math.floor(Math.random() * markdownFiles.length)
     setCurrentFileIndex(randomIndex)
     await loadMarkdownByIndex(randomIndex)
-  }
+  }, [markdownFiles, loadMarkdownByIndex])
 
   // Navigation functions
-  const navigateToPrevious = () => {
+  const navigateToPrevious = useCallback(() => {
     const newIndex =
       currentFileIndex > 0 ? currentFileIndex - 1 : markdownFiles.length - 1
     setCurrentFileIndex(newIndex)
     loadMarkdownByIndex(newIndex)
-  }
+  }, [currentFileIndex, markdownFiles, loadMarkdownByIndex])
 
-  const navigateToNext = () => {
+  const navigateToNext = useCallback(() => {
     const newIndex =
       currentFileIndex < markdownFiles.length - 1 ? currentFileIndex + 1 : 0
     setCurrentFileIndex(newIndex)
     loadMarkdownByIndex(newIndex)
-  }
+  }, [currentFileIndex, markdownFiles, loadMarkdownByIndex])
 
   // Load random markdown on component mount
   useEffect(() => {
