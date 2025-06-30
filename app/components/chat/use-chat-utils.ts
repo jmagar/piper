@@ -1,26 +1,24 @@
 'use client'
 
+import { useChats } from "@/lib/chat-store/chats/provider"
 import { appLogger } from "@/lib/logger"
 import { toast } from "@/components/ui/toast"
 import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
-import { type CreateNewChatArgs } from "@/lib/chat-store/chats/api"
-import { type Chats } from "@/lib/chat-store/types"
 import { useRef } from "react"
 
 type UseChatUtilsProps = {
   chatId: string | null
   input: string
   selectedModel: string
-  createNewChat: (args: CreateNewChatArgs) => Promise<Chats | undefined>
 }
 
 export function useChatUtils({
   chatId,
   input,
   selectedModel,
-  createNewChat,
 }: UseChatUtilsProps) {
+  const { createNewChat } = useChats()
   // Phase 1 Fix v2: Use refs for synchronous access to prevent React state race conditions
   // This eliminates the timing window where multiple calls could bypass the check
   const isCreatingRef = useRef(false)

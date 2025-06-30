@@ -62,7 +62,6 @@ function SearchParamsProvider({
 export function Chat() {
   const { chatId } = useChatSession()
   const {
-    createNewChat,
     getChatById,
     updateChatModel,
     isLoading: isChatsLoading,
@@ -150,7 +149,6 @@ export function Chat() {
     chatId,
     input,
     selectedModel,
-    createNewChat,
   })
 
   useEffect(() => {
@@ -437,7 +435,7 @@ export function Chat() {
     if (hydrated && !chatId && messages.length === 0) {
       loadRandomMarkdown()
     }
-  }, [hydrated, chatId, messages.length])
+  }, [hydrated, chatId, messages.length, loadRandomMarkdown])
 
   // Function to save edited prompt content
   const handleSavePrompt = async (newContent: string) => {

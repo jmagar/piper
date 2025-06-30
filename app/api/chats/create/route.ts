@@ -2,6 +2,11 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { appLogger } from "@/lib/logger"
 
+type MessageInput = {
+  role: "user" | "assistant"
+  content: string
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -31,39 +36,55 @@ export async function POST(req: Request) {
       )
     }
 
+    // Validate message structure
+    const invalidMessage = messages.find(
+      (msg: MessageInput) =>
+        !msg ||
+        typeof msg !== "object" ||
+        !msg.role ||
+        !msg.content ||
+        !["user", "assistant"].includes(msg.role) ||
+        typeof msg.content !== "string"
+    )
+    if (invalidMessage) {
+      return NextResponse.json(
+        { error: "Invalid message format" },
+        { status: 400 }
+      )
+    }
+
     const newChat = await prisma.chat.create({
       data: {
-        idempotencyKey: idempotencyKey,
         title: title || messages[0].content.substring(0, 100),
-        model: model,
-        systemPrompt: systemPrompt,
-        agentId: agentId,
+        model,
+        systemPrompt,
+        agentId,
+        idempotencyKey,
         messages: {
-          create: messages.map(
-            (msg: { role: "user" | "assistant"; content: string }) => ({
-              role: msg.role,
-              content: msg.content,
-            })
-          ),
+          create: messages.map((msg: MessageInput) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
         },
       },
       include: {
-        messages: true, // Include the newly created messages in the response
+        messages: true,
       },
     })
 
-    appLogger.info("Chat created via dedicated endpoint", {
+    appLogger.info("Chat created successfully", {
       chatId: newChat.id,
-      messageCount: newChat.messages.length,
+      model,
     })
 
     return NextResponse.json({ chat: newChat })
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred"
-    appLogger.error("Failed to create chat via dedicated endpoint", {
-      error: errorMessage,
+    appLogger.error("Error creating chat", {
+      error,
     })
-    return NextResponse.json({ error: errorMessage }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 } 

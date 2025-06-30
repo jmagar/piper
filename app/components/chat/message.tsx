@@ -39,7 +39,11 @@ export function Message({
   }
 
   // Convert createdAt to Date if it's a string
-  const timestamp = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt) : createdAt) : undefined
+  const timestamp = createdAt
+    ? typeof createdAt === "string"
+      ? new Date(createdAt)
+      : createdAt
+    : undefined
 
   if (variant === "user") {
     return (
