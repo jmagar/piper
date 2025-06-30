@@ -28,7 +28,7 @@ import { toast } from "@/components/ui/toast"
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
-import { Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
@@ -376,17 +376,20 @@ export function Chat() {
   }, [error])
 
   // Available markdown files
-  const markdownFiles = [
-    "ROO-IMPROVE-CODE.MD",
-    "ROO-FIX-ISSUES.MD",
-    "ROO-EXPLAIN-CODE.MD",
-    "ROO-ENHANCE-PROMPT.MD",
-    "CONTEXT-CONDENSING-PROMPT.md",
-    "mcp-server-testing-prompt.md",
-    "create-fastmcp-server.md",
-    "expert_prompt_writer.md",
-    "cursor-rules.md",
-  ]
+  const markdownFiles: string[] = useMemo(
+    () => [
+      "ROO-IMPROVE-CODE.MD",
+      "ROO-FIX-ISSUES.MD",
+      "ROO-EXPLAIN-CODE.MD",
+      "ROO-ENHANCE-PROMPT.MD",
+      "CONTEXT-CONDENSING-PROMPT.md",
+      "mcp-server-testing-prompt.md",
+      "create-fastmcp-server.md",
+      "expert_prompt_writer.md",
+      "cursor-rules.md",
+    ],
+    []
+  )
 
   // Function to load markdown file by index
   const loadMarkdownByIndex = useCallback(async (index: number) => {
@@ -565,24 +568,6 @@ export function Chat() {
     }
   }
 
-  const handleReload = async () => {
-    const uid = await getOrCreateGuestUserId()
-    if (!uid) {
-      return
-    }
-
-    const options = {
-      data: {
-        chatId,
-        userId: uid,
-        model: selectedModel,
-        systemPrompt: systemPrompt,
-      },
-    }
-
-    reload(options)
-  }
-
   // not user chatId and no messages
   if (hydrated && chatId && !isChatsLoading && !currentChat) {
     return redirect("/")
@@ -675,9 +660,6 @@ export function Chat() {
                     key="conversation"
                     messages={messages}
                     status={status}
-                    onDelete={handleDelete}
-                    onEdit={handleEdit}
-                    onReload={handleReload}
                   />
                 </ChatHandlersProvider>
               </div>
