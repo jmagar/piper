@@ -32,6 +32,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
+import { ChatHandlersProvider } from "@/app/providers/chat-handlers-provider"
 
 const DialogAuth = dynamic(
   () => import("./dialog-auth").then(mod => mod.DialogAuth),
@@ -166,6 +167,12 @@ export function Chat() {
       chatId,
       updateChatModel,
     })
+
+  const handlers = {
+    onDelete: handleDelete,
+    onEdit: handleEdit,
+    onReload: reload,
+  }
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -665,14 +672,16 @@ export function Chat() {
               </motion.div>
             ) : (
               <div className="mx-auto w-full max-w-4xl">
-                <Conversation
-                  key="conversation"
-                  messages={messages}
-                  status={status}
-                  onDelete={handleDelete}
-                  onEdit={handleEdit}
-                  onReload={handleReload}
-                />
+                <ChatHandlersProvider handlers={handlers}>
+                  <Conversation
+                    key="conversation"
+                    messages={messages}
+                    status={status}
+                    onDelete={handleDelete}
+                    onEdit={handleEdit}
+                    onReload={handleReload}
+                  />
+                </ChatHandlersProvider>
               </div>
             )}
           </AnimatePresence>
