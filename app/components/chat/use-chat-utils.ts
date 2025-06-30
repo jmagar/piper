@@ -73,6 +73,12 @@ export function useChatUtils({
           return null
         }
       }
+      // This case should ideally not be reached if the ref logic is sound.
+      // It indicates that isCreatingRef was set to true, but the creation promise
+      // was not set. This log helps detect any future issues with this logic.
+      console.warn(
+        "ensureChatExists: Concurrent creation detected, but no promise was found. Aborting duplicate request."
+      )
       return null
     }
 
