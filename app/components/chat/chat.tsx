@@ -15,31 +15,26 @@ import { useChats } from "@/lib/chat-store/chats/provider"
 import { type Agent } from "@/app/types/agent"
 import { type Prompt } from "@/app/components/chat-input/use-agent-command"
 import { type Prompt as ApiPrompt } from "@/app/types/prompt"
-import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
-import { getAllTools } from "@/lib/tool-utils";
+import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types"
+import { getAllTools } from "@/lib/tool-utils"
 import { useMessages } from "@/lib/chat-store/messages/provider"
 import type { Session } from "next-auth"
-import {
-  MESSAGE_MAX_LENGTH,
-  SYSTEM_PROMPT_DEFAULT,
-} from "@/lib/config"
+import { MESSAGE_MAX_LENGTH, SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { cn } from "@/lib/utils"
-import { useChat } from "@ai-sdk/react";
-import { toast } from "@/components/ui/toast";
+import { useChat } from "@ai-sdk/react"
+import { toast } from "@/components/ui/toast"
 import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { redirect, useSearchParams } from "next/navigation"
-import { Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { useChatHandlers } from "./use-chat-handlers"
 import { useChatUtils } from "./use-chat-utils"
 import { ChevronUp, ChevronLeft, ChevronRight, Wrench } from "lucide-react"
 
-
-
 const DialogAuth = dynamic(
-  () => import("./dialog-auth").then((mod) => mod.DialogAuth),
+  () => import("./dialog-auth").then(mod => mod.DialogAuth),
   { ssr: false }
 )
 
@@ -85,20 +80,30 @@ export function Chat() {
   }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [attachments, setAttachments] = useState<File[]>([])
-  const [selectedModel, setSelectedModel] = useState(
-    currentChat?.model || ""
-  );
-  const [availableModels, setAvailableModels] = useState<{ id: string; name: string; description: string; context_length: number | null; providerId: string; starred?: boolean }[]>([]);
-  const [starredModelIds, setStarredModelIds] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState(currentChat?.model || "")
+  const [availableModels, setAvailableModels] = useState<
+    {
+      id: string
+      name: string
+      description: string
+      context_length: number | null
+      providerId: string
+      starred?: boolean
+    }[]
+  >([])
+  const [starredModelIds, setStarredModelIds] = useState<string[]>([])
   const { currentAgent, curatedAgents, userAgents } = useAgent()
   const availableAgents = [...(curatedAgents || []), ...(userAgents || [])]
-  const [fetchedTools, setFetchedTools] = useState<FetchedToolInfo[]>([]);
-  const availableTools = fetchedTools;
-  const [mcpServers, setMcpServers] = useState<{ name: string; status: string; toolCount: number; transportType: string }[]>([]);
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [randomMarkdownContent, setRandomMarkdownContent] = useState<string>("");
-  const [isLoadingMarkdown, setIsLoadingMarkdown] = useState(false);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [fetchedTools, setFetchedTools] = useState<FetchedToolInfo[]>([])
+  const availableTools = fetchedTools
+  const [mcpServers, setMcpServers] = useState<
+    { name: string; status: string; toolCount: number; transportType: string }[]
+  >([])
+  const [prompts, setPrompts] = useState<Prompt[]>([])
+  const [randomMarkdownContent, setRandomMarkdownContent] =
+    useState<string>("")
+  const [isLoadingMarkdown, setIsLoadingMarkdown] = useState(false)
+  const [currentFileIndex, setCurrentFileIndex] = useState(0)
 
   const [isInputSectionCollapsed, setIsInputSectionCollapsed] = useState(false)
   const systemPrompt =
@@ -109,53 +114,47 @@ export function Chat() {
 
   const { draftValue, clearDraft } = useChatDraft(chatId)
 
-  const { messages, input, handleSubmit, status, error, reload, stop, setMessages, setInput } = useChat({
+  const {
+    messages,
+    input,
+    handleSubmit,
+    status,
+    error,
+    reload,
+    stop,
+    setMessages,
+    setInput,
+  } = useChat({
     api: API_ROUTE_CHAT,
     initialMessages,
     initialInput: draftValue,
     // Throttle streaming updates to improve performance during long responses
     experimental_throttle: 50,
-    onFinish: async (message) => {
+    onFinish: async message => {
       // store the assistant message in the cache
       await cacheAndAddMessage(message)
     },
-  });
+  })
 
   // Display chat errors using toast notifications
   useEffect(() => {
     if (error) {
-      toast({ title: error.message, status: 'error' });
+      toast({ title: error.message, status: "error" })
       // Consider if the error object needs to be 'cleared' from useChat's state
       // or if it automatically clears. For now, just displaying.
     }
-  }, [error]);
-
-  // Wrapper for createNewChat to match the signature expected by useChatUtils
-  const createNewChatForUtils = useCallback(
-    async (
-      title?: string,
-      model?: string
-    ): Promise<{ id: string } | null> => {
-      const newChat = await createNewChat(title, model) // Uses createNewChat from useChats
-      if (newChat && newChat.id) {
-        return { id: newChat.id }
-      }
-      return null
-    },
-    [createNewChat] // Dependency array for useCallback
-  )
+  }, [error])
 
   const { checkLimitsAndNotify, ensureChatExists } = useChatUtils({
     chatId,
-    messages,
     input,
     selectedModel,
-    createNewChat: createNewChatForUtils, // Pass the wrapper function
+    createNewChat,
   })
 
   useEffect(() => {
-    setActiveChatId(chatId ?? null);
-  }, [chatId, setActiveChatId]);
+    setActiveChatId(chatId ?? null)
+  }, [chatId, setActiveChatId])
 
   const { handleInputChange, handleDelete, handleEdit, handleModelChange } =
     useChatHandlers({
@@ -171,128 +170,154 @@ export function Chat() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const response = await fetch('/api/openrouter-models');
+        const response = await fetch("/api/openrouter-models")
         if (!response.ok) {
-          console.error('Failed to fetch models:', response.statusText);
-          setAvailableModels([]); 
-          return;
+          console.error("Failed to fetch models:", response.statusText)
+          setAvailableModels([])
+          return
         }
-        const models: { id: string; name: string; description: string; context_length: number | null; providerId: string; }[] = await response.json();
-        
+        const models: {
+          id: string
+          name: string
+          description: string
+          context_length: number | null
+          providerId: string
+        }[] = await response.json()
+
         // Model analysis logging (development only)
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`📡 Loaded ${models.length} models from OpenRouter API`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`📡 Loaded ${models.length} models from OpenRouter API`)
         }
-        
-        const modelsWithInitialStar = models.map(m => ({...m, starred: starredModelIds.includes(m.id) }))
-        setAvailableModels(modelsWithInitialStar);
+
+        const modelsWithInitialStar = models.map(m => ({
+          ...m,
+          starred: starredModelIds.includes(m.id),
+        }))
+        setAvailableModels(modelsWithInitialStar)
 
         if (modelsWithInitialStar.length > 0) {
-          const currentModelExists = modelsWithInitialStar.find(model => model.id === selectedModel);
+          const currentModelExists = modelsWithInitialStar.find(
+            model => model.id === selectedModel
+          )
           if (!currentModelExists || !selectedModel) {
             // Prefer Claude Sonnet models, then any Claude model, then first available
-            const preferredModel = modelsWithInitialStar.find(model => 
-              model.id.includes('claude') && model.id.includes('sonnet')
-            ) || modelsWithInitialStar.find(model => 
-              model.id.includes('claude')
-            ) || modelsWithInitialStar[0];
+            const preferredModel =
+              modelsWithInitialStar.find(
+                model =>
+                  model.id.includes("claude") && model.id.includes("sonnet")
+              ) ||
+              modelsWithInitialStar.find(model => model.id.includes("claude")) ||
+              modelsWithInitialStar[0]
 
             if (preferredModel) {
-              setSelectedModel(preferredModel.id);
+              setSelectedModel(preferredModel.id)
             }
           }
         }
       } catch (error) {
-        console.error("Error fetching available models:", error);
-        setAvailableModels([]);
+        console.error("Error fetching available models:", error)
+        setAvailableModels([])
         // No fallback - wait for models to load
       }
-    };
-    fetchModels();
-  }, [chatId, updateChatModel, hydrated, selectedModel, starredModelIds]);
+    }
+    fetchModels()
+  }, [chatId, updateChatModel, hydrated, selectedModel, starredModelIds])
 
   useEffect(() => {
     const fetchTools = async () => {
       try {
-        const tools = await getAllTools();
-        setFetchedTools(tools);
-        
+        const tools = await getAllTools()
+        setFetchedTools(tools)
+
         // Fetch MCP server information using existing metrics system
-        const metricsResponse = await fetch('/api/mcp-metrics');
+        const metricsResponse = await fetch("/api/mcp-metrics")
         if (metricsResponse.ok) {
-          const metricsData = await metricsResponse.json();
+          const metricsData = await metricsResponse.json()
           if (metricsData.success && metricsData.data?.metrics?.servers) {
             const servers = metricsData.data.metrics.servers
-              .filter((server: { status: string }) => server.status === 'success') // Only show connected servers
-              .map((server: { 
-                label: string; 
-                status: string; 
-                toolsCount: number; 
-                transportType: string;
-              }) => ({
-                name: server.label,
-                status: 'Connected',
-                toolCount: server.toolsCount,
-                transportType: server.transportType
-              }));
-            setMcpServers(servers);
+              .filter((server: { status: string }) => server.status === "success") // Only show connected servers
+              .map(
+                (server: {
+                  label: string
+                  status: string
+                  toolsCount: number
+                  transportType: string
+                }) => ({
+                  name: server.label,
+                  status: "Connected",
+                  toolCount: server.toolsCount,
+                  transportType: server.transportType,
+                })
+              )
+            setMcpServers(servers)
           }
         }
       } catch (error) {
-        console.error("Error fetching available tools:", error);
-        setFetchedTools([]); // Set to empty on error
-        setMcpServers([]);
-        toast({ title: "Failed to load tools", status: "error" });
+        console.error("Error fetching available tools:", error)
+        setFetchedTools([]) // Set to empty on error
+        setMcpServers([])
+        toast({ title: "Failed to load tools", status: "error" })
       }
-    };
-    fetchTools();
-  }, []); // Empty dependency array to run once on mount
+    }
+    fetchTools()
+  }, []) // Empty dependency array to run once on mount
 
   useEffect(() => {
-    const storedStarredIds = localStorage.getItem('starredModelIds');
+    const storedStarredIds = localStorage.getItem("starredModelIds")
     if (storedStarredIds) {
-      setStarredModelIds(JSON.parse(storedStarredIds));
+      setStarredModelIds(JSON.parse(storedStarredIds))
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    if (hydrated) { 
-      localStorage.setItem('starredModelIds', JSON.stringify(starredModelIds));
+    if (hydrated) {
+      localStorage.setItem("starredModelIds", JSON.stringify(starredModelIds))
     }
-  }, [starredModelIds, hydrated]);
+  }, [starredModelIds, hydrated])
 
   useEffect(() => {
-    setAvailableModels(prevModels => 
-      prevModels.map(model => ({...model, starred: starredModelIds.includes(model.id)}))
-    );
-  }, [starredModelIds]);
+    setAvailableModels(prevModels =>
+      prevModels.map(model => ({
+        ...model,
+        starred: starredModelIds.includes(model.id),
+      }))
+    )
+  }, [starredModelIds])
 
   useEffect(() => {
-    if (availableModels.length > 0 && hydrated) { 
-      const currentModelExists = availableModels.find(model => model.id === selectedModel);
+    if (availableModels.length > 0 && hydrated) {
+      const currentModelExists = availableModels.find(
+        model => model.id === selectedModel
+      )
       if (!currentModelExists || !selectedModel) {
         // Prefer Claude Sonnet models, then any Claude model, then first available
-        const preferredModel = availableModels.find(model => 
-          model.id.includes('claude') && model.id.includes('sonnet')
-        ) || availableModels.find(model => 
-          model.id.includes('claude')
-        ) || availableModels[0];
+        const preferredModel =
+          availableModels.find(
+            model => model.id.includes("claude") && model.id.includes("sonnet")
+          ) ||
+          availableModels.find(model => model.id.includes("claude")) ||
+          availableModels[0]
 
         if (preferredModel) {
-          setSelectedModel(preferredModel.id);
+          setSelectedModel(preferredModel.id)
         }
       }
     }
-  }, [availableModels, selectedModel, hydrated]);
+  }, [availableModels, selectedModel, hydrated])
 
   useEffect(() => {
-    if (currentChat && chatId && selectedModel && currentChat.model !== selectedModel) {
+    if (
+      currentChat &&
+      chatId &&
+      selectedModel &&
+      currentChat.model !== selectedModel
+    ) {
       if (availableModels.find(m => m.id === selectedModel)) {
-        updateChatModel(chatId, selectedModel);
-        currentChat.model = selectedModel;
+        updateChatModel(chatId, selectedModel)
+        currentChat.model = selectedModel
       }
     }
-  }, [selectedModel, currentChat, chatId, updateChatModel, availableModels]);
+  }, [selectedModel, currentChat, chatId, updateChatModel, availableModels])
 
   // when chatId is null, set messages to an empty array
   useEffect(() => {
@@ -347,92 +372,97 @@ export function Chat() {
 
   // Available markdown files
   const markdownFiles = [
-    'ROO-IMPROVE-CODE.MD',
-    'ROO-FIX-ISSUES.MD', 
-    'ROO-EXPLAIN-CODE.MD',
-    'ROO-ENHANCE-PROMPT.MD',
-    'CONTEXT-CONDENSING-PROMPT.md',
-    'mcp-server-testing-prompt.md',
-    'create-fastmcp-server.md',
-    'expert_prompt_writer.md',
-    'cursor-rules.md'
-  ];
+    "ROO-IMPROVE-CODE.MD",
+    "ROO-FIX-ISSUES.MD",
+    "ROO-EXPLAIN-CODE.MD",
+    "ROO-ENHANCE-PROMPT.MD",
+    "CONTEXT-CONDENSING-PROMPT.md",
+    "mcp-server-testing-prompt.md",
+    "create-fastmcp-server.md",
+    "expert_prompt_writer.md",
+    "cursor-rules.md",
+  ]
 
   // Function to load markdown file by index
   const loadMarkdownByIndex = async (index: number) => {
-    setIsLoadingMarkdown(true);
+    setIsLoadingMarkdown(true)
     try {
-      const file = markdownFiles[index];
-      const response = await fetch(`/api/prompts/docs/${file}`);
-      
+      const file = markdownFiles[index]
+      const response = await fetch(`/api/prompts/docs/${file}`)
+
       if (response.ok) {
-        const content = await response.text();
-        setRandomMarkdownContent(content);
+        const content = await response.text()
+        setRandomMarkdownContent(content)
       } else {
-        console.error('Failed to load markdown file:', response.statusText);
+        console.error("Failed to load markdown file:", response.statusText)
       }
     } catch (error) {
-      console.error('Error loading markdown:', error);
+      console.error("Error loading markdown:", error)
     } finally {
-      setIsLoadingMarkdown(false);
+      setIsLoadingMarkdown(false)
     }
-  };
+  }
 
   // Function to load random markdown file (for initial load)
   const loadRandomMarkdown = async () => {
-    const randomIndex = Math.floor(Math.random() * markdownFiles.length);
-    setCurrentFileIndex(randomIndex);
-    await loadMarkdownByIndex(randomIndex);
-  };
+    const randomIndex = Math.floor(Math.random() * markdownFiles.length)
+    setCurrentFileIndex(randomIndex)
+    await loadMarkdownByIndex(randomIndex)
+  }
 
   // Navigation functions
   const navigateToPrevious = () => {
-    const newIndex = currentFileIndex > 0 ? currentFileIndex - 1 : markdownFiles.length - 1;
-    setCurrentFileIndex(newIndex);
-    loadMarkdownByIndex(newIndex);
-  };
+    const newIndex =
+      currentFileIndex > 0 ? currentFileIndex - 1 : markdownFiles.length - 1
+    setCurrentFileIndex(newIndex)
+    loadMarkdownByIndex(newIndex)
+  }
 
   const navigateToNext = () => {
-    const newIndex = currentFileIndex < markdownFiles.length - 1 ? currentFileIndex + 1 : 0;
-    setCurrentFileIndex(newIndex);
-    loadMarkdownByIndex(newIndex);
-  };
+    const newIndex =
+      currentFileIndex < markdownFiles.length - 1 ? currentFileIndex + 1 : 0
+    setCurrentFileIndex(newIndex)
+    loadMarkdownByIndex(newIndex)
+  }
 
   // Load random markdown on component mount
   useEffect(() => {
     if (hydrated && !chatId && messages.length === 0) {
-      loadRandomMarkdown();
+      loadRandomMarkdown()
     }
-  }, [hydrated, chatId, messages.length]);
+  }, [hydrated, chatId, messages.length])
 
   // Function to save edited prompt content
   const handleSavePrompt = async (newContent: string) => {
     try {
-      const currentFile = markdownFiles[currentFileIndex];
+      const currentFile = markdownFiles[currentFileIndex]
       const response = await fetch(`/api/prompts/docs/${currentFile}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ content: newContent }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to save prompt');
+        throw new Error("Failed to save prompt")
       }
 
       // Update the displayed content and clear cache
-      setRandomMarkdownContent(newContent);
-      
-      // Optionally show a success message
-      console.log('Prompt saved successfully');
-    } catch (error) {
-      console.error('Error saving prompt:', error);
-      throw error; // Re-throw to let the CodeBlock component handle the error
-    }
-  };
+      setRandomMarkdownContent(newContent)
 
-  const submit = async (value: string, data?: { agent?: Agent | null; tool?: FetchedToolInfo | null }) => {
+      // Optionally show a success message
+      console.log("Prompt saved successfully")
+    } catch (error) {
+      console.error("Error saving prompt:", error)
+      throw error // Re-throw to let the CodeBlock component handle the error
+    }
+  }
+
+  const submit = async (
+    value: string,
+    data?: { agent?: Agent | null; tool?: FetchedToolInfo | null }
+  ) => {
     setIsSubmitting(true)
 
     if (!value.trim()) {
@@ -468,30 +498,37 @@ export function Chat() {
     }
 
     // Validate file sizes before processing
-    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
-    const oversizedFiles = attachments.filter(file => file.size > MAX_FILE_SIZE);
+    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB limit
+    const oversizedFiles = attachments.filter(file => file.size > MAX_FILE_SIZE)
     if (oversizedFiles.length > 0) {
       toast({
-        title: `Some files exceed the ${MAX_FILE_SIZE / 1024 / 1024}MB limit`,
+        title: `Some files exceed the ${
+          MAX_FILE_SIZE / 1024 / 1024
+        }MB limit`,
         status: "error",
-      });
-      setIsSubmitting(false);
-      return;
+      })
+      setIsSubmitting(false)
+      return
     }
 
-    const attachmentsPayload = attachments.length > 0 ? await Promise.all(
-      attachments.map(async (file) => {
-        const arrayBuffer = await file.arrayBuffer()
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-        const dataUrl = `data:${file.type};base64,${base64}`
-        
-        return {
-          name: file.name,
-          contentType: file.type,
-          url: dataUrl,
-        }
-      })
-    ) : undefined
+    const attachmentsPayload =
+      attachments.length > 0
+        ? await Promise.all(
+            attachments.map(async file => {
+              const arrayBuffer = await file.arrayBuffer()
+              const base64 = btoa(
+                String.fromCharCode(...new Uint8Array(arrayBuffer))
+              )
+              const dataUrl = `data:${file.type};base64,${base64}`
+
+              return {
+                name: file.name,
+                contentType: file.type,
+                url: dataUrl,
+              }
+            })
+          )
+        : undefined
 
     const options = {
       data: {
@@ -500,20 +537,20 @@ export function Chat() {
         model: selectedModel,
         systemPrompt: systemPrompt,
         ...(data?.agent && { agentId: data.agent.id }),
-        ...(data?.tool && { 
+        ...(data?.tool && {
           toolName: data.tool.name,
           // Assuming parameters are handled separately or are part of the tool object
-          // toolParameters: data.tool.parameters 
+          // toolParameters: data.tool.parameters
         }),
       },
       experimental_attachments: attachmentsPayload,
     }
 
     try {
-      await handleSubmit(undefined, options);
+      await handleSubmit(undefined, options)
 
-      clearDraft();
-      setAttachments([]);
+      clearDraft()
+      setAttachments([])
       hasSentFirstMessageRef.current = true
     } catch (submitError) {
       toast({ title: "Failed to send message", status: "error" })
@@ -547,27 +584,23 @@ export function Chat() {
   }
 
   return (
-    <div
-      className={cn(
-        "@container/main relative flex h-full flex-col"
-      )}
-    >
+    <div className={cn("@container/main relative flex h-full flex-col")}>
       {/* <DialogAuth open={hasDialogAuth} setOpen={setHasDialogAuth} /> */}
       <DialogAuth />
 
-            {/* Add Suspense boundary for SearchParamsProvider */}
+      {/* Add Suspense boundary for SearchParamsProvider */}
       <Suspense fallback={<div>Loading...</div>}>
         <SearchParamsProvider setInput={setInput} />
       </Suspense>
 
       {/* Main content area - scrollable, takes remaining space */}
       <div className="flex-1 overflow-y-auto">
-        <div className="min-h-full flex flex-col items-center justify-center px-4 py-4">
+        <div className="flex min-h-full flex-col items-center justify-center px-4 py-4">
           <AnimatePresence initial={false} mode="popLayout">
             {!chatId && messages.length === 0 ? (
               <motion.div
                 key="onboarding"
-                className="w-full max-w-4xl mx-auto"
+                className="mx-auto w-full max-w-4xl"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -582,19 +615,22 @@ export function Chat() {
                 {/* Display random markdown content with navigation */}
                 {isLoadingMarkdown ? (
                   <div className="flex items-center justify-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
                   </div>
                 ) : randomMarkdownContent ? (
-                  <div className="relative max-w-3xl mx-auto px-12 md:px-0">
+                  <div className="relative mx-auto max-w-3xl px-12 md:px-0">
                     {/* Left Arrow */}
                     <button
                       onClick={navigateToPrevious}
-                      className="absolute left-2 md:left-0 top-1/2 -translate-y-1/2 md:-translate-x-12 z-10 flex items-center justify-center w-10 h-10 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full hover:bg-background/95 hover:border-border transition-all duration-200 shadow-md hover:shadow-lg"
+                      className="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/50 bg-background/80 shadow-md backdrop-blur-sm transition-all duration-200 hover:border-border hover:bg-background/95 hover:shadow-lg md:left-0 md:-translate-x-12"
                       aria-label="Previous prompt"
                     >
-                      <ChevronLeft size={20} className="text-muted-foreground hover:text-foreground" />
+                      <ChevronLeft
+                        size={20}
+                        className="text-muted-foreground hover:text-foreground"
+                      />
                     </button>
-                    
+
                     {/* CodeBlock */}
                     <div className="max-h-[48rem] overflow-y-auto">
                       <CodeBlock>
@@ -605,25 +641,30 @@ export function Chat() {
                         />
                       </CodeBlock>
                     </div>
-                    
+
                     {/* Right Arrow */}
                     <button
                       onClick={navigateToNext}
-                      className="absolute right-2 md:right-0 top-1/2 -translate-y-1/2 md:translate-x-12 z-10 flex items-center justify-center w-10 h-10 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full hover:bg-background/95 hover:border-border transition-all duration-200 shadow-md hover:shadow-lg"
+                      className="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/50 bg-background/80 shadow-md backdrop-blur-sm transition-all duration-200 hover:border-border hover:bg-background/95 hover:shadow-lg md:right-0 md:translate-x-12"
                       aria-label="Next prompt"
                     >
-                      <ChevronRight size={20} className="text-muted-foreground hover:text-foreground" />
+                      <ChevronRight
+                        size={20}
+                        className="text-muted-foreground hover:text-foreground"
+                      />
                     </button>
-                    
+
                     {/* File indicator */}
-                    <div className="flex items-center justify-center mt-4 text-xs text-muted-foreground">
-                      <span>{currentFileIndex + 1} of {markdownFiles.length}</span>
+                    <div className="mt-4 flex items-center justify-center text-xs text-muted-foreground">
+                      <span>
+                        {currentFileIndex + 1} of {markdownFiles.length}
+                      </span>
                     </div>
                   </div>
                 ) : null}
               </motion.div>
             ) : (
-              <div className="w-full max-w-4xl mx-auto">
+              <div className="mx-auto w-full max-w-4xl">
                 <Conversation
                   key="conversation"
                   messages={messages}
@@ -642,9 +683,7 @@ export function Chat() {
       <div className="flex-shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-sm">
         <div className="px-4 py-4">
           <motion.div
-            className={cn(
-              "relative mx-auto w-full max-w-3xl"
-            )}
+            className={cn("relative mx-auto w-full max-w-3xl")}
             layout="position"
             layoutId="chat-input-container"
             transition={{
@@ -654,7 +693,7 @@ export function Chat() {
             }}
           >
             {/* Enhanced input container with unified styling */}
-            <div className="w-full bg-background/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 p-3 space-y-1">
+            <div className="w-full space-y-1 rounded-2xl border border-border/50 bg-background/95 p-3 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
               {/* Collapsible Model selector and tools info row */}
               <AnimatePresence>
                 {!isInputSectionCollapsed && (
@@ -666,16 +705,16 @@ export function Chat() {
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="flex items-center justify-between text-sm pb-2">
+                    <div className="flex items-center justify-between pb-2 text-sm">
                       <div className="flex items-center gap-2">
                         {selectedModel && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                          <div className="h-2 w-2 rounded-full bg-green-500" />
                         )}
                         <ModelSelector
                           availableModels={availableModels}
                           selectedModelId={selectedModel}
                           setSelectedModelId={handleModelChange}
-                          className="border-border/30 shadow-sm hover:shadow-md transition-all duration-200"
+                          className="border-border/30 shadow-sm transition-all duration-200 hover:shadow-md"
                           isUserAuthenticated={!!session?.user?.id}
                         />
                       </div>
@@ -686,31 +725,47 @@ export function Chat() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
-                                className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-md border border-border/30 hover:bg-muted transition-colors"
+                                className="flex items-center gap-1.5 rounded-md border border-border/30 bg-muted/50 px-2 py-1 transition-colors hover:bg-muted"
                                 aria-label="View connected MCP servers"
                               >
-                                <Wrench className="w-3.5 h-3.5 text-blue-500" />
+                                <Wrench className="h-3.5 w-3.5 text-blue-500" />
                                 <span className="text-xs font-medium text-muted-foreground">
                                   {availableTools.length}
                                 </span>
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs bg-popover border-border text-popover-foreground">
+                            <TooltipContent
+                              side="top"
+                              className="max-w-xs border-border bg-popover text-popover-foreground"
+                            >
                               <div className="space-y-2">
-                                <div className="font-medium text-sm text-foreground">Connected MCP Servers</div>
+                                <div className="text-sm font-medium text-foreground">
+                                  Connected MCP Servers
+                                </div>
                                 {mcpServers.length > 0 ? (
                                   mcpServers.map((server, index) => (
-                                    <div key={index} className="flex items-center justify-between text-xs">
+                                    <div
+                                      key={index}
+                                      className="flex items-center justify-between text-xs"
+                                    >
                                       <div className="flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                        <span className="font-medium text-foreground">{server.name}</span>
-                                        <span className="text-muted-foreground uppercase text-[10px]">({server.transportType})</span>
+                                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                        <span className="font-medium text-foreground">
+                                          {server.name}
+                                        </span>
+                                        <span className="text-[10px] uppercase text-muted-foreground">
+                                          ({server.transportType})
+                                        </span>
                                       </div>
-                                      <span className="text-muted-foreground">{server.toolCount} tools</span>
+                                      <span className="text-muted-foreground">
+                                        {server.toolCount} tools
+                                      </span>
                                     </div>
                                   ))
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">No servers connected</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    No servers connected
+                                  </div>
                                 )}
                               </div>
                             </TooltipContent>
@@ -723,11 +778,15 @@ export function Chat() {
               </AnimatePresence>
 
               {/* Collapse/expand button */}
-              <div className="flex items-center justify-center -my-1">
+              <div className="-my-1 flex items-center justify-center">
                 <button
-                  onClick={() => setIsInputSectionCollapsed(!isInputSectionCollapsed)}
-                  className="flex w-full items-center justify-center gap-1 rounded-md py-0.5 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                  aria-label={isInputSectionCollapsed ? "Show options" : "Hide options"}
+                  onClick={() =>
+                    setIsInputSectionCollapsed(!isInputSectionCollapsed)
+                  }
+                  className="flex w-full items-center justify-center gap-1 rounded-md py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                  aria-label={
+                    isInputSectionCollapsed ? "Show options" : "Hide options"
+                  }
                 >
                   <motion.div
                     animate={{ rotate: isInputSectionCollapsed ? 180 : 0 }}
@@ -743,7 +802,7 @@ export function Chat() {
                 <ChatInput
                   value={input}
                   onValueChange={handleInputChange}
-                  onSend={(data) => submit(input, data)}
+                  onSend={data => submit(input, data)}
                   onStop={stop}
                   isSubmitting={isSubmitting}
                   isStreaming={status === "streaming"}

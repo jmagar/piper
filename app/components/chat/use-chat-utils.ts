@@ -82,17 +82,21 @@ export function useChatUtils({
     // Create the promise immediately to prevent timing window race condition
     const creationPromise = (async (): Promise<string | null> => {
       try {
+        const idempotencyKey = crypto.randomUUID(); // Generate a unique key for the request
         const newChat = await createNewChat({
+          idempotencyKey, // Pass the key to the API
           title: input.substring(0, 100), // Use first 100 chars as title
           model: selectedModel,
           messages: [{ role: "user", content: input }],
         })
 
-        if (!newChat) {
+        if (!newChat || !newChat.id) {
           throw new Error("Failed to create chat: No chat returned from API")
         }
 
-        // Update browser URL without triggering navigation
+        // IMPORTANT FIX:
+        // The chat state is now updated via `refresh()` inside `createNewChat`.
+        // We can now safely update the URL.
         window.history.pushState(null, "", `/c/${newChat.id}`)
 
         return newChat.id
