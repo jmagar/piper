@@ -12,6 +12,7 @@ export { LogSource } from './constants'; // Export LogSource from constants.ts
 
 // Variables for server-side components, will be initialized asynchronously
 let winston: typeof import('winston') | undefined;
+let DailyRotateFile: typeof import('winston-daily-rotate-file') | undefined;
 let path: typeof import('path') | undefined;
 let consoleFormat: import('winston').Logform.Format | undefined;
 let winstonLogger: import('winston').Logger | null = null;
@@ -24,6 +25,9 @@ async function initializeServerComponents() {
   try {
     const winstonModule = await import('winston');
     winston = winstonModule.default || winstonModule;
+    
+    const dailyRotateModule = await import('winston-daily-rotate-file');
+    DailyRotateFile = dailyRotateModule.default || dailyRotateModule;
     
     const pathModule = await import('path');
     path = pathModule.default || pathModule;
@@ -91,17 +95,29 @@ async function initializeServerComponents() {
 const isDevelopment = process.env.NODE_ENV === 'development';
 const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info');
 
-// Create basic file transport (no rotation for now to avoid client-side issues)
+// Create daily rotating file transport
 const createFileTransport = (logsDir: string, filename: string, level?: string) => {
-  return new winston!.transports.File({
-    filename: path!.join(logsDir, `${filename}.log`),
+  // Use environment-specific rotation config
+  const env = process.env.NODE_ENV as 'development' | 'production' | 'testing' || 'development';
+  const rotationConfigs = {
+    development: { maxSize: '10m', maxFiles: '7d', datePattern: 'YYYY-MM-DD' },
+    production: { maxSize: '50m', maxFiles: '90d', datePattern: 'YYYY-MM-DD' },
+    testing: { maxSize: '1m', maxFiles: '1d', datePattern: 'YYYY-MM-DD' },
+  };
+  const config = rotationConfigs[env] || rotationConfigs.development;
+
+  return new DailyRotateFile!({
+    filename: path!.join(logsDir, `${filename}-%DATE%.log`),
+    datePattern: config.datePattern,
+    maxSize: config.maxSize,
+    maxFiles: config.maxFiles,
     level: level || logLevel,
+    zippedArchive: true, // Compress old logs
     format: winston!.format.combine(
       winston!.format.timestamp(),
       winston!.format.json()
     ),
-    maxsize: 20 * 1024 * 1024, // 20MB
-    maxFiles: 5, // Keep 5 backup files
+    auditFile: path!.join(logsDir, `${filename}-audit.json`), // Track rotated files
   });
 };
 
