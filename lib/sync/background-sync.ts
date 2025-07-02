@@ -121,22 +121,43 @@ export class BackgroundSyncManager {
       }
 
       const channel = new MessageChannel()
+      let hasResolved = false
       
-      channel.port1.onmessage = (event) => {
-        resolve(event.data)
+      const cleanup = () => {
+        if (channel.port1) {
+          channel.port1.close()
+        }
+        if (channel.port2) {
+          channel.port2.close()
+        }
       }
+
+      channel.port1.onmessage = (event) => {
+        if (!hasResolved) {
+          hasResolved = true
+          cleanup()
+          resolve(event.data)
+        }
+      }
+
+
 
       try {
         this.sw.postMessage({
           type: 'GET_SYNC_STATUS'
         }, [channel.port2])
       } catch (error) {
+        cleanup()
         reject(error)
       }
 
-      // Timeout after 5 seconds
+      // Timeout after 5 seconds with proper cleanup
       setTimeout(() => {
-        reject(new Error('Sync status request timed out'))
+        if (!hasResolved) {
+          hasResolved = true
+          cleanup()
+          reject(new Error('Sync status request timed out'))
+        }
       }, 5000)
     })
   }
@@ -278,10 +299,10 @@ export function useOfflineChatWithSync(chatId?: string) {
         } else {
           throw new Error('Failed to send message')
         }
-              } catch {
-          console.warn('[Offline Chat] Failed to send online, queuing for sync')
-          await queueForSync(messageAction)
-        }
+                    } catch (error) {
+        console.warn('[Offline Chat] Failed to send online, queuing for sync:', error)
+        await queueForSync(messageAction)
+      }
     } else {
       // Queue for later sync
       await queueForSync(messageAction)

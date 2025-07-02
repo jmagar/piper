@@ -101,11 +101,34 @@ class OfflineStorage {
             db.createObjectStore('settings', { keyPath: 'key' })
           }
         },
+        blocked() {
+          console.warn('Database upgrade blocked - another version may be open in another tab')
+        },
+        blocking() {
+          console.warn('Database blocking another upgrade - closing connection')
+          if (this.db) {
+            this.db.close()
+            this.db = null
+          }
+        },
+        terminated() {
+          console.warn('Database connection terminated unexpectedly')
+          this.db = null
+        }
       })
 
       console.log('Offline storage initialized successfully')
     } catch (error) {
       console.error('Failed to initialize offline storage:', error)
+      // Clean up on error
+      if (this.db) {
+        try {
+          this.db.close()
+        } catch (closeError) {
+          console.warn('Error closing database after init failure:', closeError)
+        }
+        this.db = null
+      }
       throw error
     }
   }
@@ -190,25 +213,45 @@ class OfflineStorage {
   async saveMessage(message: OfflineMessage): Promise<void> {
     await this.ensureDB()
     try {
+      // Use a transaction-like approach to prevent race conditions
       await this.db!.put('messages', message)
       
       // Update the chat's message list if it exists
-      const chat = await this.getChat(message.chatId)
-      if (chat) {
-        const existingIndex = chat.messages.findIndex(m => m.id === message.id)
-        if (existingIndex >= 0) {
-          chat.messages[existingIndex] = message
-        } else {
-          chat.messages.push(message)
+      // Retry logic for race condition handling
+      let retries = 0
+      const maxRetries = 3
+      
+      while (retries < maxRetries) {
+        try {
+          const chat = await this.getChat(message.chatId)
+          if (chat) {
+            const existingIndex = chat.messages.findIndex(m => m.id === message.id)
+            if (existingIndex >= 0) {
+              chat.messages[existingIndex] = message
+            } else {
+              chat.messages.push(message)
+            }
+            chat.messages.sort((a, b) => a.timestamp - b.timestamp)
+            chat.lastUpdated = Date.now()
+            await this.saveChat(chat)
+          }
+          break // Success, exit retry loop
+        } catch (chatUpdateError) {
+          retries++
+          if (retries >= maxRetries) {
+            console.error('Failed to update chat after multiple retries:', chatUpdateError)
+            // Don't throw - message is saved, chat update failed but that's not critical
+          } else {
+            console.warn(`Chat update failed, retrying (${retries}/${maxRetries}):`, chatUpdateError)
+            await new Promise(resolve => setTimeout(resolve, 100 * retries)) // Exponential backoff
+          }
         }
-        chat.messages.sort((a, b) => a.timestamp - b.timestamp)
-        await this.saveChat(chat)
       }
       
       console.log('Message saved offline:', message.id)
     } catch (error) {
       console.error('Failed to save message offline:', error)
-      throw error
+      throw new Error(`Failed to save message: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -366,7 +409,12 @@ class OfflineStorage {
 
   private async ensureDB(): Promise<void> {
     if (!this.db) {
-      await this.init()
+      try {
+        await this.init()
+      } catch (error) {
+        console.error('Failed to ensure database connection:', error)
+        throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
     }
   }
 

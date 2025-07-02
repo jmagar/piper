@@ -59,14 +59,24 @@ export const AgentProvider = ({ children, userId }: AgentProviderProps) => {
   const [userAgents, setUserAgents] = useState<Agent[] | null>(null)
 
   const fetchCuratedAgents = useCallback(async () => {
-    const agents = await fetchCuratedAgentsFromDb()
-    if (agents) setCuratedAgents(agents)
+    try {
+      const agents = await fetchCuratedAgentsFromDb()
+      if (agents) setCuratedAgents(agents)
+    } catch (error) {
+      console.error('Failed to fetch curated agents:', error)
+      setCuratedAgents([]) // Set empty array on error
+    }
   }, [])
 
   const fetchUserAgents = useCallback(async () => {
     if (!userId) return
-    const agents = await fetchUserAgentsFromDb()
-    if (agents) setUserAgents(agents)
+    try {
+      const agents = await fetchUserAgentsFromDb()
+      if (agents) setUserAgents(agents)
+    } catch (error) {
+      console.error('Failed to fetch user agents:', error)
+      setUserAgents([]) // Set empty array on error
+    }
   }, [userId])
 
   const fetchCurrentAgent = useCallback(async () => {
@@ -75,12 +85,18 @@ export const AgentProvider = ({ children, userId }: AgentProviderProps) => {
       return
     }
 
-    const agent = await fetchAgentBySlugOrId({
-      slug: agentSlug || undefined,
-      id: currentChatAgentId || undefined,
-    })
+    try {
+      const agent = await fetchAgentBySlugOrId({
+        slug: agentSlug || undefined,
+        id: currentChatAgentId || undefined,
+      })
 
-    setCurrentAgent(agent)
+      setCurrentAgent(agent)
+    } catch (error) {
+      console.error('Failed to fetch current agent:', error)
+      // Set to null on error instead of crashing
+      setCurrentAgent(null)
+    }
   }, [agentSlug, currentChatAgentId])
 
   useEffect(() => {

@@ -1,6 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
+// Input validation helpers
+function validateSlug(slug: string): boolean {
+  // Slug should be alphanumeric with hyphens/underscores, reasonable length
+  return /^[a-zA-Z0-9/_-]+$/.test(slug) && slug.length >= 1 && slug.length <= 100;
+}
+
+function validateId(id: string): boolean {
+  // ID should be a valid UUID format
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");
@@ -9,6 +20,22 @@ export async function GET(request: NextRequest) {
   if (!slug && !id) {
     return NextResponse.json(
       { error: "Either slug or id must be provided" },
+      { status: 400 }
+    );
+  }
+
+  // Validate slug format if provided
+  if (slug && !validateSlug(slug)) {
+    return NextResponse.json(
+      { error: "Invalid slug format" },
+      { status: 400 }
+    );
+  }
+
+  // Validate ID format if provided
+  if (id && !validateId(id)) {
+    return NextResponse.json(
+      { error: "Invalid ID format" },
       { status: 400 }
     );
   }

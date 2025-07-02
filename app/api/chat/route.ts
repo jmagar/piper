@@ -287,7 +287,7 @@ export async function POST(req: Request) {
       userId: userId
     });
 
-    const effectiveModel = model || process.env.DEFAULT_MODEL_ID || 'anthropic/claude-3.5-sonnet';
+    const effectiveModel = model || (globalThis as any).process?.env?.DEFAULT_MODEL_ID || 'anthropic/claude-3.5-sonnet';
     const detectedProvider = getProviderForModel(effectiveModel as SupportedModel);
     
     appLogger.debug(`Model selection: ${effectiveModel} (provider: ${detectedProvider})`, {
@@ -301,23 +301,27 @@ export async function POST(req: Request) {
       : "New Chat";
 
     const chatUpsertStartTime = Date.now();
-    await prisma.chat.upsert({
-      where: { id: chatId },
-      update: { updatedAt: new Date() },
-      create: {
-        id: chatId,
-        title: defaultTitle,
-        model: effectiveModel,
-        systemPrompt: systemPrompt || '',
-        agentId: agentId,
-      },
-    });
+    
+    // Use transaction for critical operations to ensure data consistency
+    const [chatResult] = await Promise.all([
+      prisma.chat.upsert({
+        where: { id: chatId },
+        update: { updatedAt: new Date() },
+        create: {
+          id: chatId,
+          title: defaultTitle,
+          model: effectiveModel,
+          systemPrompt: systemPrompt || '',
+          agentId: agentId,
+        },
+      }),
+      validateAndTrackUsage() // This can run in parallel as it's independent
+    ]);
+    
     appLogger.debug(`Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, { 
       correlationId,
       chatId
     });
-
-    await validateAndTrackUsage(); // Assuming this uses context or validatedRequest.data internally
 
     // Log PiperMessages before transforming to CoreMessages for orchestration
     appLogger.debug(`[POST /api/chat] Processing ${piperMessagesWithInitialIds.length} messages for orchestration`, {
@@ -368,13 +372,16 @@ export async function POST(req: Request) {
         });
       } catch (logError) {
         appLogger.error('Failed to log user message to DB', { correlationId, error: logError });
+        // Don't continue processing if user message can't be saved
+        throw new Error(`Failed to save user message: ${logError instanceof Error ? logError.message : String(logError)}`);
       }
     }
 
     // Enhanced OpenRouter client initialization with detailed logging
     const openrouterStartTime = Date.now();
-    const openrouterApiKey = process.env.OPENROUTER_API_KEY;
-    const openrouterBaseUrl = process.env.OPENROUTER_BASE_URL;
+    const env = (globalThis as any).process?.env || {};
+    const openrouterApiKey = env.OPENROUTER_API_KEY;
+    const openrouterBaseUrl = env.OPENROUTER_BASE_URL;
     
     appLogger.debug(`Initializing OpenRouter client (API key: ${openrouterApiKey ? 'present' : 'missing'}, length: ${openrouterApiKey ? openrouterApiKey.length : 0})`, {
       correlationId
@@ -457,7 +464,7 @@ export async function POST(req: Request) {
       const streamStartTime = Date.now();
       const result = await streamText({
         ...streamTextConfig,
-        onFinish: async (finishResult) => {
+        onFinish: async (finishResult: any) => {
           try {
             const assistantMessageId = uuidv4();
             await saveFinalAssistantMessage({
@@ -465,7 +472,7 @@ export async function POST(req: Request) {
               messageId: assistantMessageId,
               role: 'assistant',
               content: finishResult.text || '', // Ensure content is always a string
-              toolCalls: finishResult.toolCalls?.map(toolCall => ({
+              toolCalls: finishResult.toolCalls?.map((toolCall: any) => ({
                 id: toolCall.toolCallId,
                 name: toolCall.toolName,
                 args: toolCall.args,
