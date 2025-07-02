@@ -5,7 +5,7 @@ import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { type CreateNewChatArgs } from "@/lib/chat-store/chats/api"
 import { type Chats } from "@/lib/chat-store/types"
-import { appLogger } from "@/lib/logger"
+
 import { generateUUID } from "@/lib/utils/uuid"
 import { useRef } from "react"
 
@@ -78,7 +78,7 @@ export function useChatUtils({
       // This case should ideally not be reached if the ref logic is sound.
       // It indicates that isCreatingRef was set to true, but the creation promise
       // was not set. This log helps detect any future issues with this logic.
-      appLogger.warn(
+      console.warn(
         "ensureChatExists: Concurrent creation detected, but no promise was found. Aborting duplicate request."
       )
       return null

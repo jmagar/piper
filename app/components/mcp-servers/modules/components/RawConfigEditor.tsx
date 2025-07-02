@@ -1,6 +1,7 @@
+'use client'
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react'; // For loading spinner
-import { appLogger } from '@/lib/logger';
 import Editor, { OnChange, OnMount } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button'; // Assuming a Button component exists
 import { toast } from 'sonner'; // Assuming sonner for notifications
@@ -11,7 +12,7 @@ import { mcpConfigJsonSchema } from '@/lib/schemas/mcp-config.schema';
 // interface RawConfigEditorProps {}
 
 const RawConfigEditor: React.FC = () => {
-  appLogger.info('[RawConfigEditor] Component mounted');
+  console.log('[RawConfigEditor] Component mounted');
   const [configText, setConfigText] = useState<string>(''); // Initialize empty, will be filled by fetch or error
   const [parseError, setParseError] = useState<string | null>(null); // Initialize empty, will be filled by fetch or error
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -19,9 +20,9 @@ const RawConfigEditor: React.FC = () => {
   const initialContentRef = useRef<string>('');
 
   useEffect(() => {
-    appLogger.info('[RawConfigEditor] Initial fetch effect triggered');
+    console.log('[RawConfigEditor] Initial fetch effect triggered');
     const fetchConfig = async () => {
-      appLogger.info('[RawConfigEditor] Fetching MCP configuration...');
+      console.log('[RawConfigEditor] Fetching MCP configuration...');
       setIsLoading(true);
       try {
         const response = await fetch('/api/mcp/config');
@@ -32,10 +33,10 @@ const RawConfigEditor: React.FC = () => {
         const fetchedContent = JSON.stringify(data, null, 2);
         setConfigText(fetchedContent);
         initialContentRef.current = fetchedContent; // Store initial content
-        appLogger.info('[RawConfigEditor] MCP configuration fetched successfully.');
+        console.log('[RawConfigEditor] MCP configuration fetched successfully.');
         toast.success('MCP Config loaded successfully');
       } catch (error) {
-        appLogger.error('[RawConfigEditor] Error fetching MCP configuration', { error });
+        console.error('[RawConfigEditor] Error fetching MCP configuration', { error });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error fetching config';
         setConfigText(`// Error loading configuration:\n// ${errorMessage}`);
         toast.error(`Failed to load MCP Config: ${errorMessage}`);
