@@ -23,133 +23,114 @@ const storesReadyPromise = new Promise<void>((resolve) => {
   storesReadyResolve = resolve
 })
 
+// Add initialization lock to prevent race conditions
+let initializationLock = false
+
 function initDatabase() {
   if (!isClient) return Promise.resolve()
 
   return new Promise<void>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
+    let dbInstance: IDBDatabase | null = null
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result
-      if (!db.objectStoreNames.contains("chats")) db.createObjectStore("chats")
-      if (!db.objectStoreNames.contains("messages"))
-        db.createObjectStore("messages")
-      if (!db.objectStoreNames.contains("sync")) db.createObjectStore("sync")
+      dbInstance = db
+      
+      try {
+        if (!db.objectStoreNames.contains("chats")) {
+          db.createObjectStore("chats")
+        }
+        if (!db.objectStoreNames.contains("messages")) {
+          db.createObjectStore("messages")
+        }
+        if (!db.objectStoreNames.contains("sync")) {
+          db.createObjectStore("sync")
+        }
+      } catch (error) {
+        console.error('Error creating object stores:', error)
+        reject(error)
+      }
     }
 
     request.onsuccess = () => {
-      dbReady = true
-      request.result.close()
-      resolve()
+      try {
+        dbReady = true
+        dbInstance = request.result
+        
+        // Properly close the database connection
+        if (dbInstance) {
+          dbInstance.close()
+        }
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
     }
 
     request.onerror = () => {
+      console.error('Database initialization failed:', request.error)
+      if (dbInstance) {
+        try {
+          dbInstance.close()
+        } catch (closeError) {
+          console.warn('Error closing database:', closeError)
+        }
+      }
       reject(request.error)
     }
+
+    // Add timeout to prevent hanging
+    setTimeout(() => {
+      if (!dbReady) {
+        reject(new Error('Database initialization timeout'))
+      }
+    }, 10000)
   })
 }
 
 if (isClient) {
-  const checkRequest = indexedDB.open(DB_NAME)
-
-  checkRequest.onsuccess = () => {
-    const db = checkRequest.result
-    if (db.version > DB_VERSION) {
-      db.close()
-      const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
-      deleteRequest.onsuccess = () => {
-        initDatabaseAndStores()
-      }
-      deleteRequest.onerror = (event) => {
-        console.error("Database deletion failed:", event)
-        initDatabaseAndStores()
-      }
-    } else {
-      db.close()
-      initDatabaseAndStores()
-    }
-  }
-
-  checkRequest.onerror = () => {
-    initDatabaseAndStores()
+  // Use initialization lock to prevent race conditions
+  if (!initializationLock) {
+    initializationLock = true
+    initDatabaseAndStores().catch((error) => {
+      console.error('Failed to initialize database and stores:', error)
+      initializationLock = false
+    })
   }
 }
 
-function initDatabaseAndStores(): void {
-  dbInitPromise = initDatabase()
+async function initDatabaseAndStores(): Promise<void> {
+  try {
+    // Initialize database first
+    dbInitPromise = initDatabase()
+    await dbInitPromise
 
-  dbInitPromise
-    .then(() => {
-      const openRequest = indexedDB.open(DB_NAME)
-
-      openRequest.onsuccess = () => {
-        const objectStores = Array.from(openRequest.result.objectStoreNames)
-
-        if (objectStores.length === 0) {
-          openRequest.result.close()
-
-          // Delete and recreate the database to force onupgradeneeded
-          const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
-          deleteRequest.onsuccess = () => {
-            dbInitPromise = initDatabase() // Reinitialize with proper stores
-            dbInitPromise.then(() => {
-              // Try opening again to create stores
-              const reopenRequest = indexedDB.open(DB_NAME)
-              reopenRequest.onsuccess = () => {
-                const newObjectStores = Array.from(
-                  reopenRequest.result.objectStoreNames
-                )
-
-                if (newObjectStores.includes("chats"))
-                  stores.chats = createStore(DB_NAME, "chats")
-                if (newObjectStores.includes("messages"))
-                  stores.messages = createStore(DB_NAME, "messages")
-                if (newObjectStores.includes("sync"))
-                  stores.sync = createStore(DB_NAME, "sync")
-
-                storesReady = true
-                storesReadyResolve()
-                reopenRequest.result.close()
-              }
-
-              reopenRequest.onerror = (event) => {
-                console.error(
-                  "Failed to reopen database after recreation:",
-                  event
-                )
-                storesReady = true
-                storesReadyResolve()
-              }
-            })
-          }
-
-          return // Skip the rest of this function
-        }
-
-        // Continue with existing logic for when stores are found
-        if (objectStores.includes("chats"))
-          stores.chats = createStore(DB_NAME, "chats")
-        if (objectStores.includes("messages"))
-          stores.messages = createStore(DB_NAME, "messages")
-        if (objectStores.includes("sync"))
-          stores.sync = createStore(DB_NAME, "sync")
-
-        storesReady = true
-        storesReadyResolve()
-        openRequest.result.close()
-      }
-
-      openRequest.onerror = (event) => {
-        console.error("Failed to open database for store creation:", event)
-        storesReady = true
-        storesReadyResolve()
-      }
-    })
-    .catch((error) => {
-      console.error("Database initialization failed:", error)
+    // Create stores safely
+    try {
+      stores.chats = createStore(DB_NAME, "chats")
+      stores.messages = createStore(DB_NAME, "messages")
+      stores.sync = createStore(DB_NAME, "sync")
+      
       storesReady = true
       storesReadyResolve()
-    })
+      initializationLock = false
+      
+      console.log('Database and stores initialized successfully')
+    } catch (storeError) {
+      console.error('Failed to create stores:', storeError)
+      // Still mark as ready but with empty stores to prevent hanging
+      storesReady = true
+      storesReadyResolve()
+      initializationLock = false
+    }
+  } catch (error) {
+    console.error("Database initialization failed:", error)
+    storesReady = true
+    storesReadyResolve()
+    initializationLock = false
+    throw error
+  }
 }
 
 export async function ensureDbReady() {
@@ -192,8 +173,9 @@ export async function readFromIndexedDB<T>(
 
     return []
   } catch (error) {
-    console.warn(`readFromIndexedDB failed (${table}):`, error)
-    return key ? (null as any) : []
+    console.error(`readFromIndexedDB failed (${table}):`, error)
+    // Throw error instead of silently failing
+    throw new Error(`Failed to read from IndexedDB table '${table}': ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -221,7 +203,8 @@ export async function writeToIndexedDB<T extends { id: string | number }>(
 
     await setMany(entries, store)
   } catch (error) {
-    console.warn(`writeToIndexedDB failed (${table}):`, error)
+    console.error(`writeToIndexedDB failed (${table}):`, error)
+    throw new Error(`Failed to write to IndexedDB table '${table}': ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
