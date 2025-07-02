@@ -11,7 +11,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Default values
@@ -47,7 +46,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --daemon: Run in daemon mode (continuous monitoring)"
             echo "  --interval: Monitoring interval in seconds (default: 30)"
             echo "  --alert-threshold: File descriptor usage threshold % for alerts (default: 80)"
-            echo "  --config-file: Path to MCP configuration file (default: /config/config.json)"
+            echo "  --config-file: Path to MCP configuration file (default: config/config.json)"
             exit 0
             ;;
         *)
@@ -117,7 +116,7 @@ check_system_resources() {
     fi
     
     # Disk usage for important directories
-    local dirs=("/tmp" "/config" "/logs" "/uploads")
+    local dirs=("/tmp" "$(dirname "$CONFIG_FILE")" "/logs" "/uploads")
     for dir in "${dirs[@]}"; do
         if [ -d "$dir" ]; then
             local disk_info=$(df -h "$dir" 2>/dev/null | awk 'NR==2 {printf "Used: %s, Available: %s, Usage: %s", $3, $4, $5}' || echo "unavailable")

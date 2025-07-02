@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo "Usage: $0 [--verbose] [--config-file=/path/to/config.json]"
             echo "  --verbose: Enable verbose output"
-            echo "  --config-file: Path to MCP configuration file (default: /config/config.json)"
+            echo "  --config-file: Path to MCP configuration file (default: config/config.json)"
             exit 0
             ;;
         *)

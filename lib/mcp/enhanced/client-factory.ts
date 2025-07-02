@@ -149,11 +149,11 @@ export async function createEnhancedStdioMCPClient(
       
       // Log important environment variables for uvx troubleshooting
       const importantEnvVars = ['UV_COMPILE_BYTECODE', 'PATH', 'LOG_LEVEL', 'NODE_ENV', 'CONFIG_DIR'];
-      const presentEnvVars = importantEnvVars.filter(key => (config.env || {})[key] !== undefined);
+      const presentEnvVars = importantEnvVars.filter(key => config.env?.[key] !== undefined);
       if (presentEnvVars.length > 0) {
         logger.info(`[uvx MCP] Important environment variables set: ${presentEnvVars.join(', ')}`, {
           envDetails: presentEnvVars.reduce((acc, key) => {
-            acc[key] = (config.env || {})[key];
+            acc[key] = config.env?.[key] ?? '';
             return acc;
           }, {} as Record<string, string>)
         });
@@ -266,7 +266,7 @@ export async function createEnhancedStdioMCPClient(
         enhancedErrorMessage += `. This often indicates uvx-specific issues:
         - The uvx command is not available in PATH (check: which uvx)
         - The package '${config.args?.[0] ?? 'unknown'}' is not available or failed to install
-        - File descriptor limits are too low (current limit: $(ulimit -n))
+        - File descriptor limits are too low (check with: ulimit -n, should be >= 4096)
         - Environment variables are not properly propagated
         - Network connectivity issues preventing package download
         Try running 'uvx ${(config.args || []).join(' ')}' manually to diagnose the issue.
