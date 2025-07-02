@@ -195,10 +195,14 @@ TEST_PACKAGE="cowsay"
 if uvx --help | grep -q "from" 2>/dev/null; then
     # Try to list available packages (this doesn't install anything)
     if command -v timeout >/dev/null 2>&1; then
-        if timeout 10s uvx "$TEST_PACKAGE" --help >/dev/null 2>&1; then
+        timeout 10s uvx "$TEST_PACKAGE" --help >/dev/null 2>&1
+        local exit_code=$?
+        if [ "$exit_code" -eq 0 ]; then
             log_success "✓ uvx can access and prepare packages"
+        elif [ "$exit_code" -eq 124 ]; then
+            log_warning "⚠ uvx package access test timed out (network or package installation slow)"
         else
-            log_warning "⚠ uvx package access test timed out or failed (this may be normal)"
+            log_warning "⚠ uvx package access test failed with exit code $exit_code (this may be normal)"
         fi
     else
         # Fallback without timeout

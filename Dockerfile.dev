@@ -8,9 +8,10 @@ RUN apk add --no-cache git openssh-client python3 py3-pip curl
 ENV UV_INSTALL_DIR="/usr/local"
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Move uv binaries to proper bin directory
+# Move uv binaries to proper bin directory and set permissions
 RUN mv /usr/local/uv /usr/local/bin/uv && \
-    mv /usr/local/uvx /usr/local/bin/uvx
+    mv /usr/local/uvx /usr/local/bin/uvx && \
+    chmod +x /usr/local/bin/uv /usr/local/bin/uvx
 
 # Add environment variables to prevent bytecode compilation issues
 ENV UV_COMPILE_BYTECODE=0
@@ -34,7 +35,7 @@ USER node
 COPY --chown=node:node package*.json ./
 
 # Install project dependencies with increased file descriptor limit
-RUN sh -c "ulimit -n 4096 && npm ci --legacy-peer-deps"
+RUN sh -c "ulimit -n 4096; npm ci --legacy-peer-deps"
 
 # Copy the rest of the application's code into the container as node user
 # This ensures files copied are owned by node, which helps with permissions for .next etc.

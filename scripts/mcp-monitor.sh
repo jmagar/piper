@@ -201,12 +201,17 @@ check_mcp_servers() {
                     
                     # Simple health check: try to get help from the package
                     if command -v timeout >/dev/null 2>&1; then
-                        if timeout 5s uvx "$package_name" --help >/dev/null 2>&1; then
+                        timeout 5s uvx "$package_name" --help >/dev/null 2>&1
+                        local exit_code=$?
+                        if [ "$exit_code" -eq 0 ]; then
                             log_success "    ✓ $server_name is accessible"
                             healthy_servers=$((healthy_servers + 1))
                             log_metric "MCP_HEALTH: server=$server_name package=$package_name status=healthy"
+                        elif [ "$exit_code" -eq 124 ]; then
+                            log_warning "    ⚠ $server_name timed out (slow network/installation)"
+                            log_metric "MCP_HEALTH: server=$server_name package=$package_name status=timeout"
                         else
-                            log_warning "    ⚠ $server_name may have issues"
+                            log_warning "    ⚠ $server_name may have issues (exit code: $exit_code)"
                             log_metric "MCP_HEALTH: server=$server_name package=$package_name status=unhealthy"
                         fi
                     else
@@ -395,7 +400,7 @@ elif [ "$1" = "status" ]; then
 elif [ "$1" = "restart" ]; then
     stop_daemon
     sleep 2
-    exec "$0" --daemon --interval="$INTERVAL" --alert-threshold="$ALERT_THRESHOLD"
+    exec "$0" --daemon --interval="$INTERVAL" --alert-threshold="$ALERT_THRESHOLD" --config-file="$CONFIG_FILE"
 fi
 
 # Run monitoring
