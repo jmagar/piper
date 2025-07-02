@@ -2,10 +2,10 @@
 import { readFromIndexedDB, writeToIndexedDB } from "@/lib/chat-store/persist"
 import type { Chat } from "@/lib/chat-store/types"
 import { prisma } from "@/lib/prisma" // Keep for other functions, will address them later if needed
-import { serverFetch } from "../../server-fetch"
+import { serverFetch } from "@/lib/server-fetch"
 import {
   API_ROUTE_UPDATE_CHAT_MODEL,
-} from "../../routes"
+} from "@/lib/routes"
 import { appLogger } from "@/lib/logger"
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -195,18 +195,31 @@ export async function updateChatModel(chatId: string, model: string) {
   }
 }
 
-export async function createNewChat(
-  title?: string,
+export interface CreateNewChatArgs {
+  idempotencyKey?: string
+  title?: string
   model?: string
+  systemPrompt?: string
+  agentId?: string | null
+  messages?: { role: "user" | "assistant"; content: string }[]
+}
+
+export async function createNewChat(
+  args: CreateNewChatArgs
 ): Promise<Chat> {
-  const response = await serverFetch("/api/create-chat", {
+  const { title, model, systemPrompt, agentId, messages, idempotencyKey } = args
+  const response = await serverFetch("/api/chats/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      messages: messages || [],
       title,
       model,
+      systemPrompt,
+      agentId,
+      idempotencyKey,
     }),
   })
 
@@ -236,10 +249,8 @@ export async function createNewChat(
     attachments: data.chat.attachments || [],
   }
   
-  const currentChats = await getCachedChats()
-  currentChats.unshift(newChat)
-  await writeToIndexedDB("chats", currentChats)
-  
+  // Return the newly created chat without manipulating the cache here.
+  // The calling component or hook should be responsible for refreshing the chat list.
   return newChat
 }
 

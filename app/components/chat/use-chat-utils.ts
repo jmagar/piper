@@ -5,6 +5,8 @@ import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
 import { type CreateNewChatArgs } from "@/lib/chat-store/chats/api"
 import { type Chats } from "@/lib/chat-store/types"
+import { appLogger } from "@/lib/logger"
+import { generateUUID } from "@/lib/utils/uuid"
 import { useRef } from "react"
 
 type UseChatUtilsProps = {
@@ -73,6 +75,12 @@ export function useChatUtils({
           return null
         }
       }
+      // This case should ideally not be reached if the ref logic is sound.
+      // It indicates that isCreatingRef was set to true, but the creation promise
+      // was not set. This log helps detect any future issues with this logic.
+      appLogger.warn(
+        "ensureChatExists: Concurrent creation detected, but no promise was found. Aborting duplicate request."
+      )
       return null
     }
 
@@ -82,17 +90,21 @@ export function useChatUtils({
     // Create the promise immediately to prevent timing window race condition
     const creationPromise = (async (): Promise<string | null> => {
       try {
+        const idempotencyKey = generateUUID(); // Generate a unique key for the request
         const newChat = await createNewChat({
+          idempotencyKey, // Pass the key to the API
           title: input.substring(0, 100), // Use first 100 chars as title
           model: selectedModel,
           messages: [{ role: "user", content: input }],
         })
 
-        if (!newChat) {
+        if (!newChat || !newChat.id) {
           throw new Error("Failed to create chat: No chat returned from API")
         }
 
-        // Update browser URL without triggering navigation
+        // IMPORTANT FIX:
+        // The chat state is now updated via `refresh()` inside `createNewChat`.
+        // We can now safely update the URL.
         window.history.pushState(null, "", `/c/${newChat.id}`)
 
         return newChat.id

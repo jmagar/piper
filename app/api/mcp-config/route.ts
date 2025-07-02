@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateUUID } from '@/lib/utils/uuid';
 
 // Define TypeScript Interfaces
 interface MCPTransportSSE {
@@ -86,7 +86,7 @@ export async function GET() {
       }
 
       return {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: name,
         displayName: details.displayName || name, 
         transport: transport,

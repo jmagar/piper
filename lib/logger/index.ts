@@ -12,6 +12,7 @@ export { LogSource } from './constants'; // Export LogSource from constants.ts
 
 // Variables for server-side components, will be initialized asynchronously
 let winston: typeof import('winston') | undefined;
+let DailyRotateFile: typeof import('winston-daily-rotate-file') | undefined;
 let path: typeof import('path') | undefined;
 let consoleFormat: import('winston').Logform.Format | undefined;
 let winstonLogger: import('winston').Logger | null = null;
@@ -24,6 +25,9 @@ async function initializeServerComponents() {
   try {
     const winstonModule = await import('winston');
     winston = winstonModule.default || winstonModule;
+    
+    const dailyRotateModule = await import('winston-daily-rotate-file');
+    DailyRotateFile = dailyRotateModule.default || dailyRotateModule;
     
     const pathModule = await import('path');
     path = pathModule.default || pathModule;
@@ -58,7 +62,7 @@ async function initializeServerComponents() {
               } else {
                 metaString += ` ${stringKey}=${JSON.stringify(info[key])}`;
               }
-            } catch (_error) {
+            } catch {
               metaString += ` ${stringKey}=[Unserializable]`;
             }
           }
@@ -91,25 +95,53 @@ async function initializeServerComponents() {
 const isDevelopment = process.env.NODE_ENV === 'development';
 const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info');
 
-// Create basic file transport (no rotation for now to avoid client-side issues)
+// Create daily rotating file transport
 const createFileTransport = (logsDir: string, filename: string, level?: string) => {
-  return new winston!.transports.File({
-    filename: path!.join(logsDir, `${filename}.log`),
+  // Safety checks for required modules
+  if (!DailyRotateFile) {
+    throw new Error('DailyRotateFile module not initialized - winston-daily-rotate-file import failed');
+  }
+  if (!path) {
+    throw new Error('Path module not initialized - path import failed');
+  }
+  if (!winston) {
+    throw new Error('Winston module not initialized - winston import failed');
+  }
+
+  // Use environment-specific rotation config
+  const env = process.env.NODE_ENV as 'development' | 'production' | 'testing' || 'development';
+  const rotationConfigs = {
+    development: { maxSize: '10m', maxFiles: '7d', datePattern: 'YYYY-MM-DD', compress: false },
+    production: { maxSize: '50m', maxFiles: '90d', datePattern: 'YYYY-MM-DD', compress: true },
+    testing: { maxSize: '1m', maxFiles: '1d', datePattern: 'YYYY-MM-DD', compress: false },
+  };
+  const config = rotationConfigs[env] || rotationConfigs.development;
+
+  return new DailyRotateFile({
+    filename: path.join(logsDir, `${filename}-%DATE%.log`),
+    datePattern: config.datePattern,
+    maxSize: config.maxSize,
+    maxFiles: config.maxFiles,
     level: level || logLevel,
-    format: winston!.format.combine(
-      winston!.format.timestamp(),
-      winston!.format.json()
+    zippedArchive: config.compress, // Environment-configurable compression
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
     ),
-    maxsize: 20 * 1024 * 1024, // 20MB
-    maxFiles: 5, // Keep 5 backup files
+    auditFile: path.join(logsDir, `${filename}-audit.json`), // Track rotated files
   });
 };
 
 // Create Winston logger with basic file transports
 const createWinstonLogger = (logsDir: string) => {
-  const logFormat = winston!.format.combine(
-    winston!.format.timestamp(),
-    winston!.format.json()
+  // Safety check for winston module
+  if (!winston) {
+    throw new Error('Winston module not initialized - winston import failed');
+  }
+
+  const logFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
   );
 
   const transports = [
@@ -117,7 +149,7 @@ const createWinstonLogger = (logsDir: string) => {
     createFileTransport(logsDir, 'error', 'error'), // Error logs only
   ];
 
-  const logger = winston!.createLogger({
+  const logger = winston.createLogger({
     level: logLevel,
     format: logFormat,
     transports,
@@ -126,7 +158,7 @@ const createWinstonLogger = (logsDir: string) => {
 
   // Add console transport for development
   if (isDevelopment) {
-    logger.add(new winston!.transports.Console({
+    logger.add(new winston.transports.Console({
       format: consoleFormat
     }));
   }
@@ -223,8 +255,8 @@ const _internalServerLog = async (level: LogLevel, message: string, context?: Lo
   }
 
   const winstonLevel = level.toLowerCase();
-  if (winstonLogger && typeof (winstonLogger as any)[winstonLevel] === 'function') {
-    (winstonLogger as any)[winstonLevel](message, logMeta);
+  if (winstonLogger && typeof (winstonLogger as unknown as Record<string, unknown>)[winstonLevel] === 'function') {
+    (winstonLogger as unknown as Record<string, (msg: string, meta: Record<string, unknown>) => void>)[winstonLevel](message, logMeta);
   } else {
     // Fallback if Winston isn't initialized or level is somehow invalid
     const simpleContext = { ...context };
@@ -270,18 +302,27 @@ export const uploadLogger: UploadLoggerService = IS_SERVER
   ? {
     info: async (message: string, details?: unknown): Promise<void> => {
       await ensureLoggerInitialization();
-      winstonLogger!.log(LogLevel.INFO, message, { details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
+      if (!winstonLogger) {
+        throw new Error('Winston logger not initialized');
+      }
+      winstonLogger.log(LogLevel.INFO, message, { details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
     },
     warn: async (message: string, details?: unknown): Promise<void> => {
       await ensureLoggerInitialization();
-      winstonLogger!.log(LogLevel.WARN, message, { details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
+      if (!winstonLogger) {
+        throw new Error('Winston logger not initialized');
+      }
+      winstonLogger.log(LogLevel.WARN, message, { details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
     },
     error: async (message: string, error?: Error | unknown, details?: unknown): Promise<void> => {
       await ensureLoggerInitialization();
+      if (!winstonLogger) {
+        throw new Error('Winston logger not initialized');
+      }
       if (error instanceof Error) {
-        winstonLogger!.log(LogLevel.ERROR, message, { error: { message: error.message, stack: error.stack }, details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
+        winstonLogger.log(LogLevel.ERROR, message, { error: { message: error.message, stack: error.stack }, details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
       } else {
-        winstonLogger!.log(LogLevel.ERROR, message, { error, details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
+        winstonLogger.log(LogLevel.ERROR, message, { error, details, source: LogSource.APP }); // Changed LogSource.UPLOAD to LogSource.APP
       }
     },
   }

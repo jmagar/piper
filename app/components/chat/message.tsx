@@ -1,7 +1,10 @@
+"use client"
+
 import { Message as MessageType } from "@ai-sdk/react"
-import React, { useState } from "react"
+import React from "react"
 import { MessageAssistant } from "./message-assistant"
 import { MessageUser } from "./message-user"
+import { useChatHandlersContext } from "@/app/providers/chat-handlers-provider"
 
 type MessageProps = {
   variant: MessageType["role"]
@@ -9,9 +12,6 @@ type MessageProps = {
   id: string
   attachments?: MessageType["experimental_attachments"]
   isLast?: boolean
-  onDelete: (id: string) => void
-  onEdit: (id: string, newText: string) => void
-  onReload: () => void
   hasScrollAnchor?: boolean
   parts?: MessageType["parts"]
   status?: "streaming" | "ready" | "submitted" | "error"
@@ -24,15 +24,13 @@ export function Message({
   id,
   attachments,
   isLast,
-  onDelete,
-  onEdit,
-  onReload,
   hasScrollAnchor,
   parts,
   status,
   createdAt,
 }: MessageProps) {
-  const [copied, setCopied] = useState(false)
+  const { onDelete, onEdit, onReload } = useChatHandlersContext()
+  const [copied, setCopied] = React.useState(false)
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(children)
@@ -41,7 +39,11 @@ export function Message({
   }
 
   // Convert createdAt to Date if it's a string
-  const timestamp = createdAt ? (typeof createdAt === 'string' ? new Date(createdAt) : createdAt) : undefined
+  const timestamp = createdAt
+    ? typeof createdAt === "string"
+      ? new Date(createdAt)
+      : createdAt
+    : undefined
 
   if (variant === "user") {
     return (
