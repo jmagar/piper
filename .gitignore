@@ -20,7 +20,8 @@ config.json
 logs/
 .bivvy
 .vscode
-
+piper.code-workspace
+uvx-mcp-server-investigation.md
 # production
 /build
 
