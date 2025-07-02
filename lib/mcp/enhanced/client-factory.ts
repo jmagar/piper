@@ -129,11 +129,41 @@ export async function createEnhancedStdioMCPClient(
   config: EnhancedStdioConfig
 ): Promise<MCPToolSet> {
   const logger = config.logger || appLogger.mcp;
+  
+  // Enhanced logging for uvx commands
+  const isUvxCommand = config.command === 'uvx';
+  
   if (logger) {
-    logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
-      clientName: config.clientName || 'ai-sdk-mcp-client',
-      args: config.args, // Log arguments as part of the metadata object
-    });
+    if (isUvxCommand) {
+      // Special logging for uvx commands with detailed diagnostics
+      logger.info(`[uvx MCP] Creating uvx-based MCP client`, {
+        serverId,
+        clientName: config.clientName || 'ai-sdk-mcp-client',
+        uvxPackage: config.args?.[0] ?? 'unknown',
+        args: config.args,
+        env: Object.keys(config.env || {}),
+        cwd: config.cwd,
+        hasFromFlag: config.args?.includes('--from') ?? false,
+        envVarsCount: Object.keys(config.env || {}).length
+      });
+      
+      // Log important environment variables for uvx troubleshooting
+      const importantEnvVars = ['UV_COMPILE_BYTECODE', 'PATH', 'LOG_LEVEL', 'NODE_ENV', 'CONFIG_DIR'];
+      const presentEnvVars = importantEnvVars.filter(key => (config.env || {})[key] !== undefined);
+      if (presentEnvVars.length > 0) {
+        logger.info(`[uvx MCP] Important environment variables set: ${presentEnvVars.join(', ')}`, {
+          envDetails: presentEnvVars.reduce((acc, key) => {
+            acc[key] = (config.env || {})[key];
+            return acc;
+          }, {} as Record<string, string>)
+        });
+      }
+    } else {
+      logger.info(`[Enhanced MCP] Creating stdio client for command: ${config.command}`, {
+        clientName: config.clientName || 'ai-sdk-mcp-client',
+        args: config.args,
+      });
+    }
   }
 
   try {
@@ -154,14 +184,25 @@ export async function createEnhancedStdioMCPClient(
     const enhancedTools = await wrapToolsWithMetrics(serverId, tools)
     
     if (logger) {
-      logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+      if (isUvxCommand) {
+        logger.info(`[uvx MCP] Successfully connected to uvx-based MCP server`, {
+          uvxPackage: config.args?.[0] ?? 'unknown',
+          toolCount: Object.keys(enhancedTools).length
+        });
+      } else {
+        logger.info('[Enhanced MCP] Successfully connected to stdio MCP server');
+      }
     }
 
     return {
       tools: enhancedTools,
       close: async () => {
         if (logger) {
-          logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
+          if (isUvxCommand) {
+            logger.info(`[uvx MCP] Closing uvx client for package: ${config.args?.[0] ?? 'unknown'}`);
+          } else {
+            logger.info(`[Enhanced MCP] Closing stdio client for command: ${config.command}`);
+          }
         }
         try {
           await mcpClient.close();
@@ -198,10 +239,20 @@ export async function createEnhancedStdioMCPClient(
     };
   } catch (error) {
     if (logger) {
-      logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
+      if (isUvxCommand) {
+        logger.error(`[uvx MCP] Failed to create uvx-based MCP client`, error as Error, {
+          uvxPackage: config.args?.[0] ?? 'unknown',
+          command: config.command,
+          args: config.args,
+          env: Object.keys(config.env || {}),
+          cwd: config.cwd
+        });
+      } else {
+        logger.error(`[Enhanced MCP] Failed to create stdio client for command ${config.command}:`, error as Error);
+      }
     }
 
-    // Enhanced error reporting: try to provide more context about what went wrong
+    // Enhanced error reporting with uvx-specific guidance
     let enhancedErrorMessage = `Failed to initialize stdio MCP client: ${error instanceof Error ? error.message : String(error)}`;
     
     // Check if this looks like a process startup failure
@@ -211,12 +262,23 @@ export async function createEnhancedStdioMCPClient(
       error.message.includes('spawn') ||
       error.message.includes('exit')
     )) {
-      enhancedErrorMessage += `. This often indicates:
+      if (isUvxCommand) {
+        enhancedErrorMessage += `. This often indicates uvx-specific issues:
+        - The uvx command is not available in PATH (check: which uvx)
+        - The package '${config.args?.[0] ?? 'unknown'}' is not available or failed to install
+        - File descriptor limits are too low (current limit: $(ulimit -n))
+        - Environment variables are not properly propagated
+        - Network connectivity issues preventing package download
+        Try running 'uvx ${(config.args || []).join(' ')}' manually to diagnose the issue.
+        For troubleshooting, run the health check: ./scripts/mcp-health-check.sh --verbose`;
+      } else {
+        enhancedErrorMessage += `. This often indicates:
         - The command '${config.command}' is not available or failed to start
         - Missing dependencies for the MCP server
         - Configuration validation errors in the MCP server
         - Environment variable issues
         Try running '${config.command} ${(config.args || []).join(' ')}' manually to diagnose the issue.`;
+      }
     }
 
     if (error instanceof Error) {

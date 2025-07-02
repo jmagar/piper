@@ -12,6 +12,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN mv /usr/local/uv /usr/local/bin/uv && \
     mv /usr/local/uvx /usr/local/bin/uvx
 
+# Add environment variables to prevent bytecode compilation issues
+ENV UV_COMPILE_BYTECODE=0
+
 # Create app directory and other necessary directories for mounted volumes, then set permissions
 # These are created as root first, then ownership changed to node.
 # Create app directory and other necessary directories for mounted volumes.
@@ -30,8 +33,8 @@ USER node
 # Copy package.json and package-lock.json as node user
 COPY --chown=node:node package*.json ./
 
-# Install project dependencies as node user
-RUN npm ci --legacy-peer-deps
+# Install project dependencies with increased file descriptor limit
+RUN sh -c "ulimit -n 4096 && npm ci --legacy-peer-deps"
 
 # Copy the rest of the application's code into the container as node user
 # This ensures files copied are owned by node, which helps with permissions for .next etc.

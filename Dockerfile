@@ -16,13 +16,15 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN mv /usr/local/uv /usr/local/bin/uv && \
     mv /usr/local/uvx /usr/local/bin/uvx
 
-# Install dependencies
+# Add environment variables to prevent bytecode compilation issues
+ENV UV_COMPILE_BYTECODE=0
+
+# Install dependencies with increased file descriptor limit
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps
+RUN sh -c "ulimit -n 4096 && npm ci --legacy-peer-deps"
 
 # Copy all files
 COPY . .
-
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -33,8 +35,8 @@ COPY config/config.json /config/config.json
 # Make REDIS_URL available during build
 ENV REDIS_URL=${REDIS_URL}
 
-# Build the app (if needed)
-RUN npm run build
+# Build the app with increased file descriptor limit
+RUN sh -c "ulimit -n 4096 && npm run build"
 
 # Set environment variables (can be overridden)
 ENV NODE_ENV=production
