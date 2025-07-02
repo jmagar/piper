@@ -64,6 +64,7 @@ export function Chat() {
   const {
     getChatById,
     updateChatModel,
+    createNewChat,
     isLoading: isChatsLoading,
     setActiveChatId,
   } = useChats()
@@ -149,6 +150,7 @@ export function Chat() {
     chatId,
     input,
     selectedModel,
+    createNewChatAction: createNewChat,
   })
 
   useEffect(() => {

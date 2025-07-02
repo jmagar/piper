@@ -13,14 +13,14 @@ type UseChatUtilsProps = {
   chatId: string | null
   input: string
   selectedModel: string
-  createNewChat: (args: CreateNewChatArgs) => Promise<Chats | undefined>
+  createNewChatAction: (args: CreateNewChatArgs) => Promise<Chats | undefined>
 }
 
 export function useChatUtils({
   chatId,
   input,
   selectedModel,
-  createNewChat,
+  createNewChatAction,
 }: UseChatUtilsProps) {
   // Phase 1 Fix v2: Use refs for synchronous access to prevent React state race conditions
   // This eliminates the timing window where multiple calls could bypass the check
@@ -91,7 +91,7 @@ export function useChatUtils({
     const creationPromise = (async (): Promise<string | null> => {
       try {
         const idempotencyKey = generateUUID(); // Generate a unique key for the request
-        const newChat = await createNewChat({
+        const newChat = await createNewChatAction({
           idempotencyKey, // Pass the key to the API
           title: input.substring(0, 100), // Use first 100 chars as title
           model: selectedModel,
