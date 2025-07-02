@@ -43,11 +43,19 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             echo "Usage: $0 [--daemon] [--interval=30] [--alert-threshold=80] [--config-file=/path/to/config.json]"
+            echo "       $0 {stop|status|restart}"
             echo "  --daemon: Run in daemon mode (continuous monitoring)"
             echo "  --interval: Monitoring interval in seconds (default: 30)"
             echo "  --alert-threshold: File descriptor usage threshold % for alerts (default: 80)"
             echo "  --config-file: Path to MCP configuration file (default: config/config.json)"
+            echo "  stop: Stop the daemon"
+            echo "  status: Check daemon status"
+            echo "  restart: Restart the daemon"
             exit 0
+            ;;
+        stop|status|restart)
+            # Leave command in $1 for the post-parse handler
+            break
             ;;
         *)
             echo "Unknown option $1"
@@ -83,12 +91,21 @@ log_metric() {
 
 # Function to check file descriptor usage
 check_fd_usage() {
-    local current_fd=$(ulimit -n)
+    local current_fd_raw
+    current_fd_raw=$(ulimit -n)
+    local current_fd=${current_fd_raw/unlimited/1048576}  # fallback to 1M
     local used_fd=0
     
     # Try to count actually used file descriptors
     if [ -d "/proc/self/fd" ]; then
         used_fd=$(ls -1 /proc/self/fd | wc -l)
+    fi
+    
+    # Skip percentage calculation if unlimited
+    if [ "$current_fd_raw" = "unlimited" ]; then
+        log_info "File descriptor usage: $used_fd (limit: unlimited)"
+        log_metric "FD_USAGE: current_limit=unlimited used=$used_fd usage_percent=0"
+        return 0
     fi
     
     local usage_percent=$((used_fd * 100 / current_fd))
@@ -121,7 +138,9 @@ check_system_resources() {
         if [ -d "$dir" ]; then
             local disk_info=$(df -h "$dir" 2>/dev/null | awk 'NR==2 {printf "Used: %s, Available: %s, Usage: %s", $3, $4, $5}' || echo "unavailable")
             log_info "Disk usage for $dir: $disk_info"
-            log_metric "DISK_$dir: $disk_info"
+            # Sanitize directory path for Prometheus metrics (replace / with _)
+            local sanitized_dir=$(echo "$dir" | sed 's|/|_|g' | sed 's|^_||')
+            log_metric "DISK_${sanitized_dir}: $disk_info"
         fi
     done
     
@@ -181,13 +200,25 @@ check_mcp_servers() {
                     log_info "  - $server_name (package: $package_name)"
                     
                     # Simple health check: try to get help from the package
-                    if timeout 5s uvx --from "$package_name" --help >/dev/null 2>&1; then
-                        log_success "    ✓ $server_name is accessible"
-                        healthy_servers=$((healthy_servers + 1))
-                        log_metric "MCP_HEALTH: server=$server_name package=$package_name status=healthy"
+                    if command -v timeout >/dev/null 2>&1; then
+                        if timeout 5s uvx "$package_name" --help >/dev/null 2>&1; then
+                            log_success "    ✓ $server_name is accessible"
+                            healthy_servers=$((healthy_servers + 1))
+                            log_metric "MCP_HEALTH: server=$server_name package=$package_name status=healthy"
+                        else
+                            log_warning "    ⚠ $server_name may have issues"
+                            log_metric "MCP_HEALTH: server=$server_name package=$package_name status=unhealthy"
+                        fi
                     else
-                        log_warning "    ⚠ $server_name may have issues"
-                        log_metric "MCP_HEALTH: server=$server_name package=$package_name status=unhealthy"
+                        # Fallback without timeout (less reliable)
+                        if uvx "$package_name" --help >/dev/null 2>&1; then
+                            log_success "    ✓ $server_name is accessible"
+                            healthy_servers=$((healthy_servers + 1))
+                            log_metric "MCP_HEALTH: server=$server_name package=$package_name status=healthy"
+                        else
+                            log_warning "    ⚠ $server_name may have issues (timeout not available)"
+                            log_metric "MCP_HEALTH: server=$server_name package=$package_name status=unhealthy"
+                        fi
                     fi
                 fi
             done < <(jq -r '.mcpServers | to_entries[] | select(.value.command == "uvx") | .key' "$CONFIG_FILE" 2>/dev/null)
@@ -270,8 +301,21 @@ monitoring_cycle() {
 run_daemon() {
     log_info "Starting MCP monitor in daemon mode (interval: ${INTERVAL}s, threshold: ${ALERT_THRESHOLD}%)"
     
-    # Store PID
-    echo $$ > "$PID_FILE"
+    # Check if daemon is already running
+    if [ -f "$PID_FILE" ]; then
+        local existing_pid=$(cat "$PID_FILE" 2>/dev/null)
+        if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+            log_error "Daemon is already running with PID: $existing_pid"
+            exit 1
+        else
+            log_warning "Stale PID file found, removing it"
+            rm -f "$PID_FILE"
+        fi
+    fi
+    
+    # Store PID atomically using temp file
+    local temp_pid_file="${PID_FILE}.$$"
+    echo $$ > "$temp_pid_file" && mv "$temp_pid_file" "$PID_FILE"
     
     # Set up signal handlers
     trap 'log_info "Received SIGTERM, shutting down daemon"; rm -f "$PID_FILE"; exit 0' TERM
@@ -319,7 +363,25 @@ daemon_status() {
     fi
 }
 
+# Function to rotate logs if they get too large
+rotate_logs_if_needed() {
+    local max_size_kb=1024  # 1MB limit
+    
+    # Rotate main log file
+    if [ -f "$LOG_FILE" ] && [ $(du -k "$LOG_FILE" 2>/dev/null | cut -f1) -gt $max_size_kb ]; then
+        mv "$LOG_FILE" "${LOG_FILE}.old"
+        log_info "Rotated log file (size limit reached)"
+    fi
+    
+    # Rotate metrics file
+    if [ -f "$METRICS_FILE" ] && [ $(du -k "$METRICS_FILE" 2>/dev/null | cut -f1) -gt $max_size_kb ]; then
+        mv "$METRICS_FILE" "${METRICS_FILE}.old"
+        log_info "Rotated metrics file (size limit reached)"
+    fi
+}
+
 # Initialize log files
+rotate_logs_if_needed
 echo "MCP Monitor - $(date)" > "$LOG_FILE"
 echo "MCP Metrics - $(date)" > "$METRICS_FILE"
 

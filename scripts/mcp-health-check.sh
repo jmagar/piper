@@ -18,6 +18,10 @@ VERBOSE=false
 CONFIG_FILE="config/config.json"
 LOG_FILE="/tmp/mcp-health-check.log"
 
+# Error and warning counters
+ERROR_COUNT=0
+WARNING_COUNT=0
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -60,11 +64,13 @@ log_success() {
 log_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $1" >> "$LOG_FILE"
+    WARNING_COUNT=$((WARNING_COUNT + 1))
 }
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "$LOG_FILE"
+    ERROR_COUNT=$((ERROR_COUNT + 1))
 }
 
 # Initialize log file
@@ -119,15 +125,22 @@ fi
 # 3. Check file descriptor limits
 log_info "Checking file descriptor limits..."
 
-CURRENT_FD_LIMIT=$(ulimit -n)
-log_info "Current file descriptor limit: $CURRENT_FD_LIMIT"
-
-if [ "$CURRENT_FD_LIMIT" -ge 4096 ]; then
-    log_success "✓ File descriptor limit is adequate ($CURRENT_FD_LIMIT >= 4096)"
-elif [ "$CURRENT_FD_LIMIT" -ge 1024 ]; then
-    log_warning "⚠ File descriptor limit is moderate ($CURRENT_FD_LIMIT). Consider increasing to 4096 for large packages"
+CURRENT_FD_LIMIT_RAW=$(ulimit -n)
+if [ "$CURRENT_FD_LIMIT_RAW" = "unlimited" ]; then
+    CURRENT_FD_LIMIT=1048576   # treat as 1M
+    log_info "Current file descriptor limit: unlimited (treating as $CURRENT_FD_LIMIT)"
+    log_success "✓ File descriptor limit is unlimited (more than adequate)"
 else
-    log_error "✗ File descriptor limit is low ($CURRENT_FD_LIMIT). This may cause issues with large Python packages"
+    CURRENT_FD_LIMIT=$CURRENT_FD_LIMIT_RAW
+    log_info "Current file descriptor limit: $CURRENT_FD_LIMIT"
+    
+    if [ "$CURRENT_FD_LIMIT" -ge 4096 ]; then
+        log_success "✓ File descriptor limit is adequate ($CURRENT_FD_LIMIT >= 4096)"
+    elif [ "$CURRENT_FD_LIMIT" -ge 1024 ]; then
+        log_warning "⚠ File descriptor limit is moderate ($CURRENT_FD_LIMIT). Consider increasing to 4096 for large packages"
+    else
+        log_error "✗ File descriptor limit is low ($CURRENT_FD_LIMIT). This may cause issues with large Python packages"
+    fi
 fi
 
 # 4. Check environment variables
@@ -181,10 +194,19 @@ log_info "Testing uvx package installation capability..."
 TEST_PACKAGE="cowsay"
 if uvx --help | grep -q "from" 2>/dev/null; then
     # Try to list available packages (this doesn't install anything)
-    if timeout 10s uvx --from "$TEST_PACKAGE" --help >/dev/null 2>&1; then
-        log_success "✓ uvx can access and prepare packages"
+    if command -v timeout >/dev/null 2>&1; then
+        if timeout 10s uvx "$TEST_PACKAGE" --help >/dev/null 2>&1; then
+            log_success "✓ uvx can access and prepare packages"
+        else
+            log_warning "⚠ uvx package access test timed out or failed (this may be normal)"
+        fi
     else
-        log_warning "⚠ uvx package access test timed out or failed (this may be normal)"
+        # Fallback without timeout
+        if uvx "$TEST_PACKAGE" --help >/dev/null 2>&1; then
+            log_success "✓ uvx can access and prepare packages"
+        else
+            log_warning "⚠ uvx package access test failed (this may be normal)"
+        fi
     fi
 else
     log_info "Skipping package test (uvx version doesn't support --from flag testing)"
@@ -198,7 +220,10 @@ if command -v free >/dev/null 2>&1; then
     AVAILABLE_MEM=$(free -m | awk 'NR==2{printf "%.1f", $7/1024}')
     log_info "Available memory: ${AVAILABLE_MEM}GB"
     
-    if (( $(echo "$AVAILABLE_MEM > 1.0" | bc -l 2>/dev/null || echo "1") )); then
+    # Check memory threshold (use bc if available, fallback to integer comparison)
+    if command -v bc >/dev/null 2>&1 && (( $(echo "$AVAILABLE_MEM > 1.0" | bc -l 2>/dev/null || echo "0") )); then
+        log_success "✓ Sufficient memory available"
+    elif ! command -v bc >/dev/null 2>&1 && [ "${AVAILABLE_MEM%.*}" -ge 1 ] 2>/dev/null; then
         log_success "✓ Sufficient memory available"
     else
         log_warning "⚠ Low memory available (${AVAILABLE_MEM}GB). MCP servers may have issues"
@@ -228,18 +253,7 @@ if [ "$VERBOSE" = true ]; then
     log_info "Detailed log saved to: $LOG_FILE"
 fi
 
-# Count errors and warnings from log BEFORE adding final messages
-ERROR_COUNT=0
-WARNING_COUNT=0
-
-if [ "$VERBOSE" = true ] && [ -f "$LOG_FILE" ]; then
-    ERROR_COUNT=$(grep -c "ERROR:" "$LOG_FILE" 2>/dev/null | head -1 || echo "0")
-    WARNING_COUNT=$(grep -c "WARNING:" "$LOG_FILE" 2>/dev/null | head -1 || echo "0")
-    
-    # Ensure they are integers
-    ERROR_COUNT=${ERROR_COUNT:-0}
-    WARNING_COUNT=${WARNING_COUNT:-0}
-fi
+# Error and warning counts are tracked automatically by log_error/log_warning functions
 
 if [ "$ERROR_COUNT" -eq 0 ] && [ "$WARNING_COUNT" -eq 0 ]; then
     log_success "🎉 All checks passed! MCP servers should work correctly."
