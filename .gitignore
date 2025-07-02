@@ -18,6 +18,8 @@ config.json
 /out/
 .pnpm-store
 logs/
+.bivvy
+.vscode
 
 # production
 /build
