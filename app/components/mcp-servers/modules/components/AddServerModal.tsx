@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { MCPServerConfigFromUI, MCPTransport, MCPTransportStdio, MCPTransportSSE, ServerFormData, FormMCPTransport, FormMCPTransportStdio } from '../utils/serverTypes';
 import { validateServerForm } from '../utils/serverValidation';
 import { useServerActions } from '../hooks/useServerActions';
+import { generateUUID } from '@/lib/utils/uuid';
 
 export interface AddServerModalProps {
   isOpen: boolean;
@@ -133,23 +134,23 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
     }
 
     const serverDataToSubmit: MCPServerConfigFromUI = {
-      id: crypto.randomUUID(), // Generate ID for new server
+      id: generateUUID(), // Generate ID for new server
       name: formData.name,
       displayName: formData.displayName || formData.name,
       enabled: formData.enabled,
       transport: finalTransportConfig,
-      retries: formData.retries,
+      // retries: formData.retries, // TODO: Add to interface when needed
       isEnvManaged: false, // New servers are not environment-managed
     };
 
     // For validation, create ServerFormData with the original form transport (before parsing)
     const serverDataForValidation: ServerFormData = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: formData.name,
       displayName: formData.displayName || formData.name,
       enabled: formData.enabled,
       transport: formData.transport, // Use original form transport for validation
-      retries: formData.retries,
+      // retries: formData.retries, // TODO: Add to interface when needed
     };
 
     const validationResult = validateServerForm(serverDataForValidation, existingServers);
@@ -277,7 +278,7 @@ export function AddServerModal({ isOpen, onClose, onSubmit, existingServers }: A
               displayName: formData.displayName || formData.name,
               enabled: formData.enabled,
               transport: { ...formData.transport } as MCPTransport,
-              retries: formData.retries,
+              // retries: formData.retries, // TODO: Add to interface when needed
             };
             // Parse env for stdio if it's a string
             const transportStdio = tempServerConfig.transport as MCPTransportStdio;

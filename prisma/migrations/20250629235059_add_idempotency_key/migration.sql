@@ -7,7 +7,11 @@
 
 */
 -- AlterTable
-ALTER TABLE "Attachment" ADD COLUMN     "messageId" TEXT NOT NULL;
+-- First add the column as nullable
+ALTER TABLE "Attachment" ADD COLUMN     "messageId" TEXT;
+
+-- TODO: In a future migration, populate messageId for existing attachments 
+-- and then make it NOT NULL once all records have valid messageId values
 
 -- AlterTable
 ALTER TABLE "Chat" ADD COLUMN     "idempotencyKey" TEXT;
@@ -44,5 +48,5 @@ CREATE UNIQUE INDEX "Chat_idempotencyKey_key" ON "Chat"("idempotencyKey");
 -- CreateIndex
 CREATE INDEX "MCPServerMetric_totalFailures_idx" ON "MCPServerMetric"("totalFailures");
 
--- AddForeignKey
-ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- AddForeignKey (will be added in future migration once messageId is populated)
+-- ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

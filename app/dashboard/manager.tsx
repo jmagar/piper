@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, FileText, Server, Activity } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { generateUUID } from '@/lib/utils/uuid';
 
 // Import the log viewer component
 import LogViewer from '@/app/components/log-viewer';
@@ -184,7 +185,7 @@ export default function McpServersManager() {
 
     const serverToAdd: MCPServerConfigFromUI = {
       ...newServerForm,
-      id: crypto.randomUUID(), // Final client-side unique ID for the list
+      id: generateUUID(), // Final client-side unique ID for the list
       name: newServerForm.name.trim(), // Ensure trimmed
     };
 

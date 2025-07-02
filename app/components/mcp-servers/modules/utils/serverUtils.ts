@@ -5,6 +5,7 @@ import {
   MergedServerData,
   ServerFilters 
 } from './serverTypes';
+import { generateUUID } from '@/lib/utils/uuid';
 
 /**
  * Format relative time from a date
@@ -33,7 +34,7 @@ export const copyServerConfig = (server: MCPServerConfigFromUI): void => {
 export const createDuplicateServer = (server: MCPServerConfigFromUI): MCPServerConfigFromUI => {
   return {
     ...server,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: `${server.name}-copy`,
     displayName: `${server.displayName || server.name} (Copy)`
   };

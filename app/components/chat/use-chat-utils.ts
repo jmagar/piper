@@ -5,6 +5,7 @@ import { appLogger } from "@/lib/logger"
 import { toast } from "@/components/ui/toast"
 import { checkRateLimits } from "@/lib/api"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
+import { generateUUID } from "@/lib/utils/uuid"
 import { useRef } from "react"
 
 type UseChatUtilsProps = {
@@ -87,7 +88,7 @@ export function useChatUtils({
     // Create the promise immediately to prevent timing window race condition
     const creationPromise = (async (): Promise<string | null> => {
       try {
-        const idempotencyKey = crypto.randomUUID(); // Generate a unique key for the request
+        const idempotencyKey = generateUUID(); // Generate a unique key for the request
         const newChat = await createNewChat({
           idempotencyKey, // Pass the key to the API
           title: input.substring(0, 100), // Use first 100 chars as title
