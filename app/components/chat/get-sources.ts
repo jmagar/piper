@@ -1,15 +1,5 @@
 import type { Message as MessageAISDK } from "@ai-sdk/react"
 
-interface Citation {
-  url: string
-  title: string
-  [key: string]: unknown // Allow other properties
-}
-
-interface SummarizationResultItem {
-  citations?: Citation[]
-}
-
 export function getSources(parts: MessageAISDK["parts"]) {
   const sources = parts
     ?.filter(
@@ -25,15 +15,6 @@ export function getSources(parts: MessageAISDK["parts"]) {
         part.toolInvocation.state === "result"
       ) {
         const result = part.toolInvocation.result
-
-        if (
-          part.toolInvocation.toolName === "summarizeSources" &&
-          result?.result?.[0]?.citations
-        ) {
-          return result.result.flatMap(
-            (item: SummarizationResultItem) => item.citations || []
-          )
-        }
 
         return Array.isArray(result) ? result.flat() : result
       }

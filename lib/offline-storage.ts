@@ -101,6 +101,22 @@ class OfflineStorage {
             db.createObjectStore('settings', { keyPath: 'key' })
           }
         },
+        blocked: () => {
+          // This event is fired when the database upgrade is blocked by another tab.
+          console.warn(
+            'Database upgrade blocked - another version may be open in another tab'
+          )
+        },
+        blocking: () => {
+          // This event is fired when the database connection is blocking another connection.
+          console.warn('Database blocking another upgrade - closing connection')
+          this.close() // Ensure we close the current connection
+        },
+        terminated: () => {
+          // This event is fired when the browser terminates the database connection.
+          console.warn('Database connection terminated unexpectedly')
+          this.db = null
+        }
       })
 
       console.log('Offline storage initialized successfully')

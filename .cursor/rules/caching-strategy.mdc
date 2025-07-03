@@ -1,0 +1,46 @@
+---
+description: "Defines the project's multi-layered caching strategy."
+globs:
+  - "lib/mcp/modules/redis-cache-manager.ts"
+  - "app/api/**/*.ts"
+  - "app/sw.ts"
+alwaysApply: false
+---
+
+# Caching Strategy
+
+This project employs a multi-layered caching strategy to optimize performance, reduce database load, and enable offline functionality.
+
+## 1. Redis Cache (Primary Server-Side Cache)
+
+Redis is the primary cache for server-side data that is expensive to compute or fetch. It is managed by the `RedisCacheManager` located in `lib/mcp/modules/redis-cache-manager.ts`.
+
+**Use Cases:**
+*   **MCP Server & Agent Configurations:** Caching configs for MCP servers and AI agents to reduce file I/O and database queries.
+*   **External API Responses:** Caching responses from external APIs like OpenRouter to avoid rate limits and reduce latency. See `app/api/openrouter-models/route.ts` for an example.
+*   **Filesystem Content:** Caching frequently accessed files, like prompt templates, to avoid disk reads. See `app/api/prompts/docs/[filename]/route.ts`.
+
+**Workflow for New Redis Caching:**
+1.  Get the singleton instance of `RedisCacheManager`.
+2.  In your API route or server-side function, first attempt to retrieve the data from Redis using a `get*` method.
+3.  If the data is present (cache HIT), return it.
+4.  If the data is not present (cache MISS), fetch it from the primary source (database, external API, filesystem).
+5.  Use a `set*` method on the manager to store the newly fetched data in Redis before returning it. Define a reasonable TTL (Time To Live).
+
+## 2. PWA & Service Worker Cache
+
+The project uses `@serwist/next` to implement a Progressive Web App (PWA). The service worker configuration is in `app/sw.ts`.
+
+*   **Functionality:** It uses `defaultCache` to automatically cache static assets (JS, CSS, images) and page navigations. This enables basic offline functionality and improves subsequent load times.
+*   **Customization:** Do not modify `app/sw.ts` unless you are specifically changing the PWA's core caching behavior.
+
+## 3. Next.js Data Cache (Not Used)
+
+This project **does not** currently use the native Next.js Data Cache (i.e., `fetch` deduplication, `revalidate`, `cache: 'no-store'`). All API routes are dynamic and rely on the Redis cache or direct data fetching. Do not introduce Next.js `fetch` caching without a broader discussion on architecture.
+
+## 4. Client-Side Data Cache (IndexedDB)
+
+For a highly responsive UI, some data is cached client-side in the browser's IndexedDB.
+
+*   **Use Case:** Chat messages are stored in IndexedDB to provide an "instant" loading experience while fresh data is fetched in the background. See `lib/chat-store/messages/provider.tsx` and `lib/chat-store/persist.ts`.
+*   **Pattern:** This pattern should only be used for non-critical data where an optimistic UI is desirable. It should not be the primary data store.

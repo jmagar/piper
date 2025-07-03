@@ -8,7 +8,7 @@ import {
   TextPart,
   CoreMessage,
   ImagePart,
-  ToolCallPart
+  ToolCallPart,
 } from 'ai';
 import { prisma } from "@/lib/prisma";
 import { logUserMessage, validateAndTrackUsage } from "./api";
@@ -301,23 +301,26 @@ export async function POST(req: Request) {
       : "New Chat";
 
     const chatUpsertStartTime = Date.now();
-    await prisma.chat.upsert({
-      where: { id: chatId },
-      update: { updatedAt: new Date() },
-      create: {
-        id: chatId,
-        title: defaultTitle,
-        model: effectiveModel,
-        systemPrompt: systemPrompt || '',
-        agentId: agentId,
-      },
-    });
-    appLogger.debug(`Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, { 
+    // Use a transaction for critical database writes to ensure data consistency.
+    await prisma.$transaction([
+      prisma.chat.upsert({
+        where: { id: chatId },
+        update: { updatedAt: new Date() },
+        create: {
+          id: chatId,
+          title: defaultTitle,
+          model: effectiveModel,
+          systemPrompt: systemPrompt || '',
+          agentId: agentId,
+        },
+      })
+    ]);
+    appLogger.debug(`Chat upserted: ${chatId} (${Date.now() - chatUpsertStartTime}ms)`, {
       correlationId,
       chatId
     });
 
-    await validateAndTrackUsage(); // Assuming this uses context or validatedRequest.data internally
+    await validateAndTrackUsage();
 
     // Log PiperMessages before transforming to CoreMessages for orchestration
     appLogger.debug(`[POST /api/chat] Processing ${piperMessagesWithInitialIds.length} messages for orchestration`, {
@@ -460,12 +463,14 @@ export async function POST(req: Request) {
         onFinish: async (finishResult) => {
           try {
             const assistantMessageId = uuidv4();
+            const finalText = await finishResult.text;
+            const finalToolCalls = await finishResult.toolCalls;
             await saveFinalAssistantMessage({
               chatId: chatId!,
               messageId: assistantMessageId,
               role: 'assistant',
-              content: finishResult.text || '', // Ensure content is always a string
-              toolCalls: finishResult.toolCalls?.map(toolCall => ({
+              content: finalText || '', // Ensure content is always a string
+              toolCalls: finalToolCalls?.map((toolCall) => ({
                 id: toolCall.toolCallId,
                 name: toolCall.toolName,
                 args: toolCall.args,
@@ -479,8 +484,8 @@ export async function POST(req: Request) {
               correlationId,
               chatId,
               messageId: assistantMessageId,
-              textLength: finishResult.text?.length || 0,
-              toolCallsCount: finishResult.toolCalls?.length || 0
+              textLength: finalText?.length || 0,
+              toolCallsCount: finalToolCalls?.length || 0
             });
           } catch (error) {
             appLogger.error(`[ChatAPI] ❌ Failed to save assistant message to database`, {

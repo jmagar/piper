@@ -1,0 +1,34 @@
+---
+description: "Defines the project's code style and linting rules."
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# Linting and Formatting
+
+To maintain code consistency and quality, this project uses Prettier for code formatting and ESLint for identifying potential issues.
+
+## 1. Code Formatting (Prettier)
+
+-   **Automatic Formatting:** It is highly recommended to configure your IDE to format files on save. This project's Prettier configuration is defined in `.prettierrc.json` and includes the `prettier-plugin-tailwindcss` for automatically sorting Tailwind CSS classes.
+-   **Manual Formatting:** You can manually format the entire codebase by running:
+    ```bash
+    pnpm prettier --write .
+    ```
+
+## 2. Code Linting (ESLint)
+
+-   **Purpose:** ESLint analyzes the code to find problems, such as potential bugs, anti-patterns, and unused variables. The configuration is in `eslint.config.mjs`.
+-   **Running the Linter:** To check the entire project for linting errors, run:
+    ```bash
+    pnpm lint
+    ```
+-   **Ignoring Rules:** In rare cases, you may need to disable an ESLint rule for a specific line.
+    ```typescript
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="..." alt="..." />
+    ```
+    Only do this when you have a valid reason, and add a comment explaining why the rule is being disabled.
+-   **Build Process:** As noted in the `nextjs.mdc` rule, ESLint warnings are currently ignored during the build process (`ignoreDuringBuilds: true`). This is a temporary setting.

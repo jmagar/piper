@@ -99,22 +99,16 @@ export function normalizeServerConfig(config: ServerConfigEntry): ServerConfigEn
     delete newConfig.env;
     delete newConfig.cwd;
 
-  } else if (newConfig.url && (!newConfig.transport || !newConfig.transport.type)) {
-    // If url exists but transport.type doesn't, assume sse (or streamable-http if specified later)
-    const url = newConfig.url; // Capture for use
-    delete newConfig.url; // Remove legacy key
-
+  } else if (newConfig.url && !newConfig.transport) {
+    // LEGACY: If a top-level 'url' exists and no 'transport' object exists,
+    // create the transport object. Default to 'sse' for backward compatibility.
     newConfig.transport = {
-      type: 'sse', // Default to sse
-      httpSettings: {
-        url: url,
-      },
-    } as unknown as EnhancedTransportConfig;
-    if (newConfig.headers) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (newConfig.transport as any).httpSettings.headers = newConfig.headers;
-      delete newConfig.headers; // Remove legacy key
-    }
+      type: 'sse',
+      url: newConfig.url,
+      headers: newConfig.headers,
+    } as EnhancedTransportConfig;
+    delete newConfig.url;
+    delete newConfig.headers;
   }
 
   // After legacy migrations, handle partially-migrated configs where properties are on transport but need nesting

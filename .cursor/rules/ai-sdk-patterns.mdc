@@ -1,0 +1,50 @@
+---
+description: "Defines best practices for the AI SDK, MCP, and model providers."
+globs:
+  - "app/api/chat/**/*.ts"
+  - "lib/openproviders/**/*.ts"
+  - "lib/models/data/**/*.ts"
+alwaysApply: false
+---
+
+# AI SDK & Model Provider Patterns
+
+This document outlines the architecture for interacting with Large Language Models (LLMs) and the Model Context Protocol (MCP).
+
+## 1. Core AI Logic
+
+The primary entry point for chat interactions is the API route at `app/api/chat/route.ts`.
+
+-   **Orchestration:** This route delegates all complex logic (tool selection, context pruning, response generation) to the orchestration layer at `app/api/chat/lib/chat-orchestration.ts`.
+-   **No `createAI`:** This project uses the Vercel AI SDK's `streamText` function directly for maximum control over the request lifecycle. It does **not** use the higher-level `createAI` component.
+
+## 2. Adding a New Model Provider
+
+To add a new AI model (e.g., from a new provider or a new OpenAI model), follow this configuration-based pattern:
+
+1.  **Add Provider SDK:** If it's a new provider, add the necessary SDK package (e.g., `@ai-sdk/anthropic`).
+2.  **Create Model Config File:** In `lib/models/data/`, create a new file (e.g., `anthropic.ts`). This file will export an array of `ModelConfig` objects.
+3.  **Define the Model:** In the new file, define your model, specifying its `id`, `name`, `provider`, `contextWindow`, costs, and other metadata.
+4.  **Implement `apiSdk`:** The most important field is `apiSdk`. This is a function that returns the instantiated Vercel AI SDK model object. It should call the `openproviders` factory function from `lib/openproviders/index.ts`.
+    ```typescript
+    // In lib/models/data/anthropic.ts
+    import { openproviders } from "@/lib/openproviders";
+    import { ModelConfig } from "../types";
+
+    const anthropicModels: ModelConfig[] = [
+      {
+        id: "claude-3.5-sonnet-20240620",
+        // ... other metadata
+        apiSdk: () => openproviders("claude-3.5-sonnet-20240620"),
+      },
+    ];
+    ```
+5.  **Update Provider Map:** Add the new model ID and its provider to the `providerMap` in `lib/openproviders/provider-map.ts`.
+6.  **Update Factory:** In `lib/openproviders/index.ts`, add a new `if` block to the `openproviders` function to handle the new provider.
+
+## 3. Model Context Protocol (MCP)
+
+This project uses MCP to communicate with background tool servers.
+
+-   **Management:** The `MCPManager` in `lib/mcp/mcpManager.ts` is the central point for initializing, managing, and monitoring all MCP servers defined in `config/config.json`.
+-   **Custom Tools:** When creating a new custom tool that requires a background process, it should be implemented as an MCP server.

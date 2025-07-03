@@ -1,0 +1,56 @@
+---
+description: "Describes how to add and use shadcn/ui components in this project."
+globs:
+  - "components/ui/**/*.tsx"
+  - "components/custom/**/*.tsx"
+alwaysApply: false
+---
+
+# shadcn/ui Component Workflow
+
+This guide outlines the process for adding new `shadcn/ui` components to this project and the conventions for using them.
+
+## 1. Adding a New Component
+
+To add a new component from the `shadcn/ui` library, use the `shadcn@latest` CLI tool.
+
+Run the following command from the project root:
+
+```bash
+pnpm dlx shadcn@latest add <component-name>
+```
+
+Replace `<component-name>` with the name of the component you want to add (e.g., `card`, `input`, `dialog`). This will add the component's source files to the `components/ui` directory.
+
+## 2. Component Composition (Best Practice)
+
+Whenever possible, avoid using `shadcn/ui` components directly in your pages. Instead, create your own custom components (e.g., in a `components/custom` directory) that compose the base `shadcn/ui` components. This practice promotes reusability and encapsulates styling and behavior.
+
+### Example
+
+Instead of using the `<Button>` from `components/ui/button` directly for a "primary action," create a new component.
+
+**Create a file `components/custom/primary-button.tsx`:**
+
+```tsx
+import { Button, ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export const PrimaryButton = ({ className, ...props }: ButtonProps) => {
+  return (
+    <Button
+      className={cn(
+        "bg-blue-500 text-white hover:bg-blue-600", // Your custom styles
+        className
+      )}
+      {...props}
+    />
+  );
+};
+```
+
+This makes it easier to maintain a consistent design system and update styles across the application.
+
+## 3. Verifying Paths
+
+Before adding a component, check the configuration in `components.json` to ensure the paths for components and utils are correct.

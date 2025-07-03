@@ -1,0 +1,108 @@
+---
+description: Guidelines for working with MCP configuration caching and debugging cache-related issues.
+globs: **/{config,lib/mcp,app/api/mcp}/**/*
+alwaysApply: false
+---
+
+# MCP Cache Management
+
+Guidelines for working with MCP configuration caching and debugging cache-related issues.
+
+## Cache Invalidation Workflow
+
+When working with MCP server configurations, follow this workflow:
+
+1. **Manual Config Changes**: After editing `config/config.json` manually:
+   ```bash
+   # Clear the cache
+   curl http://localhost:8630/api/mcp/invalidate-cache
+   
+   # Restart the application
+   docker restart piper-app-dev
+   
+   # Check server status
+   curl http://localhost:8630/api/mcp-servers | jq
+   ```
+
+2. **Debugging Cache Issues**: When MCP servers show stale configurations:
+   - Check if error messages match current config
+   - Use cache invalidation endpoint before restarting
+   - Verify Redis connectivity in logs
+
+## Common Cache Problems
+
+### Stale Error Messages
+- **Problem**: Error messages reference old configuration
+- **Solution**: Call `/api/mcp/invalidate-cache` then restart
+- **Prevention**: Use configuration API instead of manual edits
+
+### Transport Type Mismatches
+- **Problem**: Server shows wrong transport type in status
+- **Solution**: Invalidate cache and check config normalization logic
+- **Check**: Verify `normalizeServerConfig()` in `lib/mcp/mcpManager.ts`
+
+### Configuration Not Updating
+- **Problem**: Changes to `config.json` not reflected in application
+- **Solution**: Always invalidate cache after manual edits
+- **Alternative**: Use `/api/mcp/config` endpoints for changes
+
+## Best Practices
+
+1. **Prefer API Changes**: Use configuration API endpoints when possible
+2. **Cache Invalidation**: Always invalidate cache after manual config edits
+3. **Logging**: Check application logs for cache-related errors
+4. **Testing**: Test configuration changes in development first
+
+## API Endpoints
+
+### Cache Management
+- `GET /api/mcp/invalidate-cache` - Clear configuration cache
+- `GET /api/mcp-servers` - Check server status
+- `GET /api/mcp/config` - Get current configuration
+
+### Debugging Commands
+```bash
+# Check server status
+curl -s http://localhost:8630/api/mcp-servers | jq '.[] | {key: .key, status: .status, error: .error}'
+
+# Clear cache
+curl http://localhost:8630/api/mcp/invalidate-cache
+
+# Check specific server
+curl -s http://localhost:8630/api/mcp-servers | jq '.[] | select(.key == "server-name")'
+```
+
+## Code Patterns
+
+### Adding Cache Invalidation to Config APIs
+```typescript
+// In API routes that modify configuration
+import { invalidateConfigCache } from '@/lib/mcp/enhanced/cached-config';
+
+// After successful config change
+await invalidateConfigCache();
+```
+
+### Checking Cache Status
+```typescript
+// In debugging code
+import { getCachedConfig } from '@/lib/mcp/enhanced/cached-config';
+
+const config = await getCachedConfig();
+// Check if config matches file system
+```
+
+## Troubleshooting Steps
+
+1. **Check Redis Connection**: Verify Redis is running and accessible
+2. **Validate JSON**: Ensure `config/config.json` has valid syntax
+3. **Check Permissions**: Verify file permissions on config file
+4. **Review Logs**: Look for cache-related errors in application logs
+5. **Test Manually**: Use `curl` to test cache invalidation endpoint
+
+## Related Files
+
+- `app/api/mcp/invalidate-cache/route.ts` - Cache invalidation endpoint
+- `lib/mcp/enhanced/cached-config.ts` - Cache management logic
+- `lib/mcp/mcpManager.ts` - Configuration normalization
+- `docs/mcp-cache-invalidation.md` - Detailed documentation

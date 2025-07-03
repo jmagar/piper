@@ -9,7 +9,7 @@
   "scripts": {
     "build": "next build",
     "start": "next start",
-    "dev": "mkdir -p .next && next dev",
+    "dev": "mkdir -p logs && next dev",
     "lint": "next lint"
   },
   "prisma": {
@@ -119,6 +119,7 @@
     "repomix": "^0.3.7",
     "tailwindcss": "^4.1.5",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "tw-animate-css": "^1.2.9",
     "typescript": "^5",
     "youtube-vision": "^0.1.2"

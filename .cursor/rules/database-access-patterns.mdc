@@ -1,0 +1,65 @@
+---
+description: "Defines conventions for interacting with the database using Prisma."
+globs:
+  - "app/api/**/*.ts"
+  - "lib/data/**/*.ts"
+  - "lib/usage.ts"
+alwaysApply: false
+---
+
+# Database Access Patterns
+
+This rule outlines the standard conventions for querying the database with Prisma to ensure code is consistent, secure, and maintainable.
+
+## 1. Prisma Client Usage
+
+-   **Singleton Instance:** Always import the shared Prisma client instance from `lib/prisma.ts`. Do not instantiate `new PrismaClient()` in other files. This ensures efficient connection management.
+    ```typescript
+    import { prisma } from '@/lib/prisma';
+    ```
+-   **Direct Access:** It is standard practice in this project to use the `prisma` client directly within API routes (`app/api/`) and server-side library functions (`lib/`). There is no strict repository pattern enforced.
+
+## 2. Data Validation
+
+-   **Always Validate:** Before writing any data to the database (create or update operations), you **must** validate the incoming data using `zod`. This is a critical security and data integrity measure.
+-   **Location:** Validation logic should happen at the beginning of the API route handler or server-side function that receives the data.
+
+### Example:
+
+```typescript
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+
+const createChatSchema = z.object({
+  title: z.string().min(1, "Title is required."),
+  userId: z.string(),
+});
+
+export async function POST(request: Request) {
+  const json = await request.json();
+  const validation = createChatSchema.safeParse(json);
+
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error.format() }, { status: 400 });
+  }
+
+  const { title, userId } = validation.data;
+
+  const chat = await prisma.chat.create({
+    data: { title, userId /* ... */ },
+  });
+
+  return NextResponse.json(chat);
+}
+```
+
+## 3. Error Handling
+
+-   **Use `try...catch`:** All database operations should be wrapped in a `try...catch` block to handle potential Prisma errors gracefully.
+-   **Specific Errors:** When possible, catch specific Prisma errors (e.g., `P2002` for unique constraint violations) to provide more meaningful feedback to the user.
+
+## 4. Security
+
+-   **No Raw Queries:** Avoid using raw SQL queries (`$queryRaw`, `$executeRaw`) whenever possible. Use Prisma's generated client methods to prevent SQL injection vulnerabilities. If a raw query is absolutely necessary, it must be reviewed and approved.
+-   **Never Trust User Input:** Treat all data from the client as untrusted. Always validate and sanitize data before using it in a database query.
+-   **Do Not Expose Full Objects:** When returning data from an API endpoint, select only the fields necessary for the client. Avoid returning the entire Prisma model object, as it may contain sensitive or unnecessary data.

@@ -1,0 +1,52 @@
+---
+description: "Defines the standard workflow for working with the Prisma ORM in this project."
+globs:
+  - "prisma/schema.prisma"
+  - "prisma/seed.ts"
+alwaysApply: false
+---
+
+# Prisma Workflow
+
+This document outlines the standard procedures for managing the database schema, client, and data seeding using Prisma.
+
+## 1. Modifying the Schema
+
+All database schema changes must be made in the `prisma/schema.prisma` file. This is the single source of truth for your database models.
+
+## 2. Generating the Prisma Client
+
+After you modify the `prisma/schema.prisma` file, you must regenerate the Prisma Client to update the types and available methods.
+
+Run the following command:
+
+```bash
+./dev.sh prisma-generate
+```
+
+The Prisma Client is located in `node_modules/@prisma/client`.
+
+## 3. Creating Database Migrations
+
+For any schema change that needs to be persisted to the database, you must create a migration.
+
+To create a new migration, run:
+
+```bash
+./dev.sh prisma-migrate-dev --name <your-migration-name>
+```
+
+Replace `<your-migration-name>` with a short, descriptive name for your migration in kebab-case (e.g., `add-user-model`). This command will:
+1.  Create a new SQL migration file in `prisma/migrations/`.
+2.  Apply the migration to your development database.
+3.  Ensure the Prisma Client is in sync.
+
+## 4. Seeding the Database
+
+The project contains a seed script at `prisma/seed.ts` to populate the database with initial data. To run it, use the command defined in `package.json` and `dev.sh`:
+
+```bash
+./dev.sh prisma db seed
+```
+
+You can modify the `prisma/seed.ts` file to change the seed data.

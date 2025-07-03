@@ -1,0 +1,40 @@
+---
+description: "Explains how to configure the project's environment variables."
+globs:
+  - ".env.example"
+  - ".env"
+alwaysApply: false
+---
+
+# Environment Variables
+
+This project uses environment variables to manage configuration for different environments (development, production). A template for these variables is provided in `.env.example`.
+
+## Setup
+
+1.  **Create a `.env` file:** Before running the application for the first time, create a `.env` file in the project root by copying the example file.
+    ```bash
+    cp .env.example .env
+    ```
+2.  **Fill in the variables:** Open the `.env` file and provide the appropriate values for your local setup. The default values are configured to work with the Docker Compose setup provided in `docker-compose.dev.yml`.
+
+## Core Variables
+
+-   `NODE_ENV`: Sets the application mode (`development` or `production`).
+-   `NEXT_PUBLIC_APP_URL`: The public base URL of the application.
+-   `DATABASE_URL`: The full connection string for the PostgreSQL database.
+-   `REDIS_URL`: The connection URL for the Redis cache.
+
+## File System Paths
+
+These variables define paths used by the application, which are especially important when running inside a Docker container.
+
+-   `UPLOADS_DIR`: Where user-uploaded files are stored.
+-   `CONFIG_DIR`: The location of the `config.json` file for MCP servers.
+-   `LOGS_DIR`: Where Winston log files are written.
+-   `LOG_LEVEL`: The minimum level of logs to record (`info`, `debug`, etc.).
+
+## AI Provider API Keys
+
+-   **`OPENROUTER_API_KEY`**: This is the most important AI-related key. This project uses OpenRouter as a primary gateway to access various models from different providers (OpenAI, Anthropic, Google, etc.). You must set this key to enable AI chat functionality.
+-   **Direct Keys (Optional):** While OpenRouter is the main provider, you can also provide direct API keys for other services like `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc. The `openproviders` factory will use these if a model is configured to connect to a provider directly.

@@ -1,26 +1,59 @@
 ---
-description: 
-globs: **/*.js,**/*.jsx,**/*.ts,**/*.tsx
-alwaysApply: false
----
----
-description: This rule explains Next.js conventions and best practices for fullstack development.
-globs: **/*.js,**/*.jsx,**/*.ts,**/*.tsx
+description: "This rule explains Next.js project-specific conventions and best practices."
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
 alwaysApply: false
 ---
 
-# Next.js rules
+# Next.js Project Rules
 
-- Use the App Router structure with `page.tsx` files in route directories.
-- Client components must be explicitly marked with `'use client'` at the top of the file.
-- Use kebab-case for directory names (e.g., `components/auth-form`) and PascalCase for component files.
-- Prefer named exports over default exports, i.e. `export function Button() { /* ... */ }` instead of `export default function Button() { /* ... */ }`.
-- Minimize `'use client'` directives:
-  - Keep most components as React Server Components (RSC)
-  - Only use client components when you need interactivity and wrap in `Suspense` with fallback UI
-  - Create small client component wrappers around interactive elements
-- Avoid unnecessary `useState` and `useEffect` when possible:
-  - Use server components for data fetching
-  - Use React Server Actions for form handling
-  - Use URL search params for shareable state
-- Use `nuqs` for URL search param state management
+This document outlines project-specific conventions for our Next.js application.
+
+## Core Principles
+
+- **App Router:** Use the App Router structure with `page.tsx` for pages and `layout.tsx` for layouts.
+- **Component Naming:** Use `kebab-case` for directory names and `PascalCase` for component filenames.
+- **Exports:** Prefer named exports over default exports.
+- **Server First:** Default to React Server Components (RSCs).
+
+## Client Components (`'use client'`)
+
+- **Minimize Usage:** Create small, targeted Client Components for interactivity.
+- **State Management:** For URL-persisted state, use `nuqs`.
+
+## API Routes & Server Actions
+
+- **Location:** API endpoints are located in `app/api/`.
+- **Form Handling:** Use Server Actions for form submissions to reduce client-side code.
+
+## Logging
+
+The project uses a unified logger from `lib/logger`.
+
+- **Usage:** Import `appLogger` and use its methods (`info`, `warn`, `error`).
+- **Log Levels:**
+    - `info`: For routine events, such as API requests or state changes.
+    - `warn`: For recoverable issues or potential problems (e.g., a failed API call that will be retried).
+    - `error`: For unrecoverable errors that disrupt a user flow.
+- **Structured Context:** When logging, provide a context object with relevant data. The logger automatically handles adding source and other metadata.
+    ```typescript
+    appLogger.info('User logged in successfully', { userId: user.id });
+    appLogger.error('Failed to process payment', { error, orderId: id });
+    ```
+-   **Sensitive Data:** **Never** log sensitive information like passwords, API keys, or raw user data.
+
+## Authentication
+
+- **Provider:** `next-auth` manages authentication.
+- **Middleware:** `middleware.ts` protects routes. Add new protected routes to its `matcher` config.
+
+## PWA (Progressive Web App)
+
+- **Service Worker:** Managed by `@serwist/next`. The source is `app/sw.ts`.
+- **Development:** PWA features are disabled in development for faster builds.
+
+## Build Configuration (`next.config.ts`)
+
+- **Build Errors:** TypeScript and ESLint errors are currently ignored during the build. This is temporary.
+- **Server Packages:** `serverExternalPackages` is used to manage server-side dependencies for the App Router.
