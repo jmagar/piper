@@ -1,0 +1,114 @@
+---
+description: "Enforces package manager requirements and dependency installation patterns."
+globs:
+  - "package.json"
+  - "pnpm-workspace.yaml"
+  - "Dockerfile*"
+alwaysApply: false
+---
+
+# Package Manager Requirements
+
+This project has specific requirements for package management and dependencies.
+
+## 1. Package Manager: pnpm ONLY
+
+**CRITICAL:** This project MUST use `pnpm`. Do not use `npm` or `yarn`.
+
+```bash
+# ✅ Correct
+pnpm install
+pnpm add package-name
+pnpm dlx shadcn@latest add button
+
+# ❌ Wrong
+npm install
+yarn add package-name
+```
+
+### Why pnpm?
+- **Workspace Support:** Defined in `pnpm-workspace.yaml`
+- **Disk Efficiency:** Shared dependency storage
+- **Build Dependencies:** Specific `onlyBuiltDependencies` configuration for Prisma, Tailwind, etc.
+
+## 2. Installation Requirements
+
+### Legacy Peer Dependencies
+**REQUIRED:** Always use `--legacy-peer-deps` flag:
+
+```bash
+pnpm install --legacy-peer-deps
+```
+
+This is required due to:
+- Next.js canary version compatibility
+- React 19 early adoption
+- MCP SDK dependencies
+
+### File Descriptor Limits
+For Docker builds, increase file descriptor limits:
+```bash
+# In Dockerfile
+RUN sh -c "ulimit -n 4096; pnpm install --legacy-peer-deps"
+```
+
+## 3. Next.js Version Requirement
+
+**CRITICAL:** This project requires Next.js canary version.
+
+Current requirement: `next@15.4.0-canary.102`
+
+### Why Canary?
+- **React 19 Support:** Required for latest React features
+- **App Router Enhancements:** Needed for server components
+- **Experimental Features:** `nodeMiddleware: true` for MCP integration
+
+### Version Updates
+When updating Next.js:
+1. Only use canary versions: `pnpm add next@canary`
+2. Test all MCP functionality
+3. Verify PWA builds work
+4. Check TypeScript compatibility
+
+## 4. Critical Dependencies
+
+### Prisma Requirements
+```bash
+# After any schema changes
+pnpm prisma generate
+```
+
+### Build Dependencies
+These packages require special handling (defined in `pnpm-workspace.yaml`):
+- `@prisma/client`
+- `@prisma/engines` 
+- `@tailwindcss/oxide`
+- `prisma`
+- `sharp`
+
+## 5. Docker Considerations
+
+### Development (Dockerfile.dev)
+```dockerfile
+RUN sh -c "ulimit -n 4096; npm install --legacy-peer-deps"
+```
+
+### Production (Dockerfile)
+```dockerfile
+RUN pnpm install --legacy-peer-deps --frozen-lockfile
+```
+
+## 6. Common Issues
+
+### Peer Dependency Conflicts
+If you see peer dependency warnings:
+1. Ensure you're using `--legacy-peer-deps`
+2. Check if you're using canary Next.js
+3. Verify React 19 compatibility
+
+### Build Failures
+If builds fail:
+1. Clear `.next` directory
+2. Delete `node_modules` and `pnpm-lock.yaml`
+3. Run `pnpm install --legacy-peer-deps`
+4. Run `pnpm prisma generate`

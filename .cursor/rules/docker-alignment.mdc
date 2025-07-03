@@ -1,0 +1,68 @@
+---
+description: "Ensures Docker configurations remain aligned across development and production."
+globs:
+  - "Dockerfile*"
+  - "docker-compose*.yml"
+  - "dev.sh"
+alwaysApply: false
+---
+
+# Docker Configuration Alignment
+
+This project uses multiple Docker configurations that must remain synchronized.
+
+## 1. Configuration Files
+
+- **Dockerfile** - Production build
+- **Dockerfile.dev** - Development build  
+- **docker-compose.yml** - Production services
+- **docker-compose.dev.yml** - Development services
+- **dev.sh** - Development orchestration script
+
+## 2. Critical Alignment Points
+
+### Port Consistency
+- **App:** 8630 (prod) / 3000 (dev container internal)
+- **Database:** 8631 (host) / 5432 (container internal)  
+- **Redis:** 8632 (host) / 6379 (container internal)
+
+### Environment Variables
+Ensure these are consistent across all files:
+- `NODE_ENV`
+- `DATABASE_URL` 
+- `REDIS_URL`
+- `CONFIG_DIR`
+- `UV_COMPILE_BYTECODE=0`
+
+### Volume Mounts
+- `/config` - MCP configuration
+- `/logs` - Application logs
+- `/app` - Application code (dev only)
+
+### Build Dependencies
+Both Dockerfiles must include:
+- Node.js 22+
+- Python 3 + pip
+- `uv` and `uvx` in `/usr/local/bin/`
+- Git, curl, build tools
+
+## 3. Validation Checklist
+
+Before deployment, verify:
+- [ ] Port mappings match between dev/prod
+- [ ] Environment variables are consistent
+- [ ] Volume mounts are properly configured
+- [ ] Build dependencies are aligned
+- [ ] Health checks are present
+- [ ] User permissions are correct (node user)
+
+## 4. Development Workflow
+
+Use `dev.sh` for all local development:
+```bash
+./dev.sh up    # Start development environment
+./dev.sh down  # Stop and cleanup
+./dev.sh logs  # View logs
+```
+
+Never run `docker-compose` directly - always use the dev.sh script to ensure proper configuration.

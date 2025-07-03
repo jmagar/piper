@@ -112,6 +112,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.2",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "knip": "^5.61.3",
     "mcp-mermaid": "^0.1.2",
     "mcp-searxng": "^0.4.6",
     "prettier": "^3.5.1",
