@@ -60,7 +60,7 @@ const getInitialFormState = (server: MCPServerConfigFromUI | null): FormState =>
     displayName: server.displayName || '',
     enabled: server.enabled,
     transport: formTransport,
-    retries: server.retries,
+    retries: server.retries ?? 3,
   };
 };
 
