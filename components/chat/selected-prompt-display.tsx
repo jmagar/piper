@@ -1,5 +1,5 @@
 import React from 'react';
-import { Prompt } from '@/app/components/chat-input/use-agent-command'; // Adjust path if necessary
+import { Prompt } from '@/components/chat-input/use-agent-command'; // Adjust path if necessary
 import { Badge } from '@/components/ui/badge';
 import { XIcon } from 'lucide-react';
 

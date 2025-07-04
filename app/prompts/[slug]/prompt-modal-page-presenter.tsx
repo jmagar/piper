@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { DialogPrompt } from "@/app/components/prompts/dialog-prompt"
+import { DialogPrompt } from "@/components/prompts/dialog-prompt"
 import type { Prompt as PromptType, PromptSummary } from "@/app/types/prompt"
 
 

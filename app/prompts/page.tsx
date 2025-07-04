@@ -1,8 +1,8 @@
 "use client"
 
-import { LayoutApp } from "@/app/components/layout/layout-app"
-import { PromptCard } from "@/app/components/prompts/prompt-card"
-import { DialogCreatePromptTrigger } from "@/app/components/prompts/dialog-create-prompt/dialog-trigger-create-prompt"
+import { LayoutApp } from "@/components/layout/layout-app"
+import { PromptCard } from "@/components/prompts/prompt-card"
+import { DialogCreatePromptTrigger } from "@/components/prompts/dialog-create-prompt/dialog-trigger-create-prompt"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fetchClient } from "@/lib/fetch"

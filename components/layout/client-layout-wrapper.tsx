@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutApp } from "@/app/components/layout/layout-app"
+import { LayoutApp } from "@/components/layout/layout-app"
 
 interface ClientLayoutWrapperProps {
   children: React.ReactNode

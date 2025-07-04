@@ -1,5 +1,5 @@
 import React from 'react';
-import { MCPTool } from '@/app/components/chat-input/use-agent-command'; // Adjust path if necessary
+import { MCPTool } from '@/components/chat-input/use-agent-command'; // Adjust path if necessary
 import { Badge } from '@/components/ui/badge';
 import { XIcon, CogIcon } from 'lucide-react'; // Added CogIcon for tool visual
 

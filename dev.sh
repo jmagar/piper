@@ -2,11 +2,11 @@
 
 # Development Environment Management Script for Piper
 
-# Ensure the script is run from the project root (where docker-compose.dev.yml is)
+# Ensure the script is run from the project root (where docker/docker-compose.dev.yml is)
 cd "$(dirname "$0")"
 
 # Default Docker Compose command
-COMPOSE_CMD="docker compose -f docker-compose.dev.yml"
+COMPOSE_CMD="docker compose -f docker/docker-compose.dev.yml"
 
 # Function to print usage
 usage() {
@@ -92,7 +92,7 @@ case "$COMMAND" in
     echo "Access Prisma Studio at http://localhost:5555"
     # Prisma studio needs the port exposed from the container.
     # We'll run it with a temporary service definition or by adding the port to piper-app if always needed.
-    # For simplicity here, we assume you might add -p 5555:5555 to piper-app in docker-compose.dev.yml if used often.
+    # For simplicity here, we assume you might add -p 5555:5555 to piper-app in docker/docker-compose.dev.yml if used often.
     # Or, run it attached to see output and stop easily:
     $COMPOSE_CMD exec piper-app npx prisma studio
     ;;

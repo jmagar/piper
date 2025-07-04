@@ -1,7 +1,7 @@
 "use client"
 
-import { ChatErrorBoundary } from "@/app/components/error-boundary"
-import { groupChatsByDate } from "@/app/components/history/utils"
+import { ChatErrorBoundary } from "@/components/error-boundary"
+import { groupChatsByDate } from "@/components/history/utils"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { HistoryTrigger } from "../../history/history-trigger"
-import { ButtonNewChat } from "@/app/components/layout/button-new-chat"
+import { ButtonNewChat } from "@/components/layout/button-new-chat"
 import { SidebarList } from "./sidebar-list"
 
 export function AppSidebar() {

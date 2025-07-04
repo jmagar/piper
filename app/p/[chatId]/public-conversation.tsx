@@ -1,6 +1,6 @@
 "use client"
 
-import { Conversation } from "@/app/components/chat/conversation"
+import { Conversation } from "@/components/chat/conversation"
 
 type Message = {
   id: string

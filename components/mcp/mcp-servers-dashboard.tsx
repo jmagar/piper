@@ -18,7 +18,7 @@ import {
   ServerGrid,
 } from './modules/components';
 
-import { AddServerModal } from './modules/components/AddServerModal';
+import { AddServerModal } from './modules/components/add-server-modal';
 import { EditServerModal } from './modules/components/EditServerModal';
 import { DeleteServerModal } from './modules/components/DeleteServerModal';
 import RawConfigEditor from './modules/components/RawConfigEditor';

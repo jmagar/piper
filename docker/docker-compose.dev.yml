@@ -4,8 +4,8 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=false
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: docker/Dockerfile.dev
     # Explicitly run as root
     user: "0:0"
     command: sh -c "npx prisma db push && npm run dev"
@@ -14,7 +14,7 @@ services:
       - "8630:3000"
     # Load environment variables from .env file
     env_file:
-      - .env
+      - ../.env
     environment:
       # Add or override any environment variables here if needed
       - NODE_ENV=development

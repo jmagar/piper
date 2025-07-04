@@ -5,12 +5,13 @@ services:
     container_name: piper-app
     restart: unless-stopped
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         - REDIS_URL=redis://piper-cache:6379
     ports:
       - 8630:3000
-    env_file: .env # Load all variables from .env
+    env_file: ../.env # Load all variables from .env
     environment:
       # This DATABASE_URL overrides the one from .env for the Docker container
       - DATABASE_URL=postgresql://piper:piper@piper-db:5432/piper

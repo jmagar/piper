@@ -1,6 +1,6 @@
 "use client"
 
-import { useAgentCommand, Prompt, MCPTool } from "@/app/components/chat-input/use-agent-command";
+import { useAgentCommand, Prompt, MCPTool } from "@/components/chat-input/use-agent-command";
 import { Agent } from "@/app/types/agent";
 import {
   PromptInput,
@@ -14,7 +14,7 @@ import type { FetchedToolInfo } from "@/lib/mcp/enhanced/types";
 import { MODELS, type ModelConfig } from "@/lib/models";
 import { getAllTools } from "@/lib/tool-utils";
 import { AttachMenu } from "./attach-menu";
-import { FileExplorerModal } from "@/app/components/files/file-explorer-modal";
+import { FileExplorerModal } from "@/components/files/file-explorer-modal";
 import { SelectedAgent } from "./selected-agent";
 import { SelectedPromptDisplay } from "./selected-prompt-display"
 import { SelectedToolDisplay } from "./selected-tool-display"

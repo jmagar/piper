@@ -1,7 +1,7 @@
 "use client"
 
-import { HistoryTrigger } from "@/app/components/history/history-trigger"
-import { UserMenu } from "@/app/components/layout/user-menu"
+import { HistoryTrigger } from "@/components/history/history-trigger"
+import { UserMenu } from "@/components/layout/user-menu"
 // import { useUser } from "@/app/providers/user-provider"
 import type { Agent } from "@/app/types/agent"
 import { useSidebar } from "@/components/ui/sidebar"

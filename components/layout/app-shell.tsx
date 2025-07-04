@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { SkeletonChatInterface } from '@/components/ui/skeleton-screens'
 import { OfflineIndicator } from '@/components/offline/offline-indicator'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
-import { ErrorBoundary } from '@/app/components/error-boundary'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 interface AppShellProps {
   children: React.ReactNode

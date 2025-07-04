@@ -1,8 +1,8 @@
 "use client"
 
 import React from 'react';
-import { FileExplorer } from '@/app/components/files/file-explorer';
-import { LayoutApp } from '@/app/components/layout/layout-app';
+import { FileExplorer } from '@/components/files/file-explorer';
+import { LayoutApp } from '@/components/layout/layout-app';
 
 export default function FilesPage() {
   return (

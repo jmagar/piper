@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutApp } from "@/app/components/layout/layout-app"
+import { LayoutApp } from "@/components/layout/layout-app"
 import { Button } from "@/components/ui/button"
 import { Article } from "@phosphor-icons/react"
 import Link from "next/link"
