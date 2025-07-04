@@ -37,13 +37,11 @@ COPY --chown=node:node package*.json ./
 # Install project dependencies with increased file descriptor limit
 RUN sh -c "ulimit -n 4096; npm install --legacy-peer-deps"
 
-# Copy the rest of the application's code into the container as node user
-# This ensures files copied are owned by node, which helps with permissions for .next etc.
-COPY --chown=node:node . .
+# Code will be mounted via volume in development, so no need to copy
+# COPY --chown=node:node . .
 
-# Generate Prisma client as part of the build, as the node user
-# This should happen after all code and node_modules are in place.
-RUN npx prisma generate
+# Prisma generation will happen at runtime when schema is available through volume mount
+# RUN npx prisma generate
 
 # Set environment variables
 # These can be overridden in docker-compose.dev.yml or .env file

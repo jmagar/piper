@@ -8,7 +8,7 @@ services:
       dockerfile: docker/Dockerfile.dev
     # Explicitly run as root
     user: "0:0"
-    command: sh -c "npx prisma db push && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
     # Expose port 3000 on host port 8630
     ports:
       - "8630:3000"
@@ -23,13 +23,13 @@ services:
       # CHOKIDAR_USEPOLLING=true # Uncomment if hot reloading is unreliable
     volumes:
       # Mounts for hot reloading application code
-      - .:/app
+      - ..:/app
       # Isolate container's node_modules from host's
       - /app/node_modules
       # Persistent volumes for data using named volumes
-      - ./uploads:/uploads
-      - ./config:/config
-      - ./logs:/logs
+      - ../uploads:/uploads
+      - ../config:/config
+      - ../logs:/logs
       # Other mounts you had, ensure these paths exist on your host or are appropriate for dev
       - /mnt/user/data:/data
       - /mnt/user/code:/code
