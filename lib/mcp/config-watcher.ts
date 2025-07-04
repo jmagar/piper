@@ -5,56 +5,9 @@ import { MCPConnectionPool } from './enhanced/connection-pool'
 import type { AppConfig, ServerConfigEntry } from './enhanced/types'
 import { AppConfigSchema } from './schemas'
 
-// Enhanced MCP Configuration schema for validation
-// Using the actual types from the enhanced module to avoid conflicts
-// TODO: Consider importing schemas from enhanced module to avoid duplication
-const EnhancedTransportConfigSchema = z.union([
-  z.object({
-    type: z.literal('stdio'),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional(),
-    cwd: z.string().optional(),
-    stderr: z.enum(['inherit', 'ignore', 'pipe']).optional(),
-    clientName: z.string().optional(),
-    timeout: z.number().optional(),
-    onUncaughtError: z.function().optional()
-  }),
-  z.object({
-    type: z.literal('sse'),
-    url: z.string(),
-    headers: z.record(z.string()).optional(),
-    clientName: z.string().optional(),
-    timeout: z.number().optional(),
-    onUncaughtError: z.function().optional()
-  }),
-  z.object({
-    type: z.literal('streamable-http'),
-    url: z.string(),
-    sessionId: z.string().optional(),
-    headers: z.record(z.string()).optional(),
-    clientName: z.string().optional(),
-    timeout: z.number().optional(),
-    onUncaughtError: z.function().optional()
-  })
-])
+// Enhanced MCP Configuration schema for validation - removed unused schema definition
 
-const ServerConfigEntrySchema = z.object({
-  label: z.string().optional(),
-  disabled: z.boolean().optional(), // Legacy compatibility
-  enabled: z.boolean().optional(),
-  transportType: z.enum(['stdio', 'sse', 'streamable-http']).optional(), // Legacy compatibility
-  name: z.string().optional(),
-  transport: EnhancedTransportConfigSchema.optional(),
-  schemas: z.record(z.unknown()).optional(), // Keep as unknown for parsing, will be cast to correct type
-  // Legacy fallback properties
-  command: z.string().optional(),
-  args: z.array(z.string()).optional(),
-  env: z.record(z.string()).optional(),
-  cwd: z.string().optional(),
-  url: z.string().optional(),
-  headers: z.record(z.string()).optional()
-})
+// Unused schema definition removed - ServerConfigEntrySchema
 
 // Re-export types for backward compatibility
 export type MCPServerConfig = ServerConfigEntry

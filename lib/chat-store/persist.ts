@@ -5,11 +5,9 @@ import {
   get,
   getMany,
   keys,
-  set,
   setMany,
 } from "idb-keyval"
 
-let dbReady = false
 let dbInitPromise: Promise<void> | null = null
 const stores: Record<string, any> = {}
 
@@ -38,7 +36,6 @@ function initDatabase() {
     }
 
     request.onsuccess = () => {
-      dbReady = true
       request.result.close()
       resolve()
     }

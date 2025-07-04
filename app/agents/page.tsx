@@ -1,5 +1,5 @@
-import { AgentsPage } from "@/app/components/agents/agents-page"
-import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
+import { AgentsPage } from "@/components/agents/agents-page"
+import { ClientLayoutWrapper } from "@/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { prisma } from "@/lib/prisma"
 

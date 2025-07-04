@@ -1,5 +1,5 @@
-import { AgentDetail } from "@/app/components/agents/agent-detail"
-import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
+import { AgentDetail } from "@/components/agents/agent-detail"
+import { ClientLayoutWrapper } from "@/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"

@@ -1,6 +1,6 @@
 "use client"
 
-import { PopoverContentAuth } from "@/app/components/chat-input/popover-content-auth"
+import { PopoverContentAuth } from "@/components/chat-input/popover-content-auth"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { Button } from "@/components/ui/button"
 import {

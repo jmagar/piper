@@ -8,14 +8,14 @@ alwaysApply: false
 
 # Development Environment (`dev.sh`)
 
-This project uses a `dev.sh` script as a convenient wrapper around `docker-compose` to manage the local development environment.
+This project uses a `scripts/dev.sh` script as a convenient wrapper around `docker-compose` to manage the local development environment.
 
 ## Running the Script
 
 All commands should be run from the project root.
 
 ```bash
-./dev.sh <command>
+./scripts/dev.sh <command>
 ```
 
 ## Available Commands
@@ -24,35 +24,35 @@ Here is a list of the available commands and what they do:
 
 | Command | Description | Example |
 |---|---|---|
-| `up` | Starts all development services in detached mode. | `./dev.sh up` |
-| `down` | Stops and removes all development services and their networks. | `./dev.sh down` |
-| `logs [service]` | Tails the logs for all services or a specific service. | `./dev.sh logs piper-app` |
-| `build [service]` | Builds or rebuilds the Docker images for all services or a specific one. Uses `--no-cache`. | `./dev.sh build` |
-| `ps` | Lists all running development containers. | `./dev.sh ps` |
-| `restart [service]` | Restarts all services or a specific one. | `./dev.sh restart piper-app` |
-| `exec <service> <cmd>` | Executes a command inside a running container. | `./dev.sh exec piper-app sh` |
-| `prisma-generate` | Runs `npx prisma generate` inside the `piper-app` container. | `./dev.sh prisma-generate` |
-| `prisma-migrate-dev`| Runs `npx prisma migrate dev` inside the `piper-app` container. You can pass a name for the migration. | `./dev.sh prisma-migrate-dev --name add-new-field` |
-| `prisma-studio` | Starts Prisma Studio, making it accessible at `http://localhost:5555`. | `./dev.sh prisma-studio` |
+| `up` | Starts all development services in detached mode. | `./scripts/dev.sh up` |
+| `down` | Stops and removes all development services and their networks. | `./scripts/dev.sh down` |
+| `logs [service]` | Tails the logs for all services or a specific service. | `./scripts/dev.sh logs piper-app` |
+| `build [service]` | Builds or rebuilds the Docker images for all services or a specific one. Uses `--no-cache`. | `./scripts/dev.sh build` |
+| `ps` | Lists all running development containers. | `./scripts/dev.sh ps` |
+| `restart [service]` | Restarts all services or a specific one. | `./scripts/dev.sh restart piper-app` |
+| `exec <service> <cmd>` | Executes a command inside a running container. | `./scripts/dev.sh exec piper-app sh` |
+| `prisma-generate` | Runs `npx prisma generate` inside the `piper-app` container. | `./scripts/dev.sh prisma-generate` |
+| `prisma-migrate-dev`| Runs `npx prisma migrate dev` inside the `piper-app` container. You can pass a name for the migration. | `./scripts/dev.sh prisma-migrate-dev --name add-new-field` |
+| `prisma-studio` | Starts Prisma Studio, making it accessible at `http://localhost:5555`. | `./scripts/dev.sh prisma-studio` |
 
 ## Common Workflows
 
 ### Starting the Environment for the First Time
 ```bash
-./dev.sh build
-./dev.sh up
-./dev.sh prisma-migrate-dev
+./scripts/dev.sh build
+./scripts/dev.sh up
+./scripts/dev.sh prisma-migrate-dev
 ```
 
 ### Stopping the Environment
 ```bash
-./dev.sh down
+./scripts/dev.sh down
 ```
 
 ### Viewing Logs
 To see the logs from the main application container:
 ```bash
-./dev.sh logs piper-app
+./scripts/dev.sh logs piper-app
 ```
 ```
 

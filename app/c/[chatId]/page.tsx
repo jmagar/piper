@@ -1,5 +1,5 @@
-import { Chat } from "@/app/components/chat/chat"
-import { ClientLayoutWrapper } from "@/app/components/layout/client-layout-wrapper"
+import { Chat } from "@/components/chat/chat"
+import { ClientLayoutWrapper } from "@/components/layout/client-layout-wrapper"
 import { MessagesProvider } from "@/lib/chat-store/messages/provider"
 
 export default async function Page() {

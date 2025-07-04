@@ -1,6 +1,5 @@
 import { appLogger } from './index';
 import { LogLevel, LogSource } from './constants';
-import type { LogContext } from './types';
 
 /**
  * Utility functions to reduce logging spam while maintaining essential information

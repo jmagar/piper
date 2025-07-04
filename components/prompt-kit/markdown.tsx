@@ -1,4 +1,4 @@
-import { LinkMarkdown } from "@/app/components/chat/link-markdown"
+import { LinkMarkdown } from "@/components/chat/link-markdown"
 import { cn } from "@/lib/utils"
 import { marked } from "marked"
 import { memo, useId, useMemo } from "react"

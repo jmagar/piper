@@ -34,11 +34,11 @@ import { toast } from '@/components/ui/toast';
 import { generateUUID } from '@/lib/utils/uuid';
 
 // Import the log viewer component
-import LogViewer from '@/app/components/log-viewer';
+import LogViewer from '@/components/log-viewer';
 // Import the MCP metrics dashboard
-import MCPMetricsDashboard from '@/app/components/dashboard/mcp-metrics-dashboard';
-import ToolExecutionHistory from '@/app/components/dashboard/tool-execution-history';
-import ActiveExecutions from '@/app/components/dashboard/active-executions';
+import MCPMetricsDashboard from '@/components/dashboard/mcp-metrics-dashboard';
+import ToolExecutionHistory from '@/components/dashboard/tool-execution-history';
+import ActiveExecutions from '@/components/dashboard/active-executions';
 
 // Interfaces (can be moved to a shared types file later)
 interface MCPTransportSSE {

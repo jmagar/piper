@@ -60,9 +60,9 @@ Before deployment, verify:
 
 Use `dev.sh` for all local development:
 ```bash
-./dev.sh up    # Start development environment
-./dev.sh down  # Stop and cleanup
-./dev.sh logs  # View logs
+./scripts/dev.sh up    # Start development environment
+./scripts/dev.sh down  # Stop and cleanup
+./scripts/dev.sh logs  # View logs
 ```
 
-Never run `docker-compose` directly - always use the dev.sh script to ensure proper configuration.
+Never run `docker-compose` directly - always use the scripts/dev.sh script to ensure proper configuration.
