@@ -270,6 +270,8 @@ piper/
 ├── tsconfig.json
 ├── tailwind.config.ts
 ├── components.json
+├── .prettierrc.json
+├── postcss.config.mjs
 ├── knip.ts
 ├── app/                       # Next.js app directory
 │   ├── (routes)/              # Route groups

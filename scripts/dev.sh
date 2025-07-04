@@ -3,7 +3,7 @@
 # Development Environment Management Script for Piper
 
 # Ensure the script is run from the project root (where docker/docker-compose.dev.yml is)
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # Default Docker Compose command
 COMPOSE_CMD="docker compose -f docker/docker-compose.dev.yml"

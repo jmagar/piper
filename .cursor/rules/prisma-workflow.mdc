@@ -21,7 +21,7 @@ After you modify the `prisma/schema.prisma` file, you must regenerate the Prisma
 Run the following command:
 
 ```bash
-./dev.sh prisma-generate
+./scripts/dev.sh prisma-generate
 ```
 
 The Prisma Client is located in `node_modules/@prisma/client`.
@@ -33,7 +33,7 @@ For any schema change that needs to be persisted to the database, you must creat
 To create a new migration, run:
 
 ```bash
-./dev.sh prisma-migrate-dev --name <your-migration-name>
+./scripts/dev.sh prisma-migrate-dev --name <your-migration-name>
 ```
 
 Replace `<your-migration-name>` with a short, descriptive name for your migration in kebab-case (e.g., `add-user-model`). This command will:
@@ -46,7 +46,7 @@ Replace `<your-migration-name>` with a short, descriptive name for your migratio
 The project contains a seed script at `prisma/seed.ts` to populate the database with initial data. To run it, use the command defined in `package.json` and `dev.sh`:
 
 ```bash
-./dev.sh prisma db seed
+./scripts/dev.sh prisma db seed
 ```
 
 You can modify the `prisma/seed.ts` file to change the seed data.

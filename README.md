@@ -103,7 +103,7 @@ Get up and running with Piper in minutes:
 
 3. Start the development environment:
    ```bash
-   ./dev.sh up
+   ./scripts/dev.sh up
    ```
 
 4. Access the application at `http://localhost:3000`
