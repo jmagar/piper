@@ -22,9 +22,9 @@ import {
 } from './components';
 
 import { AddServerModal } from './components/add-server-modal';
-import { EditServerModal } from './components/EditServerModal';
-import { DeleteServerModal } from './components/DeleteServerModal';
-import RawConfigEditor from './components/RawConfigEditor';
+import { EditServerModal } from './components/edit-server-modal';
+import { DeleteServerModal } from './components/delete-server-modal';
+import RawConfigEditor from './components/raw-config-editor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 
 export function McpServersDashboard() {

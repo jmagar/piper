@@ -9,13 +9,12 @@ The UI is built around a main container component, `McpServersDashboard.tsx`, wh
 ## File Structure
 
 ```
-/app/components/mcp-servers/
-├── McpServersDashboard.tsx   # Main container component
-├── README.md                 # This documentation file
-└── modules/
-    ├── components/           # Reusable UI components for the dashboard
-    ├── hooks/                # Custom React hooks for managing state and logic
-    └── utils/                # Helper functions, type definitions, and validation logic
+components/mcp/
+├── mcp-servers-dashboard.tsx  # Main container component
+├── README.md                  # This documentation file
+├── components/                # Reusable UI components for the dashboard
+├── hooks/                     # Custom React hooks for managing state and logic
+└── utils/                     # Helper functions, type definitions, and validation logic
 ```
 
 ---
