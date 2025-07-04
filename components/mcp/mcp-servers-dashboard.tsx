@@ -8,20 +8,23 @@ import {
   useServerFilters,
   useModalState,
   useServerActions,
+} from './hooks';
+
+import {
   MergedServerData,
-  MCPServerConfigFromUI, // Added this import
-} from './modules';
+  MCPServerConfigFromUI,
+} from './utils/serverTypes';
 
 import {
   DashboardHeader,
   ServerFilters,
   ServerGrid,
-} from './modules/components';
+} from './components';
 
-import { AddServerModal } from './modules/components/add-server-modal';
-import { EditServerModal } from './modules/components/EditServerModal';
-import { DeleteServerModal } from './modules/components/DeleteServerModal';
-import RawConfigEditor from './modules/components/RawConfigEditor';
+import { AddServerModal } from './components/add-server-modal';
+import { EditServerModal } from './components/EditServerModal';
+import { DeleteServerModal } from './components/DeleteServerModal';
+import RawConfigEditor from './components/RawConfigEditor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 
 export function McpServersDashboard() {
