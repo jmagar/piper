@@ -1,4 +1,4 @@
-import { MCPMetricsCollector, globalMetricsCollector } from './enhanced/metrics-collector'
+import { globalMetricsCollector } from './enhanced/metrics-collector'
 import { globalMCPPool } from './enhanced/connection-pool'
 import { getManagedServersInfo } from './mcpManager'
 import { redisCacheManager } from './modules'

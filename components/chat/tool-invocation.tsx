@@ -21,7 +21,7 @@ interface ToolInvocationProps {
 }
 
 const TRANSITION = {
-  type: "spring",
+  type: "spring" as const,
   duration: 0.2,
   bounce: 0,
 }
@@ -248,7 +248,7 @@ function SingleToolCard({
               if (!didCancel) {
                 setParsedResult(parsed)
               }
-            } catch (e) {
+            } catch {
               // If not valid JSON, just use the text as is
               if (!didCancel) {
                 setParsedResult(textContent.text)

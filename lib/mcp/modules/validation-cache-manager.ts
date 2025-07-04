@@ -404,7 +404,6 @@ export class ValidationCacheManager {
    */
   async clearExpiredValidationCaches(): Promise<void> {
     try {
-      const now = Date.now();
       const patterns = [
         'validation_config:*',
         'validation_schema:*',

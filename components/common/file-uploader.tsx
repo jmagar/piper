@@ -75,7 +75,7 @@ export function FileUploader({ currentExplorerPath, onUploadSuccess }: FileUploa
         try {
             const response = JSON.parse(xhr.responseText);
             errorMessage = response.error || errorMessage;
-        } catch (e) {
+        } catch {
             // Keep default error message
         }
         setUploadStatus('error');

@@ -30,6 +30,7 @@ export interface MCPServerConfigFromUI extends Omit<MCPServerConfig, 'id' | 'tra
   displayName?: string;
   transport: MCPTransport;
   enabled: boolean;
+  retries?: number;
   isEnvManaged?: boolean;
 }
 

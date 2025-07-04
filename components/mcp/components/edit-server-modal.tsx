@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Save, X, CheckCircle, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+// import { Save, X, CheckCircle, Loader2 } from 'lucide-react'; // Removed unused imports
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,7 +67,6 @@ const getInitialFormState = (server: MCPServerConfigFromUI | null): FormState =>
 export function EditServerModal({ isOpen, onClose, onSubmit, serverToEdit, existingServers }: EditServerModalProps) {
   const actions = useServerActions();
   const [isSaving, setIsSaving] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [formData, setFormData] = useState<FormState>(getInitialFormState(null));
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -356,7 +355,7 @@ export function EditServerModal({ isOpen, onClose, onSubmit, serverToEdit, exist
           </Button>
           <Button
             onClick={handleRealSubmit}
-            disabled={isSaving || isTestingConnection}
+            disabled={isSaving}
           >
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>

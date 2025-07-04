@@ -10,7 +10,7 @@ export function LinkMarkdown({
   try {
     const url = new URL(href)
     domain = url.hostname
-  } catch (error) {
+  } catch {
     // If href is not a valid URL (likely a relative path)
     domain = href.split("/").pop() || href
   }
